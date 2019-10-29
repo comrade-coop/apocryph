@@ -127,11 +127,11 @@ HashRegistry = {
       this._items.push(serialized)
       this._indices[serialized] = this._items.length - 1
     }
-    return this._indices[serialized].toString(16)
+    return 'h' + this._indices[serialized].toString(16)
   },
 
   get(hash) {
-    return JSON.parse(this._items[parseInt(hash, 16)])
+    return JSON.parse(this._items[parseInt(hash.slice(1), 16)])
   },
 }
 
