@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,28 +9,34 @@ using Perper.WebJobs.Extensions.Triggers;
 
 namespace Apocryph.FunctionApp
 {
-    public class Consensus
+    public static class Consensus
     {
+        private class State
+        {
+            public Dictionary<(AgentInput, AgentOutput), HashSet<string>> Votes { get; set; }
+        }
+        
         [FunctionName("Consensus")]
         public static async Task Run([PerperStreamTrigger] IPerperStreamContext context,
-            [PerperStream("validStream")] IPerperStream<AgentOutput> validStream,
-            [PerperStream("proposalsStream")] IPerperStream<(AgentInput, AgentOutput)> proposalsStream,
-            [PerperStream] IAsyncCollector<object> outputStream)
+            [PerperStream("validatorSet")] ValidatorSet validatorSet,
+            [PerperStream("votesStream")] IPerperStream<VoteMessage> votesStream,
+            [PerperStream] IAsyncCollector<CommitMessage> outputStream)
         {
-            var validOutputs = new Dictionary<AgentOutput, AgentInput>();
-            await Task.WhenAll(
-                validStream.Listen(async validOutput =>
+            var state = await context.GetState<State>("state");
+            
+            await votesStream.Listen(
+                async vote =>
                 {
-                    if (validOutputs.ContainsKey(validOutput))
+                    state.Votes[(vote.Input, vote.Output)].Add(vote.Signer);
+                    await context.SetState("state", state);
+                    
+                    var voted = 0; //Count based on weights in validatorSet
+                    if (3 * voted > 2 * validatorSet.Total)
                     {
-                        await outputStream.AddAsync(new {vote = "agree"});
+                        await outputStream.AddAsync(new CommitMessage {Input = vote.Input, Output = vote.Output});    
                     }
-                }, CancellationToken.None),
-                proposalsStream.Listen(proposal =>
-                {
-                    var (proposedInput, proposedOutput) = proposal;
-                    validOutputs[proposedOutput] = proposedInput;
-                }, CancellationToken.None));
+                },
+                CancellationToken.None);
         }
     }
 }

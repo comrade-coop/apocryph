@@ -9,44 +9,36 @@ using Perper.WebJobs.Extensions.Triggers;
 
 namespace Apocryph.FunctionApp
 {
-    public static class Validator
+    public static class Committer
     {
         private class State
         {
-            public bool IsProposer { get; set; }
             public Dictionary<(AgentInput, AgentOutput), HashSet<string>> Votes { get; set; }
         }
-
-        [FunctionName("Validator")]
+        
+        [FunctionName("Committer")]
         public static async Task Run([PerperStreamTrigger] IPerperStreamContext context,
             [PerperStream("validatorSet")] ValidatorSet validatorSet,
             [PerperStream("commitsStream")] IPerperStream<CommitMessage> commitsStream,
-            [PerperStream("proposalsStream")] IPerperStream<(AgentInput, AgentOutput)> proposalsStream,
-            [PerperStream] IAsyncCollector<object> outputStream)
+            [PerperStream] IAsyncCollector<(AgentOutput, bool)> outputStream)
         {
             var state = await context.GetState<State>("state");
-
-            await Task.WhenAll(
-                commitsStream.Listen(async commit =>
+            
+            await commitsStream.Listen(
+                async commit =>
                 {
                     state.Votes[(commit.Input, commit.Output)].Add(commit.Signer);
+                    await context.SetState("state", state);
                     
                     var voted = 0; //Count based on weights in validatorSet
                     if (3 * voted > 2 * validatorSet.Total)
                     {
-                        state.IsProposer = true; //Check who is the next proposer
-                    }
-                    
-                    await context.SetState("state", state);
-                }, CancellationToken.None),
+                        const bool isProposer = true; //Check who is the next proposer
 
-                proposalsStream.Listen(async proposal =>
-                {
-                    if (!state.IsProposer)
-                    {
-                        await outputStream.AddAsync(proposal.Item1);
+                        await outputStream.AddAsync((commit.Output, isProposer));
                     }
-                }, CancellationToken.None));
+                },
+                CancellationToken.None);
         }
     }
 }

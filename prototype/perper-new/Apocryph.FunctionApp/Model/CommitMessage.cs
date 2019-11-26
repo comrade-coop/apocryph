@@ -1,6 +1,6 @@
 namespace Apocryph.FunctionApp.Model
 {
-    public class VoteMessage
+    public class CommitMessage
     {
         public AgentInput Input { get; set; }
         public AgentOutput Output { get; set; }

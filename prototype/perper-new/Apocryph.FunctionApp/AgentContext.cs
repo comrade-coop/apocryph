@@ -18,24 +18,34 @@ namespace Apocryph.FunctionApp
         [FunctionName("AgentContext")]
         public static async Task Run([PerperStreamTrigger] IPerperStreamContext context,
             [PerperStream("validatorStream")] IPerperStream<AgentInput> validatorStream,
-            [PerperStream("commitStream")] IPerperStream<VoteMessage> commitStream,
-            [PerperStream] IAsyncCollector<object> outputStream)
+            [PerperStream("committerStream")] IPerperStream<(AgentOutput, bool)> committerStream,
+            [PerperStream] IAsyncCollector<(AgentInput, AgentOutput)> outputStream)
         {
             await Task.WhenAll(
-                validatorStream.Listen(async validationMessage =>
+                validatorStream.Listen(async input =>
                 {
-                    //Call Agent
-                    await outputStream.AddAsync(new AgentOutput {Type = "Valid"});
+                    //Call agent
+                    await outputStream.AddAsync((
+                        input,
+                        new AgentOutput {Type = "Valid"}));
                 }, CancellationToken.None),
 
-                commitStream.Listen(async commitMessage =>
+                committerStream.Listen(async commit =>
                 {
                     var state = await context.GetState<State>("state");
-                    state.AgentState = commitMessage.Output.State;
+                    state.AgentState = commit.Item1.State;
                     await context.SetState("state", state);
 
-                    // Execute commands in the commitMessage
-                    await outputStream.AddAsync(new AgentOutput {Type = "Proposal"});
+                    if (commit.Item2)
+                    {
+                        // Execute commands in the commitMessage
+                        await Task.Delay(1000);
+
+                        //Call agent
+                        await outputStream.AddAsync((
+                            new AgentInput {State = state.AgentState},
+                            new AgentOutput {Type = "Proposal"}));
+                    }
                 }, CancellationToken.None));
         }
     }

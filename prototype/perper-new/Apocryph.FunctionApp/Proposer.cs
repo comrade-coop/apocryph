@@ -12,10 +12,10 @@ namespace Apocryph.FunctionApp
     {
         [FunctionName("Proposer")]
         public static async Task Run([PerperStreamTrigger] IPerperStreamContext context,
-            [PerperStream("proposalsStream")] IPerperStream<(AgentInput, AgentOutput)> proposalsStream,
+            [PerperStream("contextStream")] IPerperStream<(AgentInput, AgentOutput)> contextStream,
             [PerperStream] IAsyncCollector<(AgentInput, AgentOutput)> outputStream)
         {
-            await proposalsStream.Listen(async proposal => await outputStream.AddAsync(proposal), CancellationToken.None);
+            await contextStream.Listen(async proposal => await outputStream.AddAsync(proposal), CancellationToken.None);
         }
     }
 }
