@@ -19,8 +19,8 @@ namespace Apocryph.FunctionApp
         [FunctionName("Consensus")]
         public static async Task Run([PerperStreamTrigger] IPerperStreamContext context,
             [PerperStream("validatorSet")] ValidatorSet validatorSet,
-            [PerperStream("votesStream")] IPerperStream<VoteMessage> votesStream,
-            [PerperStream] IAsyncCollector<CommitMessage> outputStream)
+            [PerperStream("votesStream")] IPerperStream<Vote> votesStream,
+            [PerperStream] IAsyncCollector<Commit> outputStream)
         {
             var state = await context.GetState<State>("state");
             
@@ -33,7 +33,7 @@ namespace Apocryph.FunctionApp
                     var voted = 0; //Count based on weights in validatorSet
                     if (3 * voted > 2 * validatorSet.Total)
                     {
-                        await outputStream.AddAsync(new CommitMessage {Input = vote.Input, Output = vote.Output});    
+                        await outputStream.AddAsync(new Commit {Input = vote.Input, Output = vote.Output});    
                     }
                 },
                 CancellationToken.None);

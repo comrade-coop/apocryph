@@ -20,7 +20,7 @@ namespace Apocryph.FunctionApp
         [FunctionName("Validator")]
         public static async Task Run([PerperStreamTrigger] IPerperStreamContext context,
             [PerperStream("validatorSet")] ValidatorSet validatorSet,
-            [PerperStream("commitsStream")] IPerperStream<CommitMessage> commitsStream,
+            [PerperStream("commitsStream")] IPerperStream<Commit> commitsStream,
             [PerperStream("proposalsStream")] IPerperStream<(AgentInput, AgentOutput)> proposalsStream,
             [PerperStream] IAsyncCollector<object> outputStream)
         {

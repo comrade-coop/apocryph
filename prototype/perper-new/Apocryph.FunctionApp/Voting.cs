@@ -26,7 +26,7 @@ namespace Apocryph.FunctionApp
                     var (validatedProposalInput, validatedProposalOutput) = validatedProposal;
                     if (validOutputs[validatedProposalInput] == validatedProposalOutput)
                     {
-                        await outputStream.AddAsync(new VoteMessage
+                        await outputStream.AddAsync(new Vote
                             {Input = validatedProposalInput, Output = validatedProposalOutput});
                     }
                 }, CancellationToken.None),
