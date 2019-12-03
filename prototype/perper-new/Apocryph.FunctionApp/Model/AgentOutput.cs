@@ -1,12 +1,13 @@
 using System.Collections.Generic;
-using Apocryph.FunctionApp.Model.Command;
+using Apocryph.FunctionApp.Command;
 
 namespace Apocryph.FunctionApp.Model
 {
-    public class AgentOutput
+    public class AgentOutput : IAgentStep
     {
-        public object State { get; set; }
-        public IEnumerable<ICommand> Output { get; set; }
         public string Type { get; set; }
+        
+        public object State { get; set; }
+        public IEnumerable<ICommand> Commands { get; set; }
     }
 }

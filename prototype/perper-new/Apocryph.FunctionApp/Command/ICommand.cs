@@ -1,4 +1,4 @@
-namespace Apocryph.FunctionApp.Model.Command
+namespace Apocryph.FunctionApp.Command
 {
     public interface ICommand
     {
