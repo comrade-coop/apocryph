@@ -1,11 +1,10 @@
 // Copyright (c) Comrade Coop. All rights reserved.
 
 using System.Numerics;
-using Apocryph.FunctionApp.Model.Message;
 
 namespace Apocryph.FunctionApp.Wetonomy.Messages
 {
-	public class MintMessage : IMessage
+	public class MintMessage
 	{
 		public BigInteger Amount { get; set; }
 

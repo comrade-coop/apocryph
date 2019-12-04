@@ -19,7 +19,7 @@ namespace Apocryph.FunctionApp.Wetonomy
             var messages = new List<object>();
             switch (action)
             {
-                case TokensChangedMessage tokensChangedEvent:
+                case TokensChangedPublication tokensChangedEvent:
                     if (tokensChangedEvent.Change > 0)
                     {
                         var individualAmount = tokensChangedEvent.Total / state.Targets.Count;

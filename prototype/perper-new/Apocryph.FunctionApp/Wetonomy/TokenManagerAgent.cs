@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using System.Numerics;
 using System.Reflection;
 using System.Threading.Tasks;
+using Apocryph.FunctionApp.Agent;
 using Apocryph.FunctionApp.Model;
 using Apocryph.FunctionApp.Wetonomy.Messages;
 using Microsoft.Azure.WebJobs;
@@ -13,116 +14,45 @@ namespace Apocryph.FunctionApp.Wetonomy
 {
     public static class TokenManagerAgent
     {
-
 	    //TODO: What can be accessed from the TriggerBinding - function attributes???, paramater attributes????
 
+	    [PerperRouter(typeof(MintMessage))]
+	    [FunctionName("Transfer")]
+	    public static void Transfer(
+		    [PerperWorkerTrigger] IAgentContext<IDictionary<string, BigInteger>> context,
+		    [PerperWorker("sender")] string sender,
+		    [PerperWorker("message")] MintMessage message)
+	    {
+		    var publication = AddTokens(context.State, message.To, message.Amount);
+		    context.MakePublication(publication);
+	    }
+	    
 	    [PerperRouter(typeof(BurnMessage))]
 	    [FunctionName("Burn")]
 	    public static void Burn(
-		    [PerperWorkerTrigger] IApocryphContext<IDictionary<string, BigInteger>> context,
+		    [PerperWorkerTrigger] IAgentContext<IDictionary<string, BigInteger>> context,
 		    [PerperWorker("sender")] string sender,
 		    [PerperWorker("message")] BurnMessage message)
 	    {
 		    var publication = RemoveTokens(context.State, message.From, message.Amount);
 		    context.MakePublication(publication);
 	    }
-
-
-	    [TargetException=PublicationMessage(message)]; AdentState=A1(a1State)
-	    public static void DoSomething(ApocryphContext context, 
-		    [AgentState]a1State
-		    PublicationMessage message)
+	    
+	    
+	    [PerperRouter(typeof(TransferMessage))]
+	    [FunctionName("Transfer")]
+	    public static void Transfer(
+		    [PerperWorkerTrigger] IAgentContext<IDictionary<string, BigInteger>> context,
+		    [PerperWorker("sender")] string sender,
+		    [PerperWorker("message")] TransferMessage message)
 	    {
-		    context.SendMessage();
-		    context.AddReminder();
-		    context.MakePublication();
-	    }
-	    
-	    public static async Task<(object, Commands)> Run(object state, PublicationMessage message)
-        {
-	        
-	        
-	        var balances = state as Dictionary<string, BigInteger> ?? new Dictionary<string, BigInteger>();
-
-	        var commands = new Commands();
-	        
-	        switch (message)
-	        {
-		        case MintMessage mintAction:
-			        commands.Add(AddTokens(balances, mintAction.To, mintAction.Amount));
-			        break;
-
-		        case TransferMessage transferAction:
-			        commands.Add(RemoveTokens(balances, transferAction.From, transferAction.Amount));
-			        commands.Add(AddTokens(balances, transferAction.To, transferAction.Amount));
-			        break;
-
-		        case BurnMessage burnAction:
-			        commands.Add(RemoveTokens(balances, burnAction.From, burnAction.Amount));
-			        break;
-	        }
-
-	        await Task.CompletedTask;
-	        
-	        return (balances, commands);
-        }
-	    
-	    
-	    public static async Task<(object, Commands)> Run(object state, ServiceResultMessage message)
-	    {
-		    var balances = state as Dictionary<string, BigInteger> ?? new Dictionary<string, BigInteger>();
-
-		    var commands = new Commands();
-	        
-		    switch (message)
-		    {
-			    case MintMessage mintAction:
-				    commands.Add(AddTokens(balances, mintAction.To, mintAction.Amount));
-				    break;
-
-			    case TransferMessage transferAction:
-				    commands.Add(RemoveTokens(balances, transferAction.From, transferAction.Amount));
-				    commands.Add(AddTokens(balances, transferAction.To, transferAction.Amount));
-				    break;
-
-			    case BurnMessage burnAction:
-				    commands.Add(RemoveTokens(balances, burnAction.From, burnAction.Amount));
-				    break;
-		    }
-
-		    await Task.CompletedTask;
-	        
-		    return (balances, commands);
-	    }
-	    
-	    public static async Task<(object, Commands)> Run(object state, MintMessage message)
-	    {
-		    var balances = state as Dictionary<string, BigInteger> ?? new Dictionary<string, BigInteger>();
-
-		    var commands = new Commands();
-	        
-		    switch (message)
-		    {
-			    case MintMessage mintAction:
-				    commands.Add(AddTokens(balances, mintAction.To, mintAction.Amount));
-				    break;
-
-			    case TransferMessage transferAction:
-				    commands.Add(RemoveTokens(balances, transferAction.From, transferAction.Amount));
-				    commands.Add(AddTokens(balances, transferAction.To, transferAction.Amount));
-				    break;
-
-			    case BurnMessage burnAction:
-				    commands.Add(RemoveTokens(balances, burnAction.From, burnAction.Amount));
-				    break;
-		    }
-
-		    await Task.CompletedTask;
-	        
-		    return (balances, commands);
+		    var removeTokensPublication = RemoveTokens(context.State, message.From, message.Amount);
+		    var addTokensPublication = AddTokens(context.State, message.To, message.Amount);
+		    context.MakePublication(removeTokensPublication);
+		    context.MakePublication(addTokensPublication);
 	    }
 
-        private static object RemoveTokens(IDictionary<string, BigInteger> balances, string from, BigInteger amount)
+	    private static object RemoveTokens(IDictionary<string, BigInteger> balances, string from, BigInteger amount)
         {
 	        if (!balances.ContainsKey(from))
 	        {
@@ -136,7 +66,7 @@ namespace Apocryph.FunctionApp.Wetonomy
 
 	        balances[from] -= amount;
 	        
-	        var @event = new TokensChangedMessage {Change = -amount, Total = balances[from], Target = from};
+	        var @event = new TokensChangedPublication {Change = -amount, Total = balances[from], Target = from};
 			        
 	        if (balances[from] == 0)
 	        {
@@ -155,7 +85,7 @@ namespace Apocryph.FunctionApp.Wetonomy
 
 	        balances[to] += amount;
 	        
-	        return new TokensChangedMessage {Change = amount, Total = balances[to], Target = to};
+	        return new TokensChangedPublication {Change = amount, Total = balances[to], Target = to};
         }
     }
 
