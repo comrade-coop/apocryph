@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.FunctionApp.Model;
@@ -13,27 +14,31 @@ namespace Apocryph.FunctionApp
     {
         private class State
         {
-            public Dictionary<(AgentInput, AgentOutput), HashSet<string>> Votes { get; set; }
+            public Dictionary<(AgentInput, AgentOutput), HashSet<string>> Commits { get; set; }
         }
-        
+
         [FunctionName("Committer")]
         public static async Task Run([PerperStreamTrigger] IPerperStreamContext context,
+            [PerperStream("self")] string self, // Or should it be "ownPublicKey" / "selfSigner"?
             [PerperStream("validatorSet")] ValidatorSet validatorSet,
             [PerperStream("commitsStream")] IPerperStream<Commit> commitsStream,
             [PerperStream] IAsyncCollector<(AgentOutput, bool)> outputStream)
         {
             var state = await context.GetState<State>("state");
-            
+
             await commitsStream.Listen(
                 async commit =>
                 {
-                    state.Votes[(commit.Input, commit.Output)].Add(commit.Signer);
+                    state.Commits[(commit.Input, commit.Output)].Add(commit.Signer);
                     await context.SetState("state", state);
-                    
-                    var voted = 0; //Count based on weights in validatorSet
+
+                    var voted = state.Commits[(commit.Input, commit.Output)]
+                        .Select(signer => validatorSet.Weights[signer]).Sum();
                     if (3 * voted > 2 * validatorSet.Total)
                     {
-                        const bool isProposer = true; //Check who is the next proposer
+                        validatorSet.AccumulateWeights();
+                        var proposer = validatorSet.PopMaxAccumulatedWeight();
+                        var isProposer = (proposer == self);
 
                         await outputStream.AddAsync((commit.Output, isProposer));
                     }

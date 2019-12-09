@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.FunctionApp.Model;
@@ -15,7 +16,7 @@ namespace Apocryph.FunctionApp
         {
             public Dictionary<(AgentInput, AgentOutput), HashSet<string>> Votes { get; set; }
         }
-        
+
         [FunctionName("Consensus")]
         public static async Task Run([PerperStreamTrigger] IPerperStreamContext context,
             [PerperStream("validatorSet")] ValidatorSet validatorSet,
@@ -23,17 +24,18 @@ namespace Apocryph.FunctionApp
             [PerperStream] IAsyncCollector<Commit> outputStream)
         {
             var state = await context.GetState<State>("state");
-            
+
             await votesStream.Listen(
                 async vote =>
                 {
                     state.Votes[(vote.Input, vote.Output)].Add(vote.Signer);
                     await context.SetState("state", state);
-                    
-                    var voted = 0; //Count based on weights in validatorSet
+
+                    var voted = state.Votes[(vote.Input, vote.Output)]
+                        .Select(signer => validatorSet.Weights[signer]).Sum();
                     if (3 * voted > 2 * validatorSet.Total)
                     {
-                        await outputStream.AddAsync(new Commit {Input = vote.Input, Output = vote.Output});    
+                        await outputStream.AddAsync(new Commit {Input = vote.Input, Output = vote.Output});
                     }
                 },
                 CancellationToken.None);

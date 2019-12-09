@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.FunctionApp.Model;
@@ -13,12 +14,13 @@ namespace Apocryph.FunctionApp
     {
         private class State
         {
-            public bool IsProposer { get; set; }
-            public Dictionary<(AgentInput, AgentOutput), HashSet<string>> Votes { get; set; }
+            public string Proposer { get; set; }
+            public Dictionary<(AgentInput, AgentOutput), HashSet<string>> Commits { get; set; }
         }
 
         [FunctionName("Validator")]
         public static async Task Run([PerperStreamTrigger] IPerperStreamContext context,
+            [PerperStream("self")] string self,
             [PerperStream("validatorSet")] ValidatorSet validatorSet,
             [PerperStream("commitsStream")] IPerperStream<Commit> commitsStream,
             [PerperStream("proposalsStream")] IPerperStream<(AgentInput, AgentOutput)> proposalsStream,
@@ -29,20 +31,23 @@ namespace Apocryph.FunctionApp
             await Task.WhenAll(
                 commitsStream.Listen(async commit =>
                 {
-                    state.Votes[(commit.Input, commit.Output)].Add(commit.Signer);
-                    
-                    var voted = 0; //Count based on weights in validatorSet
+                    state.Commits[(commit.Input, commit.Output)].Add(commit.Signer);
+
+                    var voted = state.Commits[(commit.Input, commit.Output)]
+                        .Select(signer => validatorSet.Weights[signer]).Sum();
+
                     if (3 * voted > 2 * validatorSet.Total)
                     {
-                        state.IsProposer = true; //Check who is the next proposer
+                        validatorSet.AccumulateWeights();
+                        state.Proposer = validatorSet.PopMaxAccumulatedWeight();
                     }
-                    
+
                     await context.SetState("state", state);
                 }, CancellationToken.None),
 
                 proposalsStream.Listen(async proposal =>
                 {
-                    if (!state.IsProposer)
+                    if (state.Proposer != self) // state.Proposer == proposal.Signer
                     {
                         await outputStream.AddAsync(proposal.Item1);
                     }
