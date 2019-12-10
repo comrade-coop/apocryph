@@ -13,27 +13,24 @@ namespace Apocryph.FunctionApp
     {
         [FunctionName("Voting")]
         public static async Task Run([PerperStreamTrigger] IPerperStreamContext context,
-            [PerperStream("contextStream")]
-            IPerperStream<(AgentInput, AgentOutput)> contextStream,
-            [PerperStream("proposalsStream")] 
-            IPerperStream<(AgentInput, AgentOutput)> proposalsStream,
+            [PerperStream("runtimeStream")] IAsyncEnumerable<(IAgentStep, bool)> runtimeStream,
+            [PerperStream("proposalsStream")] IAsyncEnumerable<IAgentStep> proposalsStream,
             [PerperStream] IAsyncCollector<object> outputStream)
         {
-            var validOutputs = new Dictionary<AgentInput, AgentOutput>();
+            var expectedNextSteps = new Dictionary<IAgentStep, IAgentStep>();
             await Task.WhenAll(
-                contextStream.Listen(async validatedProposal =>
-                {
-                    var (validatedProposalInput, validatedProposalOutput) = validatedProposal;
-                    if (validOutputs[validatedProposalInput] == validatedProposalOutput)
-                    {
-                        await outputStream.AddAsync(new Vote
-                            {Input = validatedProposalInput, Output = validatedProposalOutput});
-                    }
-                }, CancellationToken.None),
                 proposalsStream.Listen(proposal =>
                 {
-                    var (proposedInput, proposedOutput) = proposal;
-                    validOutputs[proposedInput] = proposedOutput;
+                    expectedNextSteps[proposal.Previous] = proposal;
+                }, CancellationToken.None),
+
+                runtimeStream.Listen(async item =>
+                {
+                    var (nextStep, isProposal) = item;
+                    if (!isProposal && expectedNextSteps[nextStep.Previous] == nextStep)
+                    {
+                        await outputStream.AddAsync(new Vote { For = nextStep });
+                    }
                 }, CancellationToken.None));
         }
     }

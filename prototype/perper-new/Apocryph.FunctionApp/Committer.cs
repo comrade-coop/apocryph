@@ -14,33 +14,33 @@ namespace Apocryph.FunctionApp
     {
         private class State
         {
-            public Dictionary<(AgentInput, AgentOutput), HashSet<string>> Commits { get; set; }
+            public Dictionary<IAgentStep, Dictionary<ValidatorKey, ValidatorSignature>> Commits { get; set; }
         }
 
         [FunctionName("Committer")]
         public static async Task Run([PerperStreamTrigger] IPerperStreamContext context,
-            [PerperStream("self")] string self, // Or should it be "ownPublicKey" / "selfSigner"?
+            [PerperStream("self")] ValidatorKey self,
             [PerperStream("validatorSet")] ValidatorSet validatorSet,
-            [PerperStream("commitsStream")] IPerperStream<Commit> commitsStream,
-            [PerperStream] IAsyncCollector<(AgentOutput, bool)> outputStream)
+            [PerperStream("commitsStream")] IAsyncEnumerable<Commit> commitsStream,
+            [PerperStream] IAsyncCollector<(IAgentStep, bool)> outputStream)
         {
             var state = await context.GetState<State>("state");
 
             await commitsStream.Listen(
                 async commit =>
                 {
-                    state.Commits[(commit.Input, commit.Output)].Add(commit.Signer);
+                    state.Commits[commit.For].Add(commit.Signer, commit.Signature);
                     await context.SetState("state", state);
 
-                    var voted = state.Commits[(commit.Input, commit.Output)]
+                    var committed = state.Commits[commit.For].Keys
                         .Select(signer => validatorSet.Weights[signer]).Sum();
-                    if (3 * voted > 2 * validatorSet.Total)
+                    if (3 * committed > 2 * validatorSet.Total)
                     {
                         validatorSet.AccumulateWeights();
                         var proposer = validatorSet.PopMaxAccumulatedWeight();
-                        var isProposer = (proposer == self);
+                        var isProposer = proposer.Equals(self);
 
-                        await outputStream.AddAsync((commit.Output, isProposer));
+                        await outputStream.AddAsync((commit.For, isProposer));
                     }
                 },
                 CancellationToken.None);

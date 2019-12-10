@@ -1,6 +1,7 @@
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Apocryph.FunctionApp.Model;
 ﻿using Ipfs.Http;
 using Microsoft.Azure.WebJobs;
 using Newtonsoft.Json;
@@ -14,15 +15,15 @@ namespace Apocryph.FunctionApp.Ipfs
     {
         [FunctionName("IpfsInput")]
         public static async Task Run([PerperStreamTrigger] IPerperStreamContext context,
-            [PerperStream("ipfsAddress")] string ipfsAddress,
+            [PerperStream("ipfsGateway")] string ipfsGateway,
             [PerperStream("topic")] string topic,
-            [PerperStream] IAsyncCollector<object> outputStream)
+            [PerperStream] IAsyncCollector<ISigned> outputStream)
         {
-            var ipfs = new IpfsClient(ipfsAddress);
+            var ipfs = new IpfsClient(ipfsGateway);
 
             await ipfs.PubSub.SubscribeAsync(topic, async message => {
                 var bytes = message.DataBytes;
-                var item = JsonConvert.DeserializeObject(Encoding.UTF8.GetString(bytes));
+                var item = JsonConvert.DeserializeObject<ISigned>(Encoding.UTF8.GetString(bytes));
                 await outputStream.AddAsync(item);
             }, CancellationToken.None);
         }

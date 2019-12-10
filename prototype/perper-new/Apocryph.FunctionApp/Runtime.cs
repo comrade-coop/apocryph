@@ -13,16 +13,11 @@ namespace Apocryph.FunctionApp
 {
     public static class Runtime
     {
-        private class State
-        {
-            public object AgentState { get; set; }
-        }
-
         [FunctionName("Runtime")]
         public static async Task Run([PerperStreamTrigger] IPerperStreamContext context,
-            [PerperStream("validatorStream")] IPerperStream<IAgentStep> validatorStream,
-            [PerperStream("committerStream")] IPerperStream<(IAgentStep, bool)> committerStream,
-            [PerperStream] IAsyncCollector<(IAgentStep, IAgentStep)> outputStream)
+            [PerperStream("validatorStream")] IAsyncEnumerable<IAgentStep> validatorStream,
+            [PerperStream("committerStream")] IAsyncEnumerable<(IAgentStep, bool)> committerStream,
+            [PerperStream] IAsyncCollector<(IAgentStep, bool)> outputStream)
         {
             await Task.WhenAll(
                 validatorStream.Listen(async step =>
@@ -33,10 +28,17 @@ namespace Apocryph.FunctionApp
                             //
                             break;
                         case AgentInput input:
+                            var result = new List<ICommand>();
+                            var agentContext = new AgentContext<object>(result);
                             //Call agent
                             await outputStream.AddAsync((
-                                input,
-                                new AgentOutput {Type = "Valid"}));
+                                new AgentOutput
+                                {
+                                    Previous = input,
+                                    State = agentContext.State,
+                                    Commands = result,
+                                },
+                                false));
                             break;
                     }
                 }, CancellationToken.None),
@@ -47,32 +49,42 @@ namespace Apocryph.FunctionApp
                     switch (step)
                     {
                         case AgentOutput output:
-                            var state = await context.GetState<State>("state");
-                            state.AgentState = output.State;
-                            await context.SetState("state", state);
+                            foreach (var command in output.Commands)
+                            {
+                                // execute services
+                                if (command is ReminderCommand reminder)
+                                {
+                                    await Task.Delay(reminder.Time); // should not block other things executing
+                                }
+                            }
                             if (isProposer)
                             {
-                                foreach (var command in output.Commands)
-                                {
-                                    if (command is ReminderCommand reminder)
-                                    {
-                                        await Task.Delay(reminder.Time);
-                                    }
-                                }
-
                                 await outputStream.AddAsync((
-                                    output,
-                                    new AgentInput {Type = "Proposal", State = state, Message = null, Sender = null}));
+                                    new AgentInput
+                                    {
+                                        Previous = output,
+                                        State = output.State,
+                                        Message = null, // ..
+                                        Sender = null, // ..
+                                    },
+                                    true));
                             }
                             break;
                         case AgentInput input:
-                            var result = new List<ICommand>();
-                            var agentContext = new AgentContext<object>(result);
-                            //Call agent
-
-                            await outputStream.AddAsync((
-                                input,
-                                new AgentOutput {Type = "Proposal", Commands = result}));
+                            if (isProposer)
+                            {
+                                var result = new List<ICommand>();
+                                var agentContext = new AgentContext<object>(result);
+                                //Call agent
+                                await outputStream.AddAsync((
+                                    new AgentOutput
+                                    {
+                                        Previous = input,
+                                        State = agentContext.State,
+                                        Commands = result,
+                                    },
+                                    true));
+                            }
                             break;
                     }
                 }, CancellationToken.None));

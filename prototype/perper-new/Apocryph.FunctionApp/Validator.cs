@@ -14,32 +14,33 @@ namespace Apocryph.FunctionApp
     {
         private class State
         {
-            public string Proposer { get; set; }
-            public Dictionary<(AgentInput, AgentOutput), HashSet<string>> Commits { get; set; }
+            public ValidatorKey Proposer { get; set; }
+            public IAgentStep CurrentStep { get; set; }
+            public Dictionary<IAgentStep, HashSet<ValidatorKey>> Commits { get; set; }
         }
 
         [FunctionName("Validator")]
         public static async Task Run([PerperStreamTrigger] IPerperStreamContext context,
-            [PerperStream("self")] string self,
             [PerperStream("validatorSet")] ValidatorSet validatorSet,
-            [PerperStream("commitsStream")] IPerperStream<Commit> commitsStream,
-            [PerperStream("proposalsStream")] IPerperStream<(AgentInput, AgentOutput)> proposalsStream,
-            [PerperStream] IAsyncCollector<object> outputStream)
+            [PerperStream("commitsStream")] IAsyncEnumerable<Commit> commitsStream,
+            [PerperStream("proposalsStream")] IAsyncEnumerable<IAgentStep> proposalsStream,
+            [PerperStream] IAsyncCollector<IAgentStep> outputStream)
         {
             var state = await context.GetState<State>("state");
 
             await Task.WhenAll(
                 commitsStream.Listen(async commit =>
                 {
-                    state.Commits[(commit.Input, commit.Output)].Add(commit.Signer);
+                    state.Commits[commit.For].Add(commit.Signer);
 
-                    var voted = state.Commits[(commit.Input, commit.Output)]
+                    var committed = state.Commits[commit.For]
                         .Select(signer => validatorSet.Weights[signer]).Sum();
 
-                    if (3 * voted > 2 * validatorSet.Total)
+                    if (3 * committed > 2 * validatorSet.Total)
                     {
                         validatorSet.AccumulateWeights();
                         state.Proposer = validatorSet.PopMaxAccumulatedWeight();
+                        state.CurrentStep = commit.For; // TODO: Commit in order
                     }
 
                     await context.SetState("state", state);
@@ -47,9 +48,9 @@ namespace Apocryph.FunctionApp
 
                 proposalsStream.Listen(async proposal =>
                 {
-                    if (state.Proposer != self) // state.Proposer == proposal.Signer
+                    if (state.Proposer.Equals(proposal.Signer) && state.CurrentStep == proposal.Previous)
                     {
-                        await outputStream.AddAsync(proposal.Item1);
+                        await outputStream.AddAsync(proposal.Previous);
                     }
                 }, CancellationToken.None));
         }

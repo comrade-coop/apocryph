@@ -1,6 +1,8 @@
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using Apocryph.FunctionApp.Model;
 ﻿using Ipfs.Http;
 using Microsoft.Azure.WebJobs;
 using Newtonsoft.Json;
@@ -16,7 +18,7 @@ namespace Apocryph.FunctionApp.Ipfs
         public static async Task Run([PerperStreamTrigger] IPerperStreamContext context,
             [PerperStream("ipfsAddress")] string ipfsAddress,
             [PerperStream("topic")] string topic,
-            [PerperStream("data")] IPerperStream<object> dataStream)
+            [PerperStream("data")] IAsyncEnumerable<ISigned> dataStream)
         {
             var ipfs = new IpfsClient(ipfsAddress);
 

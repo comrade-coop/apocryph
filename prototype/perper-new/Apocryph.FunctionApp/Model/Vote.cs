@@ -2,9 +2,9 @@ namespace Apocryph.FunctionApp.Model
 {
     public class Vote
     {
-        public AgentInput Input { get; set; }
-        public AgentOutput Output { get; set; }
+        public IAgentStep For { get; set; } // FIXME: Should be hash stored on IPFS
 
-        public string Signer { get; set; }
+        public ValidatorKey Signer { get; set; }
+        public ValidatorSignature Signature { get; set; }
     }
 }

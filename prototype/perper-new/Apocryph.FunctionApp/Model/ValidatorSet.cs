@@ -5,16 +5,16 @@ namespace Apocryph.FunctionApp.Model
 {
     public class ValidatorSet
     {
-        public Dictionary<string, int> Weights { get; set; }
-        public Dictionary<string, int> AccumulatedWeights { get; set; }
+        public Dictionary<ValidatorKey, int> Weights { get; set; }
+        public Dictionary<ValidatorKey, int> AccumulatedWeights { get; set; }
         public int Total { get; set; }
 
-        public string GetMaxAccumulatedWeight()
+        public ValidatorKey GetMaxAccumulatedWeight()
         {
             return AccumulatedWeights.Select(kv => (kv.Value, kv.Key)).Max().Item2;
         }
 
-        public string PopMaxAccumulatedWeight()
+        public ValidatorKey PopMaxAccumulatedWeight()
         {
             var maxAccumulatedWeight = GetMaxAccumulatedWeight();
             AccumulatedWeights[maxAccumulatedWeight] -= Total;

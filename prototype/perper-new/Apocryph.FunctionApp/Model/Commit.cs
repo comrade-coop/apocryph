@@ -2,9 +2,9 @@ namespace Apocryph.FunctionApp.Model
 {
     public class Commit
     {
-        public AgentInput Input { get; set; }
-        public AgentOutput Output { get; set; }
+        public IAgentStep For { get; set; }
 
-        public string Signer { get; set; }
+        public ValidatorKey Signer { get; set; }
+        public ValidatorSignature Signature { get; set; }
     }
 }
