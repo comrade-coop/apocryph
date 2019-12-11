@@ -1,6 +1,7 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 using Apocryph.FunctionApp.Model;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
@@ -24,13 +25,13 @@ namespace Apocryph.FunctionApp
             var state = context.GetState<State>("state");
 
             await Task.WhenAll(
-                commitsStream.Listen(async commit =>
+                commitsStream.ForEachAsync(async commit =>
                 {
                     state.Commits[commit.Value.For].Add(commit.Signer, commit.Signature);
                     await context.SaveState("state", state);
                 }, CancellationToken.None),
 
-                runtimeStream.Listen(async item =>
+                runtimeStream.ForEachAsync(async item =>
                 {
                     var (step, isProposal) = item;
                     if (isProposal)

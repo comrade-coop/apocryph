@@ -28,7 +28,7 @@ namespace Apocryph.FunctionApp
             var state = context.GetState<State>("state");
 
             await Task.WhenAll(
-                commitsStream.Listen(async commit =>
+                commitsStream.ForEachAsync(async commit =>
                 {
                     state.Commits[commit.Value.For].Add(commit.Signer);
 
@@ -45,7 +45,7 @@ namespace Apocryph.FunctionApp
                     await context.SaveState("state", state);
                 }, CancellationToken.None),
 
-                proposalsStream.Listen(async proposal =>
+                proposalsStream.ForEachAsync(async proposal =>
                 {
                     if (state.Proposer.Equals(proposal.Signer) && state.CurrentStep == proposal.Value.Previous)
                     {

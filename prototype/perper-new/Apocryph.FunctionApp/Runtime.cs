@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.FunctionApp.Agent;
@@ -19,7 +20,7 @@ namespace Apocryph.FunctionApp
             [Perper("outputStream")] IAsyncCollector<(IAgentStep, bool)> outputStream)
         {
             await Task.WhenAll(
-                validatorStream.Listen(async step =>
+                validatorStream.ForEachAsync(async step =>
                 {
                     switch (step.Value)
                     {
@@ -42,7 +43,7 @@ namespace Apocryph.FunctionApp
                     }
                 }, CancellationToken.None),
 
-                committerStream.Listen(async commit =>
+                committerStream.ForEachAsync(async commit =>
                 {
                     var (step, isProposer) = commit;
                     switch (step.Value)

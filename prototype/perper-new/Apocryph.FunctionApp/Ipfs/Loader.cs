@@ -1,7 +1,8 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 using Apocryph.FunctionApp.Model;
 ﻿using Ipfs;
 ﻿using Ipfs.Http;
@@ -24,7 +25,7 @@ namespace Apocryph.FunctionApp.Ipfs
         {
             var ipfs = new IpfsClient(ipfsGateway);
 
-            await hashStream.Listen(async hash => {
+            await hashStream.ForEachAsync(async hash => {
                 // NOTE: Currently blocks other items on the stream and does not process them
                 // -- we should at least timeout
                 // FIXME: Should use DAG/IPLD API instead

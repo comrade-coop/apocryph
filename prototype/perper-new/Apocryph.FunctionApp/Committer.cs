@@ -25,8 +25,7 @@ namespace Apocryph.FunctionApp
         {
             var state = context.GetState<State>("state");
 
-            await commitsStream.Listen(
-                async commit =>
+            await commitsStream.ForEachAsync(async commit =>
                 {
                     state.Commits[commit.Value.For].Add(commit.Signer, commit.Signature);
                     await context.SaveState("state", state);
@@ -41,8 +40,7 @@ namespace Apocryph.FunctionApp
 
                         await outputStream.AddAsync((commit.Value.For, isProposer));
                     }
-                },
-                CancellationToken.None);
+                }, CancellationToken.None);
         }
     }
 }

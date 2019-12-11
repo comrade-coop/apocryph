@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.FunctionApp.Model;
@@ -24,14 +25,14 @@ namespace Apocryph.FunctionApp
             var state = context.GetState<State>("state");
 
             await Task.WhenAll(
-                proposalsStream.Listen(async proposal =>
+                proposalsStream.ForEachAsync(async proposal =>
                 {
                     state.ExpectedNextSteps[proposal.Value.Previous] = proposal.Hash;
 
                     await context.SaveState("state", state);
                 }, CancellationToken.None),
 
-                runtimeStream.Listen(async item =>
+                runtimeStream.ForEachAsync(async item =>
                 {
                     var (nextStep, isProposal) = item;
                     if (!isProposal && state.ExpectedNextSteps[nextStep.Value.Previous] == nextStep.Hash)

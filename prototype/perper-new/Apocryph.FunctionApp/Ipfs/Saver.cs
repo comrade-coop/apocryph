@@ -1,7 +1,8 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 using Apocryph.FunctionApp.Model;
 ﻿using Ipfs.Http;
 using Microsoft.Azure.WebJobs;
@@ -23,7 +24,7 @@ namespace Apocryph.FunctionApp.Ipfs
         {
             var ipfs = new IpfsClient(ipfsGateway);
 
-            await objectStream.Listen(async item => {
+            await objectStream.ForEachAsync(async item => {
                 var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(item));
 
                 // FIXME: Should use DAG/IPLD API instead
