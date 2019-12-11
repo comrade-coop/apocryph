@@ -17,7 +17,7 @@ namespace Apocryph.FunctionApp.Ipfs
     public static class Output
     {
         [FunctionName("IpfsOutput")]
-        public static async Task Run([Perper(Stream = "IpfsOutput")] IPerperStreamContext context,
+        public static async Task Run([PerperTrigger("IpfsOutput")] IPerperStreamContext context,
             [Perper("ipfsGateway")] string ipfsGateway,
             [Perper("topic")] string topic,
             [Perper("dataStream")] IAsyncEnumerable<Signed<object>> dataStream) // FIXME: Change to Hashed<object>?

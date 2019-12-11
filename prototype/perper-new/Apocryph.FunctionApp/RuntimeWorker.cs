@@ -9,12 +9,14 @@ namespace Apocryph.FunctionApp
     public static class RuntimeWorker
     {
         [FunctionName("RuntimeWorker")]
-        public static void Run([Perper(Stream = "Runtime")] IPerperWorkerContext context,
-            [Perper("agentContext", State = true)] IAgentContext<object> agentContext,
+        [return: Perper]
+        public static AgentContext<object> Run([PerperTrigger("Runtime", "state")] object state,
             [Perper("sender")] string sender,
             [Perper("message")] object message)
         {
-            agentContext.AddReminder(TimeSpan.FromMinutes(5));
+            var context = new AgentContext<object>(state);
+            context.AddReminder(TimeSpan.FromMinutes(5));
+            return context;
         }
     }
 }

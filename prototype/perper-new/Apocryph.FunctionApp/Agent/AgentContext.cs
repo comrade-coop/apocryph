@@ -6,10 +6,11 @@ namespace Apocryph.FunctionApp.Agent
 {
     public class AgentContext<T> : IAgentContext<T>
     {
-        public List<ICommand> Commands { get; }
-        public AgentContext(List<ICommand> commands)
+        public List<ICommand> Commands { get; } = new List<ICommand>();
+        
+        public AgentContext(T state)
         {
-            Commands = commands;
+            State = state;
         }
         
         public T State { get; }

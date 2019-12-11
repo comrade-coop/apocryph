@@ -17,18 +17,18 @@ namespace Apocryph.FunctionApp
         }
 
         [FunctionName("Committer")]
-        public static async Task Run([Perper(Stream = "Committer")] IPerperStreamContext context,
+        public static async Task Run([PerperTrigger("Committer")] IPerperStreamContext context,
             [Perper("self")] ValidatorKey self,
             [Perper("validatorSet")] ValidatorSet validatorSet,
             [Perper("commitsStream")] IAsyncEnumerable<Signed<Commit>> commitsStream,
             [Perper("outputStream")] IAsyncCollector<(Hash, bool)> outputStream)
         {
-            var state = context.GetState<State>("state");
+            var state = context.GetState<State>();
 
             await commitsStream.ForEachAsync(async commit =>
                 {
                     state.Commits[commit.Value.For].Add(commit.Signer, commit.Signature);
-                    await context.SaveState("state", state);
+                    await context.SaveState();
 
                     var committed = state.Commits[commit.Value.For].Keys
                         .Select(signer => validatorSet.Weights[signer]).Sum();

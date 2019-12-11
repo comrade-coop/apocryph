@@ -17,19 +17,19 @@ namespace Apocryph.FunctionApp
         }
 
         [FunctionName("Voting")]
-        public static async Task Run([Perper(Stream = "Voting")] IPerperStreamContext context,
+        public static async Task Run([PerperTrigger("Voting")] IPerperStreamContext context,
             [Perper("runtimeStream")] IAsyncEnumerable<(Hashed<IAgentStep>, bool)> runtimeStream,
             [Perper("proposalsStream")] IAsyncEnumerable<Signed<IAgentStep>> proposalsStream,
             [Perper("outputStream")] IAsyncCollector<Vote> outputStream)
         {
-            var state = context.GetState<State>("state");
+            var state = context.GetState<State>();
 
             await Task.WhenAll(
                 proposalsStream.ForEachAsync(async proposal =>
                 {
                     state.ExpectedNextSteps[proposal.Value.Previous] = proposal.Hash;
 
-                    await context.SaveState("state", state);
+                    await context.SaveState();
                 }, CancellationToken.None),
 
                 runtimeStream.ForEachAsync(async item =>

@@ -17,17 +17,17 @@ namespace Apocryph.FunctionApp
         }
 
         [FunctionName("Consensus")]
-        public static async Task Run([Perper(Stream = "Consensus")] IPerperStreamContext context,
+        public static async Task Run([PerperTrigger("Consensus")] IPerperStreamContext context,
             [Perper("validatorSet")] ValidatorSet validatorSet,
             [Perper("votesStream")] IAsyncEnumerable<Signed<Vote>> votesStream,
             [Perper("outputStream")] IAsyncCollector<Commit> outputStream)
         {
-            var state = context.GetState<State>("state");
+            var state = context.GetState<State>();
 
             await votesStream.ForEachAsync(async vote =>
                 {
                     state.Votes[vote.Value.For].Add(vote.Signer, vote.Signature);
-                    await context.SaveState("state", state);
+                    await context.SaveState();
 
                     var voted = state.Votes[vote.Value.For].Keys
                         .Select(signer => validatorSet.Weights[signer]).Sum();

@@ -17,18 +17,18 @@ namespace Apocryph.FunctionApp
         }
 
         [FunctionName("Proposer")]
-        public static async Task Run([Perper(Stream = "Proposer")] IPerperStreamContext context,
+        public static async Task Run([PerperTrigger("Proposer")] IPerperStreamContext context,
             [Perper("commitsStream")] IAsyncEnumerable<Signed<Commit>> commitsStream,
             [Perper("runtimeStream")] IAsyncEnumerable<(IAgentStep, bool)> runtimeStream,
             [Perper("outputStream")] IAsyncCollector<IAgentStep> outputStream)
         {
-            var state = context.GetState<State>("state");
+            var state = context.GetState<State>();
 
             await Task.WhenAll(
                 commitsStream.ForEachAsync(async commit =>
                 {
                     state.Commits[commit.Value.For].Add(commit.Signer, commit.Signature);
-                    await context.SaveState("state", state);
+                    await context.SaveState();
                 }, CancellationToken.None),
 
                 runtimeStream.ForEachAsync(async item =>

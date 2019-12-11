@@ -19,13 +19,13 @@ namespace Apocryph.FunctionApp
         }
 
         [FunctionName("Validator")]
-        public static async Task Run([Perper(Stream = "Validator")] IPerperStreamContext context,
+        public static async Task Run([PerperTrigger("Validator")] IPerperStreamContext context,
             [Perper("validatorSet")] ValidatorSet validatorSet,
             [Perper("commitsStream")] IAsyncEnumerable<Signed<Commit>> commitsStream,
             [Perper("proposalsStream")] IAsyncEnumerable<Signed<IAgentStep>> proposalsStream,
             [Perper("outputStream")] IAsyncCollector<Hash> outputStream)
         {
-            var state = context.GetState<State>("state");
+            var state = context.GetState<State>();
 
             await Task.WhenAll(
                 commitsStream.ForEachAsync(async commit =>
@@ -42,7 +42,7 @@ namespace Apocryph.FunctionApp
                         state.CurrentStep = commit.Value.For; // TODO: Commit in order
                     }
 
-                    await context.SaveState("state", state);
+                    await context.SaveState();
                 }, CancellationToken.None),
 
                 proposalsStream.ForEachAsync(async proposal =>

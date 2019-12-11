@@ -14,7 +14,7 @@ namespace Apocryph.FunctionApp
     public static class Runtime
     {
         [FunctionName("Runtime")]
-        public static async Task Run([Perper(Stream = "Runtime")] IPerperStreamContext context,
+        public static async Task Run([PerperTrigger("Runtime")] IPerperStreamContext context,
             [Perper("validatorStream")] IAsyncEnumerable<Hashed<IAgentStep>> validatorStream,
             [Perper("committerStream")] IAsyncEnumerable<(Hashed<IAgentStep>, bool)> committerStream,
             [Perper("outputStream")] IAsyncCollector<(IAgentStep, bool)> outputStream)
@@ -25,18 +25,21 @@ namespace Apocryph.FunctionApp
                     switch (step.Value)
                     {
                         case AgentOutput output:
-                            //
+                            // ..
                             break;
                         case AgentInput input:
-                            var result = new List<ICommand>();
-                            var agentContext = new AgentContext<object>(result);
-                            //Call agent
+                            var agentContext = await context.CallWorkerFunction<AgentContext<object>>(new
+                            {
+                                state = input.State,
+                                sender = input.Sender,
+                                message = input.Message
+                            });
                             await outputStream.AddAsync((
                                 new AgentOutput
                                 {
                                     Previous = step.Hash,
                                     State = agentContext.State,
-                                    Commands = result,
+                                    Commands = agentContext.Commands
                                 },
                                 false));
                             break;
@@ -75,7 +78,7 @@ namespace Apocryph.FunctionApp
                             {
                                 var agentContext = await context.CallWorkerFunction<AgentContext<object>>(new
                                 {
-                                    context = new AgentContext<object>(new List<ICommand>()),
+                                    state = input.State,
                                     sender = input.Sender,
                                     message = input.Message
                                 });
@@ -85,7 +88,7 @@ namespace Apocryph.FunctionApp
                                     {
                                         Previous = step.Hash,
                                         State = agentContext.State,
-                                        Commands = agentContext.Commands,
+                                        Commands = agentContext.Commands
                                     },
                                     true));
                             }

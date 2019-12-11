@@ -17,7 +17,7 @@ namespace Apocryph.FunctionApp.Ipfs
     public static class Saver
     {
         [FunctionName("IpfsSaver")]
-        public static async Task Run([Perper(Stream = "IpfsOutput")] IPerperStreamContext context,
+        public static async Task Run([PerperTrigger("IpfsOutput")] IPerperStreamContext context,
             [Perper("ipfsGateway")] string ipfsGateway,
             [Perper("dataStream")] IAsyncEnumerable<object> dataStream,
             [Perper("outputStream")] IAsyncCollector<Hashed<object>> outputStream)
