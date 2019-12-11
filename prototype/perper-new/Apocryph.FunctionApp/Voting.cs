@@ -17,8 +17,8 @@ namespace Apocryph.FunctionApp
 
         [FunctionName("Voting")]
         public static async Task Run([Perper(Stream = "Voting")] IPerperStreamContext context,
-            [Perper("runtimeStream")] IAsyncEnumerable<(IAgentStep, bool)> runtimeStream,
-            [Perper("proposalsStream")] IAsyncEnumerable<IAgentStep> proposalsStream,
+            [Perper("runtimeStream")] IAsyncEnumerable<(Hashed<IAgentStep>, bool)> runtimeStream,
+            [Perper("proposalsStream")] IAsyncEnumerable<Signed<IAgentStep>> proposalsStream,
             [Perper("outputStream")] IAsyncCollector<object> outputStream)
         {
             var state = context.GetState<State>("state");
@@ -26,7 +26,7 @@ namespace Apocryph.FunctionApp
             await Task.WhenAll(
                 proposalsStream.Listen(async proposal =>
                 {
-                    state.ExpectedNextSteps[proposal.PreviousHash] = proposal.Hash;
+                    state.ExpectedNextSteps[proposal.Value.Previous] = proposal.Hash;
 
                     await context.SaveState("state", state);
                 }, CancellationToken.None),
@@ -34,9 +34,9 @@ namespace Apocryph.FunctionApp
                 runtimeStream.Listen(async item =>
                 {
                     var (nextStep, isProposal) = item;
-                    if (!isProposal && state.ExpectedNextSteps[nextStep.PreviousHash] == nextStep.Hash)
+                    if (!isProposal && state.ExpectedNextSteps[nextStep.Value.Previous] == nextStep.Hash)
                     {
-                        await outputStream.AddAsync(new Vote { ForHash = nextStep.Hash });
+                        await outputStream.AddAsync(new Vote { For = nextStep.Hash });
                     }
                 }, CancellationToken.None));
         }

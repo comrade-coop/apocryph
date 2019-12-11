@@ -16,13 +16,14 @@ namespace Apocryph.FunctionApp.Ipfs
         public static async Task Run([Perper(Stream="IpfsInput")] IPerperStreamContext context,
             [Perper("ipfsGateway")] string ipfsGateway,
             [Perper("topic")] string topic,
-            [Perper("outputStream")] IAsyncCollector<ISigned> outputStream)
+            [Perper("outputStream")] IAsyncCollector<Signed<object>> outputStream)
         {
             var ipfs = new IpfsClient(ipfsGateway);
 
             await ipfs.PubSub.SubscribeAsync(topic, async message => {
                 var bytes = message.DataBytes;
-                var item = JsonConvert.DeserializeObject<ISigned>(Encoding.UTF8.GetString(bytes));
+                // FIXME: Do not blindly trust that Hash and Value match and that Signature, Hash, and Signer match
+                var item = JsonConvert.DeserializeObject<Signed<object>>(Encoding.UTF8.GetString(bytes));
                 await outputStream.AddAsync(item);
             }, CancellationToken.None);
         }

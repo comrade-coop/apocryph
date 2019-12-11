@@ -14,14 +14,14 @@ namespace Apocryph.FunctionApp
     {
         [FunctionName("Runtime")]
         public static async Task Run([Perper(Stream = "Runtime")] IPerperStreamContext context,
-            [Perper("validatorStream")] IAsyncEnumerable<IAgentStep> validatorStream,
-            [Perper("committerStream")] IAsyncEnumerable<(IAgentStep, bool)> committerStream,
+            [Perper("validatorStream")] IAsyncEnumerable<Hashed<IAgentStep>> validatorStream,
+            [Perper("committerStream")] IAsyncEnumerable<(Hashed<IAgentStep>, bool)> committerStream,
             [Perper("outputStream")] IAsyncCollector<(IAgentStep, bool)> outputStream)
         {
             await Task.WhenAll(
                 validatorStream.Listen(async step =>
                 {
-                    switch (step)
+                    switch (step.Value)
                     {
                         case AgentOutput output:
                             //
@@ -33,7 +33,7 @@ namespace Apocryph.FunctionApp
                             await outputStream.AddAsync((
                                 new AgentOutput
                                 {
-                                    PreviousHash = input.Hash,
+                                    Previous = step.Hash,
                                     State = agentContext.State,
                                     Commands = result,
                                 },
@@ -45,7 +45,7 @@ namespace Apocryph.FunctionApp
                 committerStream.Listen(async commit =>
                 {
                     var (step, isProposer) = commit;
-                    switch (step)
+                    switch (step.Value)
                     {
                         case AgentOutput output:
                             foreach (var command in output.Commands)
@@ -61,7 +61,7 @@ namespace Apocryph.FunctionApp
                                 await outputStream.AddAsync((
                                     new AgentInput
                                     {
-                                        PreviousHash = output.Hash,
+                                        Previous = step.Hash,
                                         State = output.State,
                                         Message = null, // ..
                                         Sender = null, // ..
@@ -78,11 +78,11 @@ namespace Apocryph.FunctionApp
                                     sender = input.Sender,
                                     message = input.Message
                                 });
-                                
+
                                 await outputStream.AddAsync((
                                     new AgentOutput
                                     {
-                                        PreviousHash = input.Hash,
+                                        Previous = step.Hash,
                                         State = agentContext.State,
                                         Commands = agentContext.Commands,
                                     },

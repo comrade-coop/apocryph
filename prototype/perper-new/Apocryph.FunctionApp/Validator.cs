@@ -21,8 +21,8 @@ namespace Apocryph.FunctionApp
         [FunctionName("Validator")]
         public static async Task Run([Perper(Stream = "Validator")] IPerperStreamContext context,
             [Perper("validatorSet")] ValidatorSet validatorSet,
-            [Perper("commitsStream")] IAsyncEnumerable<Commit> commitsStream,
-            [Perper("proposalsStream")] IAsyncEnumerable<IAgentStep> proposalsStream,
+            [Perper("commitsStream")] IAsyncEnumerable<Signed<Commit>> commitsStream,
+            [Perper("proposalsStream")] IAsyncEnumerable<Signed<IAgentStep>> proposalsStream,
             [Perper("outputStream")] IAsyncCollector<Hash> outputStream)
         {
             var state = context.GetState<State>("state");
@@ -30,16 +30,16 @@ namespace Apocryph.FunctionApp
             await Task.WhenAll(
                 commitsStream.Listen(async commit =>
                 {
-                    state.Commits[commit.ForHash].Add(commit.Signer);
+                    state.Commits[commit.Value.For].Add(commit.Signer);
 
-                    var committed = state.Commits[commit.ForHash]
+                    var committed = state.Commits[commit.Value.For]
                         .Select(signer => validatorSet.Weights[signer]).Sum();
 
                     if (3 * committed > 2 * validatorSet.Total)
                     {
                         validatorSet.AccumulateWeights();
                         state.Proposer = validatorSet.PopMaxAccumulatedWeight();
-                        state.CurrentStep = commit.ForHash; // TODO: Commit in order
+                        state.CurrentStep = commit.Value.For; // TODO: Commit in order
                     }
 
                     await context.SaveState("state", state);
@@ -47,9 +47,9 @@ namespace Apocryph.FunctionApp
 
                 proposalsStream.Listen(async proposal =>
                 {
-                    if (state.Proposer.Equals(proposal.Signer) && state.CurrentStep == proposal.PreviousHash)
+                    if (state.Proposer.Equals(proposal.Signer) && state.CurrentStep == proposal.Value.Previous)
                     {
-                        await outputStream.AddAsync(proposal.PreviousHash);
+                        await outputStream.AddAsync(proposal.Value.Previous);
                     }
                 }, CancellationToken.None));
         }

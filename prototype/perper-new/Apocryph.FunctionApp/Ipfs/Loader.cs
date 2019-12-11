@@ -20,7 +20,7 @@ namespace Apocryph.FunctionApp.Ipfs
         public static async Task Run([Perper(Stream = "IpfsOutput")] IPerperStreamContext context,
             [Perper("ipfsGateway")] string ipfsGateway,
             [Perper("hashStream")] IAsyncEnumerable<Hash> hashStream,
-            [Perper("outputStream")] IAsyncCollector<IHashed> outputStream)
+            [Perper("outputStream")] IAsyncCollector<Hashed<object>> outputStream)
         {
             var ipfs = new IpfsClient(ipfsGateway);
 
@@ -30,10 +30,9 @@ namespace Apocryph.FunctionApp.Ipfs
                 // FIXME: Should use DAG/IPLD API instead
                 var block = await ipfs.Block.GetAsync(Cid.Read(hash.Bytes), CancellationToken.None);
 
-                var item = JsonConvert.DeserializeObject<IHashed>(Encoding.UTF8.GetString(block.DataBytes));
-                item.Hash = hash;
+                var item = JsonConvert.DeserializeObject(Encoding.UTF8.GetString(block.DataBytes));
 
-                await outputStream.AddAsync(item);
+                await outputStream.AddAsync(new Hashed<object>(item, hash));
             }, CancellationToken.None);
         }
     }

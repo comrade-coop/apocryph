@@ -2,9 +2,10 @@ using System.Collections.Generic;
 
 namespace Apocryph.FunctionApp.Model
 {
-    public interface IAgentStep : ISigned, IHashed
+    public interface IAgentStep
     {
-        Hash PreviousHash { get; set; }
+        Hash Previous { get; set; }
+
         Dictionary<ValidatorKey, ValidatorSignature> CommitSignatures { get; set; }
     }
 }

@@ -18,8 +18,8 @@ namespace Apocryph.FunctionApp.Ipfs
         [FunctionName("IpfsSaver")]
         public static async Task Run([Perper(Stream = "IpfsOutput")] IPerperStreamContext context,
             [Perper("ipfsGateway")] string ipfsGateway,
-            [Perper("objectStream")] IAsyncEnumerable<IHashed> objectStream,
-            [Perper("outputStream")] IAsyncCollector<IHashed> outputStream)
+            [Perper("objectStream")] IAsyncEnumerable<object> objectStream,
+            [Perper("outputStream")] IAsyncCollector<Hashed<object>> outputStream)
         {
             var ipfs = new IpfsClient(ipfsGateway);
 
@@ -29,9 +29,9 @@ namespace Apocryph.FunctionApp.Ipfs
                 // FIXME: Should use DAG/IPLD API instead
                 var cid = await ipfs.Block.PutAsync(bytes, cancel: CancellationToken.None);
 
-                item.Hash = new Hash {Bytes = cid.ToArray()};
+                var hash = new Hash {Bytes = cid.ToArray()};
 
-                await outputStream.AddAsync(item);
+                await outputStream.AddAsync(new Hashed<object>(item, hash));
             }, CancellationToken.None);
         }
     }

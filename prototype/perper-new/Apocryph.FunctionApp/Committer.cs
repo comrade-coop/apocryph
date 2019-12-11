@@ -20,7 +20,7 @@ namespace Apocryph.FunctionApp
         public static async Task Run([Perper(Stream = "Committer")] IPerperStreamContext context,
             [Perper("self")] ValidatorKey self,
             [Perper("validatorSet")] ValidatorSet validatorSet,
-            [Perper("commitsStream")] IAsyncEnumerable<Commit> commitsStream,
+            [Perper("commitsStream")] IAsyncEnumerable<Signed<Commit>> commitsStream,
             [Perper("outputStream")] IAsyncCollector<(Hash, bool)> outputStream)
         {
             var state = context.GetState<State>("state");
@@ -28,10 +28,10 @@ namespace Apocryph.FunctionApp
             await commitsStream.Listen(
                 async commit =>
                 {
-                    state.Commits[commit.ForHash].Add(commit.Signer, commit.Signature);
+                    state.Commits[commit.Value.For].Add(commit.Signer, commit.Signature);
                     await context.SaveState("state", state);
 
-                    var committed = state.Commits[commit.ForHash].Keys
+                    var committed = state.Commits[commit.Value.For].Keys
                         .Select(signer => validatorSet.Weights[signer]).Sum();
                     if (3 * committed > 2 * validatorSet.Total)
                     {
@@ -39,7 +39,7 @@ namespace Apocryph.FunctionApp
                         var proposer = validatorSet.PopMaxAccumulatedWeight();
                         var isProposer = proposer.Equals(self);
 
-                        await outputStream.AddAsync((commit.ForHash, isProposer));
+                        await outputStream.AddAsync((commit.Value.For, isProposer));
                     }
                 },
                 CancellationToken.None);

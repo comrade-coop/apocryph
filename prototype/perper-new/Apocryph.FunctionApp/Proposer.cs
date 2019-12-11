@@ -17,7 +17,7 @@ namespace Apocryph.FunctionApp
 
         [FunctionName("Proposer")]
         public static async Task Run([Perper(Stream = "Proposer")] IPerperStreamContext context,
-            [Perper("commitsStream")] IAsyncEnumerable<Commit> commitsStream,
+            [Perper("commitsStream")] IAsyncEnumerable<Signed<Commit>> commitsStream,
             [Perper("runtimeStream")] IAsyncEnumerable<(IAgentStep, bool)> runtimeStream,
             [Perper("outputStream")] IAsyncCollector<IAgentStep> outputStream)
         {
@@ -26,7 +26,7 @@ namespace Apocryph.FunctionApp
             await Task.WhenAll(
                 commitsStream.Listen(async commit =>
                 {
-                    state.Commits[commit.ForHash].Add(commit.Signer, commit.Signature);
+                    state.Commits[commit.Value.For].Add(commit.Signer, commit.Signature);
                     await context.SaveState("state", state);
                 }, CancellationToken.None),
 
@@ -35,8 +35,8 @@ namespace Apocryph.FunctionApp
                     var (step, isProposal) = item;
                     if (isProposal)
                     {
-                        // FIXME: Should probably wait to accumulate enough signatures (as we cannot be sure that the other stream would collect them in time)
-                        step.CommitSignatures = state.Commits[step.PreviousHash];
+                        // FIXME: Should probably block until there are enough signatures (as we cannot be sure that the other stream would collect them in time)
+                        step.CommitSignatures = state.Commits[step.Previous];
 
                         await outputStream.AddAsync(step);
                     }
