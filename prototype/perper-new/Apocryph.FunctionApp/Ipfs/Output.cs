@@ -26,6 +26,7 @@ namespace Apocryph.FunctionApp.Ipfs
 
             await dataStream.ForEachAsync(async item => {
                 var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(item));
+
                 await ipfs.PubSub.PublishAsync(topic, bytes, CancellationToken.None);
             }, CancellationToken.None);
         }

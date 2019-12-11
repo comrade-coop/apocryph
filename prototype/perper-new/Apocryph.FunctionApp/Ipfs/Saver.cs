@@ -19,12 +19,12 @@ namespace Apocryph.FunctionApp.Ipfs
         [FunctionName("IpfsSaver")]
         public static async Task Run([Perper(Stream = "IpfsOutput")] IPerperStreamContext context,
             [Perper("ipfsGateway")] string ipfsGateway,
-            [Perper("objectStream")] IAsyncEnumerable<object> objectStream,
+            [Perper("dataStream")] IAsyncEnumerable<object> dataStream,
             [Perper("outputStream")] IAsyncCollector<Hashed<object>> outputStream)
         {
             var ipfs = new IpfsClient(ipfsGateway);
 
-            await objectStream.ForEachAsync(async item => {
+            await dataStream.ForEachAsync(async item => {
                 var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(item));
 
                 // FIXME: Should use DAG/IPLD API instead

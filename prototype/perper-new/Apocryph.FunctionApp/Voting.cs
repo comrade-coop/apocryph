@@ -20,7 +20,7 @@ namespace Apocryph.FunctionApp
         public static async Task Run([Perper(Stream = "Voting")] IPerperStreamContext context,
             [Perper("runtimeStream")] IAsyncEnumerable<(Hashed<IAgentStep>, bool)> runtimeStream,
             [Perper("proposalsStream")] IAsyncEnumerable<Signed<IAgentStep>> proposalsStream,
-            [Perper("outputStream")] IAsyncCollector<object> outputStream)
+            [Perper("outputStream")] IAsyncCollector<Vote> outputStream)
         {
             var state = context.GetState<State>("state");
 
