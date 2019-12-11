@@ -6,11 +6,10 @@ namespace Apocryph.FunctionApp.Agent
 {
     public class AgentContext<T> : IAgentContext<T>
     {
-        private readonly IList<ICommand> _commands;
-
-        public AgentContext(IList<ICommand> commands)
+        public List<ICommand> Commands { get; }
+        public AgentContext(List<ICommand> commands)
         {
-            _commands = commands;
+            Commands = commands;
         }
         
         public T State { get; }
@@ -22,12 +21,12 @@ namespace Apocryph.FunctionApp.Agent
 
         public void SendMessage(string target, object message)
         {
-            _commands.Add(new SendMessageCommand { Target = target, Message = message});
+            Commands.Add(new SendMessageCommand { Target = target, Message = message});
         }
 
         public void AddReminder(TimeSpan time)
         {
-            _commands.Add(new ReminderCommand{Time = time});
+            Commands.Add(new ReminderCommand{Time = time});
         }
 
         public void MakePublication(object payload)

@@ -72,15 +72,19 @@ namespace Apocryph.FunctionApp
                         case AgentInput input:
                             if (isProposer)
                             {
-                                var result = new List<ICommand>();
-                                var agentContext = new AgentContext<object>(result);
-                                //Call agent
+                                var agentContext = await context.CallWorkerFunction<AgentContext<object>>(new
+                                {
+                                    context = new AgentContext<object>(new List<ICommand>()),
+                                    sender = input.Sender,
+                                    message = input.Message
+                                });
+                                
                                 await outputStream.AddAsync((
                                     new AgentOutput
                                     {
                                         PreviousHash = input.Hash,
                                         State = agentContext.State,
-                                        Commands = result,
+                                        Commands = agentContext.Commands,
                                     },
                                     true));
                             }
