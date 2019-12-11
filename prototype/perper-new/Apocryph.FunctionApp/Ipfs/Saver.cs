@@ -13,19 +13,25 @@ using Perper.WebJobs.Extensions.Triggers;
 
 namespace Apocryph.FunctionApp.Ipfs
 {
-    public static class Output
+    public static class Saver
     {
-        [FunctionName("IpfsOutput")]
+        [FunctionName("IpfsSaver")]
         public static async Task Run([Perper(Stream = "IpfsOutput")] IPerperStreamContext context,
             [Perper("ipfsGateway")] string ipfsGateway,
-            [Perper("topic")] string topic,
-            [Perper("dataStream")] IAsyncEnumerable<ISigned> dataStream)
+            [Perper("objectStream")] IAsyncEnumerable<IHashed> objectStream,
+            [Perper("outputStream")] IAsyncCollector<IHashed> outputStream)
         {
             var ipfs = new IpfsClient(ipfsGateway);
 
-            await dataStream.Listen(async item => {
+            await objectStream.Listen(async item => {
                 var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(item));
-                await ipfs.PubSub.PublishAsync(topic, bytes, CancellationToken.None);
+
+                // FIXME: Should use DAG/IPLD API instead
+                var cid = await ipfs.Block.PutAsync(bytes, cancel: CancellationToken.None);
+
+                item.Hash = new Hash {Bytes = cid.ToArray()};
+
+                await outputStream.AddAsync(item);
             }, CancellationToken.None);
         }
     }

@@ -2,9 +2,9 @@ using System.Collections.Generic;
 
 namespace Apocryph.FunctionApp.Model
 {
-    public interface IAgentStep : ISigned
+    public interface IAgentStep : ISigned, IHashed
     {
-        IAgentStep Previous { get; set; } // FIXME: Should be hash stored on IPFS
+        Hash PreviousHash { get; set; }
         Dictionary<ValidatorKey, ValidatorSignature> CommitSignatures { get; set; }
     }
 }

@@ -12,7 +12,7 @@ namespace Apocryph.FunctionApp
     {
         private class State
         {
-            public Dictionary<IAgentStep, Dictionary<ValidatorKey, ValidatorSignature>> Commits { get; set; }
+            public Dictionary<Hash, Dictionary<ValidatorKey, ValidatorSignature>> Commits { get; set; }
         }
 
         [FunctionName("Proposer")]
@@ -26,7 +26,7 @@ namespace Apocryph.FunctionApp
             await Task.WhenAll(
                 commitsStream.Listen(async commit =>
                 {
-                    state.Commits[commit.For].Add(commit.Signer, commit.Signature);
+                    state.Commits[commit.ForHash].Add(commit.Signer, commit.Signature);
                     await context.SaveState("state", state);
                 }, CancellationToken.None),
 
@@ -36,7 +36,7 @@ namespace Apocryph.FunctionApp
                     if (isProposal)
                     {
                         // FIXME: Should probably wait to accumulate enough signatures (as we cannot be sure that the other stream would collect them in time)
-                        step.CommitSignatures = state.Commits[step.Previous];
+                        step.CommitSignatures = state.Commits[step.PreviousHash];
 
                         await outputStream.AddAsync(step);
                     }

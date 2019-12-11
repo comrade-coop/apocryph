@@ -16,14 +16,14 @@ namespace Apocryph.FunctionApp.Ipfs
         public static async Task Run([Perper(Stream="IpfsInput")] IPerperStreamContext context,
             [Perper("ipfsGateway")] string ipfsGateway,
             [Perper("topic")] string topic,
-            [Perper("output")] IAsyncCollector<ISigned> output)
+            [Perper("outputStream")] IAsyncCollector<ISigned> outputStream)
         {
             var ipfs = new IpfsClient(ipfsGateway);
 
             await ipfs.PubSub.SubscribeAsync(topic, async message => {
                 var bytes = message.DataBytes;
                 var item = JsonConvert.DeserializeObject<ISigned>(Encoding.UTF8.GetString(bytes));
-                await output.AddAsync(item);
+                await outputStream.AddAsync(item);
             }, CancellationToken.None);
         }
     }

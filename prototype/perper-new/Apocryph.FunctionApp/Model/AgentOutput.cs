@@ -5,10 +5,12 @@ namespace Apocryph.FunctionApp.Model
 {
     public class AgentOutput : IAgentStep
     {
+        public Hash Hash { get; set; }
+
         public object State { get; set; }
         public List<ICommand> Commands { get; set; }
 
-        public IAgentStep Previous { get; set; }
+        public Hash PreviousHash { get; set; }
         public Dictionary<ValidatorKey, ValidatorSignature> CommitSignatures { get; set; }
 
         public ValidatorKey Signer { get; set; }

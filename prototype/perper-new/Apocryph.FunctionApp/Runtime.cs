@@ -33,7 +33,7 @@ namespace Apocryph.FunctionApp
                             await outputStream.AddAsync((
                                 new AgentOutput
                                 {
-                                    Previous = input,
+                                    PreviousHash = input.Hash,
                                     State = agentContext.State,
                                     Commands = result,
                                 },
@@ -61,7 +61,7 @@ namespace Apocryph.FunctionApp
                                 await outputStream.AddAsync((
                                     new AgentInput
                                     {
-                                        Previous = output,
+                                        PreviousHash = output.Hash,
                                         State = output.State,
                                         Message = null, // ..
                                         Sender = null, // ..
@@ -78,7 +78,7 @@ namespace Apocryph.FunctionApp
                                 await outputStream.AddAsync((
                                     new AgentOutput
                                     {
-                                        Previous = input,
+                                        PreviousHash = input.Hash,
                                         State = agentContext.State,
                                         Commands = result,
                                     },

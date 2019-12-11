@@ -14,8 +14,8 @@ namespace Apocryph.FunctionApp
         private class State
         {
             public ValidatorKey Proposer { get; set; }
-            public IAgentStep CurrentStep { get; set; }
-            public Dictionary<IAgentStep, HashSet<ValidatorKey>> Commits { get; set; }
+            public Hash CurrentStep { get; set; }
+            public Dictionary<Hash, HashSet<ValidatorKey>> Commits { get; set; }
         }
 
         [FunctionName("Validator")]
@@ -23,23 +23,23 @@ namespace Apocryph.FunctionApp
             [Perper("validatorSet")] ValidatorSet validatorSet,
             [Perper("commitsStream")] IAsyncEnumerable<Commit> commitsStream,
             [Perper("proposalsStream")] IAsyncEnumerable<IAgentStep> proposalsStream,
-            [Perper("outputStream")] IAsyncCollector<IAgentStep> outputStream)
+            [Perper("outputStream")] IAsyncCollector<Hash> outputStream)
         {
             var state = context.GetState<State>("state");
 
             await Task.WhenAll(
                 commitsStream.Listen(async commit =>
                 {
-                    state.Commits[commit.For].Add(commit.Signer);
+                    state.Commits[commit.ForHash].Add(commit.Signer);
 
-                    var committed = state.Commits[commit.For]
+                    var committed = state.Commits[commit.ForHash]
                         .Select(signer => validatorSet.Weights[signer]).Sum();
 
                     if (3 * committed > 2 * validatorSet.Total)
                     {
                         validatorSet.AccumulateWeights();
                         state.Proposer = validatorSet.PopMaxAccumulatedWeight();
-                        state.CurrentStep = commit.For; // TODO: Commit in order
+                        state.CurrentStep = commit.ForHash; // TODO: Commit in order
                     }
 
                     await context.SaveState("state", state);
@@ -47,9 +47,9 @@ namespace Apocryph.FunctionApp
 
                 proposalsStream.Listen(async proposal =>
                 {
-                    if (state.Proposer.Equals(proposal.Signer) && state.CurrentStep == proposal.Previous)
+                    if (state.Proposer.Equals(proposal.Signer) && state.CurrentStep == proposal.PreviousHash)
                     {
-                        await outputStream.AddAsync(proposal.Previous);
+                        await outputStream.AddAsync(proposal.PreviousHash);
                     }
                 }, CancellationToken.None));
         }

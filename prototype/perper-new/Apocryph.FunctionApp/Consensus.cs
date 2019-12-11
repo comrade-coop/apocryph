@@ -13,7 +13,7 @@ namespace Apocryph.FunctionApp
     {
         private class State
         {
-            public Dictionary<IAgentStep, Dictionary<ValidatorKey, ValidatorSignature>> Votes { get; set; }
+            public Dictionary<Hash, Dictionary<ValidatorKey, ValidatorSignature>> Votes { get; set; }
         }
 
         [FunctionName("Consensus")]
@@ -27,14 +27,14 @@ namespace Apocryph.FunctionApp
             await votesStream.Listen(
                 async vote =>
                 {
-                    state.Votes[vote.For].Add(vote.Signer, vote.Signature);
+                    state.Votes[vote.ForHash].Add(vote.Signer, vote.Signature);
                     await context.SaveState("state", state);
 
-                    var voted = state.Votes[vote.For].Keys
+                    var voted = state.Votes[vote.ForHash].Keys
                         .Select(signer => validatorSet.Weights[signer]).Sum();
                     if (3 * voted > 2 * validatorSet.Total)
                     {
-                        await outputStream.AddAsync(new Commit {For = vote.For});
+                        await outputStream.AddAsync(new Commit {ForHash = vote.ForHash});
                     }
                 },
                 CancellationToken.None);

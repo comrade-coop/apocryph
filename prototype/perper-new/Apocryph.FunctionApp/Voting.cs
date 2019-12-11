@@ -10,25 +10,33 @@ namespace Apocryph.FunctionApp
 {
     public static class Voting
     {
+        private class State
+        {
+            public Dictionary<Hash, Hash> ExpectedNextSteps { get; set; }
+        }
+
         [FunctionName("Voting")]
         public static async Task Run([Perper(Stream = "Voting")] IPerperStreamContext context,
             [Perper("runtimeStream")] IAsyncEnumerable<(IAgentStep, bool)> runtimeStream,
             [Perper("proposalsStream")] IAsyncEnumerable<IAgentStep> proposalsStream,
             [Perper("outputStream")] IAsyncCollector<object> outputStream)
         {
-            var expectedNextSteps = new Dictionary<IAgentStep, IAgentStep>();
+            var state = context.GetState<State>("state");
+
             await Task.WhenAll(
-                proposalsStream.Listen(proposal =>
+                proposalsStream.Listen(async proposal =>
                 {
-                    expectedNextSteps[proposal.Previous] = proposal;
+                    state.ExpectedNextSteps[proposal.PreviousHash] = proposal.Hash;
+
+                    await context.SaveState("state", state);
                 }, CancellationToken.None),
 
                 runtimeStream.Listen(async item =>
                 {
                     var (nextStep, isProposal) = item;
-                    if (!isProposal && expectedNextSteps[nextStep.Previous] == nextStep)
+                    if (!isProposal && state.ExpectedNextSteps[nextStep.PreviousHash] == nextStep.Hash)
                     {
-                        await outputStream.AddAsync(new Vote { For = nextStep });
+                        await outputStream.AddAsync(new Vote { ForHash = nextStep.Hash });
                     }
                 }, CancellationToken.None));
         }

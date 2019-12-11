@@ -4,11 +4,13 @@ namespace Apocryph.FunctionApp.Model
 {
     public class AgentInput : IAgentStep
     {
+        public Hash Hash { get; set; }
+
         public object State { get; set; }
         public string Sender { get; set; }
         public object Message { get; set; }
 
-        public IAgentStep Previous { get; set; }
+        public Hash PreviousHash { get; set; }
         public Dictionary<ValidatorKey, ValidatorSignature> CommitSignatures { get; set; }
 
         public ValidatorKey Signer { get; set; }
