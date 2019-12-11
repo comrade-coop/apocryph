@@ -4,9 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.FunctionApp.Model;
 using Microsoft.Azure.WebJobs;
-using Perper.WebJobs.Extensions.Bindings;
+using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
-using Perper.WebJobs.Extensions.Triggers;
 
 namespace Apocryph.FunctionApp
 {
@@ -18,18 +17,18 @@ namespace Apocryph.FunctionApp
         }
 
         [FunctionName("Consensus")]
-        public static async Task Run([PerperStreamTrigger] IPerperStreamContext context,
-            [PerperStream("validatorSet")] ValidatorSet validatorSet,
-            [PerperStream("votesStream")] IAsyncEnumerable<Vote> votesStream,
-            [PerperStream] IAsyncCollector<Commit> outputStream)
+        public static async Task Run([Perper(Stream = "Consensus")] IPerperStreamContext context,
+            [Perper("validatorSet")] ValidatorSet validatorSet,
+            [Perper("votesStream")] IAsyncEnumerable<Vote> votesStream,
+            [Perper("outputStream")] IAsyncCollector<Commit> outputStream)
         {
-            var state = await context.GetState<State>("state");
+            var state = context.GetState<State>("state");
 
             await votesStream.Listen(
                 async vote =>
                 {
                     state.Votes[vote.For].Add(vote.Signer, vote.Signature);
-                    await context.SetState("state", state);
+                    await context.SaveState("state", state);
 
                     var voted = state.Votes[vote.For].Keys
                         .Select(signer => validatorSet.Weights[signer]).Sum();

@@ -3,19 +3,18 @@ using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.FunctionApp.Model;
 using Microsoft.Azure.WebJobs;
-using Perper.WebJobs.Extensions.Bindings;
+using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
-using Perper.WebJobs.Extensions.Triggers;
 
 namespace Apocryph.FunctionApp
 {
     public static class Voting
     {
         [FunctionName("Voting")]
-        public static async Task Run([PerperStreamTrigger] IPerperStreamContext context,
-            [PerperStream("runtimeStream")] IAsyncEnumerable<(IAgentStep, bool)> runtimeStream,
-            [PerperStream("proposalsStream")] IAsyncEnumerable<IAgentStep> proposalsStream,
-            [PerperStream] IAsyncCollector<object> outputStream)
+        public static async Task Run([Perper(Stream = "Voting")] IPerperStreamContext context,
+            [Perper("runtimeStream")] IAsyncEnumerable<(IAgentStep, bool)> runtimeStream,
+            [Perper("proposalsStream")] IAsyncEnumerable<IAgentStep> proposalsStream,
+            [Perper("outputStream")] IAsyncCollector<object> outputStream)
         {
             var expectedNextSteps = new Dictionary<IAgentStep, IAgentStep>();
             await Task.WhenAll(

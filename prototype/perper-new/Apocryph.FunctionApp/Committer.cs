@@ -4,9 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.FunctionApp.Model;
 using Microsoft.Azure.WebJobs;
-using Perper.WebJobs.Extensions.Bindings;
+using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
-using Perper.WebJobs.Extensions.Triggers;
 
 namespace Apocryph.FunctionApp
 {
@@ -18,19 +17,19 @@ namespace Apocryph.FunctionApp
         }
 
         [FunctionName("Committer")]
-        public static async Task Run([PerperStreamTrigger] IPerperStreamContext context,
-            [PerperStream("self")] ValidatorKey self,
-            [PerperStream("validatorSet")] ValidatorSet validatorSet,
-            [PerperStream("commitsStream")] IAsyncEnumerable<Commit> commitsStream,
-            [PerperStream] IAsyncCollector<(IAgentStep, bool)> outputStream)
+        public static async Task Run([Perper(Stream = "Committer")] IPerperStreamContext context,
+            [Perper("self")] ValidatorKey self,
+            [Perper("validatorSet")] ValidatorSet validatorSet,
+            [Perper("commitsStream")] IAsyncEnumerable<Commit> commitsStream,
+            [Perper("outputStream")] IAsyncCollector<(IAgentStep, bool)> outputStream)
         {
-            var state = await context.GetState<State>("state");
+            var state = context.GetState<State>("state");
 
             await commitsStream.Listen(
                 async commit =>
                 {
                     state.Commits[commit.For].Add(commit.Signer, commit.Signature);
-                    await context.SetState("state", state);
+                    await context.SaveState("state", state);
 
                     var committed = state.Commits[commit.For].Keys
                         .Select(signer => validatorSet.Weights[signer]).Sum();

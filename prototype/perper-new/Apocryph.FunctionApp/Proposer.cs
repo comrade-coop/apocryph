@@ -3,9 +3,8 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using Apocryph.FunctionApp.Model;
 using Microsoft.Azure.WebJobs;
-using Perper.WebJobs.Extensions.Bindings;
+using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
-using Perper.WebJobs.Extensions.Triggers;
 
 namespace Apocryph.FunctionApp
 {
@@ -17,18 +16,18 @@ namespace Apocryph.FunctionApp
         }
 
         [FunctionName("Proposer")]
-        public static async Task Run([PerperStreamTrigger] IPerperStreamContext context,
-            [PerperStream("commitsStream")] IAsyncEnumerable<Commit> commitsStream,
-            [PerperStream("runtimeStream")] IAsyncEnumerable<(IAgentStep, bool)> runtimeStream,
-            [PerperStream] IAsyncCollector<IAgentStep> outputStream)
+        public static async Task Run([Perper(Stream = "Proposer")] IPerperStreamContext context,
+            [Perper("commitsStream")] IAsyncEnumerable<Commit> commitsStream,
+            [Perper("runtimeStream")] IAsyncEnumerable<(IAgentStep, bool)> runtimeStream,
+            [Perper("outputStream")] IAsyncCollector<IAgentStep> outputStream)
         {
-            var state = await context.GetState<State>("state");
+            var state = context.GetState<State>("state");
 
             await Task.WhenAll(
                 commitsStream.Listen(async commit =>
                 {
                     state.Commits[commit.For].Add(commit.Signer, commit.Signature);
-                    await context.SetState("state", state);
+                    await context.SaveState("state", state);
                 }, CancellationToken.None),
 
                 runtimeStream.Listen(async item =>

@@ -5,19 +5,18 @@ using Apocryph.FunctionApp.Agent;
 using Apocryph.FunctionApp.Command;
 using Apocryph.FunctionApp.Model;
 using Microsoft.Azure.WebJobs;
-using Perper.WebJobs.Extensions.Bindings;
+using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
-using Perper.WebJobs.Extensions.Triggers;
 
 namespace Apocryph.FunctionApp
 {
     public static class Runtime
     {
         [FunctionName("Runtime")]
-        public static async Task Run([PerperStreamTrigger] IPerperStreamContext context,
-            [PerperStream("validatorStream")] IAsyncEnumerable<IAgentStep> validatorStream,
-            [PerperStream("committerStream")] IAsyncEnumerable<(IAgentStep, bool)> committerStream,
-            [PerperStream] IAsyncCollector<(IAgentStep, bool)> outputStream)
+        public static async Task Run([Perper(Stream = "Runtime")] IPerperStreamContext context,
+            [Perper("validatorStream")] IAsyncEnumerable<IAgentStep> validatorStream,
+            [Perper("committerStream")] IAsyncEnumerable<(IAgentStep, bool)> committerStream,
+            [Perper("outputStream")] IAsyncCollector<(IAgentStep, bool)> outputStream)
         {
             await Task.WhenAll(
                 validatorStream.Listen(async step =>

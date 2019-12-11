@@ -28,17 +28,5 @@ namespace Apocryph.FunctionApp
                 await function.Invoke(x);
             }
         }
-
-        public static Task SetState<T>(this IPerperStreamContext stream,
-            string name, T state)
-        {
-            throw new NotImplementedException();
-        }
-
-        public static Task<T> GetState<T>(this IPerperStreamContext stream,
-            string name)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

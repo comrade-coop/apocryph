@@ -4,9 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.FunctionApp.Model;
 using Microsoft.Azure.WebJobs;
-using Perper.WebJobs.Extensions.Bindings;
+using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
-using Perper.WebJobs.Extensions.Triggers;
 
 namespace Apocryph.FunctionApp
 {
@@ -20,13 +19,13 @@ namespace Apocryph.FunctionApp
         }
 
         [FunctionName("Validator")]
-        public static async Task Run([PerperStreamTrigger] IPerperStreamContext context,
-            [PerperStream("validatorSet")] ValidatorSet validatorSet,
-            [PerperStream("commitsStream")] IAsyncEnumerable<Commit> commitsStream,
-            [PerperStream("proposalsStream")] IAsyncEnumerable<IAgentStep> proposalsStream,
-            [PerperStream] IAsyncCollector<IAgentStep> outputStream)
+        public static async Task Run([Perper(Stream = "Validator")] IPerperStreamContext context,
+            [Perper("validatorSet")] ValidatorSet validatorSet,
+            [Perper("commitsStream")] IAsyncEnumerable<Commit> commitsStream,
+            [Perper("proposalsStream")] IAsyncEnumerable<IAgentStep> proposalsStream,
+            [Perper("outputStream")] IAsyncCollector<IAgentStep> outputStream)
         {
-            var state = await context.GetState<State>("state");
+            var state = context.GetState<State>("state");
 
             await Task.WhenAll(
                 commitsStream.Listen(async commit =>
@@ -43,7 +42,7 @@ namespace Apocryph.FunctionApp
                         state.CurrentStep = commit.For; // TODO: Commit in order
                     }
 
-                    await context.SetState("state", state);
+                    await context.SaveState("state", state);
                 }, CancellationToken.None),
 
                 proposalsStream.Listen(async proposal =>
