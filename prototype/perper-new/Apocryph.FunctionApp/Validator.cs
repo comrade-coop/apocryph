@@ -15,32 +15,29 @@ namespace Apocryph.FunctionApp
         {
             public ValidatorKey Proposer { get; set; }
             public Hash CurrentStep { get; set; }
-            public Dictionary<Hash, HashSet<ValidatorKey>> Commits { get; set; }
         }
 
         [FunctionName("Validator")]
         public static async Task Run([PerperTrigger("Validator")] IPerperStreamContext context,
             [Perper("validatorSet")] ValidatorSet validatorSet,
-            [Perper("commitsStream")] IAsyncEnumerable<Signed<Commit>> commitsStream,
+            [Perper("committerStream")] IAsyncEnumerable<Hash> committerStream,
+            [Perper("currentProposerStream")] IAsyncEnumerable<ValidatorKey> currentProposerStream,
             [Perper("proposalsStream")] IAsyncEnumerable<Signed<IAgentStep>> proposalsStream,
             [Perper("outputStream")] IAsyncCollector<Hash> outputStream)
         {
             var state = context.GetState<State>();
 
             await Task.WhenAll(
-                commitsStream.ForEachAsync(async commit =>
+                currentProposerStream.ForEachAsync(async currentProposer =>
                 {
-                    state.Commits[commit.Value.For].Add(commit.Signer);
+                    state.Proposer = currentProposer;
 
-                    var committed = state.Commits[commit.Value.For]
-                        .Select(signer => validatorSet.Weights[signer]).Sum();
+                    await context.SaveState();
+                }, CancellationToken.None),
 
-                    if (3 * committed > 2 * validatorSet.Total)
-                    {
-                        validatorSet.AccumulateWeights();
-                        state.Proposer = validatorSet.PopMaxAccumulatedWeight();
-                        state.CurrentStep = commit.Value.For; // TODO: Commit in order
-                    }
+                committerStream.ForEachAsync(async commit =>
+                {
+                    state.CurrentStep = commit;
 
                     await context.SaveState();
                 }, CancellationToken.None),

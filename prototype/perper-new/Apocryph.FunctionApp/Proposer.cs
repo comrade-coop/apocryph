@@ -19,7 +19,7 @@ namespace Apocryph.FunctionApp
         [FunctionName("Proposer")]
         public static async Task Run([PerperTrigger("Proposer")] IPerperStreamContext context,
             [Perper("commitsStream")] IAsyncEnumerable<Signed<Commit>> commitsStream,
-            [Perper("runtimeStream")] IAsyncEnumerable<(IAgentStep, bool)> runtimeStream,
+            [Perper("proposerRuntimeStream")] IAsyncEnumerable<IAgentStep> proposerRuntimeStream,
             [Perper("outputStream")] IAsyncCollector<IAgentStep> outputStream)
         {
             var state = context.GetState<State>();
@@ -31,16 +31,12 @@ namespace Apocryph.FunctionApp
                     await context.SaveState();
                 }, CancellationToken.None),
 
-                runtimeStream.ForEachAsync(async item =>
+                proposerRuntimeStream.ForEachAsync(async step =>
                 {
-                    var (step, isProposal) = item;
-                    if (isProposal)
-                    {
-                        // FIXME: Should probably block until there are enough signatures (as we cannot be sure that the other stream would collect them in time)
-                        step.CommitSignatures = state.Commits[step.Previous];
+                    // FIXME: Should probably block until there are enough signatures (as we cannot be sure that the other stream would collect them in time)
+                    step.CommitSignatures = state.Commits[step.Previous];
 
-                        await outputStream.AddAsync(step);
-                    }
+                    await outputStream.AddAsync(step);
                 }, CancellationToken.None));
         }
     }

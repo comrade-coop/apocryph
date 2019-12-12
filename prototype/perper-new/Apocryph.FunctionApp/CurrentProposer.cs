@@ -9,31 +9,35 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.FunctionApp
 {
-    public static class Committer
+    public static class CurrentProposer
     {
         private class State
         {
-            public Dictionary<Hash, Dictionary<ValidatorKey, ValidatorSignature>> Commits { get; set; }
+            public Dictionary<Hash, HashSet<ValidatorKey>> Commits { get; set; }
         }
 
-        [FunctionName("Committer")]
-        public static async Task Run([PerperTrigger("Committer")] IPerperStreamContext context,
+        [FunctionName("CurrentProposer")]
+        public static async Task Run([PerperTrigger("CurrentProposer")] IPerperStreamContext context,
             [Perper("validatorSet")] ValidatorSet validatorSet,
             [Perper("commitsStream")] IAsyncEnumerable<Signed<Commit>> commitsStream,
-            [Perper("outputStream")] IAsyncCollector<Hash> outputStream)
+            [Perper("outputStream")] IAsyncCollector<ValidatorKey> outputStream)
         {
             var state = context.GetState<State>();
 
             await commitsStream.ForEachAsync(async commit =>
                 {
-                    state.Commits[commit.Value.For].Add(commit.Signer, commit.Signature);
+                    // TODO: Timeout proposers, rotate proposer only on his own blocks
+                    state.Commits[commit.Value.For].Add(commit.Signer);
                     await context.SaveState();
 
-                    var committed = state.Commits[commit.Value.For].Keys
+                    var committed = state.Commits[commit.Value.For]
                         .Select(signer => validatorSet.Weights[signer]).Sum();
                     if (3 * committed > 2 * validatorSet.Total)
                     {
-                        await outputStream.AddAsync(commit.Value.For);
+                        validatorSet.AccumulateWeights();
+                        var proposer = validatorSet.PopMaxAccumulatedWeight();
+
+                        await outputStream.AddAsync(proposer);
                     }
                 }, CancellationToken.None);
         }

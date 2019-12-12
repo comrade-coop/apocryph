@@ -32,24 +32,20 @@ namespace Apocryph.FunctionApp
                 topic
             });
 
-            var commitsStream = ipfsStream; // .Filter(typeof(Commit))
-            var votesStream = ipfsStream; // .Filter(typeof(Vote))
-            var proposalsStream = ipfsStream; // .Filter(typeof(IAgentStep))
+            var commitsStream = ipfsStream;
+            var votesStream = ipfsStream;
+            var proposalsStream = ipfsStream;
 
-            /* FIXME:
-                _committerStream has type (Hash, bool)
-                IpfsLoader.hashStream has type Hash
-                committerStream has type Hashed<object>
-                Runtime.committerStream has type (Hashed<object>, bool) */
-            /* FIXME:
-                runtimeStream has type (object, bool)
-                IpfsSaver.dataStream has type object
-                savedRuntimeStream has type Hashed<object>
-                Voting.runtimeStream has type (Hashed<object>, bool) */
+            // Proposer (Proposing)
+
+            var currentProposerStream = await context.CallStreamFunction("CurrentProposer", new
+            {
+                commitsStream,
+                validatorSet
+            });
 
             var _committerStream = await context.CallStreamFunction("Committer", new
             {
-                self,
                 commitsStream,
                 validatorSet
             });
@@ -60,9 +56,25 @@ namespace Apocryph.FunctionApp
                 hashStream = _committerStream
             });
 
-            var _validatorStream = await context.CallStreamFunction("Validator", new
+            var proposerRuntimeStream = await context.CallStreamFunction("ProposerRuntime", new
+            {
+                self,
+                currentProposerStream,
+                committerStream
+            });
+
+            var proposerStream = await context.CallStreamFunction("Proposer", new
             {
                 commitsStream,
+                proposerRuntimeStream
+            });
+
+            // Validator (Voting)
+
+            var _validatorStream = await context.CallStreamFunction("Validator", new
+            {
+                committerStream,
+                currentProposerStream,
                 proposalsStream,
                 validatorSet
             });
@@ -73,29 +85,25 @@ namespace Apocryph.FunctionApp
                 hashStream = _validatorStream
             });
 
-            var runtimeStream = await context.CallStreamFunction("Runtime", new
+            var _validatorRuntimeStream = await context.CallStreamFunction("ProposerRuntime", new
             {
                 validatorStream,
                 committerStream
             });
 
-            var proposerStream = await context.CallStreamFunction("Proposer", new
-            {
-                commitsStream,
-                runtimeStream
-            });
-
-            var savedRuntimeStream = await context.CallStreamFunction("IpfsSaver", new
+            var validatorRuntimeStream = await context.CallStreamFunction("IpfsSaver", new
             {
                 ipfsGateway,
-                dataStream = runtimeStream
+                dataStream = _validatorRuntimeStream
             });
 
             var votingStream = await context.CallStreamFunction("Voting", new
             {
-                runtimeStream = savedRuntimeStream,
+                runtimeStream = validatorRuntimeStream,
                 proposalsStream
             });
+
+            // Consensus (Committing)
 
             var consensusStream = await context.CallStreamFunction("Consensus", new
             {
