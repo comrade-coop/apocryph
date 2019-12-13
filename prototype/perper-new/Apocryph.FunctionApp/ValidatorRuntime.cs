@@ -14,7 +14,7 @@ namespace Apocryph.FunctionApp
     public static class ValidatorRuntime
     {
         [FunctionName("ValidatorRuntime")]
-        public static async Task Run([PerperTrigger("ValidatorRuntime")] IPerperStreamContext context,
+        public static async Task Run([PerperStream("ValidatorRuntime")] IPerperStreamContext context,
             [Perper("validatorStream")] IAsyncEnumerable<Hashed<IAgentStep>> validatorStream,
             [Perper("outputStream")] IAsyncCollector<IAgentStep> outputStream)
         {

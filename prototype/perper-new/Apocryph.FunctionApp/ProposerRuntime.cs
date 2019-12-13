@@ -14,7 +14,7 @@ namespace Apocryph.FunctionApp
     public static class ProposerRuntime
     {
         [FunctionName("ProposerRuntime")]
-        public static async Task Run([PerperTrigger("ProposerRuntime")] IPerperStreamContext context,
+        public static async Task Run([PerperStream("ProposerRuntime")] IPerperStreamContext context,
             [Perper("self")] ValidatorKey self,
             [Perper("committerStream")] IAsyncEnumerable<Hashed<IAgentStep>> committerStream,
             [Perper("currentProposerStream")] IAsyncEnumerable<ValidatorKey> currentProposerStream,

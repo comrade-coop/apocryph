@@ -17,7 +17,7 @@ namespace Apocryph.FunctionApp
         }
 
         [FunctionName("Committer")]
-        public static async Task Run([PerperTrigger("Committer")] IPerperStreamContext context,
+        public static async Task Run([PerperStream("Committer")] IPerperStreamContext context,
             [Perper("validatorSet")] ValidatorSet validatorSet,
             [Perper("commitsStream")] IAsyncEnumerable<Signed<Commit>> commitsStream,
             [Perper("outputStream")] IAsyncCollector<Hash> outputStream)

@@ -17,7 +17,7 @@ namespace Apocryph.FunctionApp
         }
 
         [FunctionName("Consensus")]
-        public static async Task Run([PerperTrigger("Consensus")] IPerperStreamContext context,
+        public static async Task Run([PerperStream("Consensus")] IPerperStreamContext context,
             [Perper("validatorSet")] ValidatorSet validatorSet,
             [Perper("votesStream")] IAsyncEnumerable<Signed<Vote>> votesStream,
             [Perper("outputStream")] IAsyncCollector<Commit> outputStream)

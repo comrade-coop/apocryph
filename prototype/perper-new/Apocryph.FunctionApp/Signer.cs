@@ -13,7 +13,7 @@ namespace Apocryph.FunctionApp
     public static class Signer
     {
         [FunctionName("Signer")]
-        public static async Task Run([PerperTrigger("Signer")] IPerperStreamContext context,
+        public static async Task Run([PerperStream("Signer")] IPerperStreamContext context,
             [Perper("self")] ValidatorKey self,
             [Perper("privateKey")] ECParameters privateKey,
             [Perper("dataStream")] IAsyncEnumerable<Hashed<object>> dataStream,

@@ -17,7 +17,7 @@ namespace Apocryph.FunctionApp
         }
 
         [FunctionName("Voting")]
-        public static async Task Run([PerperTrigger("Voting")] IPerperStreamContext context,
+        public static async Task Run([PerperStream("Voting")] IPerperStreamContext context,
             [Perper("validatorRuntimeStream")] IAsyncEnumerable<Hashed<IAgentStep>> validatorRuntimeStream,
             [Perper("proposalsStream")] IAsyncEnumerable<Signed<IAgentStep>> proposalsStream,
             [Perper("outputStream")] IAsyncCollector<Vote> outputStream)

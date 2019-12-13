@@ -10,7 +10,7 @@ namespace Apocryph.FunctionApp
     public static class Launcher
     {
         [FunctionName("Launcher")]
-        public static async Task Run([PerperTrigger("Launcher")] IPerperStreamContext context)
+        public static async Task Run([PerperStream("Launcher")] IPerperStreamContext context)
         {
             ValidatorSet validatorSet = new ValidatorSet();
 
