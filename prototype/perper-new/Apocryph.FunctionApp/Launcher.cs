@@ -37,40 +37,24 @@ namespace Apocryph.FunctionApp
                 filter = (Expression<Func<object, bool>>)(x => x is ValidatorSetPublication)
             });
 
-            var validatorSetsStream = await context.CallStreamFunction("UNIMPLEMENTED-AggregateValidatorSets", new
+            var aggregatedValidatorSetsStream = await context.CallStreamFunction("UNIMPLEMENTED-AggregateValidatorSets", new
             {
                 validatorSetPublicationsStream
             });
 
-            var filteredValidatorSetsStream = await context.CallStreamFunction("UNIMPLEMENTED-FilterValidatorSets", new
+            var validatorSetsStream = await context.CallStreamFunction("UNIMPLEMENTED-FilterValidatorSets", new
             {
-                validatorSetsStream,
+                aggregatedValidatorSetsStream,
                 self
             });
 
-            var filteredValidatorSets = ((IAsyncEnumerable<Dictionary<string, ValidatorSet>>) filteredValidatorSetsStream);
-            CancellationTokenSource? cts = null;
-
-            await filteredValidatorSets.ForEachAsync(async currentSets => {
-                cts?.Cancel();
-                cts = new CancellationTokenSource();
-                foreach (var kv in currentSets) {
-                    var agentId = kv.Key;
-                    var validatorSet = kv.Value;
-
-                    await context.CallStreamAction("ValidatorLauncher", new
-                    {
-                        ipfsGateway,
-                        agentId = agentId,
-                        validatorSet = validatorSet,
-                        privateKey,
-                        self
-                    }, cts.Token);
-                    // TODO: Cancel activations for agents we are no longer validating
-                }
-            }, cancellationToken);
-
-            cts?.Cancel();
+            await context.CallStreamAction("ValidatorScheduler", new
+            {
+                validatorSetsStream,
+                ipfsGateway,
+                privateKey,
+                self
+            });
         }
     }
 }

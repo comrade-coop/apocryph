@@ -16,8 +16,7 @@ namespace Apocryph.FunctionApp
             [PerperStream("validatorSet")] ValidatorSet validatorSet,
             [PerperStream("ipfsGateway")] string ipfsGateway,
             [PerperStream("privateKey")] string privateKey,
-            [PerperStream("self")] ValidatorKey self,
-            [Perper("cancellationToken")] CancellationToken cancellationToken)
+            [PerperStream("self")] ValidatorKey self)
         {
             var topic = "apocryph-agent-" + agentId;
 
@@ -125,7 +124,7 @@ namespace Apocryph.FunctionApp
                     ipfsGateway,
                     topic,
                     dataStream = signerStream
-                }, cancellationToken);
+                });
             }
         }
     }
