@@ -47,7 +47,7 @@ namespace Apocryph.FunctionApp
                             validatorSet = validatorSet,
                             privateKey,
                             self
-                        }).ContinueWith(x => (IAsyncDisposable)null); // TODO: remove ContinueWith when perper starts returning IAsyncDisposable-s
+                        });
                     }
                 }
             }, CancellationToken.None);

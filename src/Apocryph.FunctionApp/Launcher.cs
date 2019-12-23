@@ -37,20 +37,20 @@ namespace Apocryph.FunctionApp
                 filter = (Expression<Func<object, bool>>)(x => x is ValidatorSetPublication)
             });
 
-            await using var aggregatedValidatorSetsStream = await context.StreamFunctionAsync("UNIMPLEMENTED-AggregateValidatorSets", new
+            await using var validatorSetsStream = await context.StreamFunctionAsync("UNIMPLEMENTED-AggregateValidatorSets", new
             {
                 validatorSetPublicationsStream
             });
 
-            await using var validatorSetsStream = await context.StreamFunctionAsync("UNIMPLEMENTED-FilterValidatorSets", new
+            await using var filteredValidatorSetsStream = await context.StreamFunctionAsync("UNIMPLEMENTED-FilterValidatorSets", new
             {
-                aggregatedValidatorSetsStream,
+                validatorSetsStream,
                 self
             });
 
             await context.StreamActionAsync("ValidatorScheduler", new
             {
-                validatorSetsStream,
+                filteredValidatorSetsStream,
                 ipfsGateway,
                 privateKey,
                 self

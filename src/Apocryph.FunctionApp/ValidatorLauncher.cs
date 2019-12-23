@@ -50,10 +50,36 @@ namespace Apocryph.FunctionApp
                 hashStream = _committerStream
             });
 
-            await using var proposerRuntimeStream = await context.StreamFunctionAsync("ProposerRuntime", new
+            await using var commandsStream = await context.StreamFunctionAsync("CommandSplitter", new
+            {
+                committerStream
+            });
+
+            await using var reminderCommandExecutorStream = await context.StreamFunctionAsync("ReminderCommandExecutor", new
+            {
+                commandsStream
+            });
+
+            await using var publicationCommandExecutorStream = await context.StreamFunctionAsync("PublicationCommandExecutor", new
+            {
+                commandsStream
+            });
+
+            await using var agentInputsStream = await context.JoinStreams(
+                reminderCommandExecutorStream,
+                publicationCommandExecutorStream);
+
+            await using var proposerRuntimeStream = await context.StreamFunctionAsync("Runtime", new
             {
                 self,
                 currentProposerStream,
+                committerStream
+            });
+
+
+            await using var inputProposerStream = await context.StreamFunctionAsync("InputProposer", new
+            {
+                agentInputsStream,
                 committerStream
             });
 
@@ -79,10 +105,9 @@ namespace Apocryph.FunctionApp
                 hashStream = _validatorStream
             });
 
-            await using var _validatorRuntimeStream = await context.StreamFunctionAsync("ProposerRuntime", new
+            await using var _validatorRuntimeStream = await context.StreamFunctionAsync("Runtime", new
             {
-                validatorStream,
-                committerStream
+                inputStream = validatorStream
             });
 
             await using var validatorRuntimeStream = await context.StreamFunctionAsync("IpfsSaver", new

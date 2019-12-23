@@ -9,7 +9,7 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.FunctionApp
 {
-    public static class Validator
+    public static class ValidatorFilter
     {
         private class State
         {
@@ -17,13 +17,12 @@ namespace Apocryph.FunctionApp
             public Hash CurrentStep { get; set; }
         }
 
-        [FunctionName("Validator")]
-        public static async Task Run([PerperStreamTrigger("Validator")] IPerperStreamContext context,
-            [Perper("validatorSet")] ValidatorSet validatorSet,
+        [FunctionName("ValidatorFilter")]
+        public static async Task Run([PerperStreamTrigger("ValidatorFilter")] IPerperStreamContext context,
             [Perper("committerStream")] IAsyncEnumerable<Hash> committerStream,
             [Perper("currentProposerStream")] IAsyncEnumerable<ValidatorKey> currentProposerStream,
             [Perper("proposalsStream")] IAsyncEnumerable<Signed<IAgentStep>> proposalsStream,
-            [Perper("outputStream")] IAsyncCollector<Hash> outputStream)
+            [Perper("outputStream")] IAsyncCollector<Signed<IAgentStep>> outputStream)
         {
             var state = await context.FetchStateAsync<State>();
 
@@ -46,7 +45,7 @@ namespace Apocryph.FunctionApp
                 {
                     if (state.Proposer.Equals(proposal.Signer) && state.CurrentStep == proposal.Value.Previous)
                     {
-                        await outputStream.AddAsync(proposal.Value.Previous);
+                        await outputStream.AddAsync(proposal);
                     }
                 }, CancellationToken.None));
         }
