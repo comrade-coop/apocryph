@@ -15,7 +15,7 @@ namespace Apocryph.FunctionApp
     {
         [FunctionName("ValidatorScheduler")]
         public static async Task Run([PerperStreamTrigger("ValidatorScheduler")] IPerperStreamContext context,
-            [PerperStreamTrigger("validatorSet")] IAsyncEnumerable<Dictionary<string, ValidatorSet>> validatorSetsStream,
+            [PerperStreamTrigger("validatorSetsStream")] IAsyncEnumerable<Dictionary<string, ValidatorSet>> validatorSetsStream,
             [PerperStreamTrigger("ipfsGateway")] string ipfsGateway,
             [PerperStreamTrigger("privateKey")] string privateKey,
             [PerperStreamTrigger("self")] ValidatorKey self)
@@ -25,17 +25,16 @@ namespace Apocryph.FunctionApp
             await validatorSetsStream.ForEachAsync(async validatorSets =>
             {
                 // FIXME: Instead of restarting when validator set changes, send validator sets as a seperate stream
+
+                var filteredValidatorSets = validatorSets
+                    .Where(kv => kv.Value.Weights.ContainsKey(self));
+
                 var toStop = new HashSet<KeyValuePair<string, ValidatorSet>>(runningStreams.Keys);
-                toStop.ExceptWith(validatorSets);
 
-                foreach (var kv in toStop)
+                foreach (var kv in filteredValidatorSets)
                 {
-                    await runningStreams[kv].DisposeAsync();
-                    runningStreams.Remove(kv);
-                }
+                    toStop.Remove(kv);
 
-                foreach (var kv in validatorSets)
-                {
                     if (!runningStreams.ContainsKey(kv))
                     {
                         var agentId = kv.Key;
@@ -49,6 +48,12 @@ namespace Apocryph.FunctionApp
                             self
                         });
                     }
+                }
+
+                foreach (var kv in toStop)
+                {
+                    await runningStreams[kv].DisposeAsync();
+                    runningStreams.Remove(kv);
                 }
             }, CancellationToken.None);
         }

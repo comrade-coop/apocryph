@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Apocryph.FunctionApp.Agent;
 using Apocryph.FunctionApp.Command;
 using Apocryph.FunctionApp.Model;
+using Ipfs;
 using Ipfs.Http;
 using Microsoft.Azure.WebJobs;
 using Newtonsoft.Json;
@@ -24,7 +25,7 @@ namespace Apocryph.FunctionApp
         [FunctionName("SubscriptionCommandExecutor")]
         public static async Task Run([PerperStreamTrigger("SubscriptionCommandExecutor")] IPerperStreamContext context,
             [Perper("ipfsGateway")] string ipfsGateway,
-            [Perper("self")] IAsyncEnumerable<Dictionary<string, ValidatorSet>> validatorSetsStream,
+            [Perper("validatorSetsStream")] IAsyncEnumerable<Dictionary<string, ValidatorSet>> validatorSetsStream,
             [Perper("commandsStream")] IAsyncEnumerable<SubscriptionCommand> commandsStream,
             [Perper("outputStream")] IAsyncCollector<(string, object)> outputStream)
         {
@@ -40,17 +41,24 @@ namespace Apocryph.FunctionApp
                     {
                         var bytes = message.DataBytes;
                         // FIXME: Do not blindly trust that Hash and Value match and that Signature, Hash, and Signer match
-                        var item = JsonConvert.DeserializeObject<Signed<AgentOutput>>(Encoding.UTF8.GetString(bytes));
-                        // TODO: Fix this logic: we should verify commit signatures for the output, not for the input before it
-                        if (item.Value.CommitSignatures
-                            .All(kv => kv.Key.ValidateSignature(item.Value.Previous, kv.Value)))
+                        var input = JsonConvert.DeserializeObject<Signed<AgentInput>>(Encoding.UTF8.GetString(bytes));
+                        if (input != null && input.Value.CommitSignatures
+                            .All(kv => kv.Key.ValidateSignature(input.Value.Previous, kv.Value)))
                         {
                             var validatorSet = state.ValidatorSets[agentId];
-                            var committed = item.Value.CommitSignatures.Keys
+                            var committed = input.Value.CommitSignatures.Keys
                                 .Select(signer => validatorSet.Weights[signer]).Sum();
                             if (3 * committed > 2 * validatorSet.Total)
                             {
-                                foreach (var command in item.Value.Commands)
+                                var hash = input.Value.Previous;
+                                // NOTE: Currently blocks other items on the stream and does not process them
+                                // -- we should at least timeout
+                                // FIXME: Should use DAG/IPLD API instead
+                                var block = await ipfs.Block.GetAsync(Cid.Read(hash.Bytes), CancellationToken.None);
+
+                                var output = JsonConvert.DeserializeObject<AgentOutput>(Encoding.UTF8.GetString(block.DataBytes));
+
+                                foreach (var command in output.Commands)
                                 {
                                     if (command is PublicationCommand publication)
                                     {

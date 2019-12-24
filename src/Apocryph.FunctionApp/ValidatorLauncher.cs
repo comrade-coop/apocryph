@@ -60,9 +60,32 @@ namespace Apocryph.FunctionApp
                 commandsStream
             });
 
+            await using var agentZeroStream = await context.StreamFunctionAsync("IpfsInput", new
+            {
+                ipfsGateway,
+                topic = "apocryph-agent-0"
+            });
+
+            await using var _inputVerifierStream = await context.StreamFunctionAsync("StepVerifier", new
+            {
+                stepsStream = agentZeroStream,
+            });
+
+            await using var inputVerifierStream = await context.StreamFunctionAsync("IpfsLoader", new
+            {
+                ipfsGateway,
+                hashStream = _inputVerifierStream
+            });
+
+            await using var validatorSetsStream = await context.StreamFunctionAsync("ValidatorSets", new
+            {
+                inputVerifierStream
+            });
+
             await using var publicationCommandExecutorStream = await context.StreamFunctionAsync("PublicationCommandExecutor", new
             {
-                commandsStream
+                commandsStream,
+                validatorSetsStream
             });
 
             await using var agentInputsStream = await context.JoinStreams(

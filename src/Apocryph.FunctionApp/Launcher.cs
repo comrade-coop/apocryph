@@ -30,27 +30,31 @@ namespace Apocryph.FunctionApp
 
             var ipfsGateway = "127.0.0.1:5001";
 
-            await using var validatorSetPublicationsStream = await context.StreamFunctionAsync("UNIMPLEMENTED-AgentPublications", new
+            await using var agentZeroStream = await context.StreamFunctionAsync("IpfsInput", new
             {
                 ipfsGateway,
-                agentId = "0",
-                filter = (Expression<Func<object, bool>>)(x => x is ValidatorSetPublication)
+                topic = "apocryph-agent-0"
             });
 
-            await using var validatorSetsStream = await context.StreamFunctionAsync("UNIMPLEMENTED-AggregateValidatorSets", new
+            await using var _inputVerifierStream = await context.StreamFunctionAsync("StepVerifier", new
             {
-                validatorSetPublicationsStream
+                stepsStream = agentZeroStream,
             });
 
-            await using var filteredValidatorSetsStream = await context.StreamFunctionAsync("UNIMPLEMENTED-FilterValidatorSets", new
+            await using var inputVerifierStream = await context.StreamFunctionAsync("IpfsLoader", new
             {
-                validatorSetsStream,
-                self
+                ipfsGateway,
+                hashStream = _inputVerifierStream
+            });
+
+            await using var validatorSetsStream = await context.StreamFunctionAsync("ValidatorSets", new
+            {
+                inputVerifierStream
             });
 
             await context.StreamActionAsync("ValidatorScheduler", new
             {
-                filteredValidatorSetsStream,
+                validatorSetsStream,
                 ipfsGateway,
                 privateKey,
                 self
