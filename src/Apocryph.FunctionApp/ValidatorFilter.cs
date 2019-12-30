@@ -18,11 +18,11 @@ namespace Apocryph.FunctionApp
         }
 
         [FunctionName("ValidatorFilter")]
-        public static async Task Run([PerperStreamTrigger("ValidatorFilter")] IPerperStreamContext context,
-            [Perper("committerStream")] IAsyncEnumerable<Hash> committerStream,
-            [Perper("currentProposerStream")] IAsyncEnumerable<ValidatorKey> currentProposerStream,
-            [Perper("proposalsStream")] IAsyncEnumerable<Signed<IAgentStep>> proposalsStream,
-            [Perper("outputStream")] IAsyncCollector<Signed<IAgentStep>> outputStream)
+        public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
+            [PerperStream("committerStream")] IAsyncEnumerable<Hash> committerStream,
+            [PerperStream("currentProposerStream")] IAsyncEnumerable<ValidatorKey> currentProposerStream,
+            [PerperStream("proposalsStream")] IAsyncEnumerable<Signed<IAgentStep>> proposalsStream,
+            [PerperStream("outputStream")] IAsyncCollector<Signed<IAgentStep>> outputStream)
         {
             var state = await context.FetchStateAsync<State>();
 

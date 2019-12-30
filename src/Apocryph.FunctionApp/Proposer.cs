@@ -17,10 +17,10 @@ namespace Apocryph.FunctionApp
         }
 
         [FunctionName("Proposer")]
-        public static async Task Run([PerperStreamTrigger("Proposer")] IPerperStreamContext context,
-            [Perper("commitsStream")] IAsyncEnumerable<Signed<Commit>> commitsStream,
-            [Perper("runtimeStream")] IAsyncEnumerable<IAgentStep> runtimeStream,
-            [Perper("outputStream")] IAsyncCollector<IAgentStep> outputStream)
+        public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
+            [PerperStream("commitsStream")] IAsyncEnumerable<Signed<Commit>> commitsStream,
+            [PerperStream("runtimeStream")] IAsyncEnumerable<IAgentStep> runtimeStream,
+            [PerperStream("outputStream")] IAsyncCollector<IAgentStep> outputStream)
         {
             var state = await context.FetchStateAsync<State>();
 

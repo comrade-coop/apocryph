@@ -13,17 +13,17 @@ namespace Apocryph.FunctionApp
     public static class StreamJoiner
     {
         [FunctionName("StreamJoiner")]
-        public static async Task Run([PerperStreamTrigger("StreamJoiner")] IPerperStreamContext context,
-            [Perper("streamA")] IAsyncEnumerable<object> streamA,
-            [Perper("streamB")] IAsyncEnumerable<object> streamB,
-            [Perper("outputStream")] IAsyncCollector<object> outputStream)
+        public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
+            [PerperStream("streamA")] IAsyncEnumerable<object> streamA,
+            [PerperStream("streamB")] IAsyncEnumerable<object> streamB,
+            [PerperStream("outputStream")] IAsyncCollector<object> outputStream)
         {
             await Task.WhenAll(
                 streamA.ForEachAsync(x => outputStream.AddAsync(x), CancellationToken.None),
                 streamB.ForEachAsync(x => outputStream.AddAsync(x), CancellationToken.None));
         }
 
-        public static async Task<IAsyncDisposable> JoinStreams(this IPerperStreamContext context,
+        public static async Task<IAsyncDisposable> JoinStreams(this PerperStreamContext context,
             params IAsyncDisposable[] streams)
         {
             // NOTE: Should probably dispose all the intermediate streams as well

@@ -23,11 +23,11 @@ namespace Apocryph.FunctionApp
         }
 
         [FunctionName("SubscriptionCommandExecutor")]
-        public static async Task Run([PerperStreamTrigger("SubscriptionCommandExecutor")] IPerperStreamContext context,
+        public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("ipfsGateway")] string ipfsGateway,
-            [Perper("validatorSetsStream")] IAsyncEnumerable<Dictionary<string, ValidatorSet>> validatorSetsStream,
-            [Perper("commandsStream")] IAsyncEnumerable<SubscriptionCommand> commandsStream,
-            [Perper("outputStream")] IAsyncCollector<(string, object)> outputStream)
+            [PerperStream("validatorSetsStream")] IAsyncEnumerable<Dictionary<string, ValidatorSet>> validatorSetsStream,
+            [PerperStream("commandsStream")] IAsyncEnumerable<SubscriptionCommand> commandsStream,
+            [PerperStream("outputStream")] IAsyncCollector<(string, object)> outputStream)
         {
             var ipfs = new IpfsClient(ipfsGateway);
             var state = await context.FetchStateAsync<State>();

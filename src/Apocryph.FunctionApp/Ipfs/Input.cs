@@ -13,10 +13,10 @@ namespace Apocryph.FunctionApp.Ipfs
     public static class Input
     {
         [FunctionName("IpfsInput")]
-        public static async Task Run([PerperStreamTrigger("IpfsInput")] IPerperStreamContext context,
+        public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("ipfsGateway")] string ipfsGateway,
             [Perper("topic")] string topic,
-            [Perper("outputStream")] IAsyncCollector<Signed<object>> outputStream)
+            [PerperStream("outputStream")] IAsyncCollector<Signed<object>> outputStream)
         {
             var ipfs = new IpfsClient(ipfsGateway);
 

@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.FunctionApp.Agent;
-using Apocryph.FunctionApp.Command;
 using Apocryph.FunctionApp.Model;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
@@ -14,10 +13,11 @@ namespace Apocryph.FunctionApp
     public static class Runtime
     {
         [FunctionName("Runtime")]
-        public static async Task Run([PerperStreamTrigger("Runtime")] IPerperStreamContext context,
+        public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("self")] ValidatorKey self,
-            [Perper("inputStream")] IAsyncEnumerable<Hashed<AgentInput>> inputStream,
-            [Perper("outputStream")] IAsyncCollector<AgentOutput> outputStream)
+            [PerperStream("inputStream")] IAsyncEnumerable<Hashed<AgentInput>> inputStream,
+            [PerperStream("outputStream")] IAsyncCollector<AgentOutput> outputStream,
+            CancellationToken cancellationToken)
         {
             await inputStream.ForEachAsync(async input =>
             {
@@ -26,15 +26,15 @@ namespace Apocryph.FunctionApp
                     state = input.Value.State,
                     sender = input.Value.Sender,
                     message = input.Value.Message
-                });
+                }, cancellationToken);
 
                 await outputStream.AddAsync(new AgentOutput
                 {
                     Previous = input.Hash,
                     State = agentContext.State,
                     Commands = agentContext.Commands
-                });
-            }, CancellationToken.None);
+                }, cancellationToken);
+            }, cancellationToken);
         }
     }
 }

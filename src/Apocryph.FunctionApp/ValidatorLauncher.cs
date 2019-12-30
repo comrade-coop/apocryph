@@ -11,12 +11,12 @@ namespace Apocryph.FunctionApp
     public static class ValidatorLauncher
     {
         [FunctionName("ValidatorLauncher")]
-        public static async Task Run([PerperStreamTrigger("ValidatorLauncher")] IPerperStreamContext context,
-            [PerperStreamTrigger("agentId")] string agentId,
-            [PerperStreamTrigger("validatorSet")] ValidatorSet validatorSet,
-            [PerperStreamTrigger("ipfsGateway")] string ipfsGateway,
-            [PerperStreamTrigger("privateKey")] string privateKey,
-            [PerperStreamTrigger("self")] ValidatorKey self)
+        public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
+            [Perper("agentId")] string agentId,
+            [Perper("validatorSet")] ValidatorSet validatorSet,
+            [Perper("ipfsGateway")] string ipfsGateway,
+            [Perper("privateKey")] string privateKey,
+            [Perper("self")] ValidatorKey self)
         {
             var topic = "apocryph-agent-" + agentId;
 

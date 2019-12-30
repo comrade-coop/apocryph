@@ -18,10 +18,10 @@ namespace Apocryph.FunctionApp.Ipfs
     public static class Loader
     {
         [FunctionName("IpfsLoader")]
-        public static async Task Run([PerperStreamTrigger("IpfsLoader")] IPerperStreamContext context,
+        public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("ipfsGateway")] string ipfsGateway,
-            [Perper("hashStream")] IAsyncEnumerable<Hash> hashStream,
-            [Perper("outputStream")] IAsyncCollector<Hashed<object>> outputStream)
+            [PerperStream("hashStream")] IAsyncEnumerable<Hash> hashStream,
+            [PerperStream("outputStream")] IAsyncCollector<Hashed<object>> outputStream)
         {
             var ipfs = new IpfsClient(ipfsGateway);
 

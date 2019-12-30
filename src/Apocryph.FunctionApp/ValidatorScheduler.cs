@@ -14,11 +14,11 @@ namespace Apocryph.FunctionApp
     public static class ValidatorScheduler
     {
         [FunctionName("ValidatorScheduler")]
-        public static async Task Run([PerperStreamTrigger("ValidatorScheduler")] IPerperStreamContext context,
-            [PerperStreamTrigger("validatorSetsStream")] IAsyncEnumerable<Dictionary<string, ValidatorSet>> validatorSetsStream,
-            [PerperStreamTrigger("ipfsGateway")] string ipfsGateway,
-            [PerperStreamTrigger("privateKey")] string privateKey,
-            [PerperStreamTrigger("self")] ValidatorKey self)
+        public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
+            [PerperStream("validatorSetsStream")] IAsyncEnumerable<Dictionary<string, ValidatorSet>> validatorSetsStream,
+            [Perper("ipfsGateway")] string ipfsGateway,
+            [Perper("privateKey")] ECParameters privateKey,
+            [Perper("self")] ValidatorKey self)
         {
             var runningStreams = new Dictionary<KeyValuePair<string, ValidatorSet>, IAsyncDisposable>();
 

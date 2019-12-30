@@ -16,8 +16,8 @@ namespace Apocryph.FunctionApp
     public static class Launcher
     {
         [FunctionName("Launcher")]
-        public static async Task Run([PerperStreamTrigger("Launcher")] IPerperStreamContext context,
-            [Perper("cancellationToken")] CancellationToken cancellationToken)
+        public static async Task Run([PerperStreamTrigger(RunOnStartup = true)] PerperStreamContext context,
+            CancellationToken cancellationToken)
         {
             ECParameters privateKey;
             ValidatorKey self;
@@ -52,13 +52,15 @@ namespace Apocryph.FunctionApp
                 inputVerifierStream
             });
 
-            await context.StreamActionAsync("ValidatorScheduler", new
+            await using var validatorSchedulerStream = await context.StreamActionAsync("ValidatorScheduler", new
             {
                 validatorSetsStream,
                 ipfsGateway,
                 privateKey,
                 self
             });
+
+            await context.WaitUntilCancelled(cancellationToken);
         }
     }
 }
