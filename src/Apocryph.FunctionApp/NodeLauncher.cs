@@ -13,10 +13,10 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.FunctionApp
 {
-    public static class Launcher
+    public static class NodeLauncher
     {
-        [FunctionName("Launcher")]
-        public static async Task Run([PerperStreamTrigger(RunOnStartup = true)] PerperStreamContext context,
+        [FunctionName("NodeLauncher")]
+        public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             CancellationToken cancellationToken)
         {
             ECParameters privateKey;
@@ -28,7 +28,7 @@ namespace Apocryph.FunctionApp
                 self = new ValidatorKey{Key = dsa.ExportParameters(false)};
             }
 
-            var ipfsGateway = "127.0.0.1:5001";
+            var ipfsGateway = "http://127.0.0.1:5001";
 
             await using var agentZeroStream = await context.StreamFunctionAsync("IpfsInput", new
             {
