@@ -18,11 +18,11 @@ namespace Apocryph.FunctionApp
             [PerperStream("commandsStream")] IAsyncEnumerable<ReminderCommand> commandsStream,
             [PerperStream("outputStream")] IAsyncCollector<(string, object)> outputStream)
         {
-            commandsStream.ForEachAsync(async reminder =>
+            await commandsStream.ForEachAsync(reminder =>
             {
                 Task.Run(async () => {
                     await Task.Delay(reminder.Time);
-                    outputStream.AddAsync(("", reminder.Data));
+                    await outputStream.AddAsync(("", reminder.Data));
                 });
             }, CancellationToken.None);
         }

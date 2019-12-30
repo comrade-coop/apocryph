@@ -15,7 +15,7 @@ namespace Apocryph.FunctionApp
             [Perper("message")] object message)
         {
             var context = new AgentContext<object>(state);
-            context.AddReminder(TimeSpan.FromMinutes(5));
+            context.AddReminder(TimeSpan.FromMinutes(5), new object {});
             return context;
         }
     }

@@ -8,7 +8,7 @@ namespace Apocryph.FunctionApp.Agent
 
         // void IssueToken(string recipient);
         // void SendMessage(string target, object message);
-        void AddReminder(TimeSpan time, object? data = null);
+        void AddReminder(TimeSpan time, object data);
         void MakePublication(object payload);
         void AddSubscription(string target);
     }

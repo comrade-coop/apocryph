@@ -30,7 +30,7 @@ namespace Apocryph.FunctionApp
                 {
                     if (currentProposer.Equals(self))
                     {
-                        outputStream.AddAsync(state.LastCommit);
+                        await outputStream.AddAsync(state.LastCommit);
                     }
                 }, CancellationToken.None),
 

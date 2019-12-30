@@ -22,7 +22,7 @@ namespace Apocryph.FunctionApp
             {
                 foreach (var command in output.Value.Commands)
                 {
-                    outputStream.AddAsync(command);
+                    await outputStream.AddAsync(command);
                 }
             }, CancellationToken.None);
         }

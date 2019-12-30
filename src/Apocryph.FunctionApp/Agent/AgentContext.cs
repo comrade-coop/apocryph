@@ -25,7 +25,7 @@ namespace Apocryph.FunctionApp.Agent
             throw new NotImplementedException();
         }
 
-        public void AddReminder(TimeSpan time, object? data = null)
+        public void AddReminder(TimeSpan time, object data)
         {
             Commands.Add(new ReminderCommand{Time = time, Data = data});
         }
