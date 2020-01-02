@@ -88,10 +88,6 @@ namespace Apocryph.FunctionApp
                 validatorSetsStream
             });
 
-            await using var agentInputsStream = await context.JoinStreams(
-                reminderCommandExecutorStream,
-                publicationCommandExecutorStream);
-
             await using var proposerRuntimeStream = await context.StreamFunctionAsync("Runtime", new
             {
                 self,
@@ -102,7 +98,7 @@ namespace Apocryph.FunctionApp
 
             await using var inputProposerStream = await context.StreamFunctionAsync("InputProposer", new
             {
-                agentInputsStream,
+                agentInputsStream = new []{reminderCommandExecutorStream, publicationCommandExecutorStream},
                 committerStream
             });
 
