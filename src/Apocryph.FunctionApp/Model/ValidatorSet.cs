@@ -5,8 +5,8 @@ namespace Apocryph.FunctionApp.Model
 {
     public class ValidatorSet
     {
-        public Dictionary<ValidatorKey, int> Weights { get; set; }
-        public Dictionary<ValidatorKey, int> AccumulatedWeights { get; set; }
+        public Dictionary<ValidatorKey, int> Weights { get; set; } = new Dictionary<ValidatorKey, int>();
+        public Dictionary<ValidatorKey, int> AccumulatedWeights { get; set; } = new Dictionary<ValidatorKey, int>();
         public int Total { get; set; }
 
         public ValidatorKey GetMaxAccumulatedWeight()

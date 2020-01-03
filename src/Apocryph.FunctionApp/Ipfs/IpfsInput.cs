@@ -26,6 +26,8 @@ namespace Apocryph.FunctionApp.Ipfs
                 var item = JsonConvert.DeserializeObject<Signed<object>>(Encoding.UTF8.GetString(bytes));
                 await outputStream.AddAsync(item);
             }, CancellationToken.None);
+
+            await context.BindOutput(CancellationToken.None);
         }
     }
 }

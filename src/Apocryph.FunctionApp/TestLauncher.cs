@@ -25,6 +25,7 @@ namespace Apocryph.FunctionApp
 
             var ipfsGateway = "http://127.0.0.1:5001";
             var validatorSet = new ValidatorSet();
+            validatorSet.Weights.Add(self, 10);
 
             await using var validatorLauncherStream = await context.StreamActionAsync(nameof(ValidatorLauncher),
                 new

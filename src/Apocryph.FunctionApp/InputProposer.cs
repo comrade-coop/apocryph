@@ -51,6 +51,14 @@ namespace Apocryph.FunctionApp
                             break;
                     }
                 }, CancellationToken.None));
+
+                await outputStream.AddAsync(new AgentInput
+                {
+                    Previous = new Hash { Bytes = new byte[] { 0 } },
+                    State = new {},
+                    Sender = "",
+                    Message = new { init = true },
+                });
         }
     }
 }

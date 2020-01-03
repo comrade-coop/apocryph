@@ -53,6 +53,12 @@ namespace Apocryph.FunctionApp
                 hashStream = _committerStream
             });
 
+            await using var proposerRuntimeStream = await context.StreamFunctionAsync(nameof(Runtime), new
+            {
+                self,
+                inputStream = committerStream,
+            });
+
             await using var commandsStream = await context.StreamFunctionAsync(nameof(CommandSplitter), new
             {
                 committerStream
@@ -66,11 +72,12 @@ namespace Apocryph.FunctionApp
             await using var agentZeroStream = await context.StreamFunctionAsync(nameof(IpfsInput), new
             {
                 ipfsGateway,
-                topic = "apocryph-agent-0"
+                topic = 0 //"apocryph-agent-0"
             });
 
             await using var _inputVerifierStream = await context.StreamFunctionAsync(nameof(StepVerifier), new
             {
+                validatorSet, // TODO: Should give agent 0's validator set instead !!
                 stepsStream = agentZeroStream,
             });
 
@@ -87,17 +94,10 @@ namespace Apocryph.FunctionApp
 
             await using var subscriptionCommandExecutorStream = await context.StreamFunctionAsync(nameof(SubscriptionCommandExecutor), new
             {
+                ipfsGateway,
                 commandsStream,
                 validatorSetsStream
             });
-
-            await using var proposerRuntimeStream = await context.StreamFunctionAsync(nameof(Runtime), new
-            {
-                self,
-                currentProposerStream,
-                committerStream
-            });
-
 
             await using var inputProposerStream = await context.StreamFunctionAsync(nameof(InputProposer), new
             {
@@ -108,7 +108,7 @@ namespace Apocryph.FunctionApp
             await using var proposerStream = await context.StreamFunctionAsync(nameof(Proposer), new
             {
                 commitsStream,
-                proposerRuntimeStream
+                stepsStream = new [] {proposerRuntimeStream, inputProposerStream}
             });
 
             // Validator (Voting)
@@ -133,6 +133,7 @@ namespace Apocryph.FunctionApp
 
             await using var _validatorRuntimeStream = await context.StreamFunctionAsync(nameof(Runtime), new
             {
+                self,
                 inputStream = validatorRuntimeInputStream
             });
 
@@ -152,6 +153,7 @@ namespace Apocryph.FunctionApp
 
             await using var consensusStream = await context.StreamFunctionAsync(nameof(Consensus), new
             {
+                validatorSet,
                 votesStream
             });
 
