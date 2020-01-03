@@ -22,7 +22,7 @@ namespace Apocryph.FunctionApp
             [PerperStream("validatorFilterStream")] IAsyncEnumerable<Signed<IAgentStep>> validatorFilterStream,
             [PerperStream("outputStream")] IAsyncCollector<Vote> outputStream)
         {
-            var state = await context.FetchStateAsync<State>();
+            var state = await context.FetchStateAsync<State>() ?? new State();
 
             await Task.WhenAll(
                 validatorFilterStream.ForEachAsync(async proposal =>

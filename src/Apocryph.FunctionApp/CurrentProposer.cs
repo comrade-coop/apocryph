@@ -22,7 +22,7 @@ namespace Apocryph.FunctionApp
             [PerperStream("commitsStream")] IAsyncEnumerable<Signed<Commit>> commitsStream,
             [PerperStream("outputStream")] IAsyncCollector<ValidatorKey> outputStream)
         {
-            var state = await context.FetchStateAsync<State>();
+            var state = await context.FetchStateAsync<State>() ?? new State();
 
             await commitsStream.ForEachAsync(async commit =>
                 {

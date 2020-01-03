@@ -21,7 +21,7 @@ namespace Apocryph.FunctionApp
             [PerperStream("validatorFilterStream")] IAsyncEnumerable<Signed<AgentOutput>> validatorFilterStream,
             [PerperStream("outputStream")] IAsyncCollector<Hash> outputStream)
         {
-            var state = await context.FetchStateAsync<State>();
+            var state = await context.FetchStateAsync<State>() ?? new State();
 
             await validatorFilterStream.ForEachAsync(async output =>
             {

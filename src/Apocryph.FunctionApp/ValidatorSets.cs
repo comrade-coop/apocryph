@@ -25,7 +25,7 @@ namespace Apocryph.FunctionApp
             [PerperStream("stepVerifierStream")] IAsyncEnumerable<Hashed<AgentOutput>> stepsStream,
             [PerperStream("outputStream")] IAsyncCollector<Dictionary<string, ValidatorSet>> outputStream)
         {
-            var state = await context.FetchStateAsync<State>();
+            var state = await context.FetchStateAsync<State>() ?? new State();
 
             await stepsStream.ForEachAsync(async output =>
             {

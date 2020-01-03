@@ -23,7 +23,7 @@ namespace Apocryph.FunctionApp
             [PerperStream("commandExecutorStream")] IAsyncEnumerable<(string, object)> commandExecutorStream,
             [PerperStream("outputStream")] IAsyncCollector<Vote> outputStream)
         {
-            var state = await context.FetchStateAsync<State>();
+            var state = await context.FetchStateAsync<State>() ?? new State();
 
             await Task.WhenAll(
                 commandExecutorStream.ForEachAsync(async senderAndMessage =>

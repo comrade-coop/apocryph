@@ -24,7 +24,7 @@ namespace Apocryph.FunctionApp
             [PerperStream("proposalsStream")] IAsyncEnumerable<Signed<IAgentStep>> proposalsStream,
             [PerperStream("outputStream")] IAsyncCollector<Signed<IAgentStep>> outputStream)
         {
-            var state = await context.FetchStateAsync<State>();
+            var state = await context.FetchStateAsync<State>() ?? new State();
 
             await Task.WhenAll(
                 currentProposerStream.ForEachAsync(async currentProposer =>

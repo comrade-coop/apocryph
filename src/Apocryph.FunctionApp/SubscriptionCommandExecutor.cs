@@ -30,7 +30,7 @@ namespace Apocryph.FunctionApp
             [PerperStream("outputStream")] IAsyncCollector<(string, object)> outputStream)
         {
             var ipfs = new IpfsClient(ipfsGateway);
-            var state = await context.FetchStateAsync<State>();
+            var state = await context.FetchStateAsync<State>() ?? new State();
 
             await Task.WhenAll(
                 commandsStream.ForEachAsync(subscription =>

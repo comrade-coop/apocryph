@@ -22,7 +22,7 @@ namespace Apocryph.FunctionApp
             [PerperStream("votesStream")] IAsyncEnumerable<Signed<Vote>> votesStream,
             [PerperStream("outputStream")] IAsyncCollector<Commit> outputStream)
         {
-            var state = await context.FetchStateAsync<State>();
+            var state = await context.FetchStateAsync<State>() ?? new State();
 
             await votesStream.ForEachAsync(async vote =>
                 {

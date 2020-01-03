@@ -25,7 +25,7 @@ namespace Apocryph.FunctionApp
             [PerperStream("outputStream")] IAsyncCollector<IAgentStep> outputStream,
             ILogger logger)
         {
-            var state = await context.FetchStateAsync<State>();
+            var state = await context.FetchStateAsync<State>() ?? new State();
 
             await Task.WhenAll(
                 commitsStream.ForEachAsync(async commit =>
