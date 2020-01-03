@@ -16,16 +16,16 @@ namespace Apocryph.FunctionApp
             public Dictionary<Hash, Hash> ExpectedNextSteps { get; set; }
         }
 
-        [FunctionName("Voting")]
+        [FunctionName(nameof(Voting))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("validatorRuntimeStream")] IAsyncEnumerable<Hashed<IAgentStep>> validatorRuntimeStream,
-            [PerperStream("proposalsStream")] IAsyncEnumerable<Signed<IAgentStep>> proposalsStream,
+            [PerperStream("validatorFilterStream")] IAsyncEnumerable<Signed<IAgentStep>> validatorFilterStream,
             [PerperStream("outputStream")] IAsyncCollector<Vote> outputStream)
         {
             var state = await context.FetchStateAsync<State>();
 
             await Task.WhenAll(
-                proposalsStream.ForEachAsync(async proposal =>
+                validatorFilterStream.ForEachAsync(async proposal =>
                 {
                     state.ExpectedNextSteps[proposal.Value.Previous] = proposal.Hash;
 

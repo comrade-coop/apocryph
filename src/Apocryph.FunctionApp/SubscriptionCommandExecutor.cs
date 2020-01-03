@@ -22,7 +22,7 @@ namespace Apocryph.FunctionApp
             public Dictionary<string, ValidatorSet> ValidatorSets { get; set; }
         }
 
-        [FunctionName("SubscriptionCommandExecutor")]
+        [FunctionName(nameof(SubscriptionCommandExecutor))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("ipfsGateway")] string ipfsGateway,
             [PerperStream("validatorSetsStream")] IAsyncEnumerable<Dictionary<string, ValidatorSet>> validatorSetsStream,

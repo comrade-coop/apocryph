@@ -20,7 +20,7 @@ namespace Apocryph.FunctionApp
             public Dictionary<string, ValidatorSet> ValidatorSets { get; set; }
         }
 
-        [FunctionName("ValidatorSets")]
+        [FunctionName(nameof(ValidatorSets))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("stepVerifierStream")] IAsyncEnumerable<Hashed<AgentOutput>> stepsStream,
             [PerperStream("outputStream")] IAsyncCollector<Dictionary<string, ValidatorSet>> outputStream)

@@ -12,7 +12,7 @@ namespace Apocryph.FunctionApp
 {
     public static class Signer
     {
-        [FunctionName("Signer")]
+        [FunctionName(nameof(Signer))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("self")] ValidatorKey self,
             [Perper("privateKey")] ECParameters privateKey,

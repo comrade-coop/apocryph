@@ -13,7 +13,7 @@ namespace Apocryph.FunctionApp
 {
     public static class ReminderCommandExecutor
     {
-        [FunctionName("ReminderCommandExecutor")]
+        [FunctionName(nameof(ReminderCommandExecutor))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("commandsStream")] IAsyncEnumerable<ReminderCommand> commandsStream,
             [PerperStream("outputStream")] IAsyncCollector<(string, object)> outputStream)

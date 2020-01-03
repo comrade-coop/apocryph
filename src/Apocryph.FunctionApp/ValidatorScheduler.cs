@@ -13,7 +13,7 @@ namespace Apocryph.FunctionApp
 {
     public static class ValidatorScheduler
     {
-        [FunctionName("ValidatorScheduler")]
+        [FunctionName(nameof(ValidatorScheduler))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("validatorSetsStream")] IAsyncEnumerable<Dictionary<string, ValidatorSet>> validatorSetsStream,
             [Perper("ipfsGateway")] string ipfsGateway,
@@ -39,7 +39,7 @@ namespace Apocryph.FunctionApp
                     {
                         var agentId = kv.Key;
                         var validatorSet = kv.Value;
-                        runningStreams[kv] = await context.StreamActionAsync("ValidatorLauncher", new
+                        runningStreams[kv] = await context.StreamActionAsync(nameof(ValidatorLauncher), new
                         {
                             ipfsGateway,
                             agentId = agentId,

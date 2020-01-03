@@ -16,7 +16,7 @@ namespace Apocryph.FunctionApp
             public Dictionary<Hash, Dictionary<ValidatorKey, ValidatorSignature>> Votes { get; set; }
         }
 
-        [FunctionName("Consensus")]
+        [FunctionName(nameof(Consensus))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("validatorSet")] ValidatorSet validatorSet,
             [PerperStream("votesStream")] IAsyncEnumerable<Signed<Vote>> votesStream,

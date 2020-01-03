@@ -10,9 +10,9 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.FunctionApp.Ipfs
 {
-    public static class Input
+    public static class IpfsInput
     {
-        [FunctionName("IpfsInput")]
+        [FunctionName(nameof(IpfsInput))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("ipfsGateway")] string ipfsGateway,
             [Perper("topic")] string topic,

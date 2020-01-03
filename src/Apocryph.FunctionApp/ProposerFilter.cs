@@ -16,7 +16,7 @@ namespace Apocryph.FunctionApp
             public Signed<IAgentStep> LastCommit { get; set; }
         }
 
-        [FunctionName("ProposerFilter")]
+        [FunctionName(nameof(ProposerFilter))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("self")] ValidatorKey self,
             [PerperStream("committerStream")] IAsyncEnumerable<Signed<IAgentStep>> committerStream,

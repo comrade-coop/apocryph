@@ -14,9 +14,9 @@ using Perper.WebJobs.Extensions.Triggers;
 
 namespace Apocryph.FunctionApp.Ipfs
 {
-    public static class Saver
+    public static class IpfsSaver
     {
-        [FunctionName("IpfsSaver")]
+        [FunctionName(nameof(IpfsSaver))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("ipfsGateway")] string ipfsGateway,
             [PerperStream("dataStream")] IAsyncEnumerable<object> dataStream,

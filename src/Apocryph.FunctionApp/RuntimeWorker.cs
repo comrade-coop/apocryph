@@ -8,7 +8,7 @@ namespace Apocryph.FunctionApp
 {
     public static class RuntimeWorker
     {
-        [FunctionName("RuntimeWorker")]
+        [FunctionName(nameof(RuntimeWorker))]
         [return: Perper("$return")]
         public static AgentContext<object> Run([PerperWorkerTrigger("Runtime")] object state,
             [Perper("sender")] string sender,

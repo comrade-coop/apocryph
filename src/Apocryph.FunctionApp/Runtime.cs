@@ -12,7 +12,7 @@ namespace Apocryph.FunctionApp
 {
     public static class Runtime
     {
-        [FunctionName("Runtime")]
+        [FunctionName(nameof(Runtime))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("self")] ValidatorKey self,
             [PerperStream("inputStream")] IAsyncEnumerable<Hashed<AgentInput>> inputStream,

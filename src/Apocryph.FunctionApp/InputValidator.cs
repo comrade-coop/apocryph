@@ -16,7 +16,7 @@ namespace Apocryph.FunctionApp
             public ISet<(string, object)> PendingInputs { get; set; } = new HashSet<(string, object)>();
         }
 
-        [FunctionName("InputValidator")]
+        [FunctionName(nameof(InputValidator))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("validatorFilterStream")] IAsyncEnumerable<Signed<AgentInput>> validatorFilterStream,
             [PerperStream("committerStream")] IAsyncEnumerable<Hashed<AgentInput>> committerStream,

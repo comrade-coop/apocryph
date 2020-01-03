@@ -17,7 +17,7 @@ namespace Apocryph.FunctionApp
             public Hash CurrentStep { get; set; }
         }
 
-        [FunctionName("ValidatorFilter")]
+        [FunctionName(nameof(ValidatorFilter))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("committerStream")] IAsyncEnumerable<Hash> committerStream,
             [PerperStream("currentProposerStream")] IAsyncEnumerable<ValidatorKey> currentProposerStream,

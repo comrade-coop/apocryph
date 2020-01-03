@@ -13,7 +13,7 @@ namespace Apocryph.FunctionApp
 {
     public static class CommandSplitter
     {
-        [FunctionName("CommandSplitter")]
+        [FunctionName(nameof(CommandSplitter))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("committerStream")] IAsyncEnumerable<Hashed<AgentOutput>> committerStream,
             [PerperStream("outputStream")] IAsyncCollector<ICommand> outputStream)

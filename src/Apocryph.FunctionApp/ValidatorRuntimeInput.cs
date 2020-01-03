@@ -9,14 +9,14 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.FunctionApp
 {
-    public static class ValidatorBeforeRuntime
+    public static class ValidatorRuntimeInput
     {
         public class State
         {
             public ISet<(string, object)> PendingInputs { get; set; } = new HashSet<(string, object)>();
         }
 
-        [FunctionName("ValidatorBeforeRuntime")]
+        [FunctionName(nameof(ValidatorRuntimeInput))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("validatorFilterStream")] IAsyncEnumerable<Signed<AgentOutput>> validatorFilterStream,
             [PerperStream("outputStream")] IAsyncCollector<Hash> outputStream)
