@@ -60,7 +60,7 @@ namespace Apocryph.FunctionApp
                 self
             });
 
-            await context.WaitUntilCancelled(cancellationToken);
+            await context.BindOutput(cancellationToken);
         }
     }
 }

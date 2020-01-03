@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,7 +17,8 @@ namespace Apocryph.FunctionApp
             [Perper("validatorSet")] ValidatorSet validatorSet,
             [Perper("ipfsGateway")] string ipfsGateway,
             [Perper("privateKey")] ECParameters privateKey,
-            [Perper("self")] ValidatorKey self)
+            [Perper("self")] ValidatorKey self,
+            CancellationToken cancellationToken)
         {
             var topic = "apocryph-agent-" + agentId;
 
@@ -148,7 +150,7 @@ namespace Apocryph.FunctionApp
                 votesStream
             });
 
-            foreach (var stream in new[] {proposerStream, votingStream, consensusStream})
+            await Task.WhenAll(new[] {proposerStream, votingStream, consensusStream}.Select(async stream =>
             {
                 await using var saverStream = await context.StreamFunctionAsync("IpfsSaver", new
                 {
@@ -163,15 +165,15 @@ namespace Apocryph.FunctionApp
                     dataStream = saverStream
                 });
 
-                await context.StreamActionAsync("IpfsOutput", new
+                await using var ipfsOutputStream = await context.StreamActionAsync("IpfsOutput", new
                 {
                     ipfsGateway,
                     topic,
                     dataStream = signerStream
                 });
 
-
-            }
+                await context.BindOutput(cancellationToken);
+            }));
         }
     }
 }

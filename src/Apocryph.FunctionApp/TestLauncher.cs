@@ -35,7 +35,7 @@ namespace Apocryph.FunctionApp
                     privateKey, self
                 });
 
-            await context.WaitUntilCancelled(cancellationToken);
+            await context.BindOutput(cancellationToken);
         }
     }
 }
