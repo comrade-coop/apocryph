@@ -18,19 +18,15 @@ namespace Apocryph.FunctionApp
         {
             public Dictionary<Hash, Dictionary<ValidatorKey, ValidatorSignature>> Commits { get; }
 
-            public State()
+            public State(bool init = false)
             {
-            }
-
-            public State(ValidatorKey initialKey, ValidatorSignature initialSignature)
-            {
-                Commits = new Dictionary<Hash, Dictionary<ValidatorKey, ValidatorSignature>>
+                if (init)
                 {
-                    [new Hash {Bytes = new byte[] {0}}] = new Dictionary<ValidatorKey, ValidatorSignature>
+                    Commits = new Dictionary<Hash, Dictionary<ValidatorKey, ValidatorSignature>>
                     {
-                        [initialKey] = initialSignature
-                    }
-                };
+                        [new Hash {Bytes = new byte[] {0}}] = new Dictionary<ValidatorKey, ValidatorSignature>()
+                    };
+                }
             }
         }
 
@@ -41,7 +37,7 @@ namespace Apocryph.FunctionApp
             [PerperStream("outputStream")] IAsyncCollector<IAgentStep> outputStream,
             ILogger logger)
         {
-            var state = await context.FetchStateAsync<State>() ?? new State(new ValidatorKey(), new ValidatorSignature());
+            var state = await context.FetchStateAsync<State>() ?? new State(true);
 
             await Task.WhenAll(
                 commitsStream.ForEachAsync(async commit =>

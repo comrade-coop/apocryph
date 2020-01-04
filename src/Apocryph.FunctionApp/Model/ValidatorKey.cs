@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Newtonsoft.Json;
@@ -41,6 +42,21 @@ namespace Apocryph.FunctionApp.Model
             {
                 return ecdsa.VerifyHash(hash.Bytes, signature.Bytes);
             }
+        }
+
+        public override bool Equals(object? obj)
+        {
+            if (obj is ValidatorKey other)
+            {
+                return GetHashCode() == other.GetHashCode();
+            }
+
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Convert.ToBase64String(Key.Q.X), Convert.ToBase64String(Key.Q.Y));
         }
     }
 }

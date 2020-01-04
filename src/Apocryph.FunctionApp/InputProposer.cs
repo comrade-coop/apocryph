@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -27,19 +26,6 @@ namespace Apocryph.FunctionApp
             var state = await context.FetchStateAsync<State>() ?? new State();
 
             await Task.WhenAll(
-                Task.Run(async () =>
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(1));
-
-                    await outputStream.AddAsync(new AgentInput
-                    {
-                        Previous = new Hash {Bytes = new byte[] {0}},
-                        State = new { },
-                        Sender = "",
-                        Message = new {init = true},
-                    });
-                }),
-
                 agentInputsStream.ForEachAsync(async agentInput =>
                 {
                     state.PendingInputs.Add(agentInput);
