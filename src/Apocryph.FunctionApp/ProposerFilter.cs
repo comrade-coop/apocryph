@@ -13,15 +13,15 @@ namespace Apocryph.FunctionApp
     {
         private class State
         {
-            public Signed<IAgentStep> LastCommit { get; set; }
+            public ISigned<IAgentStep> LastCommit { get; set; }
         }
 
         [FunctionName(nameof(ProposerFilter))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("self")] ValidatorKey self,
-            [PerperStream("committerStream")] IAsyncEnumerable<Signed<IAgentStep>> committerStream,
+            [PerperStream("committerStream")] IAsyncEnumerable<ISigned<IAgentStep>> committerStream,
             [PerperStream("currentProposerStream")] IAsyncEnumerable<ValidatorKey> currentProposerStream,
-            [PerperStream("outputStream")] IAsyncCollector<Signed<IAgentStep>> outputStream)
+            [PerperStream("outputStream")] IAsyncCollector<ISigned<IAgentStep>> outputStream)
         {
             var state = await context.FetchStateAsync<State>() ?? new State();
 

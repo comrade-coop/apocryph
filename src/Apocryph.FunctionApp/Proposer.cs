@@ -36,7 +36,7 @@ namespace Apocryph.FunctionApp
 
         [FunctionName(nameof(Proposer))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("commitsStream")] IAsyncEnumerable<Signed<Commit>> commitsStream,
+            [PerperStream("commitsStream")] IAsyncEnumerable<ISigned<Commit>> commitsStream,
             [PerperStream("stepsStream")] IAsyncEnumerable<IAgentStep> stepsStream,
             [PerperStream("outputStream")] IAsyncCollector<IAgentStep> outputStream,
             ILogger logger)

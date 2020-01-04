@@ -15,7 +15,7 @@ namespace Apocryph.FunctionApp
     {
         [FunctionName(nameof(CommandSplitter))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("committerStream")] IAsyncEnumerable<Hashed<AgentOutput>> committerStream,
+            [PerperStream("committerStream")] IAsyncEnumerable<IHashed<AgentOutput>> committerStream,
             [PerperStream("outputStream")] IAsyncCollector<ICommand> outputStream)
         {
             await committerStream.ForEachAsync(async output =>

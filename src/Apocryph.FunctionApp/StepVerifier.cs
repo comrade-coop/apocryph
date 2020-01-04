@@ -16,7 +16,7 @@ namespace Apocryph.FunctionApp
     {
         [FunctionName(nameof(StepVerifier))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("stepsStream")] IAsyncEnumerable<Signed<IAgentStep>> stepsStream,
+            [PerperStream("stepsStream")] IAsyncEnumerable<ISigned<IAgentStep>> stepsStream,
             [Perper("validatorSet")] ValidatorSet validatorSet,
             [PerperStream("outputStream")] IAsyncCollector<Hash> outputStream)
         {

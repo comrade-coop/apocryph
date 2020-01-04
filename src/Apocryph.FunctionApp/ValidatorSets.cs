@@ -22,7 +22,7 @@ namespace Apocryph.FunctionApp
 
         [FunctionName(nameof(ValidatorSets))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("stepVerifierStream")] IAsyncEnumerable<Hashed<AgentOutput>> stepsStream,
+            [PerperStream("stepVerifierStream")] IAsyncEnumerable<IHashed<AgentOutput>> stepsStream,
             [PerperStream("outputStream")] IAsyncCollector<Dictionary<string, ValidatorSet>> outputStream)
         {
             var state = await context.FetchStateAsync<State>() ?? new State();

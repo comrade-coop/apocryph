@@ -17,7 +17,7 @@ namespace Apocryph.FunctionApp
             ECParameters privateKey;
             ValidatorKey self;
 
-            using (var dsa = ECDsa.Create())
+            using (var dsa = ECDsa.Create(ECCurve.NamedCurves.nistP521))
             {
                 privateKey = dsa.ExportParameters(true);
                 self = new ValidatorKey{Key = dsa.ExportParameters(false)};

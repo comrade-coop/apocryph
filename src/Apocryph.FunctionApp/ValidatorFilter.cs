@@ -21,8 +21,8 @@ namespace Apocryph.FunctionApp
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("committerStream")] IAsyncEnumerable<Hash> committerStream,
             [PerperStream("currentProposerStream")] IAsyncEnumerable<ValidatorKey> currentProposerStream,
-            [PerperStream("proposalsStream")] IAsyncEnumerable<Signed<IAgentStep>> proposalsStream,
-            [PerperStream("outputStream")] IAsyncCollector<Signed<IAgentStep>> outputStream)
+            [PerperStream("proposalsStream")] IAsyncEnumerable<ISigned<IAgentStep>> proposalsStream,
+            [PerperStream("outputStream")] IAsyncCollector<ISigned<IAgentStep>> outputStream)
         {
             var state = await context.FetchStateAsync<State>() ?? new State();
 

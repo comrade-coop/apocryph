@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Apocryph.FunctionApp.Agent;
 using Apocryph.FunctionApp.Command;
 using Apocryph.FunctionApp.Model;
+using Apocryph.FunctionApp.Ipfs;
 using Ipfs;
 using Ipfs.Http;
 using Microsoft.Azure.WebJobs;
@@ -41,7 +42,10 @@ namespace Apocryph.FunctionApp
                     {
                         var bytes = message.DataBytes;
                         // FIXME: Do not blindly trust that Hash and Value match and that Signature, Hash, and Signer match
-                        var input = JsonConvert.DeserializeObject<Signed<AgentInput>>(Encoding.UTF8.GetString(bytes));
+                        var input = (ISigned<AgentInput>)JsonConvert.DeserializeObject<ISigned<object>>(
+                            Encoding.UTF8.GetString(bytes),
+                            IpfsJsonSettings.DefaultSettings);
+
                         if (input != null && input.Value.CommitSignatures
                             .All(kv => kv.Key.ValidateSignature(input.Value.Previous, kv.Value)))
                         {
@@ -56,7 +60,7 @@ namespace Apocryph.FunctionApp
                                 // FIXME: Should use DAG/IPLD API instead
                                 var block = await ipfs.Block.GetAsync(Cid.Read(hash.Bytes), CancellationToken.None);
 
-                                var output = JsonConvert.DeserializeObject<AgentOutput>(Encoding.UTF8.GetString(block.DataBytes));
+                                var output = (AgentOutput) JsonConvert.DeserializeObject<object>(Encoding.UTF8.GetString(block.DataBytes), IpfsJsonSettings.DefaultSettings);
 
                                 foreach (var command in output.Commands)
                                 {

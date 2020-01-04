@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Linq;
@@ -16,19 +17,22 @@ namespace Apocryph.FunctionApp
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("self")] ValidatorKey self,
             [Perper("privateKey")] ECParameters privateKey,
-            [PerperStream("dataStream")] IAsyncEnumerable<Hashed<object>> dataStream,
-            [PerperStream("outputStream")] IAsyncCollector<Signed<object>> outputStream)
+            [PerperStream("dataStream")] IAsyncEnumerable<IHashed<object>> dataStream,
+            [PerperStream("outputStream")] IAsyncCollector<ISigned<object>> outputStream)
         {
 
-            await dataStream.ForEachAsync(async item =>
+            await dataStream.ForEachAsync(async hashed =>
                 {
-                    byte[] signature;
-                    using (var ecdsa = ECDsa.Create(privateKey))
+                    using var ecdsa = ECDsa.Create(privateKey);
+                    var signature = new ValidatorSignature
                     {
-                        signature = ecdsa.SignHash(item.Hash.Bytes);
-                    }
+                        Bytes = ecdsa.SignHash(hashed.Hash.Bytes)
+                    };
 
-                    await outputStream.AddAsync(new Signed<object>(item, self, new ValidatorSignature {Bytes = signature}));
+                    var signedType = typeof(Signed<>).MakeGenericType(hashed.GetType().GenericTypeArguments[0]);
+                    var signed = (ISigned<object>)Activator.CreateInstance(signedType, hashed, self, signature);
+
+                    await outputStream.AddAsync(signed);
                 }, CancellationToken.None);
         }
     }

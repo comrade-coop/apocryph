@@ -19,7 +19,7 @@ namespace Apocryph.FunctionApp
         [FunctionName(nameof(Consensus))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("validatorSet")] ValidatorSet validatorSet,
-            [PerperStream("votesStream")] IAsyncEnumerable<Signed<Vote>> votesStream,
+            [PerperStream("votesStream")] IAsyncEnumerable<ISigned<Vote>> votesStream,
             [PerperStream("outputStream")] IAsyncCollector<Commit> outputStream)
         {
             var state = await context.FetchStateAsync<State>() ?? new State();

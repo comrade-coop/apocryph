@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 
 namespace Apocryph.FunctionApp.Model
 {
-    public class Hashed<T>
+    public class Hashed<T> : IHashed<T>
     {
         public Hashed(T from, Hash hash) {
             Value = from;

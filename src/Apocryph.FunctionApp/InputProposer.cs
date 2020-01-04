@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -18,22 +19,27 @@ namespace Apocryph.FunctionApp
 
         [FunctionName(nameof(InputProposer))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("committerStream")] IAsyncEnumerable<Hashed<IAgentStep>> committerStream,
+            [PerperStream("committerStream")] IAsyncEnumerable<IHashed<IAgentStep>> committerStream,
             [PerperStream("commandExecutorStream")]
             IAsyncEnumerable<(string, object)> agentInputsStream,
             [PerperStream("outputStream")] IAsyncCollector<AgentInput> outputStream)
         {
             var state = await context.FetchStateAsync<State>() ?? new State();
 
-            await outputStream.AddAsync(new AgentInput
-            {
-                Previous = new Hash {Bytes = new byte[] {0}},
-                State = new { },
-                Sender = "",
-                Message = new {init = true},
-            });
-
             await Task.WhenAll(
+                Task.Run(async () =>
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(1));
+
+                    await outputStream.AddAsync(new AgentInput
+                    {
+                        Previous = new Hash {Bytes = new byte[] {0}},
+                        State = new { },
+                        Sender = "",
+                        Message = new {init = true},
+                    });
+                }),
+
                 agentInputsStream.ForEachAsync(async agentInput =>
                 {
                     state.PendingInputs.Add(agentInput);

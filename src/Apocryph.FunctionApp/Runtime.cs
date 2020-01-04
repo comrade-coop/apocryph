@@ -15,7 +15,7 @@ namespace Apocryph.FunctionApp
         [FunctionName(nameof(Runtime))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("self")] ValidatorKey self,
-            [PerperStream("inputStream")] IAsyncEnumerable<Hashed<AgentInput>> inputStream,
+            [PerperStream("inputStream")] IAsyncEnumerable<IHashed<AgentInput>> inputStream,
             [PerperStream("outputStream")] IAsyncCollector<AgentOutput> outputStream,
             CancellationToken cancellationToken)
         {

@@ -18,8 +18,8 @@ namespace Apocryph.FunctionApp
 
         [FunctionName(nameof(InputValidator))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("validatorFilterStream")] IAsyncEnumerable<Signed<AgentInput>> validatorFilterStream,
-            [PerperStream("committerStream")] IAsyncEnumerable<Hashed<AgentInput>> committerStream,
+            [PerperStream("validatorFilterStream")] IAsyncEnumerable<ISigned<AgentInput>> validatorFilterStream,
+            [PerperStream("committerStream")] IAsyncEnumerable<IHashed<AgentInput>> committerStream,
             [PerperStream("commandExecutorStream")] IAsyncEnumerable<(string, object)> commandExecutorStream,
             [PerperStream("outputStream")] IAsyncCollector<Vote> outputStream)
         {
