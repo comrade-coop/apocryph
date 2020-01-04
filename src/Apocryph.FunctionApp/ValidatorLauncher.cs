@@ -149,6 +149,13 @@ namespace Apocryph.FunctionApp
                 validatorFilterStream
             });
 
+            await using var inputValidatorStream = await context.StreamFunctionAsync(nameof(InputValidator), new
+            {
+                validatorFilterStream,
+                committerStream,
+                commandExecutorStream = new []{reminderCommandExecutorStream, subscriptionCommandExecutorStream}
+            });
+
             // Consensus (Committing)
 
             await using var consensusStream = await context.StreamFunctionAsync(nameof(Consensus), new
@@ -157,10 +164,12 @@ namespace Apocryph.FunctionApp
                 votesStream
             });
 
+            // Output
+
             await using var outputSaverStream = await context.StreamFunctionAsync(nameof(IpfsSaver), new
             {
                 ipfsGateway,
-                dataStream = new[] {proposerStream, votingStream, consensusStream}
+                dataStream = new[] {proposerStream, votingStream, inputValidatorStream, consensusStream}
             });
 
             await using var signerStream = await context.StreamFunctionAsync(nameof(Signer), new
