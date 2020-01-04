@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -36,12 +37,19 @@ namespace Apocryph.FunctionApp
 
                 stepsStream.ForEachAsync(async step =>
                 {
-                    // FIXME: Should probably block until there are enough signatures (as we cannot be sure that the other stream would collect them in time)
-                    step.CommitSignatures = state.Commits[step.Previous];
+                    try
+                    {
+                        // FIXME: Should probably block until there are enough signatures (as we cannot be sure that the other stream would collect them in time)
+                        step.CommitSignatures = state.Commits[step.Previous];
 
-                    logger.LogDebug("Proposing a step after {0}!", step.Previous.Bytes[0]);
+                        logger.LogDebug("Proposing a step after {0}!", step.Previous.Bytes[0]);
 
-                    await outputStream.AddAsync(step);
+                        await outputStream.AddAsync(step);
+                    }
+                    catch (Exception e)
+                    {
+                        logger.LogError(e.ToString());
+                    }
                 }, CancellationToken.None));
         }
     }
