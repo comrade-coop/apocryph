@@ -19,14 +19,13 @@ namespace Apocryph.FunctionApp
         [FunctionName(nameof(InputProposer))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("committerStream")] IAsyncEnumerable<IHashed<IAgentStep>> committerStream,
-            [PerperStream("commandExecutorStream")]
-            IAsyncEnumerable<(string, object)> agentInputsStream,
+            [PerperStream("commandExecutorStream")] IAsyncEnumerable<(string, object)> commandExecutorStream,
             [PerperStream("outputStream")] IAsyncCollector<AgentInput> outputStream)
         {
             var state = await context.FetchStateAsync<State>() ?? new State();
 
             await Task.WhenAll(
-                agentInputsStream.ForEachAsync(async agentInput =>
+                commandExecutorStream.ForEachAsync(async agentInput =>
                 {
                     state.PendingInputs.Add(agentInput);
                     await context.UpdateStateAsync(state);

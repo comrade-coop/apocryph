@@ -101,7 +101,7 @@ namespace Apocryph.FunctionApp
 
             await using var inputProposerStream = await context.StreamFunctionAsync(nameof(InputProposer), new
             {
-                agentInputsStream = new []{reminderCommandExecutorStream, subscriptionCommandExecutorStream},
+                commandExecutorStream = new []{reminderCommandExecutorStream, subscriptionCommandExecutorStream},
                 committerStream
             });
 
