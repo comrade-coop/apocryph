@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.FunctionApp.Model;
 using Microsoft.Azure.WebJobs;
+using Microsoft.Extensions.Logging;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
 
@@ -21,7 +22,8 @@ namespace Apocryph.FunctionApp
             [PerperStream("validatorFilterStream")] IAsyncEnumerable<ISigned<AgentInput>> validatorFilterStream,
             [PerperStream("committerStream")] IAsyncEnumerable<IHashed<AgentInput>> committerStream,
             [PerperStream("commandExecutorStream")] IAsyncEnumerable<(string, object)> commandExecutorStream,
-            [PerperStream("outputStream")] IAsyncCollector<Vote> outputStream)
+            [PerperStream("outputStream")] IAsyncCollector<Vote> outputStream,
+            ILogger logger)
         {
             var state = await context.FetchStateAsync<State>() ?? new State();
 

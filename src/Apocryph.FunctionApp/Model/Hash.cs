@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 
 namespace Apocryph.FunctionApp.Model
@@ -42,6 +43,11 @@ namespace Apocryph.FunctionApp.Model
 
                 return result;
             }
+        }
+
+        public override string ToString()
+        {
+            return Convert.ToBase64String(Bytes);
         }
     }
 }

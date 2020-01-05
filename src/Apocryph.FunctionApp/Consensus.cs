@@ -13,7 +13,7 @@ namespace Apocryph.FunctionApp
     {
         private class State
         {
-            public Dictionary<Hash, Dictionary<ValidatorKey, ValidatorSignature>> Votes { get; set; }
+            public Dictionary<Hash, Dictionary<ValidatorKey, ValidatorSignature>> Votes { get; set; } = new Dictionary<Hash, Dictionary<ValidatorKey, ValidatorSignature>>();
         }
 
         [FunctionName(nameof(Consensus))]
@@ -25,17 +25,21 @@ namespace Apocryph.FunctionApp
             var state = await context.FetchStateAsync<State>() ?? new State();
 
             await votesStream.ForEachAsync(async vote =>
+            {
+                if (!state.Votes.ContainsKey(vote.Value.For))
                 {
-                    state.Votes[vote.Value.For].Add(vote.Signer, vote.Signature);
-                    await context.UpdateStateAsync(state);
+                    state.Votes[vote.Value.For] = new Dictionary<ValidatorKey, ValidatorSignature>();
+                }
+                state.Votes[vote.Value.For].Add(vote.Signer, vote.Signature);
+                await context.UpdateStateAsync(state);
 
-                    var voted = state.Votes[vote.Value.For].Keys
-                        .Select(signer => validatorSet.Weights[signer]).Sum();
-                    if (3 * voted > 2 * validatorSet.Total)
-                    {
-                        await outputStream.AddAsync(new Commit {For = vote.Value.For});
-                    }
-                }, CancellationToken.None);
+                var voted = state.Votes[vote.Value.For].Keys
+                    .Select(signer => validatorSet.Weights[signer]).Sum();
+                if (3 * voted > 2 * validatorSet.Total)
+                {
+                    await outputStream.AddAsync(new Commit {For = vote.Value.For});
+                }
+            }, CancellationToken.None);
         }
     }
 }

@@ -58,5 +58,10 @@ namespace Apocryph.FunctionApp.Model
         {
             return HashCode.Combine(Convert.ToBase64String(Key.Q.X), Convert.ToBase64String(Key.Q.Y));
         }
+
+        public override string ToString()
+        {
+            return Convert.ToBase64String(Key.Q.X) + "|" + Convert.ToBase64String(Key.Q.Y);
+        }
     }
 }

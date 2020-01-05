@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.FunctionApp.Model;
 using Microsoft.Azure.WebJobs;
+using Microsoft.Extensions.Logging;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
 
@@ -27,10 +28,11 @@ namespace Apocryph.FunctionApp
 
         [FunctionName(nameof(ValidatorFilter))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("committerStream")] IAsyncEnumerable<Hash> committerStream,
+            [PerperStream("committerStream")] IAsyncEnumerable<IHashed<IAgentStep>> committerStream,
             [PerperStream("currentProposerStream")] IAsyncEnumerable<ValidatorKey> currentProposerStream,
             [PerperStream("proposalsStream")] IAsyncEnumerable<ISigned<IAgentStep>> proposalsStream,
-            [PerperStream("outputStream")] IAsyncCollector<ISigned<IAgentStep>> outputStream)
+            [PerperStream("outputStream")] IAsyncCollector<ISigned<IAgentStep>> outputStream,
+            ILogger logger)
         {
             var state = await context.FetchStateAsync<State>() ?? new State(true);
 
@@ -44,7 +46,7 @@ namespace Apocryph.FunctionApp
 
                 committerStream.ForEachAsync(async commit =>
                 {
-                    state.CurrentStep = commit;
+                    state.CurrentStep = commit.Hash;
 
                     await context.UpdateStateAsync(state);
                 }, CancellationToken.None),

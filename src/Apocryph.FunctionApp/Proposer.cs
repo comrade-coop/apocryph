@@ -16,18 +16,7 @@ namespace Apocryph.FunctionApp
     {
         private class State
         {
-            public Dictionary<Hash, Dictionary<ValidatorKey, ValidatorSignature>> Commits { get; }
-
-            public State(bool init = false)
-            {
-                if (init)
-                {
-                    Commits = new Dictionary<Hash, Dictionary<ValidatorKey, ValidatorSignature>>
-                    {
-                        [new Hash {Bytes = new byte[] {0}}] = new Dictionary<ValidatorKey, ValidatorSignature>()
-                    };
-                }
-            }
+            public Dictionary<Hash, Dictionary<ValidatorKey, ValidatorSignature>> Commits { get; } = new Dictionary<Hash, Dictionary<ValidatorKey, ValidatorSignature>>();
         }
 
         [FunctionName(nameof(Proposer))]
@@ -37,11 +26,15 @@ namespace Apocryph.FunctionApp
             [PerperStream("outputStream")] IAsyncCollector<IAgentStep> outputStream,
             ILogger logger)
         {
-            var state = await context.FetchStateAsync<State>() ?? new State(true);
+            var state = await context.FetchStateAsync<State>() ?? new State();
 
             await Task.WhenAll(
                 commitsStream.ForEachAsync(async commit =>
                 {
+                    if (!state.Commits.ContainsKey(commit.Value.For))
+                    {
+                        state.Commits[commit.Value.For] = new Dictionary<ValidatorKey, ValidatorSignature>();
+                    }
                     state.Commits[commit.Value.For].Add(commit.Signer, commit.Signature);
                     await context.UpdateStateAsync(state);
                 }, CancellationToken.None),
@@ -50,8 +43,11 @@ namespace Apocryph.FunctionApp
                 {
                     try
                     {
-                        // FIXME: Should probably block until there are enough signatures (as we cannot be sure that the other stream would collect them in time)
-                        step.CommitSignatures = state.Commits[step.Previous];
+                        if (state.Commits.ContainsKey(step.Previous))
+                        {
+                            // FIXME: Should probably block until there are enough signatures (as we cannot be sure that the other stream would collect them in time)
+                            step.CommitSignatures = state.Commits[step.Previous];
+                        }
 
                         logger.LogDebug("Proposing a step after {0}!", step.Previous.Bytes[0]);
 
