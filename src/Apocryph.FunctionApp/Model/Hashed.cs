@@ -5,8 +5,8 @@ namespace Apocryph.FunctionApp.Model
 {
     public class Hashed<T> : IHashed<T>
     {
-        public Hashed(T from, Hash hash) {
-            Value = from;
+        public Hashed(T value, Hash hash) {
+            Value = value;
             Hash = hash;
         }
 

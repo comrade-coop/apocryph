@@ -48,7 +48,7 @@ namespace Apocryph.FunctionApp.Model
         {
             if (obj is ValidatorKey other)
             {
-                return GetHashCode() == other.GetHashCode();
+                return Key.Q.X.SequenceEqual(other.Key.Q.X) && Key.Q.Y.SequenceEqual(other.Key.Q.Y);
             }
 
             return false;

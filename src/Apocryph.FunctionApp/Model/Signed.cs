@@ -5,18 +5,16 @@ namespace Apocryph.FunctionApp.Model
 {
     public class Signed<T> : ISigned<T>
     {
-        public Signed(Hashed<T> from, ValidatorKey signer, ValidatorSignature signature) {
-            _hashed = from;
+        public Signed(IHashed<T> hashed, ValidatorKey signer, ValidatorSignature signature) {
+            Hashed = hashed;
             Signer = signer;
             Signature = signature;
         }
 
-        [JsonPropertyAttribute("Hashed")]
-        readonly protected Hashed<T> _hashed;
-
-        [JsonIgnore]
-        public IHashed<T> Hashed { get => _hashed; }
+        public IHashed<T> Hashed { get; }
         public ValidatorKey Signer { get; }
         public ValidatorSignature Signature { get; }
+        public T Value => Hashed.Value;
+        public Hash Hash => Hashed.Hash;
     }
 }

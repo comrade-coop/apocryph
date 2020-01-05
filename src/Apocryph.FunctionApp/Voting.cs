@@ -13,7 +13,15 @@ namespace Apocryph.FunctionApp
     {
         private class State
         {
-            public Dictionary<Hash, Hash> ExpectedNextSteps { get; set; }
+            public Dictionary<Hash, Hash> ExpectedNextSteps { get; }
+
+            public State(bool init = false)
+            {
+                if (init)
+                {
+                    ExpectedNextSteps = new Dictionary<Hash, Hash>();
+                }
+            }
         }
 
         [FunctionName(nameof(Voting))]
@@ -22,7 +30,7 @@ namespace Apocryph.FunctionApp
             [PerperStream("validatorFilterStream")] IAsyncEnumerable<ISigned<IAgentStep>> validatorFilterStream,
             [PerperStream("outputStream")] IAsyncCollector<Vote> outputStream)
         {
-            var state = await context.FetchStateAsync<State>() ?? new State();
+            var state = await context.FetchStateAsync<State>() ?? new State(true);
 
             await Task.WhenAll(
                 validatorFilterStream.ForEachAsync(async proposal =>

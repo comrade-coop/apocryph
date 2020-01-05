@@ -105,18 +105,25 @@ namespace Apocryph.FunctionApp
                 committerStream
             });
 
+            await using var testInputGeneratorStream = await context.StreamFunctionAsync(nameof(TestInputGenerator), new {});
+
             await using var proposerStream = await context.StreamFunctionAsync(nameof(Proposer), new
             {
                 commitsStream,
-                stepsStream = new [] {proposerRuntimeStream, inputProposerStream}
+                stepsStream = new [] {proposerRuntimeStream, inputProposerStream, testInputGeneratorStream}
             });
 
             // Validator (Voting)
 
+            await using var testProposerGeneratorStream = await context.StreamFunctionAsync(nameof(TestProposerGenerator), new
+            {
+                self
+            });
+
             await using var validatorFilterStream = await context.StreamFunctionAsync(nameof(ValidatorFilter), new
             {
                 committerStream,
-                currentProposerStream,
+                currentProposerStream = new []{currentProposerStream, testProposerGeneratorStream},
                 proposalsStream
             });
 

@@ -13,6 +13,14 @@ namespace Apocryph.FunctionApp
     {
         private class State
         {
+            public State(bool init = false)
+            {
+                if (init)
+                {
+                    CurrentStep = new Hash {Bytes = new byte[] {0}};
+                }
+            }
+
             public ValidatorKey Proposer { get; set; }
             public Hash CurrentStep { get; set; }
         }
@@ -24,7 +32,7 @@ namespace Apocryph.FunctionApp
             [PerperStream("proposalsStream")] IAsyncEnumerable<ISigned<IAgentStep>> proposalsStream,
             [PerperStream("outputStream")] IAsyncCollector<ISigned<IAgentStep>> outputStream)
         {
-            var state = await context.FetchStateAsync<State>() ?? new State();
+            var state = await context.FetchStateAsync<State>() ?? new State(true);
 
             await Task.WhenAll(
                 currentProposerStream.ForEachAsync(async currentProposer =>

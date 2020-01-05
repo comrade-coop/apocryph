@@ -10,8 +10,8 @@ namespace Apocryph.FunctionApp.Model
         ValidatorSignature Signature { get; }
 
         [JsonIgnore]
-        T Value { get => Hashed.Value; }
+        T Value { get; }
         [JsonIgnore]
-        Hash Hash { get => Hashed.Hash; }
+        Hash Hash { get; }
     }
 }
