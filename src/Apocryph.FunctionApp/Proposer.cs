@@ -31,12 +31,19 @@ namespace Apocryph.FunctionApp
             await Task.WhenAll(
                 commitsStream.ForEachAsync(async commit =>
                 {
-                    if (!state.Commits.ContainsKey(commit.Value.For))
+                    try
                     {
-                        state.Commits[commit.Value.For] = new Dictionary<ValidatorKey, ValidatorSignature>();
+                        if (!state.Commits.ContainsKey(commit.Value.For))
+                        {
+                            state.Commits[commit.Value.For] = new Dictionary<ValidatorKey, ValidatorSignature>();
+                        }
+                        state.Commits[commit.Value.For].Add(commit.Signer, commit.Signature);
+                        await context.UpdateStateAsync(state);
                     }
-                    state.Commits[commit.Value.For].Add(commit.Signer, commit.Signature);
-                    await context.UpdateStateAsync(state);
+                    catch (Exception e)
+                    {
+                        logger.LogError(e.ToString());
+                    }
                 }, CancellationToken.None),
 
                 stepsStream.ForEachAsync(async step =>
