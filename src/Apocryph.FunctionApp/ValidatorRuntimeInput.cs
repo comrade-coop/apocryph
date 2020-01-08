@@ -11,18 +11,11 @@ namespace Apocryph.FunctionApp
 {
     public static class ValidatorRuntimeInput
     {
-        public class State
-        {
-            public ISet<(string, object)> PendingInputs { get; set; } = new HashSet<(string, object)>();
-        }
-
         [FunctionName(nameof(ValidatorRuntimeInput))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("validatorFilterStream")] IAsyncEnumerable<ISigned<AgentOutput>> validatorFilterStream,
             [PerperStream("outputStream")] IAsyncCollector<Hash> outputStream)
         {
-            var state = await context.FetchStateAsync<State>() ?? new State();
-
             await validatorFilterStream.ForEachAsync(async output =>
             {
                 await outputStream.AddAsync(output.Value.Previous);

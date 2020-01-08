@@ -73,7 +73,7 @@ namespace Apocryph.FunctionApp
                 commandsStream
             });
 
-            await using var agentZeroStream = await context.StreamFunctionAsync(nameof(IpfsInput), new
+            /* await using var agentZeroStream = await context.StreamFunctionAsync(nameof(IpfsInput), new
             {
                 ipfsGateway,
                 topic = 0 //"apocryph-agent-0"
@@ -101,7 +101,7 @@ namespace Apocryph.FunctionApp
                 ipfsGateway,
                 commandsStream,
                 validatorSetsStream
-            });
+            }); */
 
             await using var initMessageStream = await context.StreamFunctionAsync(nameof(TestDataGenerator), new
             {
@@ -113,7 +113,7 @@ namespace Apocryph.FunctionApp
             {
                 reminderCommandExecutorStream,
                 initMessageStream,
-                subscriptionCommandExecutorStream
+                // subscriptionCommandExecutorStream
             };
 
             await using var _initCommitStream = await context.StreamFunctionAsync(nameof(TestDataGenerator), new
@@ -172,21 +172,28 @@ namespace Apocryph.FunctionApp
                 hashStream = _validatorRuntimeInputStream
             });
 
-            await using var _validatorRuntimeStream = await context.StreamFunctionAsync(nameof(Runtime), new
+            await using var validatorRuntimeStream = await context.StreamFunctionAsync(nameof(Runtime), new
             {
                 self,
                 inputStream = validatorRuntimeInputStream
             });
 
-            await using var validatorRuntimeStream = await context.StreamFunctionAsync(nameof(IpfsSaver), new
+            await using var _validatorRuntimeOutputStream = await context.StreamFunctionAsync(nameof(ValidatorRuntimeOutput), new
+            {
+                self,
+                validatorFilterStream,
+                runtimeStream = validatorRuntimeStream
+            });
+
+            await using var validatorRuntimeOutputStream = await context.StreamFunctionAsync(nameof(IpfsSaver), new
             {
                 ipfsGateway,
-                dataStream = _validatorRuntimeStream
+                dataStream = _validatorRuntimeOutputStream
             });
 
             await using var votingStream = await context.StreamFunctionAsync(nameof(Voting), new
             {
-                validatorRuntimeStream,
+                validatorRuntimeOutputStream,
                 validatorFilterStream
             });
 

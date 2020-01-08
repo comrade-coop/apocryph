@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -14,6 +15,7 @@ namespace Apocryph.FunctionApp
         public class State
         {
             public ISet<(string, object)> PendingInputs { get; set; } = new HashSet<(string, object)>();
+            public (Hash, object)? PendingOutput { get; set; } = null;
         }
 
         [FunctionName(nameof(InputProposer))]
@@ -24,10 +26,29 @@ namespace Apocryph.FunctionApp
         {
             var state = await context.FetchStateAsync<State>() ?? new State();
 
+            async Task processPending() {
+                if (state.PendingInputs.Count != 0 && state.PendingOutput != null)
+                {
+                    var (sender, message) = state.PendingInputs.First();
+                    var (previous, agentState) = state.PendingOutput.Value;
+
+                    await outputStream.AddAsync(new AgentInput
+                    {
+                        Previous = previous,
+                        State = agentState,
+                        Sender = sender,
+                        Message = message,
+                    });
+
+                    state.PendingOutput = null;
+                }
+            };
+
             await Task.WhenAll(
                 commandExecutorStream.ForEachAsync(async agentInput =>
                 {
                     state.PendingInputs.Add(agentInput);
+                    await processPending();
                     await context.UpdateStateAsync(state);
                 }, CancellationToken.None),
 
@@ -37,19 +58,14 @@ namespace Apocryph.FunctionApp
                     {
                         case AgentInput input:
                             state.PendingInputs.Remove((input.Sender, input.Message));
-                            await context.UpdateStateAsync(state);
+                            state.PendingOutput = null;
                             break;
                         case AgentOutput output:
-                            var (sender, message) = state.PendingInputs.First();
-                            await outputStream.AddAsync(new AgentInput
-                            {
-                                Previous = step.Hash,
-                                State = output.State,
-                                Sender = sender,
-                                Message = message,
-                            });
+                            state.PendingOutput = (step.Hash, output.State);
                             break;
                     }
+                    await processPending();
+                    await context.UpdateStateAsync(state);
                 }, CancellationToken.None));
         }
     }

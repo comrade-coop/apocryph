@@ -11,29 +11,28 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.FunctionApp
 {
-    public static class Voting
+    public static class ValidatorRuntimeOutput
     {
-        private class State
+        public class State
         {
-            public Dictionary<Hash, Hash> ExpectedNextSteps { get; } = new Dictionary<Hash, Hash>();
+            public Dictionary<Hash, Dictionary<ValidatorKey, ValidatorSignature>> CommitSignatures { get; } = new Dictionary<Hash, Dictionary<ValidatorKey, ValidatorSignature>>();
         }
 
-        [FunctionName(nameof(Voting))]
+        [FunctionName(nameof(ValidatorRuntimeOutput))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("validatorRuntimeOutputStream")] IAsyncEnumerable<IHashed<AgentOutput>> validatorRuntimeOutputStream,
             [PerperStream("validatorFilterStream")] IAsyncEnumerable<ISigned<AgentOutput>> validatorFilterStream,
-            [PerperStream("outputStream")] IAsyncCollector<Vote> outputStream,
+            [PerperStream("runtimeStream")] IAsyncEnumerable<AgentOutput> runtimeStream,
+            [PerperStream("outputStream")] IAsyncCollector<AgentOutput> outputStream,
             ILogger logger)
         {
             var state = await context.FetchStateAsync<State>() ?? new State();
 
             await Task.WhenAll(
-                validatorFilterStream.ForEachAsync(async proposal =>
+                validatorFilterStream.ForEachAsync(async expectedOutput =>
                 {
                     try
                     {
-                        state.ExpectedNextSteps[proposal.Value.Previous] = proposal.Hash;
-
+                        state.CommitSignatures[expectedOutput.Value.Previous] = expectedOutput.Value.CommitSignatures;
                         await context.UpdateStateAsync(state);
                     }
                     catch (Exception e)
@@ -42,18 +41,13 @@ namespace Apocryph.FunctionApp
                     }
                 }, CancellationToken.None),
 
-                validatorRuntimeOutputStream.ForEachAsync(async step =>
+                runtimeStream.ForEachAsync(async output =>
                 {
                     try
                     {
-                        if (state.ExpectedNextSteps[step.Value.Previous] == step.Hash)
-                        {
-                            await outputStream.AddAsync(new Vote { For = step.Hash });
-                        }
-                        else
-                        {
-                            logger.LogWarning("Got {hash}, expected {expected}", step.Hash, state.ExpectedNextSteps[step.Value.Previous]);
-                        }
+                        output.CommitSignatures = state.CommitSignatures[output.Previous];
+
+                        await outputStream.AddAsync(output);
                     }
                     catch (Exception e)
                     {

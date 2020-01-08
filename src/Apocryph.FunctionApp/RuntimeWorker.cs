@@ -10,12 +10,20 @@ namespace Apocryph.FunctionApp
     {
         [FunctionName(nameof(RuntimeWorker))]
         [return: Perper("$return")]
-        public static AgentContext<object> Run([PerperWorkerTrigger("Runtime")] object state,
+        public static AgentContext<object> Run([PerperWorkerTrigger("Runtime")] object workerContext,
+            [Perper("state")] object state,
             [Perper("sender")] string sender,
             [Perper("message")] object message)
         {
             var context = new AgentContext<object>(state);
-            context.AddReminder(TimeSpan.FromMinutes(5), new object {});
+            if (message is string stringMessage)
+            {
+                context.AddReminder(TimeSpan.FromSeconds(5), stringMessage + "i");
+            }
+            else
+            {
+                context.AddReminder(TimeSpan.FromSeconds(5), "h");
+            }
             return context;
         }
     }
