@@ -11,7 +11,7 @@ To build these new economies, developers need mature languages and scalable runt
 Apocryph is built on top of [Perper](https://github.com/obecto/perper) - a serverless stream processing framework maintained separately by members of our team. The main entities in Apocryph are called Agents - they process incoming messages as a stream and send new ones as output. Each Agent runs as a containerized lambda function app, that can be written in C#, Python, JavaScript or come as a WebAssembly.
 
 ## Proactive entities
-Since autonomy is our main focus, Agents can proactively initiate their own execution by scheduling reminders and subscribing to events from other Agents. This opens entirely new use cases and more natural programming models. Users can own a proxy Agent that automates tasks for them on the network.
+Since autonomy is our main focus, Agents can proactively initiate their own execution by scheduling reminders and subscribing to events from other Agents. This opens entirely new use cases and more natural programming models. For example, users can have their own Proxy Agents on the network to actively manage and monitor tasks for them.
 
 ## Free user transactions
 Messages in the network are processed only if they come with a valid execution ticket for the computing resources requested. These tickets can be paid either by the sending or the receiving party, while agents have their own wallets so they can pay for executing messages coming from certain users. This is crucial to enable use cases like voting, rating and user feedback that were unfeasible with previous blockchain economic models that require users to pay each transaction.
