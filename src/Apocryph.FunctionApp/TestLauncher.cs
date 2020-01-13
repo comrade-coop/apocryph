@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,29 +17,43 @@ namespace Apocryph.FunctionApp
         public static async Task Run([PerperStreamTrigger(RunOnStartup = true)] PerperStreamContext context,
             CancellationToken cancellationToken)
         {
-            ECParameters privateKey;
-            ValidatorKey self;
+            var keys = new List<(ECParameters, ValidatorKey)>();
+            var validatorSet = new ValidatorSet();
 
-            using (var dsa = ECDsa.Create(ECCurve.NamedCurves.nistP521))
+            for (var i = 0; i < 2; i ++)
             {
-                privateKey = dsa.ExportParameters(true);
-                self = new ValidatorKey{Key = dsa.ExportParameters(false)};
+                using var dsa = ECDsa.Create(ECCurve.NamedCurves.nistP521);
+                var privateKey = dsa.ExportParameters(true);
+                var publicKey = new ValidatorKey{Key = dsa.ExportParameters(false)};
+                keys.Add((privateKey, publicKey));
+                validatorSet.Weights.Add(publicKey, 10);
             }
 
             var ipfsGateway = "http://127.0.0.1:5001";
-            var validatorSet = new ValidatorSet();
-            validatorSet.Weights.Add(self, 10);
 
-            await using var validatorLauncherStream = await context.StreamActionAsync(nameof(ValidatorLauncher),
-                new
-                {
-                    agentId = "0",
-                    validatorSet,
-                    ipfsGateway,
-                    privateKey, self
-                });
+            var validatorLauncherStreams = new List<IAsyncDisposable>();
+            foreach (var (privateKey, self) in keys)
+            {
+                validatorLauncherStreams.Add(
+                    await context.StreamActionAsync("ValidatorLauncher",
+                        new
+                        {
+                            agentId = "0",
+                            validatorSet,
+                            ipfsGateway,
+                            privateKey,
+                            self
+                        }));
+            }
 
-            await context.BindOutput(cancellationToken);
+            try
+            {
+                await context.BindOutput(cancellationToken);
+            }
+            finally
+            {
+                await Task.WhenAll(validatorLauncherStreams.Select(x => x.DisposeAsync()));
+            }
         }
     }
 }

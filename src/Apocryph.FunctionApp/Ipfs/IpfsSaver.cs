@@ -30,12 +30,15 @@ namespace Apocryph.FunctionApp.Ipfs
             await dataStream.ForEachAsync(async item => {
                 try
                 {
-                    var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(item, typeof(ISigned<object>), IpfsJsonSettings.DefaultSettings));
+                    var json = JsonConvert.SerializeObject(item, typeof(ISigned<object>), IpfsJsonSettings.DefaultSettings);
+                    var bytes = Encoding.UTF8.GetBytes(json);
 
                     // FIXME: Should use DAG/IPLD API instead
                     var cid = await ipfs.Block.PutAsync(bytes, cancel: CancellationToken.None);
 
                     var hash = new Hash {Bytes = cid.ToArray()};
+
+                    logger.LogDebug("Saved {json} as {hash} in ipfs", json, hash);
 
                     var hashedType = typeof(Hashed<>).MakeGenericType(item.GetType());
                     var hashed = (IHashed<object>)Activator.CreateInstance(hashedType, item, hash);

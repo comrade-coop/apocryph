@@ -13,30 +13,40 @@ namespace Apocryph.FunctionApp
     {
         private class State
         {
-            public ISigned<IAgentStep> LastCommit { get; set; }
+            public IHashed<IAgentStep>? LastCommit { get; set; } = null;
+            public ValidatorKey? LastProposer { get; set; } = null;
         }
 
         [FunctionName(nameof(ProposerFilter))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("self")] ValidatorKey self,
-            [PerperStream("committerStream")] IAsyncEnumerable<ISigned<IAgentStep>> committerStream,
+            [PerperStream("committerStream")] IAsyncEnumerable<IHashed<IAgentStep>> committerStream,
             [PerperStream("currentProposerStream")] IAsyncEnumerable<ValidatorKey> currentProposerStream,
-            [PerperStream("outputStream")] IAsyncCollector<ISigned<IAgentStep>> outputStream)
+            [PerperStream("outputStream")] IAsyncCollector<IHashed<IAgentStep>> outputStream)
         {
             var state = await context.FetchStateAsync<State>() ?? new State();
+
+            async Task processPending() {
+                if (state.LastProposer != null && state.LastProposer.Equals(self) && state.LastCommit != null)
+                {
+                    await outputStream.AddAsync(state.LastCommit);
+                    state.LastCommit = null; // Do not produce the same commit twice
+                    state.LastProposer = null; // Do not produce the next commit before the proposer is updated
+                }
+            };
 
             await Task.WhenAll(
                 currentProposerStream.ForEachAsync(async currentProposer =>
                 {
-                    if (currentProposer.Equals(self))
-                    {
-                        await outputStream.AddAsync(state.LastCommit);
-                    }
+                    state.LastProposer = currentProposer;
+                    await processPending();
+                    await context.UpdateStateAsync(state);
                 }, CancellationToken.None),
 
                 committerStream.ForEachAsync(async commit =>
                 {
                     state.LastCommit = commit;
+                    await processPending();
                     await context.UpdateStateAsync(state);
                 }, CancellationToken.None));
         }

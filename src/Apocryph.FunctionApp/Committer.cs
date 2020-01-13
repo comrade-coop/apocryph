@@ -40,7 +40,7 @@ namespace Apocryph.FunctionApp
 
                     var committed = state.Commits[commit.Value.For].Keys
                         .Select(signer => validatorSet.Weights[signer]).Sum();
-                    if (3 * committed > 2 * validatorSet.Total)
+                    if (3 * committed > 2 * validatorSet.Total && 3 * committed - validatorSet.Weights[commit.Signer] <= 2 * validatorSet.Total)
                     {
                         await outputStream.AddAsync(commit.Value.For);
                     }

@@ -20,7 +20,7 @@ namespace Apocryph.FunctionApp
 
         [FunctionName(nameof(InputProposer))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("committerStream")] IAsyncEnumerable<IHashed<IAgentStep>> committerStream,
+            [PerperStream("proposerFilterStream")] IAsyncEnumerable<IHashed<IAgentStep>> proposerFilterStream,
             [PerperStream("commandExecutorStream")] IAsyncEnumerable<(string, object)> commandExecutorStream,
             [PerperStream("outputStream")] IAsyncCollector<AgentInput> outputStream)
         {
@@ -52,7 +52,7 @@ namespace Apocryph.FunctionApp
                     await context.UpdateStateAsync(state);
                 }, CancellationToken.None),
 
-                committerStream.ForEachAsync(async step =>
+                proposerFilterStream.ForEachAsync(async step =>
                 {
                     switch (step.Value)
                     {

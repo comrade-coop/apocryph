@@ -41,7 +41,7 @@ namespace Apocryph.FunctionApp
 
                     var committed = state.Commits[commit.Value.For]
                         .Select(signer => validatorSet.Weights[signer]).Sum();
-                    if (3 * committed > 2 * validatorSet.Total)
+                    if (3 * committed > 2 * validatorSet.Total && 3 * committed - validatorSet.Weights[commit.Signer] <= 2 * validatorSet.Total)
                     {
                         validatorSet.AccumulateWeights();
                         var proposer = validatorSet.PopMaxAccumulatedWeight();
