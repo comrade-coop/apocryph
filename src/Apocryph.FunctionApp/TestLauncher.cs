@@ -52,7 +52,7 @@ namespace Apocryph.FunctionApp
             }
             finally
             {
-                await Task.WhenAll(validatorLauncherStreams.Select(x => x.DisposeAsync()));
+                await Task.WhenAll(validatorLauncherStreams.Select(x => x.DisposeAsync().AsTask()));
             }
         }
     }
