@@ -1,3 +1,7 @@
+[[Getting Started]](https://github.com/comrade-coop/apocryph/blob/master/GettingStarted.md)
+
+----------------------------------
+
 # APOCRYPH
 ## Consensus Network for Autonomous Agents
 
