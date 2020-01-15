@@ -1,4 +1,4 @@
-[[Getting Started]](https://github.com/comrade-coop/apocryph/blob/master/GettingStarted.md)
+[Getting Started](https://github.com/comrade-coop/apocryph/blob/master/GettingStarted.md) | [Discord Community](https://discord.gg/ESr9KMR) 
 
 ----------------------------------
 
