@@ -55,7 +55,7 @@ namespace Apocryph.FunctionApp
                     State = new object(),
                     Commands = new List<ICommand>(),
                     Previous = new Hash { Bytes = new byte[]{} },
-                    CommitSignatures = new Dictionary<ValidatorKey, ValidatorSignature>()
+                    PreviousCommits = new List<ISigned<Commit>>()
                 }
             });
 
@@ -159,19 +159,36 @@ namespace Apocryph.FunctionApp
                 commandExecutorStream
             });
 
-            await using var proposerStream = await context.StreamFunctionAsync(nameof(Proposer), new
+            await using var proposerCommitInjectorStream = await context.StreamFunctionAsync(nameof(ProposerCommitInjector), new
             {
                 commitsStream,
                 stepsStream = new [] {proposerRuntimeStream, inputProposerStream}
             });
 
+            await using var proposerStream = await context.StreamFunctionAsync(nameof(Proposer), new
+            {
+                proposerCommitInjectorStream
+            });
+
             // Validator (Voting)
 
-            await using var validatorFilterStream = await context.StreamFunctionAsync(nameof(ValidatorFilter), new
+            await using var _validatorFilterStream = await context.StreamFunctionAsync(nameof(ValidatorFilter), new
             {
                 committerStream = new []{committerStream, initCommitStream},
                 currentProposerStream = new []{currentProposerStream, initProposerStream},
                 proposalsStream
+            });
+
+            await using var _loadedValidatorFilterStream = await context.StreamFunctionAsync(nameof(IpfsLoader), new
+            {
+                ipfsGateway,
+                hashStream = _validatorFilterStream
+            });
+
+            await using var validatorFilterStream = await context.StreamFunctionAsync(nameof(StepOrderVerifier), new
+            {
+                ipfsGateway,
+                stepsStream = _loadedValidatorFilterStream
             });
 
             await using var _validatorRuntimeInputStream = await context.StreamFunctionAsync(nameof(ValidatorRuntimeInput), new

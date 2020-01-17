@@ -13,7 +13,7 @@ namespace Apocryph.FunctionApp
     {
         private class State
         {
-            public Dictionary<Hash, Dictionary<ValidatorKey, ValidatorSignature>> Votes { get; set; } = new Dictionary<Hash, Dictionary<ValidatorKey, ValidatorSignature>>();
+            public Dictionary<Hash, HashSet<ValidatorKey>> Votes { get; set; } = new Dictionary<Hash, HashSet<ValidatorKey>>();
         }
 
         [FunctionName(nameof(Consensus))]
@@ -28,12 +28,12 @@ namespace Apocryph.FunctionApp
             {
                 if (!state.Votes.ContainsKey(vote.Value.For))
                 {
-                    state.Votes[vote.Value.For] = new Dictionary<ValidatorKey, ValidatorSignature>();
+                    state.Votes[vote.Value.For] = new HashSet<ValidatorKey>();
                 }
-                state.Votes[vote.Value.For].Add(vote.Signer, vote.Signature);
+                state.Votes[vote.Value.For].Add(vote.Signer);
                 await context.UpdateStateAsync(state);
 
-                var voted = state.Votes[vote.Value.For].Keys
+                var voted = state.Votes[vote.Value.For]
                     .Select(signer => validatorSet.Weights[signer]).Sum();
                 if (3 * voted > 2 * validatorSet.Total && 3 * voted - validatorSet.Weights[vote.Signer] <= 2 * validatorSet.Total)
                 {

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.FunctionApp.Model;
@@ -27,23 +26,17 @@ namespace Apocryph.FunctionApp.Ipfs
         {
             var ipfs = new IpfsClient(ipfsGateway);
 
-            await dataStream.ForEachAsync(async item => {
+            await dataStream.ForEachAsync(async item =>
+            {
                 try
                 {
-                    var json = JsonConvert.SerializeObject(item, typeof(ISigned<object>), IpfsJsonSettings.DefaultSettings);
-                    var bytes = Encoding.UTF8.GetBytes(json);
-
-                    // FIXME: Should use DAG/IPLD API instead
-                    var cid = await ipfs.Block.PutAsync(bytes, cancel: CancellationToken.None);
-
+                    var jToken = IpfsJsonSettings.JTokenFromObject(item);
+                    var cid = await ipfs.Dag.PutAsync(jToken, cancel: CancellationToken.None);
                     var hash = new Hash {Bytes = cid.ToArray()};
 
-                    logger.LogDebug("Saved {json} as {hash} in ipfs", json, hash);
+                    logger.LogDebug("Saved {json} as {hash} in ipfs", jToken.ToString(Formatting.None), hash);
 
-                    var hashedType = typeof(Hashed<>).MakeGenericType(item.GetType());
-                    var hashed = (IHashed<object>)Activator.CreateInstance(hashedType, item, hash);
-
-                    await outputStream.AddAsync(hashed);
+                    await outputStream.AddAsync(Hashed.Create(item, hash));
                 }
                 catch (Exception e)
                 {

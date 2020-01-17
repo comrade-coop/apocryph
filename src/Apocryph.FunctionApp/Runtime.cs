@@ -26,7 +26,7 @@ namespace Apocryph.FunctionApp
             {
                 try
                 {
-                    var agentContext = await context.CallWorkerAsync<AgentContext<object>>(new
+                    var agentContext = await context.CallWorkerAsync<AgentContext<object>>(nameof(RuntimeWorker), new
                     {
                         state = input.Value.State,
                         sender = input.Value.Sender,

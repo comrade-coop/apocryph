@@ -26,7 +26,8 @@ namespace Apocryph.FunctionApp
         {
             var state = await context.FetchStateAsync<State>() ?? new State();
 
-            async Task processPending() {
+            async Task processPending()
+            {
                 if (state.PendingInputs.Count != 0 && state.PendingOutput != null)
                 {
                     var (sender, message) = state.PendingInputs.First();

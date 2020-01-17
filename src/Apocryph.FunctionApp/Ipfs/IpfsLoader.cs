@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.FunctionApp.Model;
@@ -34,15 +33,11 @@ namespace Apocryph.FunctionApp.Ipfs
                 {
                     // NOTE: Currently blocks other items on the stream and does not process them
                     // -- we should at least timeout
-                    // FIXME: Should use DAG/IPLD API instead
-                    var block = await ipfs.Block.GetAsync(Cid.Read(hash.Bytes), CancellationToken.None);
 
-                    var item = JsonConvert.DeserializeObject<object>(Encoding.UTF8.GetString(block.DataBytes), IpfsJsonSettings.DefaultSettings);
+                    var jToken = await ipfs.Dag.GetAsync(Cid.Read(hash.Bytes), CancellationToken.None);
+                    var item = jToken.ToObject<object>(JsonSerializer.Create(IpfsJsonSettings.DefaultSettings));
 
-                    var hashedType = typeof(Hashed<>).MakeGenericType(item.GetType());
-                    var hashed = (IHashed<object>)Activator.CreateInstance(hashedType, item, hash);
-
-                    await outputStream.AddAsync(hashed);
+                    await outputStream.AddAsync(Hashed.Create(item, hash));
                 }
                 catch (Exception e)
                 {

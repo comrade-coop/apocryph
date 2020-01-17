@@ -30,7 +30,7 @@ namespace Apocryph.FunctionApp
             [PerperStream("commandsStream")] IAsyncEnumerable<SubscriptionCommand> commandsStream,
             [PerperStream("outputStream")] IAsyncCollector<(string, object)> outputStream)
         {
-            var ipfs = new IpfsClient(ipfsGateway);
+            /*var ipfs = new IpfsClient(ipfsGateway);
             var state = await context.FetchStateAsync<State>() ?? new State();
 
             await Task.WhenAll(
@@ -78,7 +78,7 @@ namespace Apocryph.FunctionApp
                 {
                     state.ValidatorSets = validatorSets;
                     await context.UpdateStateAsync(state);
-                }, CancellationToken.None));
+                }, CancellationToken.None));*/
         }
     }
 }

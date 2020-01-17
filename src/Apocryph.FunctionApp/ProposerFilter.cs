@@ -26,7 +26,8 @@ namespace Apocryph.FunctionApp
         {
             var state = await context.FetchStateAsync<State>() ?? new State();
 
-            async Task processPending() {
+            async Task processPending()
+            {
                 if (state.LastProposer != null && state.LastProposer.Equals(self) && state.LastCommit != null)
                 {
                     await outputStream.AddAsync(state.LastCommit);

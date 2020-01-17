@@ -15,7 +15,7 @@ namespace Apocryph.FunctionApp
     {
         private class State
         {
-            public Dictionary<Hash, Dictionary<ValidatorKey, ValidatorSignature>> Commits { get; set; } = new Dictionary<Hash, Dictionary<ValidatorKey, ValidatorSignature>>();
+            public Dictionary<Hash, HashSet<ValidatorKey>> Commits { get; set; } = new Dictionary<Hash, HashSet<ValidatorKey>>();
         }
 
         [FunctionName(nameof(Committer))]
@@ -33,12 +33,12 @@ namespace Apocryph.FunctionApp
                 {
                     if (!state.Commits.ContainsKey(commit.Value.For))
                     {
-                        state.Commits[commit.Value.For] = new Dictionary<ValidatorKey, ValidatorSignature>();
+                        state.Commits[commit.Value.For] = new HashSet<ValidatorKey>();
                     }
-                    state.Commits[commit.Value.For].Add(commit.Signer, commit.Signature);
+                    state.Commits[commit.Value.For].Add(commit.Signer);
                     await context.UpdateStateAsync(state);
 
-                    var committed = state.Commits[commit.Value.For].Keys
+                    var committed = state.Commits[commit.Value.For]
                         .Select(signer => validatorSet.Weights[signer]).Sum();
                     if (3 * committed > 2 * validatorSet.Total && 3 * committed - validatorSet.Weights[commit.Signer] <= 2 * validatorSet.Total)
                     {

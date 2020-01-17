@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.FunctionApp.Model;
@@ -31,7 +30,7 @@ namespace Apocryph.FunctionApp.Ipfs
             {
                 try
                 {
-                    var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(item, typeof(ISigned<object>), IpfsJsonSettings.DefaultSettings));
+                    var bytes = IpfsJsonSettings.ObjectToBytes(item);
 
                     await ipfs.PubSub.PublishAsync(topic, bytes, CancellationToken.None);
                 }

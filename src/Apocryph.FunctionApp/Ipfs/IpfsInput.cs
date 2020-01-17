@@ -1,5 +1,4 @@
 using System;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.FunctionApp.Model;
@@ -27,13 +26,15 @@ namespace Apocryph.FunctionApp.Ipfs
             {
                 try
                 {
-                    var bytes = message.DataBytes;
-                    // FIXME: Do not blindly trust that Hash and Value match and that Signature, Hash, and Signer match
-                    var item = JsonConvert.DeserializeObject<ISigned<object>>(Encoding.UTF8.GetString(bytes), IpfsJsonSettings.DefaultSettings);
+                    var item = IpfsJsonSettings.BytesToObject<ISigned<object>>(message.DataBytes);
 
-                    logger.LogTrace("Received a '{type}' from '{topic}' on IPFS pubsub", item.GetType(), topic);
+                    var valueBytes = IpfsJsonSettings.ObjectToBytes(item.Value);
 
-                    await outputStream.AddAsync(item);
+                    if (item.Signer.ValidateSignature(valueBytes, item.Signature))
+                    {
+                        logger.LogTrace("Received a '{type}' from '{topic}' on IPFS pubsub", item.GetType(), topic);
+                        await outputStream.AddAsync(item);
+                    }
                 }
                 catch (Exception e)
                 {

@@ -5,13 +5,8 @@ namespace Apocryph.FunctionApp.Model
 {
     public interface ISigned<out T>
     {
-        IHashed<T> Hashed { get; }
+        T Value { get; }
         ValidatorKey Signer { get; }
         ValidatorSignature Signature { get; }
-
-        [JsonIgnore]
-        T Value { get; }
-        [JsonIgnore]
-        Hash Hash { get; }
     }
 }

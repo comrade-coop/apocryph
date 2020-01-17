@@ -37,7 +37,7 @@ namespace Apocryph.FunctionApp
                 topic = "apocryph-agent-0"
             });
 
-            await using var _inputVerifierStream = await context.StreamFunctionAsync(nameof(StepVerifier), new
+            await using var _inputVerifierStream = await context.StreamFunctionAsync(nameof(StepSignatureVerifier), new
             {
                 stepsStream = agentZeroStream,
             });

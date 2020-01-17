@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.FunctionApp.Agent;
 using Apocryph.FunctionApp.Command;
+using Apocryph.FunctionApp.Ipfs;
 using Apocryph.FunctionApp.Model;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
@@ -12,20 +12,30 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.FunctionApp
 {
-    public static class StepVerifier
+    public static class StepSignatureVerifier
     {
-        [FunctionName(nameof(StepVerifier))]
+        [FunctionName(nameof(StepSignatureVerifier))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("stepsStream")] IAsyncEnumerable<ISigned<IAgentStep>> stepsStream,
+            [PerperStream("stepsStream")] IAsyncEnumerable<IHashed<IAgentStep>> stepsStream,
             [Perper("validatorSet")] ValidatorSet validatorSet,
             [PerperStream("outputStream")] IAsyncCollector<Hash> outputStream)
         {
             await stepsStream.ForEachAsync(async step =>
             {
-                if (step.Value.CommitSignatures
-                    .All(kv => kv.Key.ValidateSignature(step.Value.Previous, kv.Value)))
+                bool validateCommit(ISigned<Commit> commit)
                 {
-                    var committed = step.Value.CommitSignatures.Keys
+                    if (commit.Value.For != step.Value.Previous)
+                    {
+                        return false;
+                    }
+                    var bytes = IpfsJsonSettings.ObjectToBytes(commit.Value);
+                    return commit.Signer.ValidateSignature(bytes, commit.Signature);
+                };
+
+                if (step.Value.PreviousCommits.All(validateCommit))
+                {
+                    var committed = step.Value.PreviousCommits
+                        .Select(commit => commit.Signer).Distinct()
                         .Select(signer => validatorSet.Weights[signer]).Sum();
                     if (3 * committed > 2 * validatorSet.Total)
                     {

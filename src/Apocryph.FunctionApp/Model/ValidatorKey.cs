@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Text;
 using Newtonsoft.Json;
 
 namespace Apocryph.FunctionApp.Model
@@ -10,12 +9,18 @@ namespace Apocryph.FunctionApp.Model
     {
         public ECParameters Key { get; set; }
 
-        public bool ValidateSignature(Hash hash, ValidatorSignature signature)
+        public static ValidatorSignature GenerateSignature(ECParameters privateKey, byte[] dataBytes)
         {
-            using (var ecdsa = ECDsa.Create(Key))
-            {
-                return ecdsa.VerifyHash(hash.Bytes, signature.Bytes);
-            }
+            using var ecdsa = ECDsa.Create(privateKey);
+            return new ValidatorSignature{
+                Bytes = ecdsa.SignData(dataBytes, HashAlgorithmName.SHA256)
+            };
+        }
+
+        public bool ValidateSignature(byte[] dataBytes, ValidatorSignature signature)
+        {
+            using var ecdsa = ECDsa.Create(Key);
+            return ecdsa.VerifyData(dataBytes, signature.Bytes, HashAlgorithmName.SHA256);
         }
 
         public override bool Equals(object? obj)

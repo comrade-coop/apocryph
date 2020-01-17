@@ -21,7 +21,7 @@ namespace Apocryph.FunctionApp
         [FunctionName(nameof(Voting))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("validatorRuntimeOutputStream")] IAsyncEnumerable<IHashed<AgentOutput>> validatorRuntimeOutputStream,
-            [PerperStream("validatorFilterStream")] IAsyncEnumerable<ISigned<AgentOutput>> validatorFilterStream,
+            [PerperStream("validatorFilterStream")] IAsyncEnumerable<IHashed<AgentOutput>> validatorFilterStream,
             [PerperStream("outputStream")] IAsyncCollector<Vote> outputStream,
             ILogger logger)
         {

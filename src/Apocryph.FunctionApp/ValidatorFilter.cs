@@ -14,27 +14,17 @@ namespace Apocryph.FunctionApp
     {
         private class State
         {
-            public State(bool init = false)
-            {
-                if (init)
-                {
-                    CurrentStep = new Hash {Bytes = new byte[] {0}};
-                }
-            }
-
             public ValidatorKey Proposer { get; set; }
-            public Hash CurrentStep { get; set; }
         }
 
         [FunctionName(nameof(ValidatorFilter))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("committerStream")] IAsyncEnumerable<IHashed<IAgentStep>> committerStream,
             [PerperStream("currentProposerStream")] IAsyncEnumerable<ValidatorKey> currentProposerStream,
-            [PerperStream("proposalsStream")] IAsyncEnumerable<ISigned<IAgentStep>> proposalsStream,
-            [PerperStream("outputStream")] IAsyncCollector<ISigned<IAgentStep>> outputStream,
+            [PerperStream("proposalsStream")] IAsyncEnumerable<ISigned<Proposal>> proposalsStream,
+            [PerperStream("outputStream")] IAsyncCollector<Hash> outputStream,
             ILogger logger)
         {
-            var state = await context.FetchStateAsync<State>() ?? new State(true);
+            var state = await context.FetchStateAsync<State>() ?? new State();
 
             await Task.WhenAll(
                 currentProposerStream.ForEachAsync(async currentProposer =>
@@ -44,18 +34,11 @@ namespace Apocryph.FunctionApp
                     await context.UpdateStateAsync(state);
                 }, CancellationToken.None),
 
-                committerStream.ForEachAsync(async commit =>
-                {
-                    state.CurrentStep = commit.Hash;
-
-                    await context.UpdateStateAsync(state);
-                }, CancellationToken.None),
-
                 proposalsStream.ForEachAsync(async proposal =>
                 {
-                    if (state.Proposer.Equals(proposal.Signer) && state.CurrentStep == proposal.Value.Previous)
+                    if (state.Proposer.Equals(proposal.Signer))
                     {
-                        await outputStream.AddAsync(proposal);
+                        await outputStream.AddAsync(proposal.Value.For);
                     }
                 }, CancellationToken.None));
         }

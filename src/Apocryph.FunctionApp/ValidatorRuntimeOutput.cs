@@ -15,12 +15,12 @@ namespace Apocryph.FunctionApp
     {
         public class State
         {
-            public Dictionary<Hash, Dictionary<ValidatorKey, ValidatorSignature>> CommitSignatures { get; } = new Dictionary<Hash, Dictionary<ValidatorKey, ValidatorSignature>>();
+            public Dictionary<Hash, List<ISigned<Commit>>> PreviousCommits { get; } = new Dictionary<Hash, List<ISigned<Commit>>>();
         }
 
         [FunctionName(nameof(ValidatorRuntimeOutput))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("validatorFilterStream")] IAsyncEnumerable<ISigned<AgentOutput>> validatorFilterStream,
+            [PerperStream("validatorFilterStream")] IAsyncEnumerable<IHashed<AgentOutput>> validatorFilterStream,
             [PerperStream("runtimeStream")] IAsyncEnumerable<AgentOutput> runtimeStream,
             [PerperStream("outputStream")] IAsyncCollector<AgentOutput> outputStream,
             ILogger logger)
@@ -32,7 +32,7 @@ namespace Apocryph.FunctionApp
                 {
                     try
                     {
-                        state.CommitSignatures[expectedOutput.Value.Previous] = expectedOutput.Value.CommitSignatures;
+                        state.PreviousCommits[expectedOutput.Value.Previous] = expectedOutput.Value.PreviousCommits;
                         await context.UpdateStateAsync(state);
                     }
                     catch (Exception e)
@@ -45,7 +45,7 @@ namespace Apocryph.FunctionApp
                 {
                     try
                     {
-                        output.CommitSignatures = state.CommitSignatures[output.Previous];
+                        output.PreviousCommits = state.PreviousCommits[output.Previous];
 
                         await outputStream.AddAsync(output);
                     }

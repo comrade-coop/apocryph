@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Security.Cryptography;
 using Apocryph.FunctionApp.Model;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Apocryph.FunctionApp.Ipfs
 {
@@ -62,5 +64,31 @@ namespace Apocryph.FunctionApp.Ipfs
             TypeNameHandling = TypeNameHandling.Auto,
             // TODO: Must set SerializationBinder as well!
         };
+
+        public static JToken JTokenFromObject<T>(T value)
+        {
+            var serializer = JsonSerializer.Create(DefaultSettings);
+            using var tokenWriter = new JTokenWriter();
+            serializer.Serialize(tokenWriter, value, typeof(T));
+            return tokenWriter.Token;
+        }
+
+        public static T ObjectFromJToken<T>(JToken token)
+        {
+            var serializer = JsonSerializer.Create(DefaultSettings);
+            return token.ToObject<T>(serializer);
+        }
+
+        public static byte[] ObjectToBytes<T>(T value)
+        {
+            var json = JsonConvert.SerializeObject(value, typeof(T), DefaultSettings);
+            return Encoding.UTF8.GetBytes(json);
+        }
+
+        public static T BytesToObject<T>(byte[] bytes)
+        {
+            var json = Encoding.UTF8.GetString(bytes);
+            return JsonConvert.DeserializeObject<T>(json, IpfsJsonSettings.DefaultSettings);
+        }
     }
 }

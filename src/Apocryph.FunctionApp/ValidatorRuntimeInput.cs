@@ -13,7 +13,7 @@ namespace Apocryph.FunctionApp
     {
         [FunctionName(nameof(ValidatorRuntimeInput))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("validatorFilterStream")] IAsyncEnumerable<ISigned<AgentOutput>> validatorFilterStream,
+            [PerperStream("validatorFilterStream")] IAsyncEnumerable<IHashed<AgentOutput>> validatorFilterStream,
             [PerperStream("outputStream")] IAsyncCollector<Hash> outputStream)
         {
             await validatorFilterStream.ForEachAsync(async output =>

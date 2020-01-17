@@ -9,6 +9,6 @@ namespace Apocryph.FunctionApp.Model
         public List<ICommand> Commands { get; set; }
 
         public Hash Previous { get; set; }
-        public Dictionary<ValidatorKey, ValidatorSignature> CommitSignatures { get; set; }
+        public List<ISigned<Commit>> PreviousCommits { get; set; }
     }
 }
