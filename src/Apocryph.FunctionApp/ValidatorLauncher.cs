@@ -91,9 +91,37 @@ namespace Apocryph.FunctionApp
                 hashStream = _committerStream
             });
 
+            await using var _syncLoaderStream = await context.StreamFunctionAsync(nameof(StepHashCollector), new
+            {
+                inputStream = ipfsStream
+            });
+
+            await using var syncLoaderStream = await context.StreamFunctionAsync(nameof(IpfsRecursiveLoader), new
+            {
+                ipfsGateway,
+                hashStream = _syncLoaderStream
+            });
+
+            await using var _syncSignatureVerifierStream = await context.StreamFunctionAsync(nameof(StepSignatureVerifier), new
+            {
+                stepsStream = syncLoaderStream,
+                validatorSet
+            });
+
+            await using var syncSignatureVerifierStream = await context.StreamFunctionAsync(nameof(IpfsLoader), new
+            {
+                ipfsGateway,
+                hashStream = _syncSignatureVerifierStream
+            });
+
+            await using var syncStream = await context.StreamFunctionAsync(nameof(StepOrderVerifier), new
+            {
+                stepsStream = new []{syncSignatureVerifierStream, committerStream}
+            });
+
             await using var commandsStream = await context.StreamFunctionAsync(nameof(CommandSplitter), new
             {
-                committerStream
+                stepsStream = syncStream
             });
 
             await using var reminderCommandExecutorStream = await context.StreamFunctionAsync(nameof(ReminderCommandExecutor), new
@@ -143,7 +171,7 @@ namespace Apocryph.FunctionApp
             await using var proposerFilterStream = await context.StreamFunctionAsync(nameof(ProposerFilter), new
             {
                 self,
-                committerStream = new []{committerStream, initCommitStream},
+                syncStream,
                 currentProposerStream = new []{currentProposerStream, initProposerStream},
             });
 
@@ -174,7 +202,6 @@ namespace Apocryph.FunctionApp
 
             await using var _validatorFilterStream = await context.StreamFunctionAsync(nameof(ValidatorFilter), new
             {
-                committerStream = new []{committerStream, initCommitStream},
                 currentProposerStream = new []{currentProposerStream, initProposerStream},
                 proposalsStream
             });

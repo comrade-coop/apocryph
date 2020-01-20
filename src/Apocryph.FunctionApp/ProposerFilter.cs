@@ -20,7 +20,7 @@ namespace Apocryph.FunctionApp
         [FunctionName(nameof(ProposerFilter))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("self")] ValidatorKey self,
-            [PerperStream("committerStream")] IAsyncEnumerable<IHashed<IAgentStep>> committerStream,
+            [PerperStream("syncStream")] IAsyncEnumerable<IHashed<IAgentStep>> syncStream,
             [PerperStream("currentProposerStream")] IAsyncEnumerable<ValidatorKey> currentProposerStream,
             [PerperStream("outputStream")] IAsyncCollector<IHashed<IAgentStep>> outputStream)
         {
@@ -44,7 +44,7 @@ namespace Apocryph.FunctionApp
                     await context.UpdateStateAsync(state);
                 }, CancellationToken.None),
 
-                committerStream.ForEachAsync(async commit =>
+                syncStream.ForEachAsync(async commit =>
                 {
                     state.LastCommit = commit;
                     await processPending();

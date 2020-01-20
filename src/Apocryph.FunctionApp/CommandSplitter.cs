@@ -15,10 +15,10 @@ namespace Apocryph.FunctionApp
     {
         [FunctionName(nameof(CommandSplitter))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("committerStream")] IAsyncEnumerable<IHashed<AgentOutput>> committerStream,
+            [PerperStream("stepsStream")] IAsyncEnumerable<IHashed<AgentOutput>> stepsStream,
             [PerperStream("outputStream")] IAsyncCollector<ICommand> outputStream)
         {
-            await committerStream.ForEachAsync(async output =>
+            await stepsStream.ForEachAsync(async output =>
             {
                 foreach (var command in output.Value.Commands)
                 {
