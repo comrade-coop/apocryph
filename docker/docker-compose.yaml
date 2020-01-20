@@ -1,0 +1,23 @@
+version: '3'
+services:
+  ipfs:
+    image: ipfs/go-ipfs
+    network_mode: host
+    command: daemon --enable-pubsub-experiment
+  perper-fabric:
+    image: perper/fabric
+    network_mode: host
+    ipc: host
+    volumes:
+    - /tmp/perper:/tmp/perper
+  apocryph-runtime:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+    network_mode: host
+    ipc: host
+    depends_on:
+      - ipfs
+      - perper-fabric
+    volumes:
+      - /tmp/perper:/tmp/perper
