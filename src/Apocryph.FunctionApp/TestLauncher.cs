@@ -30,20 +30,24 @@ namespace Apocryph.FunctionApp
             }
 
             var ipfsGateway = "http://127.0.0.1:5001";
+            await using var validatorSetStream = await context.StreamFunctionAsync("TestDataGenerator", new
+            {
+                delay = TimeSpan.FromSeconds(0),
+                data = validatorSet
+            });
 
             var validatorLauncherStreams = new List<IAsyncDisposable>();
             foreach (var (privateKey, self) in keys)
             {
                 validatorLauncherStreams.Add(
-                    await context.StreamActionAsync("ValidatorLauncher",
-                        new
-                        {
-                            agentId = "0",
-                            validatorSet,
-                            ipfsGateway,
-                            privateKey,
-                            self
-                        }));
+                    await context.StreamActionAsync("ValidatorLauncher", new
+                    {
+                        agentId = "0",
+                        validatorSetStream,
+                        ipfsGateway,
+                        privateKey,
+                        self
+                    }));
             }
 
             try

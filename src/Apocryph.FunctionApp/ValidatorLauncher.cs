@@ -19,13 +19,13 @@ namespace Apocryph.FunctionApp
         [FunctionName(nameof(ValidatorLauncher))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("agentId")] string agentId,
-            [Perper("validatorSet")] ValidatorSet validatorSet,
+            [Perper("validatorSetStream")] object[] validatorSetStream,
             [Perper("ipfsGateway")] string ipfsGateway,
             [Perper("privateKey")] ECParameters privateKey,
             [Perper("self")] ValidatorKey self,
             CancellationToken cancellationToken)
         {
-            validatorSet.AccumulateWeights();
+            // validatorSet.AccumulateWeights();
 
             var topic = "apocryph-agent-" + agentId;
 
@@ -65,24 +65,18 @@ namespace Apocryph.FunctionApp
                 dataStream = _initCommitStream
             });
 
-            await using var initProposerStream = await context.StreamFunctionAsync(nameof(TestDataGenerator), new
-            {
-                delay = TimeSpan.FromSeconds(1.0),
-                data = validatorSet.GetMaxAccumulatedWeight()
-            });
-
             // Committer (Executing)
 
             await using var currentProposerStream = await context.StreamFunctionAsync(nameof(CurrentProposer), new
             {
                 commitsStream,
-                validatorSet
+                validatorSetStream
             });
 
             await using var _committerStream = await context.StreamFunctionAsync(nameof(Committer), new
             {
                 commitsStream,
-                validatorSet
+                validatorSetStream
             });
 
             await using var committerStream = await context.StreamFunctionAsync(nameof(IpfsLoader), new
@@ -105,7 +99,7 @@ namespace Apocryph.FunctionApp
             await using var _syncSignatureVerifierStream = await context.StreamFunctionAsync(nameof(StepSignatureVerifier), new
             {
                 stepsStream = syncLoaderStream,
-                validatorSet
+                validatorSetStream
             });
 
             await using var syncSignatureVerifierStream = await context.StreamFunctionAsync(nameof(IpfsLoader), new
@@ -135,9 +129,9 @@ namespace Apocryph.FunctionApp
                 topic = 0 //"apocryph-agent-0"
             });
 
-            await using var _inputVerifierStream = await context.StreamFunctionAsync(nameof(StepVerifier), new
+            await using var _inputVerifierStream = await context.StreamFunctionAsync(nameof(StepSignatureVerifier), new
             {
-                validatorSet, // TODO: Should give agent 0's validator set instead !!
+                validatorSetStream, // TODO: Should give agent 0's validator set instead !!
                 stepsStream = agentZeroStream,
             });
 
@@ -172,7 +166,7 @@ namespace Apocryph.FunctionApp
             {
                 self,
                 syncStream,
-                currentProposerStream = new []{currentProposerStream, initProposerStream},
+                currentProposerStream,
             });
 
             await using var proposerRuntimeStream = await context.StreamFunctionAsync(nameof(Runtime), new
@@ -202,7 +196,7 @@ namespace Apocryph.FunctionApp
 
             await using var _validatorFilterStream = await context.StreamFunctionAsync(nameof(ValidatorFilter), new
             {
-                currentProposerStream = new []{currentProposerStream, initProposerStream},
+                currentProposerStream,
                 proposalsStream
             });
 
@@ -265,7 +259,7 @@ namespace Apocryph.FunctionApp
 
             await using var consensusStream = await context.StreamFunctionAsync(nameof(Consensus), new
             {
-                validatorSet,
+                validatorSetStream,
                 votesStream
             });
 

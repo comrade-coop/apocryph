@@ -1,9 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.FunctionApp.Model;
 using Microsoft.Azure.WebJobs;
+using Microsoft.Extensions.Logging;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
 
@@ -14,32 +16,47 @@ namespace Apocryph.FunctionApp
         private class State
         {
             public Dictionary<Hash, HashSet<ValidatorKey>> Votes { get; set; } = new Dictionary<Hash, HashSet<ValidatorKey>>();
+            public ValidatorSet ValidatorSet { get; set; }
         }
 
         [FunctionName(nameof(Consensus))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [Perper("validatorSet")] ValidatorSet validatorSet,
+            [PerperStream("validatorSetStream")] IAsyncEnumerable<ValidatorSet> validatorSetStream,
             [PerperStream("votesStream")] IAsyncEnumerable<ISigned<Vote>> votesStream,
-            [PerperStream("outputStream")] IAsyncCollector<Commit> outputStream)
+            [PerperStream("outputStream")] IAsyncCollector<Commit> outputStream,
+            ILogger logger)
         {
             var state = await context.FetchStateAsync<State>() ?? new State();
-
-            await votesStream.ForEachAsync(async vote =>
-            {
-                if (!state.Votes.ContainsKey(vote.Value.For))
+            await Task.WhenAll(
+                validatorSetStream.ForEachAsync(async validatorSet =>
                 {
-                    state.Votes[vote.Value.For] = new HashSet<ValidatorKey>();
-                }
-                state.Votes[vote.Value.For].Add(vote.Signer);
-                await context.UpdateStateAsync(state);
+                    try
+                    {
+                        state.ValidatorSet = validatorSet;
+                        await context.UpdateStateAsync(state);
+                    }
+                    catch (Exception e)
+                    {
+                        logger.LogError(e.ToString());
+                    }
+                }, CancellationToken.None),
 
-                var voted = state.Votes[vote.Value.For]
-                    .Select(signer => validatorSet.Weights[signer]).Sum();
-                if (3 * voted > 2 * validatorSet.Total && 3 * voted - validatorSet.Weights[vote.Signer] <= 2 * validatorSet.Total)
+                votesStream.ForEachAsync(async vote =>
                 {
-                    await outputStream.AddAsync(new Commit {For = vote.Value.For});
-                }
-            }, CancellationToken.None);
+                    if (!state.Votes.ContainsKey(vote.Value.For))
+                    {
+                        state.Votes[vote.Value.For] = new HashSet<ValidatorKey>();
+                    }
+                    state.Votes[vote.Value.For].Add(vote.Signer);
+                    await context.UpdateStateAsync(state);
+
+                    var voted = state.Votes[vote.Value.For]
+                        .Select(signer => state.ValidatorSet.Weights[signer]).Sum();
+                    if (3 * voted > 2 * state.ValidatorSet.Total && 3 * voted - state.ValidatorSet.Weights[vote.Signer] <= 2 * state.ValidatorSet.Total)
+                    {
+                        await outputStream.AddAsync(new Commit {For = vote.Value.For});
+                    }
+                }, CancellationToken.None));
         }
     }
 }

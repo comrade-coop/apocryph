@@ -16,40 +16,55 @@ namespace Apocryph.FunctionApp
         private class State
         {
             public Dictionary<Hash, HashSet<ValidatorKey>> Commits { get; set; } = new Dictionary<Hash, HashSet<ValidatorKey>>();
+            public ValidatorSet ValidatorSet { get; set; }
         }
 
         [FunctionName(nameof(Committer))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [Perper("validatorSet")] ValidatorSet validatorSet,
+            [PerperStream("validatorSetStream")] IAsyncEnumerable<ValidatorSet> validatorSetStream,
             [PerperStream("commitsStream")] IAsyncEnumerable<ISigned<Commit>> commitsStream,
             [PerperStream("outputStream")] IAsyncCollector<Hash> outputStream,
             ILogger logger)
         {
             var state = await context.FetchStateAsync<State>() ?? new State();
 
-            await commitsStream.ForEachAsync(async commit =>
-            {
-                try
+            await Task.WhenAll(
+                validatorSetStream.ForEachAsync(async validatorSet =>
                 {
-                    if (!state.Commits.ContainsKey(commit.Value.For))
+                    try
                     {
-                        state.Commits[commit.Value.For] = new HashSet<ValidatorKey>();
+                        state.ValidatorSet = validatorSet;
+                        await context.UpdateStateAsync(state);
                     }
-                    state.Commits[commit.Value.For].Add(commit.Signer);
-                    await context.UpdateStateAsync(state);
+                    catch (Exception e)
+                    {
+                        logger.LogError(e.ToString());
+                    }
+                }, CancellationToken.None),
 
-                    var committed = state.Commits[commit.Value.For]
-                        .Select(signer => validatorSet.Weights[signer]).Sum();
-                    if (3 * committed > 2 * validatorSet.Total && 3 * committed - validatorSet.Weights[commit.Signer] <= 2 * validatorSet.Total)
-                    {
-                        await outputStream.AddAsync(commit.Value.For);
-                    }
-                }
-                catch (Exception e)
+                commitsStream.ForEachAsync(async commit =>
                 {
-                    logger.LogError(e.ToString());
-                }
-            }, CancellationToken.None);
+                    try
+                    {
+                        if (!state.Commits.ContainsKey(commit.Value.For))
+                        {
+                            state.Commits[commit.Value.For] = new HashSet<ValidatorKey>();
+                        }
+                        state.Commits[commit.Value.For].Add(commit.Signer);
+                        await context.UpdateStateAsync(state);
+
+                        var committed = state.Commits[commit.Value.For]
+                            .Select(signer => state.ValidatorSet.Weights[signer]).Sum();
+                        if (3 * committed > 2 * state.ValidatorSet.Total && 3 * committed - state.ValidatorSet.Weights[commit.Signer] <= 2 * state.ValidatorSet.Total)
+                        {
+                            await outputStream.AddAsync(commit.Value.For);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        logger.LogError(e.ToString());
+                    }
+                }, CancellationToken.None));
         }
     }
 }
