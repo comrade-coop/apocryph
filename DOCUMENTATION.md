@@ -23,7 +23,7 @@ tools and development paradigms.
 Below, you can see a short video of how easy is to setup Apocryph test node on you 
 local development machine using only Docker and Docker-Compose:
 
-<script id="asciicast-295036" src="https://asciinema.org/a/295036.js" async></script>
+[![asciicast](https://asciinema.org/a/295036.svg)](https://asciinema.org/a/295036?speed=2)
 
 ### Quick Summary
 
