@@ -33,20 +33,20 @@ Apocryph is an architecture:
 - covers both open-source and closed-source parts of the system beign built
 - compliant with the latest enterprise-grade software architectures and technologies
 
-Apocryph is an multi-agent system framework:
+Apocryph is a framework:
 
-- has built-in library for builing agent-oriented software
+- has built-in library for builing multi-agent systems
 - supports both proactive and passive agents
 
-Apocryph is digital economy *(implementation in-progress)*:
+Apocryph is a economy *(implementation in-progress)*:
 
-- supports programmable economy model
-- accomodates both human and AI 
+- supports fully programmable digital economy model
+- accomodates both humans and AI actors 
 
-Apocryph is blockchain *(implementation in-progress)*:
+Apocryph is a blockchain *(implementation in-progress)*:
 
 - implements highly scalable DPoS BFT consensus 
-- built around the principle of using inter-blockchain communication as fundamental bulding block
+- designed to be inter-blockchain communication ready
 
 ## How Apocryph works
 
