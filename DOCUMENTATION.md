@@ -27,13 +27,48 @@ local development machine using only Docker and Docker-Compose:
 
 ### Quick Summary
 
+Apocryph is an architecture:
+
+- defines patterns and practices for building distributed systems
+- covers both open-source and closed-source parts of the system beign built
+- compliant with the latest enterprise-grade software architectures and technologies
+
+Apocryph is an multi-agent system framework:
+
+- has built-in library for builing agent-oriented software
+- supports both proactive and passive agents
+
+Apocryph is digital economy *(implementation in-progress)*:
+
+- supports programmable economy model
+- accomodates both human and AI 
+
+Apocryph is blockchain *(implementation in-progress)*:
+
+- implements highly scalable DPoS BFT consensus 
+- built around the principle of using inter-blockchain communication as fundamental bulding block
+
 ## How Apocryph works
+
+![Architecture Overview](docs/images/architecture_overview.jpg "Architecture Overview")
 
 ### Apocryph Nodes
 
+Apocryph is built on top of [Peprer](https://github.com/obecto/perper) - stream-based, horizontally 
+scalable framework for asynchronous data processing. This allow Apocryph Nodes to both
+work on a single machine (using docker-compose) or in a datacenter grade cluster environment
+using [Kubernetes](http://kubernetes.io/).
+
 ### Apocryph Consenus
 
+Apocryph consensus implementation is using serverless, stream-based architecture to 
+achieve high concurency and throughput. For intra-node communication it is using [Peprer](https://github.com/obecto/perper) 
+and for inter-node communication and persistence it is using [IPFS](https://ipfs.io/). 
+
 ### Apocryph Agents
+
+Apocryph agents are regular .NET Core or Python programs that are executed 
+in a serverless sandbox environment built on top of [Azure Functions](https://docs.microsoft.com/en-us/azure/azure-functions/).
 
 ## Getting started
 
