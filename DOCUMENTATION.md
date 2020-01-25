@@ -38,15 +38,15 @@ Apocryph is a framework:
 - has built-in library for builing multi-agent systems
 - supports both proactive and passive agents
 
-Apocryph is a economy *(implementation in-progress)*:
-
-- supports fully programmable digital economy model
-- accomodates both humans and AI actors 
-
 Apocryph is a blockchain *(implementation in-progress)*:
 
 - implements highly scalable DPoS BFT consensus 
 - designed to be inter-blockchain communication ready
+
+Apocryph is a economy *(implementation in-progress)*:
+
+- supports fully programmable digital economy model
+- accomodates both humans and AI actors 
 
 ## How Apocryph works
 
