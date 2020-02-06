@@ -7,5 +7,6 @@ RUN cd /apocryph/src/Apocryph.FunctionApp && \
 
 FROM mcr.microsoft.com/azure-functions/dotnet:3.0
 ENV AzureWebJobsScriptRoot=/home/site/wwwroot \
-    AzureFunctionsJobHost__Logging__Console__IsEnabled=true
+    AzureFunctionsJobHost__Logging__Console__IsEnabled=true \
+    ASPNETCORE_URLS=http://*:7071
 COPY --from=build-env ["/home/site/wwwroot", "/home/site/wwwroot"]
