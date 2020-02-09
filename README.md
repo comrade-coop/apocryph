@@ -27,7 +27,7 @@ The state of each Agent is stored on a separate blockchain and the transactions 
 Since the network nodes run on Perper, they scale horizontally and each node is supposed to be more a cluster of machines, rather than just a single machine. This enables the network validators to run nodes on professional infrastructure and achieve economies of scale. 
 
 ## Interoperability and extensibility
-With the main focus on decoupling and reusability, the Apocryph network is designed to be highly interoperable and extensible. Agents might require that certain services are running on their validator nodes and thus access any functionality needed - from sending emails to interoperability with EthereumEthereum interoperability and decentralized training of AI.
+With the main focus on decoupling and reusability, the Apocryph network is designed to be highly interoperable and extensible. Agents might require that certain services are running on their validator nodes and thus access any functionality needed - from sending emails to interoperability with Ethereum and decentralized training of AI.
 
 ## DPoS consensus
 The network runs on a Delegated Proof of Stake, Practical Byzantine Fault Tolerance consensus algorithm. IPFS is used for storing the block data, while block propagation and voting happen over IPFS GossipSub. By reusing established technology and existing infrastructure we significantly simplify the consensus engine, allowing more idiomatic and secure implementation.
