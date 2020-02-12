@@ -21,7 +21,7 @@ namespace Apocryph.FunctionApp
 
         [FunctionName(nameof(Committer))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("validatorSetStream")] IAsyncEnumerable<ValidatorSet> validatorSetStream,
+            [PerperStream("validatorSetStream")] IAsyncEnumerable<IHashed<ValidatorSet>> validatorSetStream,
             [PerperStream("commitsStream")] IAsyncEnumerable<ISigned<Commit>> commitsStream,
             [PerperStream("outputStream")] IAsyncCollector<Hash> outputStream,
             ILogger logger)
@@ -33,7 +33,7 @@ namespace Apocryph.FunctionApp
                 {
                     try
                     {
-                        state.ValidatorSet = validatorSet;
+                        state.ValidatorSet = validatorSet.Value;
                         await context.UpdateStateAsync(state);
                     }
                     catch (Exception e)
@@ -50,12 +50,14 @@ namespace Apocryph.FunctionApp
                         {
                             state.Commits[commit.Value.For] = new HashSet<ValidatorKey>();
                         }
+
+                        var wasMoreThanTwoThirds = state.ValidatorSet.IsMoreThanTwoThirds(state.Commits[commit.Value.For]);
+
                         state.Commits[commit.Value.For].Add(commit.Signer);
                         await context.UpdateStateAsync(state);
 
-                        var committed = state.Commits[commit.Value.For]
-                            .Select(signer => state.ValidatorSet.Weights[signer]).Sum();
-                        if (3 * committed > 2 * state.ValidatorSet.Total && 3 * committed - state.ValidatorSet.Weights[commit.Signer] <= 2 * state.ValidatorSet.Total)
+                        if (!wasMoreThanTwoThirds &&
+                            state.ValidatorSet.IsMoreThanTwoThirds(state.Commits[commit.Value.For]))
                         {
                             await outputStream.AddAsync(commit.Value.For);
                         }

@@ -21,7 +21,7 @@ namespace Apocryph.FunctionApp
 
         [FunctionName(nameof(Consensus))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("validatorSetStream")] IAsyncEnumerable<ValidatorSet> validatorSetStream,
+            [PerperStream("validatorSetStream")] IAsyncEnumerable<IHashed<ValidatorSet>> validatorSetStream,
             [PerperStream("votesStream")] IAsyncEnumerable<ISigned<Vote>> votesStream,
             [PerperStream("outputStream")] IAsyncCollector<Commit> outputStream,
             ILogger logger)
@@ -32,7 +32,7 @@ namespace Apocryph.FunctionApp
                 {
                     try
                     {
-                        state.ValidatorSet = validatorSet;
+                        state.ValidatorSet = validatorSet.Value;
                         await context.UpdateStateAsync(state);
                     }
                     catch (Exception e)
@@ -47,12 +47,13 @@ namespace Apocryph.FunctionApp
                     {
                         state.Votes[vote.Value.For] = new HashSet<ValidatorKey>();
                     }
+                    var wasMoreThanTwoThirds = state.ValidatorSet.IsMoreThanTwoThirds(state.Votes[vote.Value.For]);
+
                     state.Votes[vote.Value.For].Add(vote.Signer);
                     await context.UpdateStateAsync(state);
 
-                    var voted = state.Votes[vote.Value.For]
-                        .Select(signer => state.ValidatorSet.Weights[signer]).Sum();
-                    if (3 * voted > 2 * state.ValidatorSet.Total && 3 * voted - state.ValidatorSet.Weights[vote.Signer] <= 2 * state.ValidatorSet.Total)
+                    if (!wasMoreThanTwoThirds &&
+                        state.ValidatorSet.IsMoreThanTwoThirds(state.Votes[vote.Value.For]))
                     {
                         await outputStream.AddAsync(new Commit {For = vote.Value.For});
                     }

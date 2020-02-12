@@ -14,7 +14,7 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.FunctionApp
 {
-    public static class StepOrderVerifier
+    public static class ProposedStepOrderVerifier
     {
         private class State
         {
@@ -22,9 +22,10 @@ namespace Apocryph.FunctionApp
             public List<Hash> ValidatorSets { get; set; } = new List<Hash> {new Hash { Bytes = new byte[]{} }};
         }
 
-        [FunctionName(nameof(StepOrderVerifier))]
+        [FunctionName(nameof(ProposedStepOrderVerifier))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("stepsStream")] IAsyncEnumerable<IHashed<IAgentStep>> stepsStream,
+            [PerperStream("proposedStepsStream")] IAsyncEnumerable<IHashed<IAgentStep>> proposedStepsStream,
             [PerperStream("validatorSetStream")] IAsyncEnumerable<IHashed<ValidatorSet>> validatorSetStream,
             [PerperStream("outputStream")] IAsyncCollector<IHashed<IAgentStep>> outputStream,
             ILogger logger)
@@ -43,20 +44,38 @@ namespace Apocryph.FunctionApp
                 {
                     try
                     {
-                        if (step.Value.Previous != state.CurrentStep)
+                        var i = 0;
+                        for (; i < state.ValidatorSets.Count; i++)
+                        {
+                            if (step.Value.PreviousValidatorSet == state.ValidatorSets[i])
+                            {
+                                break;
+                            }
+                        }
+                        state.ValidatorSets.RemoveRange(0, i);
+                        state.CurrentStep = step.Hash;
+                        await context.UpdateStateAsync(state);
+                    }
+                    catch (Exception e)
+                    {
+                        logger.LogError(e.ToString());
+                    }
+                }, CancellationToken.None),
+
+                proposedStepsStream.ForEachAsync(async proposedStep =>
+                {
+                    try
+                    {
+                        if (proposedStep.Value.Previous != state.CurrentStep)
                         {
                             return;
                         }
 
-                        // Find first matching validator set, drop all before it
                         for (var i = 0; i < state.ValidatorSets.Count; i++)
                         {
-                            if (step.Value.PreviousValidatorSet == state.ValidatorSets[i])
+                            if (proposedStep.Value.PreviousValidatorSet == state.ValidatorSets[i])
                             {
-                                state.ValidatorSets.RemoveRange(0, i);
-                                state.CurrentStep = step.Hash;
-                                await outputStream.AddAsync(step);
-                                await context.UpdateStateAsync(state);
+                                await outputStream.AddAsync(proposedStep);
                                 break;
                             }
                         }

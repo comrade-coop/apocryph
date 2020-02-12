@@ -21,7 +21,7 @@ namespace Apocryph.FunctionApp
 
         [FunctionName(nameof(CurrentProposer))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("validatorSetStream")] IAsyncEnumerable<ValidatorSet> validatorSetStream,
+            [PerperStream("validatorSetStream")] IAsyncEnumerable<IHashed<ValidatorSet>> validatorSetStream,
             [PerperStream("commitsStream")] IAsyncEnumerable<ISigned<Commit>> commitsStream,
             [PerperStream("outputStream")] IAsyncCollector<ValidatorKey> outputStream,
             ILogger logger)
@@ -35,11 +35,12 @@ namespace Apocryph.FunctionApp
                     {
                         if (state.ValidatorSet == null) // HACK
                         {
-                            state.ValidatorSet.AccumulateWeights();
-                            var initialProposer = state.ValidatorSet.PopMaxAccumulatedWeight();
+                            // state.ValidatorSet.AccumulateWeights();
+                            // state.ValidatorSet.PopMaxAccumulatedWeight();
+                            var initialProposer = validatorSet.Value.Weights.Keys.First();
                             await outputStream.AddAsync(initialProposer);
                         }
-                        state.ValidatorSet = validatorSet;
+                        state.ValidatorSet = validatorSet.Value;
                         await context.UpdateStateAsync(state);
                     }
                     catch (Exception e)
@@ -59,12 +60,14 @@ namespace Apocryph.FunctionApp
                         // TODO: Timeout proposers, rotate proposer only on his own blocks
                         state.Commits[commit.Value.For].Add(commit.Signer);
 
-                        var committed = state.Commits[commit.Value.For]
-                            .Select(signer => state.ValidatorSet.Weights[signer]).Sum();
-                        if (3 * committed > 2 * state.ValidatorSet.Total && 3 * committed - state.ValidatorSet.Weights[commit.Signer] <= 2 * state.ValidatorSet.Total)
+                        var wasMoreThanTwoThirds = state.ValidatorSet.IsMoreThanTwoThirds(state.Commits[commit.Value.For]);
+
+                        if (!wasMoreThanTwoThirds &&
+                            state.ValidatorSet.IsMoreThanTwoThirds(state.Commits[commit.Value.For]))
                         {
-                            state.ValidatorSet.AccumulateWeights();
-                            var proposer = state.ValidatorSet.PopMaxAccumulatedWeight();
+                            // state.ValidatorSet.AccumulateWeights();
+                            // state.ValidatorSet.PopMaxAccumulatedWeight();
+                            var proposer = state.ValidatorSet.Weights.Keys.First();
 
                             await outputStream.AddAsync(proposer);
                         }

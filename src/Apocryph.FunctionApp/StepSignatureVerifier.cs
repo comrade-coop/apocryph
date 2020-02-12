@@ -16,65 +16,42 @@ namespace Apocryph.FunctionApp
 {
     public static class StepSignatureVerifier
     {
-        private class State
-        {
-            public ValidatorSet ValidatorSet { get; set; }
-        }
-
         [FunctionName(nameof(StepSignatureVerifier))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("stepsStream")] IAsyncEnumerable<IHashed<IAgentStep>> stepsStream,
-            [PerperStream("validatorSetStream")] IAsyncEnumerable<ValidatorSet> validatorSetStream,
+            [PerperStream("stepValidatorSetSplitterStream")] IAsyncEnumerable<IHashed<ValidatorSet>> stepValidatorSetSplitterStream,
             [PerperStream("outputStream")] IAsyncCollector<Hash> outputStream,
             ILogger logger)
         {
-
-            var state = await context.FetchStateAsync<State>() ?? new State();
-
-            await Task.WhenAll(
-                validatorSetStream.ForEachAsync(async validatorSet =>
+            await stepsStream.Zip(stepValidatorSetSplitterStream).ForEachAsync(async stepAndValidatorSet =>
+            {
+                var (step, validatorSet) = stepAndValidatorSet;
+                try
                 {
-                    try
+                    var commitsSignaturesValid = step.Value.PreviousCommits.All(commit =>
                     {
-                        state.ValidatorSet = validatorSet;
-                        await context.UpdateStateAsync(state);
-                    }
-                    catch (Exception e)
-                    {
-                        logger.LogError(e.ToString());
-                    }
-                }, CancellationToken.None),
-
-                stepsStream.ForEachAsync(async step =>
-                {
-                    try
-                    {
-                        var commitsSignaturesValid = step.Value.PreviousCommits.All(commit =>
+                        if (commit.Value.For != step.Value.Previous)
                         {
-                            if (commit.Value.For != step.Value.Previous)
-                            {
-                                return false;
-                            }
-                            var bytes = IpfsJsonSettings.ObjectToBytes(commit.Value);
-                            return commit.Signer.ValidateSignature(bytes, commit.Signature);
-                        });
+                            return false;
+                        }
+                        var bytes = IpfsJsonSettings.ObjectToBytes(commit.Value);
+                        return commit.Signer.ValidateSignature(bytes, commit.Signature);
+                    });
 
-                        if (commitsSignaturesValid)
+                    if (commitsSignaturesValid)
+                    {
+                        var signers = step.Value.PreviousCommits.Select(commit => commit.Signer).Distinct();
+                        if (validatorSet.Value.IsMoreThanTwoThirds(signers))
                         {
-                            var committed = step.Value.PreviousCommits
-                                .Select(commit => commit.Signer).Distinct()
-                                .Select(signer => state.ValidatorSet.Weights[signer]).Sum();
-                            if (3 * committed > 2 * state.ValidatorSet.Total)
-                            {
-                                await outputStream.AddAsync(step.Value.Previous);
-                            }
+                            await outputStream.AddAsync(step.Value.Previous);
                         }
                     }
-                    catch (Exception e)
-                    {
-                        logger.LogError(e.ToString());
-                    }
-                }, CancellationToken.None));
+                }
+                catch (Exception e)
+                {
+                    logger.LogError(e.ToString());
+                }
+            }, CancellationToken.None);
         }
     }
 }

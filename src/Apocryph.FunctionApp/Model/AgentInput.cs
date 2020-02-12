@@ -9,6 +9,7 @@ namespace Apocryph.FunctionApp.Model
         public object Message { get; set; }
 
         public Hash Previous { get; set; }
+        public Hash PreviousValidatorSet { get; set; }
         public List<ISigned<Commit>> PreviousCommits { get; set; }
     }
 }

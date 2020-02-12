@@ -19,14 +19,12 @@ namespace Apocryph.FunctionApp
         [FunctionName(nameof(ValidatorLauncher))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("agentId")] string agentId,
-            [Perper("validatorSetStream")] object[] validatorSetStream,
+            [Perper("validatorSetsStream")] object[] validatorSetsStream,
             [Perper("ipfsGateway")] string ipfsGateway,
             [Perper("privateKey")] ECParameters privateKey,
             [Perper("self")] ValidatorKey self,
             CancellationToken cancellationToken)
         {
-            // validatorSet.AccumulateWeights();
-
             var topic = "apocryph-agent-" + agentId;
 
             await using var ipfsStream = await context.StreamFunctionAsync(nameof(IpfsInput), new
@@ -55,6 +53,7 @@ namespace Apocryph.FunctionApp
                     State = new object(),
                     Commands = new List<ICommand>(),
                     Previous = new Hash { Bytes = new byte[]{} },
+                    PreviousValidatorSet = new Hash { Bytes = new byte[]{} },
                     PreviousCommits = new List<ISigned<Commit>>()
                 }
             });
@@ -70,13 +69,13 @@ namespace Apocryph.FunctionApp
             await using var currentProposerStream = await context.StreamFunctionAsync(nameof(CurrentProposer), new
             {
                 commitsStream,
-                validatorSetStream
+                validatorSetsStream
             });
 
             await using var _committerStream = await context.StreamFunctionAsync(nameof(Committer), new
             {
                 commitsStream,
-                validatorSetStream
+                validatorSetsStream
             });
 
             await using var committerStream = await context.StreamFunctionAsync(nameof(IpfsLoader), new
@@ -85,37 +84,51 @@ namespace Apocryph.FunctionApp
                 hashStream = _committerStream
             });
 
-            await using var _syncLoaderStream = await context.StreamFunctionAsync(nameof(StepHashCollector), new
+            // - Sync
+
+            await using var _unverifiedStepsStream = await context.StreamFunctionAsync(nameof(StepHashCollector), new
             {
                 inputStream = ipfsStream
             });
 
-            await using var syncLoaderStream = await context.StreamFunctionAsync(nameof(IpfsRecursiveLoader), new
+            await using var unverifiedStepsStream = await context.StreamFunctionAsync(nameof(IpfsRecursiveLoader), new
             {
                 ipfsGateway,
-                hashStream = _syncLoaderStream
+                hashStream = _unverifiedStepsStream
             });
 
-            await using var _syncSignatureVerifierStream = await context.StreamFunctionAsync(nameof(StepSignatureVerifier), new
+            await using var _stepValidatorSetSplitterStream = await context.StreamFunctionAsync(nameof(StepValidatorSetSplitter), new
             {
-                stepsStream = syncLoaderStream,
-                validatorSetStream
+                stepsStream = unverifiedStepsStream,
             });
 
-            await using var syncSignatureVerifierStream = await context.StreamFunctionAsync(nameof(IpfsLoader), new
+            await using var stepValidatorSetSplitterStream = await context.StreamFunctionAsync(nameof(IpfsLoader), new
             {
                 ipfsGateway,
-                hashStream = _syncSignatureVerifierStream
+                hashStream = _stepValidatorSetSplitterStream
             });
 
-            await using var syncStream = await context.StreamFunctionAsync(nameof(StepOrderVerifier), new
+            await using var _signatureVerifierStream = await context.StreamFunctionAsync(nameof(StepSignatureVerifier), new
             {
-                stepsStream = new []{syncSignatureVerifierStream, committerStream}
+                stepsStream = unverifiedStepsStream,
+                stepValidatorSetSplitterStream
+            });
+
+            await using var signatureVerifierStream = await context.StreamFunctionAsync(nameof(IpfsLoader), new
+            {
+                ipfsGateway,
+                hashStream = _signatureVerifierStream
+            });
+
+            await using var verifiedStepStream = await context.StreamFunctionAsync(nameof(StepOrderVerifier), new
+            {
+                stepsStream = new []{signatureVerifierStream, committerStream},
+                validatorSetsStream
             });
 
             await using var commandsStream = await context.StreamFunctionAsync(nameof(CommandSplitter), new
             {
-                stepsStream = syncStream
+                stepsStream = verifiedStepStream
             });
 
             await using var reminderCommandExecutorStream = await context.StreamFunctionAsync(nameof(ReminderCommandExecutor), new
@@ -131,7 +144,7 @@ namespace Apocryph.FunctionApp
 
             await using var _inputVerifierStream = await context.StreamFunctionAsync(nameof(StepSignatureVerifier), new
             {
-                validatorSetStream, // TODO: Should give agent 0's validator set instead !!
+                validatorSetsStream, // TODO: Should give agent 0's validator set instead !!
                 stepsStream = agentZeroStream,
             });
 
@@ -165,7 +178,7 @@ namespace Apocryph.FunctionApp
             await using var proposerFilterStream = await context.StreamFunctionAsync(nameof(ProposerFilter), new
             {
                 self,
-                syncStream,
+                verifiedStepStream,
                 currentProposerStream,
             });
 
@@ -194,22 +207,46 @@ namespace Apocryph.FunctionApp
 
             // Validator (Voting)
 
-            await using var _validatorFilterStream = await context.StreamFunctionAsync(nameof(ValidatorFilter), new
+            await using var _proposedStepsStream = await context.StreamFunctionAsync(nameof(ValidatorFilter), new
             {
                 currentProposerStream,
                 proposalsStream
             });
 
-            await using var _loadedValidatorFilterStream = await context.StreamFunctionAsync(nameof(IpfsLoader), new
+            await using var proposedStepsStream = await context.StreamFunctionAsync(nameof(IpfsLoader), new
             {
                 ipfsGateway,
-                hashStream = _validatorFilterStream
+                hashStream = _proposedStepsStream
+            });
+
+            await using var _proposalValidatorSetSplitter = await context.StreamFunctionAsync(nameof(StepValidatorSetSplitter), new
+            {
+                stepsStream = proposedStepsStream,
+            });
+
+            await using var proposalValidatorSetSplitter = await context.StreamFunctionAsync(nameof(IpfsLoader), new
+            {
+                ipfsGateway,
+                hashStream = _proposalValidatorSetSplitter
+            });
+
+            await using var _proposalSignatureVerifierStream = await context.StreamFunctionAsync(nameof(StepSignatureVerifier), new
+            {
+                stepsStream = proposedStepsStream,
+                stepValidatorSetSplitterStream = proposalValidatorSetSplitter
+            });
+
+            await using var proposalSignatureVerifierStream = await context.StreamFunctionAsync(nameof(IpfsLoader), new
+            {
+                ipfsGateway,
+                hashStream = _proposalSignatureVerifierStream
             });
 
             await using var validatorFilterStream = await context.StreamFunctionAsync(nameof(StepOrderVerifier), new
             {
-                ipfsGateway,
-                stepsStream = _loadedValidatorFilterStream
+                stepsStream = verifiedStepStream,
+                proposedStepsStream = proposalSignatureVerifierStream,
+                validatorSetsStream
             });
 
             await using var _validatorRuntimeInputStream = await context.StreamFunctionAsync(nameof(ValidatorRuntimeInput), new
@@ -259,7 +296,7 @@ namespace Apocryph.FunctionApp
 
             await using var consensusStream = await context.StreamFunctionAsync(nameof(Consensus), new
             {
-                validatorSetStream,
+                validatorSetsStream,
                 votesStream
             });
 

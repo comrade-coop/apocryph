@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -6,31 +7,14 @@ namespace Apocryph.FunctionApp.Model
     public class ValidatorSet
     {
         public Dictionary<ValidatorKey, int> Weights { get; set; } = new Dictionary<ValidatorKey, int>();
-        public Dictionary<ValidatorKey, int> AccumulatedWeights { get; set; } = new Dictionary<ValidatorKey, int>();
-        public int Total { get; set; }
 
-        public ValidatorKey GetMaxAccumulatedWeight()
-        {
-            return AccumulatedWeights.Select(kv => (kv.Value, kv.Key)).Max().Item2;
-        }
+        private int? _total = null;
+        public int Total { get => (_total = _total ?? Weights.Values.Sum()) ?? 0; }
 
-        public ValidatorKey PopMaxAccumulatedWeight()
+        public bool IsMoreThanTwoThirds(IEnumerable<ValidatorKey> distinctVoters)
         {
-            var maxAccumulatedWeight = GetMaxAccumulatedWeight();
-            AccumulatedWeights[maxAccumulatedWeight] -= Total;
-            return maxAccumulatedWeight;
-        }
-
-        public void AccumulateWeights()
-        {
-            foreach (var kv in Weights)
-            {
-                if (!AccumulatedWeights.ContainsKey(kv.Key))
-                {
-                    AccumulatedWeights[kv.Key] = 0;
-                }
-                AccumulatedWeights[kv.Key] += kv.Value;
-            }
+            var voted = distinctVoters.Select(signer => Weights[signer]).Sum();
+            return 3 * voted > 2 * Total;
         }
     }
 }
