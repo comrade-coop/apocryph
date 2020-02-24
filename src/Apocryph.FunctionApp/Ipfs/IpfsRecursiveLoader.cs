@@ -20,7 +20,7 @@ namespace Apocryph.FunctionApp.Ipfs
     {
         public class State
         {
-            public HashSet<Hash> ResolvedHashes { get; set; } = new HashSet<Hash>();
+            public HashSet<Hash> ResolvedHashes { get; set; } = new HashSet<Hash> {new Hash {Bytes = new byte[] {}}};
         }
 
         [FunctionName(nameof(IpfsRecursiveLoader))]

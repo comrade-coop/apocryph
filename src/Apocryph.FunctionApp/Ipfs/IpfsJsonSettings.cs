@@ -58,7 +58,7 @@ namespace Apocryph.FunctionApp.Ipfs
         public static JsonSerializerSettings DefaultSettings { get; } = new JsonSerializerSettings
         {
             Converters = {
-                new CustomDictionaryConverter<ValidatorKey, ValidatorSignature>(),
+                new CustomDictionaryConverter<ValidatorKey, int>(),
                 new ECParametersJsonConverter()
             },
             TypeNameHandling = TypeNameHandling.Auto,

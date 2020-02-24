@@ -16,12 +16,12 @@ namespace Apocryph.FunctionApp
     {
         [FunctionName(nameof(StepHashCollector))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("stepsStream")] IAsyncEnumerable<ISigned<IAgentStep>> inputStream,
+            [PerperStream("inputStream")] IAsyncEnumerable<ISigned<object>> inputStream,
             [PerperStream("outputStream")] IAsyncCollector<Hash> outputStream)
         {
             await inputStream.ForEachAsync(async input =>
             {
-                switch (input)
+                switch (input.Value)
                 {
                     case Commit commit:
                         await outputStream.AddAsync(commit.For);

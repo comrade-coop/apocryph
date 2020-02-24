@@ -22,7 +22,7 @@ namespace Apocryph.FunctionApp.Model
         public static ISigned<object> Create(object value, ValidatorKey signer, ValidatorSignature signature)
         {
             var type = typeof(Signed<>).MakeGenericType(value.GetType());
-            return (ISigned<object>)Activator.CreateInstance(type, signer, signature);
+            return (ISigned<object>)Activator.CreateInstance(type, value, signer, signature);
         }
     }
 }

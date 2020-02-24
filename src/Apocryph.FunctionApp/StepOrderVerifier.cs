@@ -25,14 +25,14 @@ namespace Apocryph.FunctionApp
         [FunctionName(nameof(StepOrderVerifier))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("stepsStream")] IAsyncEnumerable<IHashed<IAgentStep>> stepsStream,
-            [PerperStream("validatorSetStream")] IAsyncEnumerable<IHashed<ValidatorSet>> validatorSetStream,
+            [PerperStream("validatorSetsStream")] IAsyncEnumerable<IHashed<ValidatorSet>> validatorSetsStream,
             [PerperStream("outputStream")] IAsyncCollector<IHashed<IAgentStep>> outputStream,
             ILogger logger)
         {
             var state = await context.FetchStateAsync<State>() ?? new State();
 
             await Task.WhenAll(
-                validatorSetStream.ForEachAsync(async validatorSet =>
+                validatorSetsStream.ForEachAsync(async validatorSet =>
                 {
                     state.ValidatorSets.Add(validatorSet.Hash);
 

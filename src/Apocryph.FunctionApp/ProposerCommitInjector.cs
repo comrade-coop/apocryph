@@ -72,6 +72,12 @@ namespace Apocryph.FunctionApp
                             step.PreviousCommits = state.Commits[step.Previous];
                             step.PreviousValidatorSet = state.ValidatorSet.Hash;
                         }
+                        else
+                        {
+
+                            step.PreviousValidatorSet = state.ValidatorSet.Hash;
+                            step.PreviousCommits = new List<ISigned<Commit>>();
+                        }
 
                         logger.LogDebug("Proposing a step after {0}!", step.Previous.Bytes[0]);
 

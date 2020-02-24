@@ -21,7 +21,7 @@ namespace Apocryph.FunctionApp
 
         [FunctionName(nameof(Committer))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("validatorSetStream")] IAsyncEnumerable<IHashed<ValidatorSet>> validatorSetStream,
+            [PerperStream("validatorSetsStream")] IAsyncEnumerable<IHashed<ValidatorSet>> validatorSetsStream,
             [PerperStream("commitsStream")] IAsyncEnumerable<ISigned<Commit>> commitsStream,
             [PerperStream("outputStream")] IAsyncCollector<Hash> outputStream,
             ILogger logger)
@@ -29,7 +29,7 @@ namespace Apocryph.FunctionApp
             var state = await context.FetchStateAsync<State>() ?? new State();
 
             await Task.WhenAll(
-                validatorSetStream.ForEachAsync(async validatorSet =>
+                validatorSetsStream.ForEachAsync(async validatorSet =>
                 {
                     try
                     {
