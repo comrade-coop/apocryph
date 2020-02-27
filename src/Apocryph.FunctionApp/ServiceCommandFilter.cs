@@ -11,20 +11,20 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.FunctionApp
 {
-    public static class ReminderCommandExecutor
+    public static class ServiceCommandFilter
     {
-        [FunctionName(nameof(ReminderCommandExecutor))]
+        [FunctionName(nameof(ServiceCommandFilter))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("commandsStream")] IAsyncEnumerable<ReminderCommand> commandsStream,
-            [PerperStream("outputStream")] IAsyncCollector<(string, object)> outputStream,
+            [PerperStream("commandsStream")] IAsyncEnumerable<ServiceCommand> commandsStream,
+            [PerperStream("serviceName")] string serviceName,
+            [PerperStream("outputStream")] IAsyncCollector<object> outputStream,
             CancellationToken cancellationToken)
         {
-            await commandsStream.ForEachAsync(reminder =>
+            await commandsStream.ForEachAsync(async command =>
             {
-                Task.Run(async () => {
-                    await Task.Delay(reminder.Time, cancellationToken);
-                    await outputStream.AddAsync(("reminder", reminder.Data));
-                });
+                if (command.Service == serviceName) {
+                    await outputStream.AddAsync(command.Parameters);
+                }
             }, cancellationToken);
         }
     }

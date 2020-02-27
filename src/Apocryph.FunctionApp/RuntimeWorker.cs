@@ -1,5 +1,6 @@
 using System;
 using Apocryph.FunctionApp.Agent;
+using Apocryph.FunctionApp.Service;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
@@ -16,13 +17,26 @@ namespace Apocryph.FunctionApp
             [Perper("message")] object message)
         {
             var context = new AgentContext<object>(state);
-            if (message is string stringMessage)
+            if (message is InitMessage)
             {
-                context.AddReminder(TimeSpan.FromSeconds(5), stringMessage + "i");
+                context.SampleStore("0", "1");
+                context.AddReminder(TimeSpan.FromSeconds(5), "0");
             }
-            else
+            else if (sender == "reminder" && message is string key)
             {
-                context.AddReminder(TimeSpan.FromSeconds(5), "h");
+                context.SampleRestore(key);
+            }
+            else if (sender == "sample" && message is Tuple<string, object> data)
+            {
+                if (data.Item2 is string item)
+                {
+                    context.AddReminder(TimeSpan.FromSeconds(5), item);
+                }
+                else
+                {
+                    context.SampleStore(data.Item1, (int.Parse(data.Item1) + 1).ToString());
+                    context.AddReminder(TimeSpan.FromSeconds(5), "0");
+                }
             }
             return context;
         }

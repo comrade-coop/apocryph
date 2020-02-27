@@ -2,14 +2,17 @@ using System;
 
 namespace Apocryph.FunctionApp.Agent
 {
-    public interface IAgentContext<out T>
+    public interface IAgentContext
     {
-        T State { get; }
-
-        // void IssueToken(string recipient);
-        // void SendMessage(string target, object message);
         void AddReminder(TimeSpan time, object data);
         void MakePublication(object payload);
         void AddSubscription(string target);
+
+        void AddServiceCommand(string command, object parameters);
+    }
+
+    public interface IAgentContext<out T> : IAgentContext
+    {
+        T State { get; }
     }
 }

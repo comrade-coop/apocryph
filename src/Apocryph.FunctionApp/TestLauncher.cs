@@ -43,7 +43,7 @@ namespace Apocryph.FunctionApp
                 dataStream = _validatorSetsStream
             });
 
-            var validatorLauncherStreams = new List<IAsyncDisposable>();
+            await using var validatorLauncherStreams = new AsyncDisposableList();
             foreach (var (privateKey, self) in keys)
             {
                 validatorLauncherStreams.Add(
@@ -57,14 +57,7 @@ namespace Apocryph.FunctionApp
                     }));
             }
 
-            try
-            {
-                await context.BindOutput(cancellationToken);
-            }
-            finally
-            {
-                await Task.WhenAll(validatorLauncherStreams.Select(x => x.DisposeAsync().AsTask()));
-            }
+            await context.BindOutput(cancellationToken);
         }
     }
 }
