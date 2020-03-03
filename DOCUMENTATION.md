@@ -63,12 +63,23 @@ using [Kubernetes](http://kubernetes.io/).
 
 Apocryph consensus implementation is using serverless, stream-based architecture to 
 achieve high concurency and throughput. For intra-node communication it is using [Peprer](https://github.com/obecto/perper) 
-and for inter-node communication and persistence it is using [IPFS](https://ipfs.io/). 
+and for inter-node communication and persistence it is using [IPFS](https://ipfs.io/).
 
 ### Apocryph Agents
 
 Apocryph agents are regular .NET Core or Python programs that are executed 
 in a serverless sandbox environment built on top of [Azure Functions](https://docs.microsoft.com/en-us/azure/azure-functions/).
+
+### Apocryph Services
+
+Apocryph services are comprised of custom logic which allows Agents to communicate with 
+the outside world. They allow one to extend the consensus algorithm and provide additional 
+ways to receive inputs and produce outputs for an agent.
+
+While service execution is not covered by consensus between nodes (in the way agent execution is), 
+the different instances of services running on different nodes are expected to give the same outputs 
+on most nodes, so that the nodes can reach consensus on the input to the agent.
+
 
 ## Getting started
 
