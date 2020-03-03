@@ -21,7 +21,7 @@ namespace Apocryph.FunctionApp
             var keys = new List<(ECParameters, ValidatorKey)>();
             var validatorSet = new ValidatorSet();
 
-            for (var i = 0; i < 2; i ++)
+            for (var i = 0; i < 1; i ++)
             {
                 using var dsa = ECDsa.Create(ECCurve.NamedCurves.nistP521);
                 var privateKey = dsa.ExportParameters(true);
@@ -43,13 +43,14 @@ namespace Apocryph.FunctionApp
                 dataStream = _validatorSetsStream
             });
 
-            var validatorLauncherStreams = new List<IAsyncDisposable>();
+            await using var validatorLauncherStreams = new AsyncDisposableList();
             foreach (var (privateKey, self) in keys)
             {
                 validatorLauncherStreams.Add(
                     await context.StreamActionAsync(nameof(ValidatorLauncher), new
                     {
                         agentId = "0",
+                        services = new [] {"Sample"},
                         validatorSetsStream,
                         ipfsGateway,
                         privateKey,
@@ -57,14 +58,7 @@ namespace Apocryph.FunctionApp
                     }));
             }
 
-            try
-            {
-                await context.BindOutput(cancellationToken);
-            }
-            finally
-            {
-                await Task.WhenAll(validatorLauncherStreams.Select(x => x.DisposeAsync().AsTask()));
-            }
+            await context.BindOutput(cancellationToken);
         }
     }
 }

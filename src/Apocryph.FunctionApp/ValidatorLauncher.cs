@@ -19,6 +19,7 @@ namespace Apocryph.FunctionApp
         [FunctionName(nameof(ValidatorLauncher))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("agentId")] string agentId,
+            [Perper("services")] string[] services,
             [Perper("validatorSetsStream")] object[] validatorSetsStream,
             [Perper("ipfsGateway")] string ipfsGateway,
             [Perper("privateKey")] ECParameters privateKey,
@@ -171,12 +172,32 @@ namespace Apocryph.FunctionApp
                 validatorSetsStream
             }); */
 
+            await using var serviceFilterStreams = new AsyncDisposableList();
+            await using var serviceStreams = new AsyncDisposableList();
+            foreach (var serviceName in services) {
+                var functionName = "Service" + serviceName;
+                var filteredCommandsStream = await context.StreamFunctionAsync(nameof(ServiceCommandFilter), new
+                {
+                    commandsStream,
+                    serviceName
+                });
+                serviceFilterStreams.Add(filteredCommandsStream);
+                var serviceStream = await context.StreamFunctionAsync(functionName, new
+                {
+                    commandsStream = filteredCommandsStream,
+                    agentId,
+                    ipfsGateway
+                    // validatorSetsStream, self, privateKey
+                });
+                serviceStreams.Add(serviceStream);
+            }
+
             var commandExecutorStream = new []
             {
                 reminderCommandExecutorStream,
                 initMessageStream,
                 // subscriptionCommandExecutorStream
-            };
+            }.Concat(serviceStreams).ToArray();
 
             // Proposer (Proposing)
 

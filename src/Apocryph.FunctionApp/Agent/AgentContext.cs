@@ -39,5 +39,10 @@ namespace Apocryph.FunctionApp.Agent
         {
             Commands.Add(new SubscriptionCommand{Target = target});
         }
+
+        public void SendServiceMessage(string service, object parameters)
+        {
+            Commands.Add(new ServiceCommand{Service = service, Parameters = parameters});
+        }
     }
 }
