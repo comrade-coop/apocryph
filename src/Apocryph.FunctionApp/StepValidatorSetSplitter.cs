@@ -24,7 +24,10 @@ namespace Apocryph.FunctionApp
         {
             await stepsStream.ForEachAsync(async step =>
             {
-                await outputStream.AddAsync(step.Value.PreviousValidatorSet);
+                if (step.Value.Previous != new Hash { Bytes = new byte[]{} })
+                {
+                    await outputStream.AddAsync(step.Value.PreviousValidatorSet);
+                }
             }, CancellationToken.None);
         }
     }

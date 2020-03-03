@@ -58,10 +58,9 @@ namespace Apocryph.FunctionApp
                             state.Commits[commit.Value.For] = new HashSet<ValidatorKey>();
                         }
                         // TODO: Timeout proposers, rotate proposer only on his own blocks
-                        state.Commits[commit.Value.For].Add(commit.Signer);
-
                         var wasMoreThanTwoThirds = state.ValidatorSet.IsMoreThanTwoThirds(state.Commits[commit.Value.For]);
 
+                        state.Commits[commit.Value.For].Add(commit.Signer);
                         if (!wasMoreThanTwoThirds &&
                             state.ValidatorSet.IsMoreThanTwoThirds(state.Commits[commit.Value.For]))
                         {

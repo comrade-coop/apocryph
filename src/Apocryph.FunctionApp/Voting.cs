@@ -22,6 +22,7 @@ namespace Apocryph.FunctionApp
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("validatorRuntimeOutputStream")] IAsyncEnumerable<IHashed<AgentOutput>> validatorRuntimeOutputStream,
             [PerperStream("validatorFilterStream")] IAsyncEnumerable<IHashed<AgentOutput>> validatorFilterStream,
+            [PerperStream("genesisStream")] IAsyncEnumerable<IHashed<AgentOutput>> genesisStream,
             [PerperStream("outputStream")] IAsyncCollector<Vote> outputStream,
             ILogger logger)
         {
@@ -54,6 +55,18 @@ namespace Apocryph.FunctionApp
                         {
                             logger.LogWarning("Got {hash}, expected {expected}", step.Hash, state.ExpectedNextSteps[step.Value.Previous]);
                         }
+                    }
+                    catch (Exception e)
+                    {
+                        logger.LogError(e.ToString());
+                    }
+                }, CancellationToken.None),
+
+                genesisStream.ForEachAsync(async step =>
+                {
+                    try
+                    {
+                        await outputStream.AddAsync(new Vote { For = step.Hash });
                     }
                     catch (Exception e)
                     {

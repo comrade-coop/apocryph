@@ -15,6 +15,7 @@ namespace Apocryph.FunctionApp
     {
         public class State
         {
+            public Dictionary<Hash, Hash> PreviousValidatorSets { get; } = new Dictionary<Hash, Hash>();
             public Dictionary<Hash, List<ISigned<Commit>>> PreviousCommits { get; } = new Dictionary<Hash, List<ISigned<Commit>>>();
         }
 
@@ -33,6 +34,7 @@ namespace Apocryph.FunctionApp
                     try
                     {
                         state.PreviousCommits[expectedOutput.Value.Previous] = expectedOutput.Value.PreviousCommits;
+                        state.PreviousValidatorSets[expectedOutput.Value.Previous] = expectedOutput.Value.PreviousValidatorSet;
                         await context.UpdateStateAsync(state);
                     }
                     catch (Exception e)
@@ -46,6 +48,7 @@ namespace Apocryph.FunctionApp
                     try
                     {
                         output.PreviousCommits = state.PreviousCommits[output.Previous];
+                        output.PreviousValidatorSet = state.PreviousValidatorSets[output.Previous];
 
                         await outputStream.AddAsync(output);
                     }

@@ -20,12 +20,20 @@ namespace Apocryph.FunctionApp
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("stepsStream")] IAsyncEnumerable<IHashed<IAgentStep>> stepsStream,
             [PerperStream("stepValidatorSetSplitterStream")] IAsyncEnumerable<IHashed<ValidatorSet>> stepValidatorSetSplitterStream,
-            [PerperStream("outputStream")] IAsyncCollector<Hash> outputStream,
+            [PerperStream("outputStream")] IAsyncCollector<IHashed<IAgentStep>> outputStream,
             ILogger logger)
         {
-            await stepsStream.Zip(stepValidatorSetSplitterStream).ForEachAsync(async stepAndValidatorSet =>
+            await using var stepValidatorSetSplitterEnumerator = stepValidatorSetSplitterStream.GetAsyncEnumerator();
+            await stepsStream.ForEachAsync(async step =>
             {
-                var (step, validatorSet) = stepAndValidatorSet;
+                if (step.Value.Previous == new Hash { Bytes = new byte[]{} })
+                {
+                    return;
+                }
+
+                await stepValidatorSetSplitterEnumerator.MoveNextAsync();
+
+                var validatorSet = stepValidatorSetSplitterEnumerator.Current;
                 try
                 {
                     var commitsSignaturesValid = step.Value.PreviousCommits.All(commit =>
@@ -34,7 +42,7 @@ namespace Apocryph.FunctionApp
                         {
                             return false;
                         }
-                        var bytes = IpfsJsonSettings.ObjectToBytes(commit.Value);
+                        var bytes = IpfsJsonSettings.ObjectToBytes<object>(commit.Value);
                         return commit.Signer.ValidateSignature(bytes, commit.Signature);
                     });
 
@@ -43,7 +51,7 @@ namespace Apocryph.FunctionApp
                         var signers = step.Value.PreviousCommits.Select(commit => commit.Signer).Distinct();
                         if (validatorSet.Value.IsMoreThanTwoThirds(signers))
                         {
-                            await outputStream.AddAsync(step.Value.Previous);
+                            await outputStream.AddAsync(step);
                         }
                     }
                 }

@@ -79,7 +79,7 @@ namespace Apocryph.FunctionApp
                             step.PreviousCommits = new List<ISigned<Commit>>();
                         }
 
-                        logger.LogDebug("Proposing a step after {0}!", step.Previous.Bytes[0]);
+                        logger.LogDebug("Proposing a step after {0}!", step.Previous.Bytes.Length > 0 ? step.Previous.Bytes[0] : 0);
 
                         await outputStream.AddAsync(step);
                     }

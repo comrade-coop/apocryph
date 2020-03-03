@@ -36,10 +36,11 @@ namespace Apocryph.FunctionApp.Ipfs
 
             public override void WriteJson(JsonWriter writer, ECParameters value, JsonSerializer serializer)
             {
-                if (value.Curve.Equals(Curve))
+                // Serialization of ECCurve messes up, so the next if is disabled
+                /*if (!value.Curve.Equals(Curve))
                 {
                     throw new Exception("Unexpected curve value");
-                }
+                }*/
 
                 serializer.Serialize(writer, value.Q, typeof(ECPoint));
             }
