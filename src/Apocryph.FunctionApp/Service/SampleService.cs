@@ -12,7 +12,7 @@ namespace Apocryph.FunctionApp.Service
 {
     public static class SampleService
     {
-        public class State
+        private class State
         {
             public Dictionary<string, object> Data { get; set; } = new Dictionary<string, object>();
         }

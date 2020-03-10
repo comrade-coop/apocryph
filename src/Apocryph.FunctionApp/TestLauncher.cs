@@ -50,7 +50,7 @@ namespace Apocryph.FunctionApp
                     await context.StreamActionAsync(nameof(ValidatorLauncher), new
                     {
                         agentId = "0",
-                        services = new [] {"Sample"},
+                        services = new [] {"Sample", "IpfsInput"},
                         validatorSetsStream,
                         ipfsGateway,
                         privateKey,
