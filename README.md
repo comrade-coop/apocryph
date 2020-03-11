@@ -24,13 +24,13 @@ Messages in the network are processed only if they come with a valid execution t
 The state of each Agent is stored on a separate blockchain and the transactions on these blockchains are running in parallel to enable an extremely high transaction throughput. Agents are self-governing and each agent can declare which subset of the Apocryph network validators should validate the respective Agent’s blockchain. 
 
 ## Scalable nodes
-Since the network nodes run on Perper, they scale horizontally and each node is supposed to be more a cluster of machines, rather than just a single machine. This enables the network validators to run nodes on professional infrastructure and achieve economies of scale. 
+Since the network nodes run on [Perper](https://github.com/obecto/perper), they scale horizontally and each node is supposed to be more a cluster of machines, rather than just a single machine. This enables the network validators to run nodes on professional infrastructure and achieve economies of scale. 
 
 ## Interoperability and extensibility
 With the main focus on decoupling and reusability, the Apocryph network is designed to be highly interoperable and extensible. Agents might require that certain services are running on their validator nodes and thus access any functionality needed - from sending emails to interoperability with Ethereum and decentralized training of AI.
 
-## DPoS consensus
-The network runs on a Delegated Proof of Stake, Practical Byzantine Fault Tolerance consensus algorithm. IPFS is used for storing the block data, while block propagation and voting happen over IPFS GossipSub. By reusing established technology and existing infrastructure we significantly simplify the consensus engine, allowing more idiomatic and secure implementation.
+## Leaderless consensus
+The network runs a leaderless Byzantine fault tolerance consensus protocol inspired by [Wavelet](https://wavelet.perlin.net/whitepaper.pdf). It uses [IPFS](https://ipfs.io) for storing the block data, while block propagation and voting happen over IPFS [GossipSub](https://github.com/libp2p/specs/tree/master/pubsub/gossipsub). By reusing established technology and existing infrastructure we significantly simplify the consensus engine, allowing more idiomatic and secure implementation.
 
 ## Built by a coop
 Apocryph is built by the [Comrade Cooperative](https://www.comrade.coop/) - a member-owned organization of software developers and innovation builders, that is based on transparency, technocracy, and self-governance. In the past two years, we are working on two pillar projects around the most important use cases we saw for consensus networks - autonomous organizations with [Wetonomy](https://www.wetonomy.com/) and decentralized AI with [ScyNet](https://www.scynet.ai/). Apocryph emerged as a solution to the numerous problems we encountered while we were working on these projects and now they all form a coherent ecosystem.
