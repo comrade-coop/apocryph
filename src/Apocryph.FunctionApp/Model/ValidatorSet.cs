@@ -16,5 +16,10 @@ namespace Apocryph.FunctionApp.Model
             var voted = distinctVoters.Select(signer => Weights[signer]).Sum();
             return 3 * voted > 2 * Total;
         }
+
+        public void InvalidateTotal()
+        {
+            _total = null;
+        }
     }
 }

@@ -15,38 +15,55 @@ namespace Apocryph.FunctionApp
     {
         [FunctionName(nameof(ValidatorScheduler))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("validatorSetsStream")] IAsyncEnumerable<Dictionary<string, ValidatorSet>> validatorSetsStream,
+            [PerperStream("validatorSetsStream")] IAsyncEnumerable<Dictionary<string, IHashed<ValidatorSet>>> validatorSetsStream,
+            [Perper("validatorSetsStream")] object[] validatorSetsStreamPassthrough,
             [Perper("ipfsGateway")] string ipfsGateway,
             [Perper("privateKey")] ECParameters privateKey,
             [Perper("self")] ValidatorKey self)
         {
-            var runningStreams = new Dictionary<KeyValuePair<string, ValidatorSet>, IAsyncDisposable>();
+            var runningStreams = new Dictionary<string, IAsyncDisposable>();
 
             await validatorSetsStream.ForEachAsync(async validatorSets =>
             {
                 // FIXME: Instead of restarting when validator set changes, send validator sets as a seperate stream
 
                 var filteredValidatorSets = validatorSets
-                    .Where(kv => kv.Value.Weights.ContainsKey(self));
+                    .Where(kv => kv.Value.Value.Weights.ContainsKey(self));
 
-                var toStop = new HashSet<KeyValuePair<string, ValidatorSet>>(runningStreams.Keys);
+                var toStop = new HashSet<string>(runningStreams.Keys);
 
                 foreach (var kv in filteredValidatorSets)
                 {
-                    toStop.Remove(kv);
+                    toStop.Remove(kv.Key);
 
-                    if (!runningStreams.ContainsKey(kv))
+                    if (!runningStreams.ContainsKey(kv.Key))
                     {
                         var agentId = kv.Key;
-                        var validatorSet = kv.Value;
-                        runningStreams[kv] = await context.StreamActionAsync(nameof(ValidatorLauncher), new
+                        var filterStream = await context.StreamFunctionAsync(nameof(AgentZeroValidatorSetsSplitter), new
                         {
-                            ipfsGateway,
+                            validatorSetsStream = validatorSetsStreamPassthrough,
+                            agentId,
+                        });
+                        var initValidatorSetStream = await context.StreamFunctionAsync(nameof(TestDataGenerator), new
+                        {
+                            delay = TimeSpan.FromSeconds(10),
+                            data = kv.Value
+                        });
+                        var launcher = await context.StreamActionAsync(nameof(ValidatorLauncher), new
+                        {
                             agentId = agentId,
-                            validatorSet = validatorSet,
+                            services = new [] {"Sample", "IpfsInput"},
+                            ipfsGateway,
+                            validatorSetsStream = new [] {filterStream, initValidatorSetStream},
                             privateKey,
                             self
                         });
+                        runningStreams[kv.Key] = new AsyncDisposableList
+                        {
+                            { filterStream },
+                            { initValidatorSetStream },
+                            { launcher }
+                        };
                     }
                 }
 

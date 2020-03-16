@@ -19,10 +19,10 @@ namespace Apocryph.FunctionApp.Model
 
     public static class Signed
     {
-        public static ISigned<object> Create(object value, ValidatorKey signer, ValidatorSignature signature)
+        public static ISigned<T> Create<T>(T value, ValidatorKey signer, ValidatorSignature signature)
         {
             var type = typeof(Signed<>).MakeGenericType(value.GetType());
-            return (ISigned<object>)Activator.CreateInstance(type, value, signer, signature);
+            return (ISigned<T>)Activator.CreateInstance(type, value, signer, signature);
         }
     }
 }

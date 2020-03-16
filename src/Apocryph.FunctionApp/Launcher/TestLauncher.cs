@@ -19,7 +19,7 @@ namespace Apocryph.FunctionApp
             CancellationToken cancellationToken)
         {
             var keys = new List<(ECParameters, ValidatorKey)>();
-            var validatorSet = new ValidatorSet();
+            var genesisValidatorSet = new ValidatorSet();
 
             for (var i = 0; i < 1; i ++)
             {
@@ -27,31 +27,18 @@ namespace Apocryph.FunctionApp
                 var privateKey = dsa.ExportParameters(true);
                 var publicKey = new ValidatorKey{Key = dsa.ExportParameters(false)};
                 keys.Add((privateKey, publicKey));
-                validatorSet.Weights.Add(publicKey, 10);
+                genesisValidatorSet.Weights.Add(publicKey, 10);
             }
 
             var ipfsGateway = "http://127.0.0.1:5001";
-            await using var _validatorSetsStream = await context.StreamFunctionAsync("TestDataGenerator", new
-            {
-                delay = TimeSpan.FromSeconds(20),
-                data = validatorSet
-            });
-
-            await using var validatorSetsStream = await context.StreamFunctionAsync(nameof(IpfsSaver), new
-            {
-                ipfsGateway,
-                dataStream = _validatorSetsStream
-            });
 
             await using var validatorLauncherStreams = new AsyncDisposableList();
             foreach (var (privateKey, self) in keys)
             {
                 validatorLauncherStreams.Add(
-                    await context.StreamActionAsync(nameof(ValidatorLauncher), new
+                    await context.StreamActionAsync(nameof(NodeLauncher), new
                     {
-                        agentId = "0",
-                        services = new [] {"Sample", "IpfsInput"},
-                        validatorSetsStream,
+                        genesisValidatorSet,
                         ipfsGateway,
                         privateKey,
                         self

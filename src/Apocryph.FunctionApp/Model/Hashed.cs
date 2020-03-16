@@ -17,10 +17,10 @@ namespace Apocryph.FunctionApp.Model
 
     public static class Hashed
     {
-        public static IHashed<object> Create(object value, Hash hash)
+        public static IHashed<T> Create<T>(T value, Hash hash)
         {
             var type = typeof(Hashed<>).MakeGenericType(value.GetType());
-            return (IHashed<object>)Activator.CreateInstance(type, value, hash);
+            return (IHashed<T>)Activator.CreateInstance(type, value, hash);
         }
     }
 }

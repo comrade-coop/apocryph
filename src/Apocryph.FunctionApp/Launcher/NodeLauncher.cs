@@ -18,39 +18,62 @@ namespace Apocryph.FunctionApp
     {
         [FunctionName(nameof(NodeLauncher))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
+            [Perper("ipfsGateway")] string ipfsGateway,
+            [Perper("privateKey")] ECParameters privateKey,
+            [Perper("self")] ValidatorKey self,
+            [Perper("genesisValidatorSet")] ValidatorSet genesisValidatorSet,
             CancellationToken cancellationToken)
         {
-            ECParameters privateKey;
-            ValidatorKey self;
-
-            using (var dsa = ECDsa.Create())
-            {
-                privateKey = dsa.ExportParameters(true);
-                self = new ValidatorKey{Key = dsa.ExportParameters(false)};
-            }
-
-            var ipfsGateway = "http://127.0.0.1:5001";
-
-            await using var agentZeroStream = await context.StreamFunctionAsync(nameof(IpfsInput), new
+            await using var ipfsStream = await context.StreamFunctionAsync(nameof(IpfsInput), new
             {
                 ipfsGateway,
                 topic = "apocryph-agent-0"
             });
 
-            await using var _inputVerifierStream = await context.StreamFunctionAsync(nameof(StepSignatureVerifier), new
+            await using var _unverifiedStepsStream = await context.StreamFunctionAsync(nameof(StepHashCollector), new
             {
-                stepsStream = agentZeroStream,
+                inputStream = ipfsStream
             });
 
-            await using var inputVerifierStream = await context.StreamFunctionAsync(nameof(IpfsLoader), new
+            await using var unverifiedStepsStream = await context.StreamFunctionAsync(nameof(IpfsRecursiveLoader), new
             {
                 ipfsGateway,
-                hashStream = _inputVerifierStream
+                hashStream = _unverifiedStepsStream
             });
 
-            await using var validatorSetsStream = await context.StreamFunctionAsync(nameof(ValidatorSets), new
+            await using var _stepValidatorSetSplitterStream = await context.StreamFunctionAsync(nameof(StepValidatorSetSplitter), new
             {
-                inputVerifierStream
+                stepsStream = unverifiedStepsStream,
+            });
+
+            await using var stepValidatorSetSplitterStream = await context.StreamFunctionAsync(nameof(IpfsLoader), new
+            {
+                ipfsGateway,
+                hashStream = _stepValidatorSetSplitterStream
+            });
+
+            await using var stepSignatureVerifierStream = await context.StreamFunctionAsync(nameof(StepSignatureVerifier), new
+            {
+                stepsStream = unverifiedStepsStream,
+                stepValidatorSetSplitterStream
+            });
+
+            await using var _verifiedStepsStream = await context.StreamFunctionAsync(nameof(StepVerifiedStepGetter), new
+            {
+                stepSignatureVerifierStream
+            });
+
+            await using var verifiedStepsStream = await context.StreamFunctionAsync(nameof(IpfsLoader), new
+            {
+                ipfsGateway,
+                hashStream = _verifiedStepsStream
+            });
+
+            await using var validatorSetsStream = await context.StreamFunctionAsync(nameof(AgentZetoStepOrderVerifier), new
+            {
+                stepsStream = verifiedStepsStream,
+                genesisValidatorSet,
+                ipfsGateway
             });
 
             await using var validatorSchedulerStream = await context.StreamActionAsync(nameof(ValidatorScheduler), new

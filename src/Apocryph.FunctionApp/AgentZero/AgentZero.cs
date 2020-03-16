@@ -8,20 +8,28 @@ using Apocryph.FunctionApp.AgentZero.Publications;
 using Apocryph.FunctionApp.AgentZero.State;
 using Apocryph.FunctionApp.Model;
 using Microsoft.Azure.WebJobs;
+using Perper.WebJobs.Extensions.Config;
+using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.FunctionApp.AgentZero
 {
-    public static class AgentZero
+    public static class AgentZeroWorker
     {
         public class State
         {
-            public BalancesState Balances { get; set; }
-            public StakesState Stakes { get; set; }
-            public AgentsState Agents { get; set; }
+            public BalancesState Balances { get; set; } = new BalancesState();
+            public StakesState Stakes { get; set; } = new StakesState();
+            public AgentsState Agents { get; set; } = new AgentsState();
         }
 
-        public static void Run(IAgentContext<State> context, string sender, object message)
+        [FunctionName(nameof(AgentZeroWorker))]
+        [return: Perper("$return")]
+        public static AgentContext<State> Run([PerperWorkerTrigger] object workerContext,
+            [Perper("state")] State state,
+            [Perper("sender")] string sender,
+            [Perper("message")] object message)
         {
+            var context = new AgentContext<State>(state ?? new State());
             switch (message)
             {
                 case TransferMessage transferMessage:
@@ -68,7 +76,7 @@ namespace Apocryph.FunctionApp.AgentZero
                     });
                     break;
             }
-
+            return context;
         }
     }
 }
