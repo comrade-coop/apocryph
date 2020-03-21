@@ -20,7 +20,12 @@ namespace Apocryph.FunctionApp.Agent
             throw new NotImplementedException();
         }
 
-        public void SendMessage(AgentCapability target, object message, AgentCallToken callToken)
+        public void SendMessage(AgentCapability receiver, object message, AgentCallToken callToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void IssueCapability(AgentCapability receiver, string[] messageTypes, AgentCallToken callToken)
         {
             throw new NotImplementedException();
         }

@@ -6,6 +6,7 @@ namespace Apocryph.FunctionApp.Agent
     {
         void RequestCallToken(string target);
         void SendMessage(AgentCapability receiver, object message, AgentCallToken callToken);
+        void IssueCapability(AgentCapability receiver, string[] messageTypes, AgentCallToken callToken);
 
         void AddReminder(TimeSpan time, object data);
         void MakePublication(object payload);
