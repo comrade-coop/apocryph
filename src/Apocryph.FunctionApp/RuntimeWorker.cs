@@ -15,7 +15,7 @@ namespace Apocryph.FunctionApp
         [return: Perper("$return")]
         public static AgentContext<object> Run([PerperWorkerTrigger] object workerContext,
             [Perper("state")] object state,
-            [Perper("sender")] string sender,
+            [Perper("sender")] AgentCapability sender,
             [Perper("message")] object message)
         {
             var context = new AgentContext<object>(state);
@@ -37,11 +37,11 @@ namespace Apocryph.FunctionApp
                 });
                 context.AddReminder(TimeSpan.FromSeconds(5), "0");
             }
-            else if (sender == "Reminder" && message is string key)
+            else if (sender.AgentId == "Reminder" && message is string key)
             {
                 context.SampleRestore(key);
             }
-            else if (sender == "Sample" && message is Tuple<string, object> data)
+            else if (sender.AgentId == "Sample" && message is Tuple<string, object> data)
             {
                 if (data.Item2 is string item)
                 {
@@ -53,7 +53,7 @@ namespace Apocryph.FunctionApp
                     context.AddReminder(TimeSpan.FromSeconds(5), "0");
                 }
             }
-            else if (sender == "IpfsInput")
+            else if (sender.AgentId == "IpfsInput")
             {
                 Console.WriteLine(message);
             }

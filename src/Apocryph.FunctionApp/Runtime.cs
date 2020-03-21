@@ -29,7 +29,7 @@ namespace Apocryph.FunctionApp
                     var agentContext = await context.CallWorkerAsync<AgentContext<object>>(nameof(RuntimeWorker), new
                     {
                         state = input.Value.State,
-                        sender = input.Value.Sender,
+                        sender = new AgentCapability(input.Value.Sender),
                         message = input.Value.Message
                     }, cancellationToken);
 

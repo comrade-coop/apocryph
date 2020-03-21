@@ -15,12 +15,12 @@ namespace Apocryph.FunctionApp.Agent
 
         public T State { get; }
 
-        public void IssueToken(string recipient)
+        public void RequestCallToken(string target)
         {
             throw new NotImplementedException();
         }
 
-        public void SendMessage(string target, object message)
+        public void SendMessage(AgentCapability target, object message, AgentCallToken callToken)
         {
             throw new NotImplementedException();
         }
