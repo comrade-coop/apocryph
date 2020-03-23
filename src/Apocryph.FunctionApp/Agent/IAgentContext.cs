@@ -4,9 +4,10 @@ namespace Apocryph.FunctionApp.Agent
 {
     public interface IAgentContext
     {
-        void RequestCallToken(string target);
-        void SendMessage(AgentCapability receiver, object message, AgentCallToken callToken);
-        void IssueCapability(AgentCapability receiver, string[] messageTypes, AgentCallToken callToken);
+        void RequestCallTicket(AgentCapability agent);
+        void SendMessage(AgentCapability receiver, object message, AgentCallTicket callTicket);
+        void IssueCapability(AgentCapability receiver, string[] messageTypes, AgentCallTicket callTicket);
+        void RevokeCapability(AgentCapability agent);
 
         void AddReminder(TimeSpan time, object data);
         void MakePublication(object payload);
