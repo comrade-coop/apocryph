@@ -14,7 +14,7 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.FunctionApp
 {
-    public static class ProposedStepOrderVerifier
+    public static class ValidatorStepOrderVerifier
     {
         private class State
         {
@@ -22,7 +22,7 @@ namespace Apocryph.FunctionApp
             public List<Hash> ValidatorSets { get; set; } = new List<Hash> {new Hash { Bytes = new byte[]{} }};
         }
 
-        [FunctionName(nameof(ProposedStepOrderVerifier))]
+        [FunctionName(nameof(ValidatorStepOrderVerifier))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("stepsStream")] IAsyncEnumerable<IHashed<IAgentStep>> stepsStream,
             [PerperStream("proposedStepsStream")] IAsyncEnumerable<IHashed<IAgentStep>> proposedStepsStream,

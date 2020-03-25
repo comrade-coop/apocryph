@@ -10,7 +10,7 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.FunctionApp
 {
-    public static class InputProposer
+    public static class ProposerInputProposer
     {
         public class State
         {
@@ -18,7 +18,7 @@ namespace Apocryph.FunctionApp
             public (Hash, object)? PendingOutput { get; set; } = null;
         }
 
-        [FunctionName(nameof(InputProposer))]
+        [FunctionName(nameof(ProposerInputProposer))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("proposerFilterStream")] IAsyncEnumerable<IHashed<IAgentStep>> proposerFilterStream,
             [PerperStream("commandExecutorStream")] IAsyncEnumerable<(string, object)> commandExecutorStream,

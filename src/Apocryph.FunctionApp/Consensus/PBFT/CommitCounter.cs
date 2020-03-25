@@ -11,7 +11,7 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.FunctionApp
 {
-    public static class Committer
+    public static class CommitCounter
     {
         private class State
         {
@@ -19,7 +19,7 @@ namespace Apocryph.FunctionApp
             public ValidatorSet ValidatorSet { get; set; }
         }
 
-        [FunctionName(nameof(Committer))]
+        [FunctionName(nameof(CommitCounter))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("validatorSetsStream")] IAsyncEnumerable<IHashed<ValidatorSet>> validatorSetsStream,
             [PerperStream("commitsStream")] IAsyncEnumerable<ISigned<Commit>> commitsStream,

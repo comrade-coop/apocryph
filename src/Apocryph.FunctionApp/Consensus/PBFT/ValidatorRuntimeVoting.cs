@@ -11,14 +11,14 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.FunctionApp
 {
-    public static class Voting
+    public static class ValidatorRuntimeVoting
     {
         private class State
         {
             public Dictionary<Hash, Hash> ExpectedNextSteps { get; } = new Dictionary<Hash, Hash>();
         }
 
-        [FunctionName(nameof(Voting))]
+        [FunctionName(nameof(ValidatorRuntimeVoting))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("validatorRuntimeOutputStream")] IAsyncEnumerable<IHashed<AgentOutput>> validatorRuntimeOutputStream,
             [PerperStream("validatorFilterStream")] IAsyncEnumerable<IHashed<AgentOutput>> validatorFilterStream,
