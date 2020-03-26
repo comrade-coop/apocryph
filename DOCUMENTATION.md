@@ -16,11 +16,11 @@ Consensus Network for Autonomous Agents
 
 ## Overview
 
-Apocryph is a new consensus network for autonomous agents. From developer perpspective,
-we have put a great focus on selecting a tehnology stack comprising widely adopted platforms,
+Apocryph is a new consensus network for autonomous agents. From developer perspective,
+we have put a great focus on selecting a technology stack comprising widely adopted platforms,
 tools and development paradigms.
 
-Below, you can see a short video of how easy is to setup Apocryph test node on you 
+Below, you can see a short video of how easy it is to setup Apocryph test node on you 
 local development machine using only Docker and Docker-Compose:
 
 [![asciicast](https://asciinema.org/a/295036.svg)](https://asciinema.org/a/295036?speed=2)
@@ -30,12 +30,12 @@ local development machine using only Docker and Docker-Compose:
 Apocryph is an architecture:
 
 - defines patterns and practices for building distributed systems
-- covers both open-source and closed-source parts of the system beign built
+- covers both open-source and closed-source parts of the system being built
 - compliant with the latest enterprise-grade software architectures and technologies
 
 Apocryph is a framework:
 
-- has built-in library for builing multi-agent systems
+- has built-in library for building multi-agent systems
 - supports both proactive and passive agents
 
 Apocryph is a blockchain *(implementation in-progress)*:
@@ -43,10 +43,10 @@ Apocryph is a blockchain *(implementation in-progress)*:
 - implements highly scalable DPoS BFT consensus 
 - designed to be inter-blockchain communication ready
 
-Apocryph is a economy *(implementation in-progress)*:
+Apocryph is an economy *(implementation in-progress)*:
 
 - supports fully programmable digital economy model
-- accomodates both humans and AI actors 
+- accommodates both humans and AI actors 
 
 ## How Apocryph works
 
@@ -55,14 +55,14 @@ Apocryph is a economy *(implementation in-progress)*:
 ### Apocryph Nodes
 
 Apocryph is built on top of [Peprer](https://github.com/obecto/perper) - stream-based, horizontally 
-scalable framework for asynchronous data processing. This allow Apocryph Nodes to both
+scalable framework for asynchronous data processing. This allows Apocryph Nodes to both
 work on a single machine (using docker-compose) or in a datacenter grade cluster environment
 using [Kubernetes](http://kubernetes.io/).
 
 ### Apocryph Consenus
 
 Apocryph consensus implementation is using serverless, stream-based architecture to 
-achieve high concurency and throughput. For intra-node communication it is using [Peprer](https://github.com/obecto/perper) 
+achieve high concurrency and throughput. For intra-node communication it is using [Peprer](https://github.com/obecto/perper) 
 and for inter-node communication and persistence it is using [IPFS](https://ipfs.io/).
 
 ### Apocryph Agents
