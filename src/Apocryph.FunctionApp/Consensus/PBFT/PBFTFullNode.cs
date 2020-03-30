@@ -14,9 +14,9 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.FunctionApp
 {
-    public static class PBFTConsensus
+    public static class PBFTFullNode
     {
-        [FunctionName(nameof(PBFTConsensus))]
+        [FunctionName(nameof(PBFTFullNode))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("agentId")] string agentId,
             [Perper("services")] string[] services,

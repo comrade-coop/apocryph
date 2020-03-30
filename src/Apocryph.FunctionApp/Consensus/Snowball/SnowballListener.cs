@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.FunctionApp.Model;
 using Apocryph.FunctionApp.Ipfs;
+using Ipfs;
 using Ipfs.Http;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
@@ -44,10 +45,13 @@ namespace Apocryph.FunctionApp
 
             var ipfs = new IpfsClient(ipfsGateway);
 
-            await ipfs.DoCommandAsync("p2p/listen", cancellationToken, protocol, new [] {"arg=" + new MultiAddress(listenEndpoint)});
+            await ipfs.DoCommandAsync("p2p/listen", cancellationToken, protocol, new []
+            {
+                $"arg=/ip4/{listenEndpoint.Address}/tcp/{listenEndpoint.Port}"
+            });
 
             await Task.WhenAll(
-                Task.Run(() =>
+                Task.Run(async () =>
                 {
                     using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.IP);
                     socket.Bind(listenEndpoint);
@@ -72,7 +76,7 @@ namespace Apocryph.FunctionApp
 
                     await Task.WhenAll(pendingListeners);
                 }),
-                Task.Run(() =>
+                Task.Run(async () =>
                 {
                     var random = new Random();
                     var addresses = await ipfs.Swarm.AddressesAsync(cancellationToken);
@@ -86,7 +90,7 @@ namespace Apocryph.FunctionApp
                         {
                             await ipfs.DoCommandAsync("p2p/forward", cancellationToken, protocol, new []
                             {
-                                "arg=" + new MultiAddress(forwardEndpoint)
+                                $"arg=/ip4/{forwardEndpoint.Address}/tcp/{forwardEndpoint.Port}",
                                 "arg=/p2p/" + peer.Id.ToString()
                             });
 
@@ -106,8 +110,7 @@ namespace Apocryph.FunctionApp
                     });
 
                     await Task.WhenAll(tasks);
-                })
-            );
+                }));
 
             try
             {

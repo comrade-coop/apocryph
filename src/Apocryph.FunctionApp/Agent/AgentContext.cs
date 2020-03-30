@@ -23,7 +23,8 @@ namespace Apocryph.FunctionApp.Agent
 
         public void SendMessage(AgentCapability receiver, object message, AgentCallTicket callTicket)
         {
-            throw new NotImplementedException();
+            // HACK: Should add actual Capability support in the Runtime
+            Commands.Add(new SendMessageCommand{Target = receiver.AgentId, Payload = message});
         }
 
         public void IssueCapability(AgentCapability receiver, string[] messageTypes, AgentCallTicket callTicket)
