@@ -28,7 +28,7 @@ namespace Apocryph.FunctionApp
         {
             var genesisMessage = ("", (object)new InitMessage());
 
-            await using var validatorSchedulerStream = await context.StreamActionAsync(nameof(PBFTConsensus), new
+            await using var validatorSchedulerStream = await context.StreamActionAsync(nameof(SnowballConsensus), new
             {
                 agentId,
                 services,
