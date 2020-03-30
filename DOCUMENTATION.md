@@ -20,7 +20,7 @@ Apocryph is a new consensus network for autonomous agents. From developer perspe
 we have put a great focus on selecting a technology stack comprising widely adopted platforms,
 tools and development paradigms.
 
-Below, you can see a short video of how easy it is to setup Apocryph test node on you 
+Below, you can see a short video of how easy it is to setup Apocryph test node on your 
 local development machine using only Docker and Docker-Compose:
 
 [![asciicast](https://asciinema.org/a/295036.svg)](https://asciinema.org/a/295036?speed=2)
