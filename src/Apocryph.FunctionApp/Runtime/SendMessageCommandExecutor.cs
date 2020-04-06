@@ -28,8 +28,6 @@ namespace Apocryph.FunctionApp
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("agentId")] string agentId,
             [Perper("ipfsGateway")] string ipfsGateway,
-            [Perper("self")] ValidatorKey self,
-            [Perper("privateKey")] ECParameters privateKey,
             [PerperStream("validatorSetsStream")] IAsyncEnumerable<Dictionary<string, IHashed<ValidatorSet>>> validatorSetsStream,
             [PerperStream("commandsStream")] IAsyncEnumerable<SendMessageCommand> commandsStream,
             CancellationToken cancellationToken)
@@ -45,24 +43,23 @@ namespace Apocryph.FunctionApp
 
                 commandsStream.ForEachAsync(async command =>
                 {
-                    var notification = new CallNotification { From = agentId };
-
-                    var bytes = IpfsJsonSettings.ObjectToBytes(notification);
-                    var signature = ValidatorKey.GenerateSignature(privateKey, bytes);
-
-                    var signedNotification = Signed.Create(notification, self, signature);
+                    var notification = new CallNotification
+                    {
+                        From = agentId,
+                        Command = command,
+                        // Step = TODO,
+                        // ValidatorSet = TODO,
+                        // Commits = TODO
+                    };
 
                     await context.CallWorkerAsync<object>(nameof(PBFTNotificationWorker), new
                     {
                         agentId = command.Target,
                         validatorSet = state.ValidatorSets[command.Target],
-                        notification = signedNotification,
+                        notification = notification,
                         ipfsGateway
                     }, cancellationToken);
-                }, cancellationToken),
-
-                context.BindOutput(cancellationToken));
-
+                }, cancellationToken));
         }
     }
 }

@@ -20,16 +20,35 @@ namespace Apocryph.FunctionApp
     {
         [FunctionName(nameof(CallNotificationOutput))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [Perper("otherId")] string otherId,
             [Perper("agentId")] string agentId,
-            [PerperStream("commandsStream")] IAsyncEnumerable<SendMessageCommand> commandsStream,
+            [PerperStream("notificationsStream")] IAsyncEnumerable<IHashed<CallNotification>> notificationsStream,
+            [PerperStream("notificationStepSplitterStream")] IAsyncEnumerable<IHashed<IAgentStep>> notificationStepSplitterStream,
             [PerperStream("outputStream")] IAsyncCollector<(string, object)> outputStream)
         {
-            await commandsStream.ForEachAsync(async command =>
+            await using var stepSplitterStreamEnumerator = notificationStepSplitterStream.GetAsyncEnumerator();
+            await notificationsStream.ForEachAsync(async notification =>
             {
-                if (command.Target == agentId)
+                await stepSplitterStreamEnumerator.MoveNextAsync();
+                var step = stepSplitterStreamEnumerator.Current;
+
+                // TODO: Use Merkle proofs for this
+                var found = false;
+
+                if (step.Value is AgentOutput output)
                 {
-                    await outputStream.AddAsync((otherId, command.Payload));
+                    foreach (var command in output.Commands)
+                    {
+                        if (command == notification.Value.Command)
+                        {
+                            found = true;
+                        }
+                    }
+
+                }
+
+                if (found)
+                {
+                    await outputStream.AddAsync((notification.Value.From, notification.Value.Command.Payload));
                 }
             }, CancellationToken.None);
         }

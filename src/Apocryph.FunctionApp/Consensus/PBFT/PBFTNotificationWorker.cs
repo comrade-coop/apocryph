@@ -17,10 +17,10 @@ namespace Apocryph.FunctionApp
     {
         [FunctionName(nameof(PBFTNotificationWorker))]
         [return: Perper("$return")]
-        public static async Task<object> Run([PerperWorkerTrigger] PerperWorkerContext context,
+        public static async Task<object?> Run([PerperWorkerTrigger] PerperWorkerContext context,
             [Perper("agentId")] string agentId,
             [Perper("validatorSet")] IHashed<ValidatorSet> validatorSet,
-            [Perper("notification")] ISigned<object> notification,
+            [Perper("notification")] CallNotification notification,
             [Perper("ipfsGateway")] string ipfsGateway)
         {
             var topic = "apocryph-agentNotifications-" + agentId;
