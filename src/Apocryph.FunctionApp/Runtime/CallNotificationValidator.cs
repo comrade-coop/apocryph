@@ -26,7 +26,7 @@ namespace Apocryph.FunctionApp
         [FunctionName(nameof(CallNotificationValidator))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("agentId")] string agentId,
-            [PerperStream("validatorSetsStream")] IAsyncEnumerable<Dictionary<string, IHashed<ValidatorSet>>> validatorSetsStream,
+            [PerperStream("otherValidatorSetsStream")] IAsyncEnumerable<Dictionary<string, IHashed<ValidatorSet>>> otherValidatorSetsStream,
             [PerperStream("notificationsStream")] IAsyncEnumerable<IHashed<CallNotification>> notificationsStream,
             [PerperStream("outputStream")] IAsyncCollector<IHashed<CallNotification>> outputStream,
             ILogger logger)
@@ -38,7 +38,7 @@ namespace Apocryph.FunctionApp
             var state = await context.FetchStateAsync<State>() ?? new State();
 
             await Task.WhenAll(
-                validatorSetsStream.ForEachAsync(async validatorSets =>
+                otherValidatorSetsStream.ForEachAsync(async validatorSets =>
                 {
                     state.ValidatorSets = validatorSets;
                     await context.UpdateStateAsync(state);

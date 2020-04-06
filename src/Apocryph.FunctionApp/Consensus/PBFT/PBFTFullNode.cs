@@ -21,6 +21,7 @@ namespace Apocryph.FunctionApp
             [Perper("agentId")] string agentId,
             [Perper("services")] string[] services,
             [Perper("validatorSetsStream")] object[] validatorSetsStream,
+            [Perper("otherValidatorSetsStream")] object[] otherValidatorSetsStream,
             [Perper("genesisMessage")] (string, object) genesisMessage,
             [Perper("ipfsGateway")] string ipfsGateway,
             [Perper("privateKey")] ECParameters privateKey,
@@ -28,11 +29,18 @@ namespace Apocryph.FunctionApp
             CancellationToken cancellationToken)
         {
             var topic = "apocryph-agent-" + agentId;
+            var notificationsTopic = "apocryph-agentNotifications-" + agentId;
 
             await using var ipfsStream = await context.StreamFunctionAsync(nameof(IpfsInput), new
             {
                 ipfsGateway,
                 topic
+            });
+
+            await using var notificationsStream = await context.StreamFunctionAsync(nameof(IpfsInput), new
+            {
+                ipfsGateway,
+                topic = notificationsTopic
             });
 
             var commitsStream = ipfsStream;
@@ -135,6 +143,8 @@ namespace Apocryph.FunctionApp
             var commandExecutorStream =  await context.StreamFunctionAsync(nameof(CommandExecutor), new
             {
                 commandsStream,
+                otherValidatorSetsStream,
+                notificationsStream,
                 agentId,
                 services,
                 genesisMessage,

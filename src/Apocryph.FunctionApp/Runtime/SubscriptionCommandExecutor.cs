@@ -21,7 +21,7 @@ namespace Apocryph.FunctionApp
         [FunctionName(nameof(SubscriptionCommandExecutor))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("ipfsGateway")] string ipfsGateway,
-            [PerperStream("validatorSetsStream")] IAsyncEnumerable<Dictionary<string, IHashed<ValidatorSet>>> validatorSetsStream,
+            [PerperStream("otherValidatorSetsStream")] IAsyncEnumerable<Dictionary<string, IHashed<ValidatorSet>>> otherValidatorSetsStream,
             [PerperStream("commandsStream")] IAsyncEnumerable<SubscriptionCommand> commandsStream,
             CancellationToken cancellationToken)
         {
@@ -31,16 +31,16 @@ namespace Apocryph.FunctionApp
             await commandsStream.ForEachAsync(async subscription =>
             {
                 var otherId = subscription.Target;
-                var splitValidatorSetsStream = await context.StreamFunctionAsync(nameof(AgentZeroValidatorSetsSplitter), new
+                var validatorSetsStream = await context.StreamFunctionAsync(nameof(AgentZeroValidatorSetsSplitter), new
                 {
                     agentId = otherId,
-                    validatorSetsStream,
+                    otherValidatorSetsStream,
                 });
 
                 var lightNodeStream = await context.StreamFunctionAsync(nameof(PBFTLightNode), new
                 {
                     agentId = otherId,
-                    validatorSetsStream = splitValidatorSetsStream,
+                    validatorSetsStream,
                     ipfsGateway
                 });
 
@@ -55,7 +55,7 @@ namespace Apocryph.FunctionApp
                     publicationsStream = commandsStream
                 });
 
-                utilityStreams.Add(splitValidatorSetsStream);
+                utilityStreams.Add(validatorSetsStream);
                 utilityStreams.Add(lightNodeStream);
                 utilityStreams.Add(commandsStream);
                 outputStreams.Add(outputStream);

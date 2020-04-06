@@ -28,14 +28,14 @@ namespace Apocryph.FunctionApp
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("agentId")] string agentId,
             [Perper("ipfsGateway")] string ipfsGateway,
-            [PerperStream("validatorSetsStream")] IAsyncEnumerable<Dictionary<string, IHashed<ValidatorSet>>> validatorSetsStream,
+            [PerperStream("otherValidatorSetsStream")] IAsyncEnumerable<Dictionary<string, IHashed<ValidatorSet>>> otherValidatorSetsStream,
             [PerperStream("commandsStream")] IAsyncEnumerable<SendMessageCommand> commandsStream,
             CancellationToken cancellationToken)
         {
             var state = await context.FetchStateAsync<State>() ?? new State();
 
             await Task.WhenAll(
-                validatorSetsStream.ForEachAsync(async validatorSets =>
+                otherValidatorSetsStream.ForEachAsync(async validatorSets =>
                 {
                     state.ValidatorSets = validatorSets;
                     await context.UpdateStateAsync(state);

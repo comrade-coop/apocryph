@@ -22,14 +22,14 @@ namespace Apocryph.FunctionApp
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("agentId")] string agentId,
             [Perper("ipfsGateway")] string ipfsGateway,
-            [PerperStream("validatorSetsStream")] object[] validatorSetsStream,
-            [PerperStream("notificationsStream")] object[] notificationsStream,
+            [Perper("otherValidatorSetsStream")] object[] otherValidatorSetsStream,
+            [Perper("notificationsStream")] object[] notificationsStream,
             CancellationToken cancellationToken)
         {
             await using var notificationValidatorStream = await context.StreamFunctionAsync(nameof(CallNotificationValidator), new
             {
                 agentId,
-                validatorSetsStream,
+                otherValidatorSetsStream,
                 notificationsStream
             });
 

@@ -18,9 +18,11 @@ namespace Apocryph.FunctionApp
     {
         [FunctionName(nameof(CommandExecutor))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
+            [Perper("commandsStream")] object[] commandsStream,
+            [Perper("otherValidatorSetsStream")] object[] otherValidatorSetsStream,
+            [Perper("notificationsStream")] object[] notificationsStream,
             [Perper("agentId")] string agentId,
             [Perper("services")] string[] services,
-            [Perper("commandsStream")] object[] commandsStream,
             [Perper("genesisMessage")] object genesisMessage,
             [Perper("ipfsGateway")] string ipfsGateway,
             CancellationToken cancellationToken)
@@ -32,39 +34,32 @@ namespace Apocryph.FunctionApp
                 data = genesisMessage
             });
 
-            /* await using var agentZeroStream = await context.StreamFunctionAsync(nameof(IpfsInput), new
-            {
-                ipfsGateway,
-                topic = 0 //"apocryph-agent-0"
-            });
-
-            await using var _inputVerifierStream = await context.StreamFunctionAsync(nameof(StepSignatureVerifier), new
-            {
-                validatorSetsStream, // TODO: Should give agent 0's validator set instead !!
-                stepsStream = agentZeroStream,
-            });
-
-            await using var inputVerifierStream = await context.StreamFunctionAsync(nameof(IpfsLoader), new
-            {
-                ipfsGateway,
-                hashStream = _inputVerifierStream
-            });
-
-            await using var validatorSetsStream = await context.StreamFunctionAsync(nameof(ValidatorSets), new
-            {
-                inputVerifierStream
-            });
-
             await using var subscriptionCommandExecutorStream = await context.StreamFunctionAsync(nameof(SubscriptionCommandExecutor), new
             {
                 ipfsGateway,
-                commandsStream,
-                validatorSetsStream
-            }); */
+                otherValidatorSetsStream,
+                commandsStream
+            });
 
             await using var reminderCommandExecutorStream = await context.StreamFunctionAsync(nameof(ReminderCommandExecutor), new
             {
                 commandsStream
+            });
+
+            await using var sendMessageCommandExecutorStream = await context.StreamActionAsync(nameof(SendMessageCommandExecutor), new
+            {
+                agentId,
+                ipfsGateway,
+                otherValidatorSetsStream,
+                commandsStream,
+            });
+
+            await using var callNotificationProcessorStream = await context.StreamFunctionAsync(nameof(CallNotificationProcessor), new
+            {
+                agentId,
+                ipfsGateway,
+                otherValidatorSetsStream,
+                notificationsStream,
             });
 
             await using var serviceFilterStreams = new AsyncDisposableList();
@@ -90,7 +85,8 @@ namespace Apocryph.FunctionApp
             {
                 reminderCommandExecutorStream,
                 genesisMessageStream,
-                // subscriptionCommandExecutorStream
+                subscriptionCommandExecutorStream,
+                callNotificationProcessorStream
             }.Concat(serviceStreams).ToArray();
 
 

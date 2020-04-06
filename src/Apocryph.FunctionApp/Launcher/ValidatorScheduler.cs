@@ -55,6 +55,7 @@ namespace Apocryph.FunctionApp
                             services = new [] {"Sample", "IpfsInput"},
                             ipfsGateway,
                             validatorSetsStream = new [] {filterStream, initValidatorSetStream},
+                            otherValidatorSetsStream = validatorSetsStreamPassthrough,
                             privateKey,
                             self
                         });

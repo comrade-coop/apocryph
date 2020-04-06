@@ -21,6 +21,7 @@ namespace Apocryph.FunctionApp
             [Perper("agentId")] string agentId,
             [Perper("services")] string[] services,
             [Perper("validatorSetsStream")] object[] validatorSetsStream,
+            [Perper("otherValidatorSetsStream")] object[] otherValidatorSetsStream,
             [Perper("ipfsGateway")] string ipfsGateway,
             [Perper("privateKey")] ECParameters privateKey,
             [Perper("self")] ValidatorKey self,
@@ -28,11 +29,12 @@ namespace Apocryph.FunctionApp
         {
             var genesisMessage = ("", (object)new InitMessage());
 
-            await using var validatorSchedulerStream = await context.StreamActionAsync(nameof(SnowballConsensus), new
+            await using var validatorSchedulerStream = await context.StreamActionAsync(nameof(PBFTFullNode), new
             {
                 agentId,
                 services,
                 validatorSetsStream,
+                otherValidatorSetsStream,
                 genesisMessage,
                 ipfsGateway,
                 privateKey,
