@@ -10,6 +10,10 @@ ProjectSection(SolutionItems) = preProject
 	docker\docker-compose.yaml = docker\docker-compose.yaml
 EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apocryph.Agents.Testbed", "src\Apocryph.Agents.Testbed\Apocryph.Agents.Testbed.csproj", "{803BE683-6C58-43CF-91CE-8324F1496B69}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apocryph.Agent.FunctionApp", "src\Apocryph.Agent.FunctionApp\Apocryph.Agent.FunctionApp.csproj", "{C6017B68-4471-44CF-9BDF-817C3D102870}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -17,11 +21,21 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{1E974229-9988-49F5-B9E7-0FF7BF869375} = {E7399C0B-BA25-4A4E-B97D-14CE02EFD9C6}
+		{803BE683-6C58-43CF-91CE-8324F1496B69} = {E7399C0B-BA25-4A4E-B97D-14CE02EFD9C6}
+		{C6017B68-4471-44CF-9BDF-817C3D102870} = {E7399C0B-BA25-4A4E-B97D-14CE02EFD9C6}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{1E974229-9988-49F5-B9E7-0FF7BF869375}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{1E974229-9988-49F5-B9E7-0FF7BF869375}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1E974229-9988-49F5-B9E7-0FF7BF869375}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1E974229-9988-49F5-B9E7-0FF7BF869375}.Release|Any CPU.Build.0 = Release|Any CPU
+		{803BE683-6C58-43CF-91CE-8324F1496B69}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{803BE683-6C58-43CF-91CE-8324F1496B69}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{803BE683-6C58-43CF-91CE-8324F1496B69}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{803BE683-6C58-43CF-91CE-8324F1496B69}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C6017B68-4471-44CF-9BDF-817C3D102870}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C6017B68-4471-44CF-9BDF-817C3D102870}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C6017B68-4471-44CF-9BDF-817C3D102870}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C6017B68-4471-44CF-9BDF-817C3D102870}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
