@@ -49,7 +49,7 @@ namespace Apocryph.Agent.FunctionApp.Agents
         public async Task AgentTwo(
             [PerperStreamTrigger] PerperStreamContext context,
             [Perper("agentId")] string agentId,
-            [Perper("initMessage")] string initMessage,
+            [Perper("initMessage")] object initMessage,
             [PerperStream("commands")] IAsyncEnumerable<AgentCommands> commands,
             [PerperStream("output")] IAsyncCollector<AgentCommands> output,
             CancellationToken cancellationToken)

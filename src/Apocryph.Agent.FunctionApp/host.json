@@ -2,8 +2,7 @@
     "version": "2.0",
     "logging": {
         "logLevel": {
-            "Function": "Trace",
-            "Perper.WebJobs.Extensions": "Trace"
+            "Apocryph.Agents.Testbed": "Trace"
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Agents.Testbed.Api;
@@ -54,7 +55,7 @@ namespace Apocryph.Agents.Testbed
             {
                 foreach (var command in commandsBatch.Commands)
                 {
-                    _logger.LogInformation($"Agent Command Generated: {command}");
+                    _logger.LogInformation($"{command.CommandType.ToString()} command with {command.Receiver?.Issuer} receiver");
                 }
             }
         }
@@ -62,7 +63,7 @@ namespace Apocryph.Agents.Testbed
         private async Task InitRuntime(PerperStreamContext context, string agentDelegate,
             ICollection<IAsyncDisposable> agents)
         {
-            await Task.Delay(TimeSpan.FromSeconds(10)); //Wait for Execute to engage Runtime
+            await Task.Delay(TimeSpan.FromSeconds(1)); //Wait for Execute to engage Runtime
 
             var agent = await context.StreamFunctionAsync(agentDelegate, new
             {
@@ -100,6 +101,8 @@ namespace Apocryph.Agents.Testbed
             string agentId,
             object initMessage, IAsyncCollector<AgentCommands> output)
         {
+            await Task.Delay(TimeSpan.FromSeconds(1)); //Wait for Execute to engage Runtime
+
             var agentContext = entryPoint(null,
                 new AgentCapability
                 {
