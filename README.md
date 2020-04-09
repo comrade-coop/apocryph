@@ -1,9 +1,10 @@
 # Apocryph 
 Consensus Network for Autonomous Agents
 
+> Apocryph Agents can automate the cash flow in autonomous organizations, optimize city traffic, or reward the computing power used to train their own neural networks.
+
 [![Discord](https://img.shields.io/badge/DISCORD-COMMUNITY-informational?style=for-the-badge&logo=discord)](https://discord.gg/ESr9KMR)
 
-> Apocryph Agents can automate the cash flow in autonomous organizations, optimize city traffic, or reward the computing power used to train their own neural networks.
 ## Table of Contents
 
 - [Overview](#overview)
