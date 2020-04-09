@@ -1,36 +1,217 @@
-[Documentation](https://github.com/comrade-coop/apocryph/blob/master/DOCUMENTATION.md) | [Discord Community](https://discord.gg/ESr9KMR) 
+[Discord Community](https://discord.gg/ESr9KMR)
 
-----------------------------------
+# Apocryph 
+Consensus Network for Autonomous Agents
 
-# APOCRYPH
-## Consensus Network for Autonomous Agents
+> Apocryph Agents can automate the cash flow in autonomous organizations, optimize city traffic, or reward the computing power used to train their own neural networks.
+## Table of Contents
 
-> Apocryph Agents can automate the cash flow in autonomous organizations, optimize city traffic, or reward the computing power used to train their own neural networks. 
+- [Overview](#overview)
+  - [Quick Summary](#quick-summary)
+- [Getting Started](#getting-started)
+  - [Prerequisite](#prerequisite)
+  - [Create Apocryph Agent Project](#create-apocryph-agent-project)
+  - [Enable Agent Testbed](#enable-agent-testbed)
+  - [Configure Agent Testbed](#configure-agent-testbed)
+  - [Create your Agents](#create-your-agents)
+  - [Run your first multi-agent distributed application](#run-your-first-multi-agent-distributed-application)
+- [How Apocryph works](#how-apocryph-works)
+  - [Agent Model](#agent-model)
+    - [Reminders](#reminders)
+    - [Publish and Subscribe](#publish-and-subscribe)
+    - [Object Capability Security Model](#object-capability-security-model)
+    - [Call Tickets](#call-tickets)
+    - [Messages](#messages)
+    - [Services](#services)
+  - [Consenus](#consenus)
+    - [Inter Blockchain Communication](#inter-blockchain-communication)
+  - [Network Nodes](#network-nodes)
+    - [Scalability](#scalability)
+- [Apocryph Developer Node](#apocryph-developer-node)
+  - [Running via Docker Compose](#running-via-docker-compose)
+  - [Running natively](#running-natively)
 
-As engineers, we strive to automate everything. For us, the biggest promise of blockchain technology is that it can for the first time enable fully automatic and thus incorruptible social institutions. We can establish programmatic organizations and even whole programmatic economies that have the potential to drive our civilization to a new and unprecedented level of collaboration and growth. 
+## Overview
 
-To build these new economies, developers need mature languages and scalable runtimes, which are still not available in mainstream blockchain networks. This motivated us to take a different approach and design a blockchain network that reuses as many established technologies as possible, instead of rewriting everything from scratch. As a result, we have built Apocryph - a consensus network for autonomous agents with the following advantages:
+Apocryph is a new consensus network for autonomous agents. From developer perspective,
+we have put a great focus on selecting a technology stack comprising widely adopted platforms,
+tools and development paradigms.
 
-## Developer productivity
-Apocryph is built on top of [Perper](https://github.com/obecto/perper) - a serverless stream processing framework maintained separately by members of our team. The main entities in Apocryph are called Agents - they process incoming messages as a stream and send new ones as output. Each Agent runs as a containerized lambda function app, that can be written in C#, Python, JavaScript or come as a WebAssembly.
+Below, you can see a short video of how easy it is to setup Apocryph test node on your 
+local development machine using only Docker and Docker-Compose:
 
-## Proactive entities
-Since autonomy is our main focus, Agents can proactively initiate their own execution by scheduling reminders and subscribing to events from other Agents. This opens entirely new use cases and more natural programming models. For example, users can have their own Proxy Agents on the network, to actively manage and monitor tasks for them.
+[![asciicast](https://asciinema.org/a/295036.svg)](https://asciinema.org/a/295036?speed=2)
 
-## Free user transactions
-Messages in the network are processed only if they come with a valid execution ticket for the computing resources requested. These tickets can be paid either by the sending or the receiving party, while agents have their own wallets so they can pay for executing messages coming from certain users. This is crucial to enable use cases like voting, rating and user feedback that were unfeasible with previous blockchain economic models that require users to pay each transaction.
+### Quick Summary
 
-## Scalable network
-The state of each Agent is stored on a separate blockchain and the transactions on these blockchains are running in parallel to enable an extremely high transaction throughput. Agents are self-governing and each agent can declare which subset of the Apocryph network validators should validate the respective Agent’s blockchain. 
+Apocryph is an architecture:
 
-## Scalable nodes
-Since the network nodes run on [Perper](https://github.com/obecto/perper), they scale horizontally and each node is supposed to be more a cluster of machines, rather than just a single machine. This enables the network validators to run nodes on professional infrastructure and achieve economies of scale. 
+- defines patterns and practices for building distributed systems
+- covers both open-source and closed-source parts of the system being built
+- compliant with the latest enterprise-grade software architectures and technologies
 
-## Interoperability and extensibility
-With the main focus on decoupling and reusability, the Apocryph network is designed to be highly interoperable and extensible. Agents might require that certain services are running on their validator nodes and thus access any functionality needed - from sending emails to interoperability with Ethereum and decentralized training of AI.
+Apocryph is a framework:
 
-## Leaderless consensus
-The network runs a leaderless Byzantine fault tolerance consensus protocol inspired by [Wavelet](https://wavelet.perlin.net/whitepaper.pdf). It uses [IPFS](https://ipfs.io) for storing the block data, while consensus querying happens over [libp2p](https://libp2p.io/). By reusing established technology and existing infrastructure we significantly simplify the consensus engine, allowing more idiomatic and secure implementation.
+- has built-in library for building multi-agent systems
+- supports both proactive and passive agents
 
-## Built by a coop
-Apocryph is built by the [Comrade Cooperative](https://www.comrade.coop/) - a member-owned organization of software developers and innovation builders, that is based on transparency, technocracy, and self-governance. In the past two years, we are working on two pillar projects around the most important use cases we saw for consensus networks - autonomous organizations with [Wetonomy](https://www.wetonomy.com/) and decentralized AI with [ScyNet](https://www.scynet.ai/). Apocryph emerged as a solution to the numerous problems we encountered while we were working on these projects and now they all form a coherent ecosystem.
+Apocryph is a blockchain *(implementation in-progress)*:
+
+- implements highly scalable DPoS BFT consensus 
+- designed to be inter-blockchain communication ready
+
+Apocryph is an economy *(implementation in-progress)*:
+
+- supports fully programmable digital economy model
+- accommodates both humans and AI actors 
+
+## Getting Started
+
+### Prerequisite
+
+### Create Apocryph Agent Project
+
+### Enable Agent Testbed
+
+### Configure Agent Testbed
+
+### Create your Agents
+
+### Run your first multi-agent distributed application
+
+## How Apocryph works
+
+![Architecture Overview](docs/images/architecture_overview.jpg "Architecture Overview")
+ 
+### Agent Model
+
+#### Reminders
+
+#### Publish and Subscribe
+
+#### Object Capability Security Model
+
+#### Call Tickets
+
+#### Messages
+
+#### Services
+
+Apocryph services are comprised of custom logic which allows Agents to communicate with 
+the outside world. They allow one to extend the consensus algorithm and provide additional 
+ways to receive inputs and produce outputs for an agent.
+
+While service execution is not covered by consensus between nodes (in the way agent execution is), 
+the different instances of services running on different nodes are expected to give the same outputs 
+on most nodes, so that the nodes can reach consensus on the input to the agent.
+
+### Consenus
+
+Apocryph consensus implementation is using serverless, stream-based architecture to 
+achieve high concurrency and throughput. For intra-node communication it is using [Peprer](https://github.com/obecto/perper) 
+and for inter-node communication and persistence it is using [IPFS](https://ipfs.io/).
+
+#### Inter Blockchain Communication
+
+### Network Nodes
+
+Apocryph is built on top of [Peprer](https://github.com/obecto/perper) - stream-based, horizontally 
+scalable framework for asynchronous data processing. This allows Apocryph Nodes to both
+work on a single machine (using docker-compose) or in a datacenter grade cluster environment
+using [Kubernetes](http://kubernetes.io/).
+
+#### Scalability
+
+## Apocryph Developer Node
+
+You can test and experiment with Apocryph runtime by running a local
+developer node. You can run this node on all major operating systems: 
+Windows, Linux and macOS.
+
+### Running via Docker Compose
+Using Docker Compose to run Apocryph runtime is the recommended way for users that
+would like to run Apocryph Developer Node.
+
+### Prerequisite
+- Install [Docker](https://docs.docker.com/install/)
+- Install [Docker Compose](https://docs.docker.com/compose/install/)
+
+#### Start IPFS Daemon
+
+Apocryph uses IPFS for its DPoS consensus implementation, thus requires IPFS daemon to run locally on the node:
+
+```bash
+docker-compose up -d ipfs
+```
+
+#### Start Apocryph Runtime
+
+Before running the Apocryph runtime locally you have to start Perper Fabric in local 
+development mode:
+
+- Create Perper Fabric IPC directory  
+```bash
+mkdir -p /tmp/perper
+```
+- Run Perper Fabric Docker (This steps require pre-built Perper Fabric image. More information can be found [here](https://github.com/obecto/perper))
+```bash
+docker-compose up -d perper-fabric
+```
+
+Apocryph runtime is implemented as Azure Functions App and can be started with:
+```bash
+docker-compose up apocryph-runtime
+```
+
+### Running natively
+
+In addition to using Docker Compose, you can run Apocryph Developer Node 
+natively on your machine. This setup is recommended if you are doing 
+source code contributions to Apocryph Runtime. The recommended operating 
+system for this setup is Ubuntu 18.04 LTS. 
+
+#### Prerequisite
+
+Before running this sample, you must have the following:
+
+- Install [Azure Functions Core Tools v3](https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local#v2)
+- Install [.NET Core SDK 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1)
+- Install [Docker](https://docs.docker.com/install/)
+- Install [IPFS](https://ipfs.io/#install)
+
+#### Enable Perper Functions
+
+Apocryph is based on [Perper](https://github.com/obecto/perper) - stream-based,
+horizontally scalable framework for asynchronous data processing. To run Apocryph 
+make sure you have cloned Perper repo and have the correct path in Apocryph.proj file.
+
+#### Start IPFS Daemon
+
+Apocryph uses IPFS for its DPoS consensus implementation, thus requires IPFS daemon to run locally on the node:
+
+```bash
+ipfs daemon --enable-pubsub-experiment
+```
+
+#### Start Apocryph Runtime
+
+Before running the Apocryph runtime locally you have to start Perper Fabric in local 
+development mode:
+
+- Building Perper Fabric Docker (in the directory where Perper repo is cloned)
+```bash
+docker build -t perper/fabric -f docker/Dockerfile .
+```
+- Create Perper Fabric IPC directory  
+```bash
+mkdir -p /tmp/perper
+```
+- Run Perper Fabric Docker 
+```bash
+docker run -v /tmp/perper:/tmp/perper --network=host --ipc=host -it perper/fabric
+```
+
+Apocryph runtime is implemented as Azure Functions App and can be started with:
+```bash
+func start
+```
