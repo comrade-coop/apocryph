@@ -10,10 +10,10 @@ Consensus Network for Autonomous Agents
   - [Quick Summary](#quick-summary)
 - [Getting Started](#getting-started)
   - [Prerequisite](#prerequisite)
-  - [Create Apocryph Agent Project](#create-apocryph-agent-project)
-  - [Enable Agent Testbed](#enable-agent-testbed)
-  - [Configure Agent Testbed](#configure-agent-testbed)
-  - [Create your Agents](#create-your-agents)
+  - [Create agent project](#create-agent-project)
+  - [Enable agent testbed](#enable-agent-testbed)
+  - [Configure agent testbed](#configure-agent-testbed)
+  - [Create your agents](#create-your-agents)
   - [Run your first multi-agent distributed application](#run-your-first-multi-agent-distributed-application)
 - [How Apocryph works](#how-apocryph-works)
   - [Agent Model](#agent-model)
@@ -69,13 +69,13 @@ Apocryph is an economy *(implementation in-progress)*:
 
 ### Prerequisite
 
-### Create Apocryph Agent Project
+### Create agent project
 
-### Enable Agent Testbed
+### Enable agent testbed
 
-### Configure Agent Testbed
+### Configure agent testbed
 
-### Create your Agents
+### Create your agents
 
 ### Run your first multi-agent distributed application
 
