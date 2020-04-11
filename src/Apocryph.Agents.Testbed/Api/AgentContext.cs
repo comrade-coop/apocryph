@@ -1,19 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net.WebSockets;
 
 namespace Apocryph.Agents.Testbed.Api
 {
+    public class AgentContext<T> : AgentContext where T : class
+    {
+        public T State => (T) InternalState;
+
+        public AgentContext(T state, AgentCapability self):base(state, self)
+        {
+        }
+    }
+
     public class AgentContext
     {
-        public object State { get; }
+        public object InternalState { get; }
 
         private readonly AgentCapability _self;
         private readonly List<AgentCommand> _commands;
 
-        public AgentContext(object state, AgentCapability self)
+        public AgentContext(object internalState, AgentCapability self)
         {
-            State = state;
+            InternalState = internalState;
 
             _self = self;
             _commands = new List<AgentCommand>();
@@ -21,7 +29,7 @@ namespace Apocryph.Agents.Testbed.Api
 
         public AgentCommands GetCommands()
         {
-            return new AgentCommands {State = State, Commands = _commands.ToArray()};
+            return new AgentCommands {Origin = _self.Issuer, State = InternalState, Commands = _commands.ToArray()};
         }
 
         public AgentCapability IssueCapability(Type[] messageTypes)
@@ -57,14 +65,17 @@ namespace Apocryph.Agents.Testbed.Api
 
         public void AddReminder(TimeSpan time, object data)
         {
+            _commands.Add(new AgentCommand{CommandType = AgentCommandType.Reminder, Receiver = _self, Timeout = time, Message = data});
         }
 
         public void MakePublication(object payload)
         {
+            _commands.Add(new AgentCommand{CommandType = AgentCommandType.Publish, Message = payload});
         }
 
         public void AddSubscription(string target)
         {
+            _commands.Add(new AgentCommand{CommandType = AgentCommandType.Subscribe, AgentId = target});
         }
 
         public void SendServiceMessage(string service, object parameters)

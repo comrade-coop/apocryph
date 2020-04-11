@@ -12,12 +12,16 @@ namespace Apocryph.Agents.Testbed.Api
         public AgentCapability Receiver { get; set; }
 
         public object Message { get; set; }
-        public object State { get; set; }
+
+        public TimeSpan Timeout { get; set; }
     }
 
     public enum AgentCommandType
     {
         CreateAgent,
         SendMessage,
+        Publish,
+        Subscribe,
+        Reminder
     }
 }
