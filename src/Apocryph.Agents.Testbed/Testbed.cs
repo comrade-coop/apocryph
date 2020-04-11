@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Agents.Testbed.Api;
@@ -29,7 +28,7 @@ namespace Apocryph.Agents.Testbed
             await context.BindOutput(cancellationToken);
         }
 
-        public async Task Agent(Func<object, AgentCapability, object, AgentContext> entryPoint,
+        public async Task Agent(Func<object, AgentCapability, object, Task<AgentContext>> entryPoint,
             string agentId,
             object initMessage,
             IAsyncEnumerable<AgentCommands> commands, IAsyncCollector<AgentCommands> output,
@@ -99,14 +98,14 @@ namespace Apocryph.Agents.Testbed
             }
         }
 
-        private async Task InitAgent(Func<object, AgentCapability, object, AgentContext> entryPoint,
+        private async Task InitAgent(Func<object, AgentCapability, object, Task<AgentContext>> entryPoint,
             ICollection<object> states,
             string agentId,
             object initMessage, IAsyncCollector<AgentCommands> output)
         {
             await Task.Delay(TimeSpan.FromSeconds(1)); //Wait for Execute to engage Runtime
 
-            var agentContext = entryPoint(null,
+            var agentContext = await entryPoint(null,
                 new AgentCapability
                 {
                     Issuer = agentId,
@@ -116,7 +115,7 @@ namespace Apocryph.Agents.Testbed
             await output.AddAsync(agentContext.GetCommands());
         }
 
-        private async Task ExecuteAgent(Func<object, AgentCapability, object, AgentContext> entryPoint,
+        private async Task ExecuteAgent(Func<object, AgentCapability, object, Task<AgentContext>> entryPoint,
             ICollection<object> states,
             string agentId,
             IAsyncEnumerable<AgentCommands> commands, IAsyncCollector<AgentCommands> output,
@@ -129,14 +128,14 @@ namespace Apocryph.Agents.Testbed
                 {
                     if (command.CommandType == AgentCommandType.SendMessage && command.Receiver.Issuer == agentId)
                     {
-                        var agentContext = entryPoint(states.Last(), command.Receiver, command.Message);
+                        var agentContext = await entryPoint(states.Last(), command.Receiver, command.Message);
                         states.Add(agentContext.InternalState);
                         await output.AddAsync(agentContext.GetCommands(), cancellationToken);
                     }
                     else if (command.CommandType == AgentCommandType.Reminder && commandsBatch.Origin == agentId)
                     {
                         await Task.Delay(command.Timeout, cancellationToken);
-                        var agentContext = entryPoint(states.Last(), command.Receiver, command.Message);
+                        var agentContext = await entryPoint(states.Last(), command.Receiver, command.Message);
                         states.Add(agentContext.InternalState);
                         await output.AddAsync(agentContext.GetCommands(), cancellationToken);
                     }
@@ -146,7 +145,7 @@ namespace Apocryph.Agents.Testbed
                     }
                     else if (command.CommandType == AgentCommandType.Publish && publishers.Contains(commandsBatch.Origin))
                     {
-                        var agentContext = entryPoint(states.Last(), new AgentCapability {Issuer = agentId}, command.Message);
+                        var agentContext = await entryPoint(states.Last(), new AgentCapability {Issuer = agentId}, command.Message);
                         states.Add(agentContext.InternalState);
                         await output.AddAsync(agentContext.GetCommands(), cancellationToken);
                     }

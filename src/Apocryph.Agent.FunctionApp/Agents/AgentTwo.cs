@@ -11,7 +11,7 @@ namespace Apocryph.Agent.FunctionApp.Agents
 {
     public class AgentTwo
     {
-        public AgentContext Run(object state, AgentCapability self, object message)
+        public Task<AgentContext> Run(object state, AgentCapability self, object message)
         {
             var context = new AgentContext(state, self);
             if(message is PingPongMessage initMessage && initMessage.AgentTwo == null)
@@ -32,7 +32,7 @@ namespace Apocryph.Agent.FunctionApp.Agents
                     Content = "Pong"
                 }, null);
             }
-            return context;
+            return Task.FromResult(context);
         }
     }
 

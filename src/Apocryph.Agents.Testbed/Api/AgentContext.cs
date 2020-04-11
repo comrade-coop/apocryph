@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Channels;
 
 namespace Apocryph.Agents.Testbed.Api
 {
@@ -21,6 +22,7 @@ namespace Apocryph.Agents.Testbed.Api
 
         public AgentContext(object internalState, AgentCapability self)
         {
+
             InternalState = internalState;
 
             _self = self;
