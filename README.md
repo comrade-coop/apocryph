@@ -11,12 +11,12 @@ Consensus Network for Autonomous Agents
   - [Quick Summary](#quick-summary)
 - [Getting Started](#getting-started)
   - [Prerequisite](#prerequisite)
-  - [Create agent project](#create-agent-project)
-  - [Enable agent testbed](#enable-agent-testbed)
-  - [Configure agent testbed](#configure-agent-testbed)
+  - [Create project](#create-project)
+  - [Enable testbed](#enable-testbed)
+  - [Configure testbed](#configure-testbed)
   - [Create your agents](#create-your-agents)
   - [Run your first multi-agent distributed application](#run-your-first-multi-agent-distributed-application)
-- [How Apocryph works](#how-apocryph-works)
+- [How Apocryph works?](#how-apocryph-works)
   - [Agent Model](#agent-model)
     - [Reminders](#reminders)
     - [Publish and Subscribe](#publish-and-subscribe)
@@ -68,19 +68,30 @@ Apocryph is an economy *(implementation in-progress)*:
 
 ## Getting Started
 
+This is a quick start guide of how to create a simple multi-agent system
+using Apocryph.  
+
 ### Prerequisite
+
+Before running this guide, you must have the following:
+
+- Install [Azure Functions Core Tools v3](https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local#v2)
+- Install [.NET Core SDK 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1)
+- Install [Docker](https://docs.docker.com/install/)
 
 ### Create agent project
 
-### Enable agent testbed
 
-### Configure agent testbed
+
+### Enable testbed
+
+### Configure testbed
 
 ### Create your agents
 
 ### Run your first multi-agent distributed application
 
-## How Apocryph works
+## How Apocryph works?
 
 ![Architecture Overview](docs/images/architecture_overview.jpg "Architecture Overview")
  
