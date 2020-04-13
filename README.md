@@ -24,8 +24,8 @@ Consensus Network for Autonomous Agents
     - [Call Tickets](#call-tickets)
     - [Invocations](#invocations)
     - [Services](#services)
-  - [Consenus](#consenus)
-    - [Agent 0](#agent-0)
+  - [Consensus](#consenus)
+    - [Modularity](#modularity)
     - [Inter Blockchain Communication](#inter-blockchain-communication)
   - [Network Nodes](#network-nodes)
     - [Scalability](#scalability)
@@ -112,7 +112,7 @@ Apocryph consensus implementation is using serverless, stream-based architecture
 achieve high concurrency and throughput. For intra-node communication it is using [Peprer](https://github.com/obecto/perper) 
 and for inter-node communication and persistence it is using [IPFS](https://ipfs.io/).
 
-#### Agent 0
+#### Modularity
 
 #### Inter Blockchain Communication
 
