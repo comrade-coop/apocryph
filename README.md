@@ -41,7 +41,7 @@ tools and development paradigms.
 Below, you can see a short video of how easy it is to setup Apocryph test node on your 
 local development machine using only Docker and Docker-Compose:
 
-[![asciicast](docs/images/developer_node_rec.jpg)](https://asciinema.org/a/295036?speed=2&rows=30)
+[![asciicast](docs/images/developer_node_rec.png)](https://asciinema.org/a/295036?speed=2&rows=30)
 
 ### Quick Summary
 
