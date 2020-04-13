@@ -25,12 +25,12 @@ Consensus Network for Autonomous Agents
     - [Invocations](#invocations)
     - [Services](#services)
   - [Consenus](#consenus)
+    - [Agent 0](#agent-0)
     - [Inter Blockchain Communication](#inter-blockchain-communication)
   - [Network Nodes](#network-nodes)
     - [Scalability](#scalability)
+    - [Developer Node](#developer-node)
 - [Contributing](#contributing)
-  - [Running via Docker Compose](#running-via-docker-compose)
-  - [Running natively](#running-natively)
 
 ## Overview
 
@@ -41,7 +41,7 @@ tools and development paradigms.
 Below, you can see a short video of how easy it is to setup Apocryph test node on your 
 local development machine using only Docker and Docker-Compose:
 
-[![asciicast](https://asciinema.org/a/295036.svg)](https://asciinema.org/a/295036?speed=2)
+[![asciicast](docs/images/developer_node_rec.jpg)](https://asciinema.org/a/295036?speed=2&rows=30)
 
 ### Quick Summary
 
@@ -94,7 +94,7 @@ Apocryph is an economy *(implementation in-progress)*:
 
 #### Call Tickets
 
-#### Messages
+#### Invocations
 
 #### Services
 
@@ -112,6 +112,8 @@ Apocryph consensus implementation is using serverless, stream-based architecture
 achieve high concurrency and throughput. For intra-node communication it is using [Peprer](https://github.com/obecto/perper) 
 and for inter-node communication and persistence it is using [IPFS](https://ipfs.io/).
 
+#### Agent 0
+
 #### Inter Blockchain Communication
 
 ### Network Nodes
@@ -123,21 +125,16 @@ using [Kubernetes](http://kubernetes.io/).
 
 #### Scalability
 
-## Apocryph Developer Node
+#### Developer Node
 
-You can test and experiment with Apocryph runtime by running a local
-developer node. You can run this node on all major operating systems: 
-Windows, Linux and macOS.
-
-### Running via Docker Compose
 Using Docker Compose to run Apocryph runtime is the recommended way for users that
 would like to run Apocryph Developer Node.
 
-### Prerequisite
+##### Prerequisite
 - Install [Docker](https://docs.docker.com/install/)
 - Install [Docker Compose](https://docs.docker.com/compose/install/)
 
-#### Start IPFS Daemon
+##### Start IPFS Daemon
 
 Apocryph uses IPFS for its DPoS consensus implementation, thus requires IPFS daemon to run locally on the node:
 
@@ -145,7 +142,7 @@ Apocryph uses IPFS for its DPoS consensus implementation, thus requires IPFS dae
 docker-compose up -d ipfs
 ```
 
-#### Start Apocryph Runtime
+##### Start Apocryph Runtime
 
 Before running the Apocryph runtime locally you have to start Perper Fabric in local 
 development mode:
@@ -164,17 +161,17 @@ Apocryph runtime is implemented as Azure Functions App and can be started with:
 docker-compose up apocryph-runtime
 ```
 
-### Running natively
+## Contributing
 
-In addition to using Docker Compose, you can run Apocryph Developer Node 
-natively on your machine. This setup is recommended if you are doing 
-source code contributions to Apocryph Runtime. The recommended operating 
-system for this setup is Ubuntu 18.04 LTS. 
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+
+Please make sure to update tests as appropriate.
 
 #### Prerequisite
 
 Before running this sample, you must have the following:
 
+- The recommended operating system is Ubuntu 18.04 LTS.
 - Install [Azure Functions Core Tools v3](https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local#v2)
 - Install [.NET Core SDK 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1)
 - Install [Docker](https://docs.docker.com/install/)
