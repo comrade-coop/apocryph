@@ -257,7 +257,7 @@ public async Task Setup(
 
 You can use any other name that is more suitable for your multi-agent system domain 
 (for example: "Organization", "Template" or other). This name indicates the first 
-Agent you have to create, serving as entrypoint to your multi-agent system.
+agent you have to create, serving as entrypoint to your multi-agent system.
 
 In the testbed, every agent is represented by a function configured with a small boilerplate
 (we will group our agents in a separate namespace called "Agents"). For simplicity we will
