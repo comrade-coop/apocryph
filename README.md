@@ -79,17 +79,341 @@ Before running this guide, you must have the following:
 - Install [.NET Core SDK 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1)
 - Install [Docker](https://docs.docker.com/install/)
 
-### Create agent project
+### Create project
 
+> **NOTE:** As a best practice, the agents should be developed as a separate Class Library 
+that is referenced by the function app project.
 
+Run the following command from the command line to create a function app project 
+in the SampleApp folder of the current local directory. This project will contain
+both the agents source code and testbed configuration.
 
+```bash
+func init SampleApp
+```
+
+When prompted, select a worker runtime - for now only dotnet is fully supported.
+
+After the project is created, use the following command to navigate to the new SampleApp project folder.
+
+```bash
+cd SampleApp
+````
 ### Enable testbed
+
+To run your agents on your developer machines you can use the 
+Apocryph testbed. To use it, you have to clone Apocryph GitHub repo
+and add reference to Apocryph.Agents.Testbed. 
+
+There are two more NuGet packages that are required:
+
+- Microsoft.Azure.Functions.Extensions
+- Microsoft.NET.Sdk.Functions
+
+After theese configurations, your project file will be similar to this:
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <AzureFunctionsVersion>v3</AzureFunctionsVersion>
+        <LangVersion>8</LangVersion>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Update="host.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="local.settings.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+        </None>
+    </ItemGroup>
+    
+    <ItemGroup>
+      <ProjectReference Include="..\..\Apocryph.Agents.Testbed\Apocryph.Agents.Testbed.csproj" />
+    </ItemGroup>
+    
+    <ItemGroup>
+      <PackageReference Include="Microsoft.Azure.Functions.Extensions" Version="1.0.0" />
+      <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="3.0.5" />
+    </ItemGroup>
+
+</Project>
+```
 
 ### Configure testbed
 
+Using the testbed requires adding a small portion of boilerplate code that
+will enable a local execution of your agents. Using this you can debug
+your agents as regular .NET project.
+
+First, you have to enable the testbed and the logging as services. To do this add
+Startup.cs file in the root of your project:
+
+```csharp
+using Apocryph.Agents.Testbed;
+using Microsoft.Azure.Functions.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
+
+[assembly: FunctionsStartup(typeof(SampleApp.Startup))]
+
+namespace SampleApp
+{
+    public class Startup : FunctionsStartup
+    {
+        public override void Configure(IFunctionsHostBuilder builder)
+        {
+            builder.Services.AddLogging();
+            builder.Services.AddTransient(typeof(Testbed), typeof(Testbed));
+        }
+    }
+}
+```
+
+You also have to enable the logging in the host.json:
+
+```json
+{
+    "version": "2.0",
+    "logging": {
+        "logLevel": {
+            "SampleApp": "Trace"
+        }
+    }
+}
+```
+
+Second, you have to create the testbed functions used as main entrypoints
+for setting up the agents execution environment. To do this add App.cs file 
+in the root of your project:
+
+```csharp
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Apocryph.Agents.Testbed;
+using Apocryph.Agents.Testbed.Api;
+using Microsoft.Azure.WebJobs;
+using Perper.WebJobs.Extensions.Config;
+using Perper.WebJobs.Extensions.Model;
+
+namespace SampleApp
+{
+    public class App
+    {
+        private readonly Testbed _testbed;
+
+        public App(Testbed testbed)
+        {
+            _testbed = testbed;
+        }
+
+        [FunctionName("Setup")]
+        public async Task Setup(
+            [PerperStreamTrigger(RunOnStartup = true)] PerperStreamContext context,
+            CancellationToken cancellationToken)
+        {
+            await _testbed.Setup(context, "AgentOne", "Runtime", "Monitor", cancellationToken);
+        }
+
+        [FunctionName("Runtime")]
+        public async Task Runtime(
+            [PerperStreamTrigger] PerperStreamContext context,
+            [Perper("agentDelegate")] string agentDelegate,
+            [PerperStream("commands")] IAsyncEnumerable<AgentCommands> commands,
+            CancellationToken cancellationToken)
+        {
+            await _testbed.Runtime(context, agentDelegate, commands, cancellationToken);
+        }
+
+        [FunctionName("Monitor")]
+        public async Task Monitor(
+            [PerperStreamTrigger] PerperStreamContext context,
+            [PerperStream("commands")] IAsyncEnumerable<AgentCommands> commands,
+            CancellationToken cancellationToken)
+        {
+            await _testbed.Monitor(commands, cancellationToken);
+        }
+    }
+}
+```
 ### Create your agents
 
+In the previous step we have configured the testbed entrypoints, by specify
+the name of our root agent ("AgentOne"):
+
+```csharp
+[FunctionName("Setup")]
+public async Task Setup(
+    [PerperStreamTrigger(RunOnStartup = true)] PerperStreamContext context,
+    CancellationToken cancellationToken)
+{
+    await _testbed.Setup(context, "AgentOne", "Runtime", "Monitor", cancellationToken);
+}
+```
+
+You can use any other name that is more suitable for your multi-agent system domain 
+(for example: "Organization", "Template" or other). This name indicates the first 
+Agent you have to create, serving as entrypoint to your multi-agent system.
+
+In the testbed, every agent is represented by a function configured with a small boilerplate
+(we will group our agents in a separate namespace called "Agents"). For simplicity we will
+colocate the boilerplate (AgentOneWrapper class) and the actual source code (AgentOne class) 
+in a single C# file.
+
+**Agents\AgentOne.cs**
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Apocryph.Agents.Testbed;
+using Apocryph.Agents.Testbed.Api;
+using Microsoft.Azure.WebJobs;
+using Perper.WebJobs.Extensions.Config;
+using Perper.WebJobs.Extensions.Model;
+
+namespace SampleApp.Agents
+{
+    public class AgentOne
+    {
+        public Task<AgentContext> Run(object state, AgentCapability self, object message)
+        {
+            var context = new AgentContext(state, self);
+            if (message is AgentRootInitMessage rootInitMessage)
+            {
+                var cap = context.IssueCapability(new[] {typeof(PingPongMessage)});
+                context.CreateAgent("AgentTwo", "AgentTwo", new PingPongMessage {AgentOne = cap}, null);
+            }
+            else if(message is PingPongMessage pingPongMessage)
+            {
+                context.SendMessage(pingPongMessage.AgentTwo, new PingPongMessage
+                {
+                    AgentOne = pingPongMessage.AgentOne,
+                    AgentTwo = pingPongMessage.AgentTwo,
+                    Content = "Ping"
+                }, null);
+            }
+            return Task.FromResult(context);
+        }
+    }
+
+    public class AgentOneWrapper
+    {
+        private readonly Testbed _testbed;
+
+        public AgentOneWrapper(Testbed testbed)
+        {
+            _testbed = testbed;
+        }
+
+        [FunctionName("AgentOne")]
+        public async Task AgentOne(
+            [PerperStreamTrigger] PerperStreamContext context,
+            [Perper("agentId")] string agentId,
+            [Perper("initMessage")] object initMessage,
+            [PerperStream("commands")] IAsyncEnumerable<AgentCommands> commands,
+            [PerperStream("output")] IAsyncCollector<AgentCommands> output,
+            CancellationToken cancellationToken)
+        {
+            await _testbed.Agent(new AgentOne().Run, agentId, initMessage, commands, output, cancellationToken);
+        }
+    }
+}
+```
+
+The root agent is a regular agent with the only specific that it receives
+a special init message ("AgentRootInitMessage") by the runtime.
+
+The logic for our sample root agent is to create another agent ("AgentTwo")
+and start passing back and forward a simple message ("PingPongMessage"). In a 
+similar way we can create the source code of our second agent ("AgentTwo").
+
+**Agents\AgentTwo.cs**
+```csharp
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Apocryph.Agents.Testbed;
+using Apocryph.Agents.Testbed.Api;
+using Microsoft.Azure.WebJobs;
+using Perper.WebJobs.Extensions.Config;
+using Perper.WebJobs.Extensions.Model;
+
+namespace Apocryph.Agent.FunctionApp.Agents
+{
+    public class AgentTwo
+    {
+        public Task<AgentContext> Run(object state, AgentCapability self, object message)
+        {
+            var context = new AgentContext(state, self);
+            if(message is PingPongMessage initMessage && initMessage.AgentTwo == null)
+            {
+                var cap = context.IssueCapability(new[] {typeof(PingPongMessage)});
+                context.SendMessage(initMessage.AgentOne, new PingPongMessage
+                {
+                    AgentOne = initMessage.AgentOne,
+                    AgentTwo = cap
+                }, null);
+            }
+            else if(message is PingPongMessage pingPongMessage)
+            {
+                context.SendMessage(pingPongMessage.AgentOne, new PingPongMessage
+                {
+                    AgentOne = pingPongMessage.AgentOne,
+                    AgentTwo = pingPongMessage.AgentTwo,
+                    Content = "Pong"
+                }, null);
+            }
+            return Task.FromResult(context);
+        }
+    }
+
+    public class AgentTwoWrapper
+    {
+        private readonly Testbed _testbed;
+
+        public AgentTwoWrapper(Testbed testbed)
+        {
+            _testbed = testbed;
+        }
+
+        [FunctionName("AgentTwo")]
+        public async Task AgentTwo(
+            [PerperStreamTrigger] PerperStreamContext context,
+            [Perper("agentId")] string agentId,
+            [Perper("initMessage")] object initMessage,
+            [PerperStream("commands")] IAsyncEnumerable<AgentCommands> commands,
+            [PerperStream("output")] IAsyncCollector<AgentCommands> output,
+            CancellationToken cancellationToken)
+        {
+            await _testbed.Agent(new AgentTwo().Run, agentId, initMessage, commands, output, cancellationToken);
+        }
+    }
+}
+```
+
 ### Run your first multi-agent distributed application
+
+To run your application you have to first start the Perper Fabric. 
+Both Apocryph Runtime and Testbed are using [Perper](https://github.com/obecto/perper)
+which is a stream-based, horizontally scalable framework for asynchronous data processing.
+
+You can run Perper Fabric by executing the following command:
+
+```bash
+docker run -p 10800:10800 -p 40400:40400 -it obecto/perper-fabric
+```
+
+Then you can run your SampleApp as a regular Azure Functions application 
+using the following command (in you "SampleApp" project folder):
+
+```bash
+func start --build
+```
 
 ## How Apocryph works?
 
