@@ -85,8 +85,8 @@ Before running this guide, you must have the following:
 that is referenced by the function app project.
 
 Run the following command from the command line to create a function app project 
-in the SampleApp folder of the current local directory. This project will contain
-both the agents source code and testbed configuration.
+in the SampleApp folder of the current local directory. For simplicity this 
+project will contain both the agents source code and testbed configuration (*see the note above*).
 
 ```bash
 func init SampleApp
@@ -264,7 +264,7 @@ In the testbed, every agent is represented by a function configured with a small
 colocate the boilerplate (AgentOneWrapper class) and the actual source code (AgentOne class) 
 in a single C# file.
 
-**Agents\AgentOne.cs**
+*Agents\AgentOne.cs*
 ```csharp
 using System;
 using System.Collections.Generic;
@@ -332,7 +332,7 @@ The logic for our sample root agent is to create another agent ("AgentTwo")
 and start passing back and forward a simple message ("PingPongMessage"). In a 
 similar way we can create the source code of our second agent ("AgentTwo").
 
-**Agents\AgentTwo.cs**
+*Agents\AgentTwo.cs*
 ```csharp
 using System.Collections.Generic;
 using System.Threading;
