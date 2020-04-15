@@ -16,7 +16,7 @@ Consensus Network for Autonomous Agents
   - [Configure testbed](#configure-testbed)
   - [Create your agents](#create-your-agents)
   - [Run your first multi-agent distributed application](#run-your-first-multi-agent-distributed-application)
-- [How Apocryph works?](#how-apocryph-works)
+- [Apocryph Architecture Overview](#apocryph-architecture-overview)
   - [Agent Model](#agent-model)
     - [Reminders](#reminders)
     - [Publish and Subscribe](#publish-and-subscribe)
@@ -415,7 +415,7 @@ using the following command (in you "SampleApp" project folder):
 func start --build
 ```
 
-## How Apocryph works?
+## Apocryph Architecture Overview
 
 ![Architecture Overview](docs/images/architecture_overview.jpg "Architecture Overview")
  
