@@ -5,7 +5,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Perper.WebJobs.Extensions" Version="0.3.6" />
+      <PackageReference Include="Perper.WebJobs.Extensions" Version="0.3.8" />
     </ItemGroup>
-
+    
 </Project>
