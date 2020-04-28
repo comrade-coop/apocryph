@@ -21,7 +21,7 @@ namespace Apocryph.FunctionApp.Ipfs
         [FunctionName(nameof(IpfsLoader))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("ipfsGateway")] string ipfsGateway,
-            [PerperStream("hashStream")] IAsyncEnumerable<Hash> hashStream,
+            [PerperStream("hashStream")] IAsyncEnumerable<Cid> hashStream,
             [PerperStream("outputStream")] IAsyncCollector<IHashed<object>> outputStream,
             ILogger logger)
         {

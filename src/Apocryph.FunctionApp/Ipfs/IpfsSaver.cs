@@ -32,7 +32,7 @@ namespace Apocryph.FunctionApp.Ipfs
                 {
                     var jToken = IpfsJsonSettings.JTokenFromObject(item);
                     var cid = await ipfs.Dag.PutAsync(jToken, cancel: CancellationToken.None);
-                    var hash = new Hash {Bytes = cid.ToArray()};
+                    var hash = new Cid {Bytes = cid.ToArray()};
 
                     logger.LogDebug("Saved {json} as {hash} in ipfs", jToken.ToString(Formatting.None), hash);
 

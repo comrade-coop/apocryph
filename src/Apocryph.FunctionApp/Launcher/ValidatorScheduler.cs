@@ -9,7 +9,7 @@ using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
 
-namespace Apocryph.FunctionApp
+namespace Apocryph.FunctionApp.Launcher
 {
     public static class ValidatorScheduler
     {

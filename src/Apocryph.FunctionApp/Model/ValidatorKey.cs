@@ -35,7 +35,24 @@ namespace Apocryph.FunctionApp.Model
 
         public int CompareTo(ValidatorKey other)
         {
-            return GetHashCode().CompareTo(other.GetHashCode());
+            for (var i = 0; i < (Key.Q.Y?.Length ?? 0); i++)
+            {
+                if (i < (other.Key.Q.Y?.Length ?? 0))
+                {
+                    return -1;
+                }
+                var result = Key.Q.Y[i].CompareTo(other.Key.Q.Y[i]);
+                if (result != 0)
+                {
+                    return result;
+                }
+            }
+            return 1;
+        }
+
+        public byte[] GetPosition()
+        {
+            return Key.Q.X;
         }
 
         public override int GetHashCode()

@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
 
-namespace Apocryph.FunctionApp
+namespace Apocryph.FunctionApp.Utils
 {
     public static class TestDataGenerator
     {

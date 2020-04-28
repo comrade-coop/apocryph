@@ -20,20 +20,20 @@ namespace Apocryph.FunctionApp.Ipfs
     {
         public class State
         {
-            public HashSet<Hash> ResolvedHashes { get; set; } = new HashSet<Hash> {new Hash {Bytes = new byte[] {}}};
+            public HashSet<Cid> ResolvedHashes { get; set; } = new HashSet<Cid> {new Cid {Bytes = new byte[] {}}};
         }
 
         [FunctionName(nameof(IpfsRecursiveLoader))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("ipfsGateway")] string ipfsGateway,
-            [PerperStream("hashStream")] IAsyncEnumerable<Hash> hashStream,
+            [PerperStream("hashStream")] IAsyncEnumerable<Cid> hashStream,
             [PerperStream("outputStream")] IAsyncCollector<IHashed<object>> outputStream,
             ILogger logger)
         {
             var ipfs = new IpfsClient(ipfsGateway);
             var state = await context.FetchStateAsync<State>() ?? new State();
 
-            async Task processHash(Hash hash, CancellationToken cancellationToken)
+            async Task processHash(Cid hash, CancellationToken cancellationToken)
             {
                 if (state.ResolvedHashes.Contains(hash))
                 {

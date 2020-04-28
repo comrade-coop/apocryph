@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 // using System.Linq;
 
-namespace Apocryph.FunctionApp
+namespace Apocryph.FunctionApp.Utils
 {
     public class AsyncDisposableList : List<IAsyncDisposable>, IAsyncDisposable
     {
