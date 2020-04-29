@@ -8,21 +8,21 @@ using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
 
-namespace Apocryph.Runtime.FunctionApp.Commuication
+namespace Apocryph.Runtime.FunctionApp.Communication
 {
     public static class ReminderCommandExecutor
     {
         [FunctionName(nameof(ReminderCommandExecutor))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("commandsStream")] IAsyncEnumerable<ReminderCommand> commandsStream,
+            [PerperStream("commandsStream")] IAsyncEnumerable<AgentCommand> commandsStream,
             [PerperStream("outputStream")] IAsyncCollector<(string, object)> outputStream,
             CancellationToken cancellationToken)
         {
             await commandsStream.ForEachAsync(reminder =>
             {
                 Task.Run(async () => {
-                    await Task.Delay(reminder.Time, cancellationToken);
-                    await outputStream.AddAsync(("Reminder", reminder.Data));
+                    await Task.Delay(reminder.Timeout, cancellationToken);
+                    await outputStream.AddAsync(("Reminder", reminder.Message));
                 });
             }, cancellationToken);
         }

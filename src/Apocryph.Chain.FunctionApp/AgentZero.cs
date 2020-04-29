@@ -24,11 +24,12 @@ namespace Apocryph.Chain.FunctionApp
         [FunctionName(nameof(AgentZeroWorker))]
         [return: Perper("$return")]
         public static AgentContext<State> Run([PerperWorkerTrigger] object workerContext,
+            [Perper("self")] AgentCapability self,
             [Perper("state")] State state,
             [Perper("sender")] string sender,
             [Perper("message")] object message)
         {
-            var context = new AgentContext<State>(state ?? new State());
+            var context = new AgentContext<State>(state ?? new State(), self);
             switch (message)
             {
                 case TransferMessage transferMessage:

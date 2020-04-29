@@ -20,7 +20,7 @@ namespace Apocryph.Runtime.FunctionApp.Ipfs
     {
         public class State
         {
-            public HashSet<Cid> ResolvedHashes { get; set; } = new HashSet<Cid> {new Cid {Bytes = new byte[] {}}};
+            public HashSet<Cid> ResolvedHashes { get; set; } = new HashSet<Cid> {};
         }
 
         [FunctionName(nameof(IpfsRecursiveLoader))]
@@ -41,16 +41,15 @@ namespace Apocryph.Runtime.FunctionApp.Ipfs
                 }
 
                 state.ResolvedHashes.Add(hash);
-                var jToken = await ipfs.Dag.GetAsync(Cid.Read(hash.Bytes), cancellationToken);
+                var jToken = await ipfs.Dag.GetAsync(hash, cancellationToken);
                 var item = IpfsJsonSettings.ObjectFromJToken<object>(jToken);
 
-                if (item is IAgentStep agentStep)
-                {
-                    await processHash(agentStep.Previous, cancellationToken);
-                }
+                // if (item is AgentBlock agentStep)
+                // {
+                //     await processHash(agentStep.Previous, cancellationToken);
+                // }
 
-                var hashedType = typeof(Hashed<>).MakeGenericType(item.GetType());
-                var hashed = (IHashed<object>)Activator.CreateInstance(hashedType, item, hash);
+                var hashed = Hashed.Create(item, hash);
 
                 await outputStream.AddAsync(hashed);
             };

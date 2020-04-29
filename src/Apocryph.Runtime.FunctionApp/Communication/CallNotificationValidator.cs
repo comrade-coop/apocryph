@@ -6,13 +6,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Agent;
 using Apocryph.Runtime.FunctionApp.Ipfs;
+using Apocryph.Runtime.FunctionApp.Utils;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
 
-namespace Apocryph.Runtime.FunctionApp.Commuication
+namespace Apocryph.Runtime.FunctionApp.Communication
 {
     public static class CallNotificationValidator
     {
@@ -46,14 +47,14 @@ namespace Apocryph.Runtime.FunctionApp.Commuication
                 {
                     try
                     {
-                        if (notification.Value.Command.Target != agentId)
+                        if (notification.Value.Command.Receiver.Issuer != agentId)
                         {
                             return;
                         }
 
-                        var notificationSignaturesValid = notification.Value.Commits.All(commit =>
+                        var notificationSignaturesValid = notification.Value.Signatures.All(commit =>
                         {
-                            if (commit.Value.For != notification.Value.Step)
+                            if (commit.Value != notification.Value.Block)
                             {
                                 return false;
                             }
@@ -65,7 +66,7 @@ namespace Apocryph.Runtime.FunctionApp.Commuication
                         {
                             // TODO: Accept the previous validator set for a short period of time.
                             var validatorSet = state.ValidatorSets[notification.Value.From];
-                            var signers = notification.Value.Commits.Select(commit => commit.Signer).Distinct();
+                            var signers = notification.Value.Signatures.Select(commit => commit.Signer).Distinct();
                             if (validatorSet.Value.IsMoreThanTwoThirds(signers))
                             {
                                 await outputStream.AddAsync(notification);

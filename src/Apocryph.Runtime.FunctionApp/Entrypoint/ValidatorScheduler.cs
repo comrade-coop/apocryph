@@ -4,7 +4,9 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using Apocryph.Runtime.FunctionApp.Communication;
 using Apocryph.Runtime.FunctionApp.Ipfs;
+using Apocryph.Runtime.FunctionApp.Utils;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
@@ -39,30 +41,30 @@ namespace Apocryph.Runtime.FunctionApp.Entrypoint
                     if (!runningStreams.ContainsKey(kv.Key))
                     {
                         var agentId = kv.Key;
-                        var filterStream = await context.StreamFunctionAsync(nameof(AgentZeroValidatorSetsSplitter), new
-                        {
-                            validatorSetsStream = validatorSetsStreamPassthrough,
-                            agentId,
-                        });
-                        var initValidatorSetStream = await context.StreamFunctionAsync(nameof(TestDataGenerator), new
-                        {
-                            delay = TimeSpan.FromSeconds(10),
-                            data = kv.Value
-                        });
+                        // var filterStream = await context.StreamFunctionAsync(nameof(AgentZeroValidatorSetsSplitter), new
+                        // {
+                        //     validatorSetsStream = validatorSetsStreamPassthrough,
+                        //     agentId,
+                        // });
+                        // var initValidatorSetStream = await context.StreamFunctionAsync(nameof(TestDataGenerator), new
+                        // {
+                        //     delay = TimeSpan.FromSeconds(10),
+                        //     data = kv.Value
+                        // });
                         var launcher = await context.StreamActionAsync(nameof(ValidatorLauncher), new
                         {
                             agentId = agentId,
                             services = new [] {"Sample", "IpfsInput"},
                             ipfsGateway,
-                            validatorSetsStream = new [] {filterStream, initValidatorSetStream},
+                            // validatorSetsStream = new [] {filterStream, initValidatorSetStream},
                             otherValidatorSetsStream = validatorSetsStreamPassthrough,
                             privateKey,
                             self
                         });
                         runningStreams[kv.Key] = new AsyncDisposableList
                         {
-                            { filterStream },
-                            { initValidatorSetStream },
+                            // { filterStream },
+                            // { initValidatorSetStream },
                             { launcher }
                         };
                     }

@@ -25,19 +25,17 @@ namespace Apocryph.Runtime.FunctionApp.Entrypoint
             [Perper("self")] ValidatorKey self,
             CancellationToken cancellationToken)
         {
-            var genesisMessage = ("", (object)new InitMessage());
-
-            await using var validatorSchedulerStream = await context.StreamActionAsync(nameof(PBFTFullNode), new
-            {
-                agentId,
-                services,
-                validatorSetsStream,
-                otherValidatorSetsStream,
-                genesisMessage,
-                ipfsGateway,
-                privateKey,
-                self
-            });
+            // await using var validatorSchedulerStream = await context.StreamActionAsync(nameof(PBFTFullNode), new
+            // {
+            //     agentId,
+            //     services,
+            //     validatorSetsStream,
+            //     otherValidatorSetsStream,
+            //     genesisMessage,
+            //     ipfsGateway,
+            //     privateKey,
+            //     self
+            // });
 
             await context.BindOutput(cancellationToken);
         }

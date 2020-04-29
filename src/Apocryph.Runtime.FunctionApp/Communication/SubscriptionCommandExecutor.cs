@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Agent;
 using Apocryph.Runtime.FunctionApp.Ipfs;
+using Apocryph.Runtime.FunctionApp.Utils;
 using Ipfs;
 using Ipfs.Http;
 using Microsoft.Azure.WebJobs;
@@ -12,7 +13,7 @@ using Newtonsoft.Json;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
 
-namespace Apocryph.Runtime.FunctionApp.Commuication
+namespace Apocryph.Runtime.FunctionApp.Communication
 {
     public static class SubscriptionCommandExecutor
     {
@@ -20,7 +21,7 @@ namespace Apocryph.Runtime.FunctionApp.Commuication
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("ipfsGateway")] string ipfsGateway,
             [PerperStream("otherValidatorSetsStream")] IAsyncEnumerable<Dictionary<string, IHashed<ValidatorSet>>> otherValidatorSetsStream,
-            [PerperStream("commandsStream")] IAsyncEnumerable<SubscriptionCommand> commandsStream,
+            [PerperStream("commandsStream")] IAsyncEnumerable<AgentCommand> commandsStream,
             CancellationToken cancellationToken)
         {
             var cts = new CancellationTokenSource(); // Dispose!
@@ -28,23 +29,23 @@ namespace Apocryph.Runtime.FunctionApp.Commuication
             await using var utilityStreams = new AsyncDisposableList();
             await commandsStream.ForEachAsync(async subscription =>
             {
-                var otherId = subscription.Target;
-                var validatorSetsStream = await context.StreamFunctionAsync(nameof(AgentZeroValidatorSetsSplitter), new
-                {
-                    agentId = otherId,
-                    otherValidatorSetsStream,
-                });
-
-                var lightNodeStream = await context.StreamFunctionAsync(nameof(PBFTLightNode), new
-                {
-                    agentId = otherId,
-                    validatorSetsStream,
-                    ipfsGateway
-                });
+                var otherId = subscription.Receiver.Issuer;
+                // var validatorSetsStream = await context.StreamFunctionAsync(nameof(AgentZeroValidatorSetsSplitter), new
+                // {
+                //     agentId = otherId,
+                //     otherValidatorSetsStream,
+                // });
+                //
+                // var lightNodeStream = await context.StreamFunctionAsync(nameof(PBFTLightNode), new
+                // {
+                //     agentId = otherId,
+                //     validatorSetsStream,
+                //     ipfsGateway
+                // });
 
                 var commandsStream = await context.StreamFunctionAsync(nameof(CommandSplitter), new
                 {
-                    stepsStream = lightNodeStream
+                    // stepsStream = lightNodeStream
                 });
 
                 var outputStream = await context.StreamFunctionAsync(nameof(SubscriptionCommandOutput), new
@@ -53,8 +54,8 @@ namespace Apocryph.Runtime.FunctionApp.Commuication
                     publicationsStream = commandsStream
                 });
 
-                utilityStreams.Add(validatorSetsStream);
-                utilityStreams.Add(lightNodeStream);
+                // utilityStreams.Add(validatorSetsStream);
+                // utilityStreams.Add(lightNodeStream);
                 utilityStreams.Add(commandsStream);
                 outputStreams.Add(outputStream);
 

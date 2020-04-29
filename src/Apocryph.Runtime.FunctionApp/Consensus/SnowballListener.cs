@@ -9,7 +9,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Runtime.FunctionApp.Ipfs;
-using Apocryph.Runtime.FunctionApp.Ipfs;
+using Apocryph.Runtime.FunctionApp.Utils;
 using Ipfs;
 using Ipfs.Http;
 using Microsoft.Azure.WebJobs;
@@ -63,8 +63,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
                         using (socket)
                         {
                             await using var stream = new NetworkStream(socket, true);
-                            var multihash = new MultiHash(state.CurrentColor.Bytes);
-                            multihash.Write(stream);
+                            state.CurrentColor.Write(stream);
                         }
                     };
 
@@ -100,8 +99,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
 
                             await using var stream = new NetworkStream(socket, true);
 
-                            var multihash = new MultiHash(stream);
-                            var hash = new Cid {Bytes = multihash.ToArray()};
+                            var hash = Cid.Read(stream);
                             state.CurrentCounts[hash] += 1;
                         }
                         finally

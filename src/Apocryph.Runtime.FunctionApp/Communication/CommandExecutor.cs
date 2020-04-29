@@ -6,11 +6,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Agent;
 using Apocryph.Runtime.FunctionApp.Ipfs;
+using Apocryph.Runtime.FunctionApp.Utils;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
 
-namespace Apocryph.Runtime.FunctionApp.Commuication
+namespace Apocryph.Runtime.FunctionApp.Communication
 {
     public static class CommandExecutor
     {
@@ -20,7 +21,6 @@ namespace Apocryph.Runtime.FunctionApp.Commuication
             [Perper("otherValidatorSetsStream")] object[] otherValidatorSetsStream,
             [Perper("notificationsStream")] object[] notificationsStream,
             [Perper("agentId")] string agentId,
-            [Perper("services")] string[] services,
             [Perper("genesisMessage")] object genesisMessage,
             [Perper("ipfsGateway")] string ipfsGateway,
             CancellationToken cancellationToken)
@@ -60,32 +60,13 @@ namespace Apocryph.Runtime.FunctionApp.Commuication
                 notificationsStream,
             });
 
-            await using var serviceFilterStreams = new AsyncDisposableList();
-            await using var serviceStreams = new AsyncDisposableList();
-            foreach (var serviceName in services) {
-                var functionName = "Service" + serviceName;
-                var filteredCommandsStream = await context.StreamFunctionAsync(nameof(ServiceCommandFilter), new
-                {
-                    commandsStream,
-                    serviceName
-                });
-                serviceFilterStreams.Add(filteredCommandsStream);
-                var serviceStream = await context.StreamFunctionAsync(functionName, new
-                {
-                    commandsStream = filteredCommandsStream,
-                    agentId,
-                    ipfsGateway
-                });
-                serviceStreams.Add(serviceStream);
-            }
-
             var outputStream = new []
             {
                 reminderCommandExecutorStream,
                 genesisMessageStream,
                 subscriptionCommandExecutorStream,
                 callNotificationProcessorStream
-            }.Concat(serviceStreams).ToArray();
+            };
 
 
             await context.BindOutput(outputStream, cancellationToken);

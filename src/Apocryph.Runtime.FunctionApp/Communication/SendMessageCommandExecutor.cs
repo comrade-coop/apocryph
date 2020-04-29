@@ -13,7 +13,7 @@ using Newtonsoft.Json;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
 
-namespace Apocryph.Runtime.FunctionApp.Commuication
+namespace Apocryph.Runtime.FunctionApp.Communication
 {
     public static class SendMessageCommandExecutor
     {
@@ -27,7 +27,7 @@ namespace Apocryph.Runtime.FunctionApp.Commuication
             [Perper("agentId")] string agentId,
             [Perper("ipfsGateway")] string ipfsGateway,
             [PerperStream("otherValidatorSetsStream")] IAsyncEnumerable<Dictionary<string, IHashed<ValidatorSet>>> otherValidatorSetsStream,
-            [PerperStream("commandsStream")] IAsyncEnumerable<SendMessageCommand> commandsStream,
+            [PerperStream("commandsStream")] IAsyncEnumerable<AgentCommand> commandsStream,
             CancellationToken cancellationToken)
         {
             var state = await context.FetchStateAsync<State>() ?? new State();
@@ -50,13 +50,13 @@ namespace Apocryph.Runtime.FunctionApp.Commuication
                         // Commits = TODO
                     };
 
-                    await context.CallWorkerAsync<object>(nameof(PBFTNotificationWorker), new
-                    {
-                        agentId = command.Target,
-                        validatorSet = state.ValidatorSets[command.Target],
-                        notification = notification,
-                        ipfsGateway
-                    }, cancellationToken);
+                    // await context.CallWorkerAsync<object>(nameof(PBFTNotificationWorker), new
+                    // {
+                    //     agentId = command.Receiver.Issuer,
+                    //     validatorSet = state.ValidatorSets[command.Receiver.Issuer],
+                    //     notification = notification,
+                    //     ipfsGateway
+                    // }, cancellationToken);
                 }, cancellationToken));
         }
     }

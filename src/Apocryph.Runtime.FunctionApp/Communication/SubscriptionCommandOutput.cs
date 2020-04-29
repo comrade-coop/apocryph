@@ -12,19 +12,19 @@ using Newtonsoft.Json;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
 
-namespace Apocryph.Runtime.FunctionApp.Commuication
+namespace Apocryph.Runtime.FunctionApp.Communication
 {
     public static class SubscriptionCommandOutput
     {
         [FunctionName(nameof(SubscriptionCommandOutput))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("otherId")] string otherId,
-            [PerperStream("publicationsStream")] IAsyncEnumerable<PublicationCommand> publicationsStream,
+            [PerperStream("publicationsStream")] IAsyncEnumerable<AgentCommand> publicationsStream,
             [PerperStream("outputStream")] IAsyncCollector<(string, object)> outputStream)
         {
             await publicationsStream.ForEachAsync(async publication =>
             {
-                await outputStream.AddAsync((otherId, publication.Payload));
+                await outputStream.AddAsync((otherId, publication.Message));
             }, CancellationToken.None);
         }
     }

@@ -16,12 +16,33 @@ namespace Apocryph.Runtime.FunctionApp.ValidatorSelection
 {
     public static class KingOfTheHillKeySearch
     {
+        private class State : KingOfTheHillBase.State
+        {
+        }
+
         [FunctionName(nameof(KingOfTheHillKeySearch))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("seenKeysStream")] IAsyncEnumerable<ValidatorKey> seenKeysStream,
             [PerperStream("outputStream")] IAsyncCollector<ECParameters> outputStream,
             CancellationToken cancellationToken)
         {
+            var state = await context.FetchStateAsync<State>() ?? new State();
+
+            Task.Run(() => // TODO: Run multiple threads in parallel
+            {
+                while (true)
+                {
+                    using var dsa = ECDsa.Create(ECCurve.NamedCurves.nistP521);
+                    var publicKey = new ValidatorKey{Key = dsa.ExportParameters(false)};
+                    if (state.AddKey(publicKey))
+                    {
+                        var privateKey = dsa.ExportParameters(true);
+                        outputStream.AddAsync(privateKey);
+                    }
+                }
+            });
+
+            await KingOfTheHillBase.Run(context, state, seenKeysStream);
         }
     }
 }

@@ -12,7 +12,7 @@ using Newtonsoft.Json;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
 
-namespace Apocryph.Runtime.FunctionApp.Commuication
+namespace Apocryph.Runtime.FunctionApp.Communication
 {
     public static class CallNotificationStepSplitter
     {
@@ -23,7 +23,7 @@ namespace Apocryph.Runtime.FunctionApp.Commuication
         {
             await notificationsStream.ForEachAsync(async notification =>
             {
-                await outputStream.AddAsync(notification.Value.Step);
+                await outputStream.AddAsync(notification.Value.Block);
             }, CancellationToken.None);
         }
     }

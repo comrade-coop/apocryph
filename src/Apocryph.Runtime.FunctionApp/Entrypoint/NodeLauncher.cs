@@ -20,7 +20,6 @@ namespace Apocryph.Runtime.FunctionApp.Entrypoint
             [Perper("ipfsGateway")] string ipfsGateway,
             [Perper("privateKey")] ECParameters privateKey,
             [Perper("self")] ValidatorKey self,
-            [Perper("genesisValidatorSet")] ValidatorSet genesisValidatorSet,
             CancellationToken cancellationToken)
         {
             await using var ipfsStream = await context.StreamFunctionAsync(nameof(IpfsInput), new
@@ -28,7 +27,7 @@ namespace Apocryph.Runtime.FunctionApp.Entrypoint
                 ipfsGateway,
                 topic = "apocryph-agent-0"
             });
-
+            /*
             await using var _unverifiedStepsStream = await context.StreamFunctionAsync(nameof(StepHashCollector), new
             {
                 inputStream = ipfsStream
@@ -71,7 +70,6 @@ namespace Apocryph.Runtime.FunctionApp.Entrypoint
             await using var validatorSetsStream = await context.StreamFunctionAsync(nameof(AgentZetoStepOrderVerifier), new
             {
                 stepsStream = verifiedStepsStream,
-                genesisValidatorSet,
                 ipfsGateway
             });
 
@@ -81,7 +79,7 @@ namespace Apocryph.Runtime.FunctionApp.Entrypoint
                 ipfsGateway,
                 privateKey,
                 self
-            });
+            });*/
 
             await context.BindOutput(cancellationToken);
         }

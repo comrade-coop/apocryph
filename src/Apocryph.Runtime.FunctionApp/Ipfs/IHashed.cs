@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using Ipfs;
@@ -16,7 +17,7 @@ namespace Apocryph.Runtime.FunctionApp.Ipfs
         {
             public HashedImpl(T value, Cid hash) {
                 Value = value;
-                Cid = hash;
+                Hash = hash;
             }
 
             public T Value { get; }

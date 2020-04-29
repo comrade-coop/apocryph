@@ -34,7 +34,7 @@ namespace Apocryph.Runtime.FunctionApp.Ipfs
                     // NOTE: Currently blocks other items on the stream and does not process them
                     // -- we should at least timeout
 
-                    var jToken = await ipfs.Dag.GetAsync(Cid.Read(hash.Bytes), CancellationToken.None);
+                    var jToken = await ipfs.Dag.GetAsync(hash, CancellationToken.None);
                     var item = jToken.ToObject<object>(JsonSerializer.Create(IpfsJsonSettings.DefaultSettings));
 
                     await outputStream.AddAsync(Hashed.Create(item, hash));

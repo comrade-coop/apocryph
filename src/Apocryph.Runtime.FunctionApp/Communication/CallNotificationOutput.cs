@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Agent;
+using Apocryph.Runtime.FunctionApp.Consensus;
 using Apocryph.Runtime.FunctionApp.Ipfs;
 using Ipfs;
 using Ipfs.Http;
@@ -12,7 +13,7 @@ using Newtonsoft.Json;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
 
-namespace Apocryph.Runtime.FunctionApp.Commuication
+namespace Apocryph.Runtime.FunctionApp.Communication
 {
     public static class CallNotificationOutput
     {
@@ -20,7 +21,7 @@ namespace Apocryph.Runtime.FunctionApp.Commuication
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("agentId")] string agentId,
             [PerperStream("notificationsStream")] IAsyncEnumerable<IHashed<CallNotification>> notificationsStream,
-            [PerperStream("notificationStepSplitterStream")] IAsyncEnumerable<IHashed<IAgentStep>> notificationStepSplitterStream,
+            [PerperStream("notificationStepSplitterStream")] IAsyncEnumerable<IHashed<AgentBlock>> notificationStepSplitterStream,
             [PerperStream("outputStream")] IAsyncCollector<(string, object)> outputStream)
         {
             await using var stepSplitterStreamEnumerator = notificationStepSplitterStream.GetAsyncEnumerator();
@@ -32,21 +33,17 @@ namespace Apocryph.Runtime.FunctionApp.Commuication
                 // TODO: Use Merkle proofs for this
                 var found = false;
 
-                if (step.Value is AgentOutput output)
+                foreach (var command in step.Value.Commands)
                 {
-                    foreach (var command in output.Commands)
+                    if (command == notification.Value.Command)
                     {
-                        if (command == notification.Value.Command)
-                        {
-                            found = true;
-                        }
+                        found = true;
                     }
-
                 }
 
                 if (found)
                 {
-                    await outputStream.AddAsync((notification.Value.From, notification.Value.Command.Payload));
+                    await outputStream.AddAsync((notification.Value.From, notification.Value.Command.Message));
                 }
             }, CancellationToken.None);
         }
