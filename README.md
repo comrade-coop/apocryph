@@ -103,7 +103,7 @@ cd SampleApp
 
 To run your agents on your developer machines you can use the 
 Apocryph testbed. To use it, you have to clone Apocryph GitHub repo
-and add reference to Apocryph.Agents.Testbed. 
+and add reference to Apocryph.Testbed. 
 
 There are two more NuGet packages that are required:
 
@@ -133,7 +133,7 @@ After theese configurations, your project file will be similar to this:
     </ItemGroup>
     
     <ItemGroup>
-      <ProjectReference Include="..\..\Apocryph.Agents.Testbed\Apocryph.Agents.Testbed.csproj" />
+      <ProjectReference Include="..\..\Apocryph.Testbed\Apocryph.Testbed.csproj" />
     </ItemGroup>
     
     <ItemGroup>
@@ -154,7 +154,7 @@ First, you have to enable the testbed and the logging as services. To do this ad
 Startup.cs file in the root of your project:
 
 ```csharp
-using Apocryph.Agents.Testbed;
+using Apocryph.Testbed;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -194,8 +194,8 @@ in the root of your project:
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Apocryph.Agents.Testbed;
-using Apocryph.Agents.Testbed.Api;
+using Apocryph.Testbed;
+using Apocryph.Agent;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
@@ -270,8 +270,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Apocryph.Agents.Testbed;
-using Apocryph.Agents.Testbed.Api;
+using Apocryph.Testbed;
+using Apocryph.Agent;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
@@ -337,13 +337,13 @@ similar way we can create the source code of our second agent ("AgentTwo").
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Apocryph.Agents.Testbed;
-using Apocryph.Agents.Testbed.Api;
+using Apocryph.Testbed;
+using Apocryph.Agent;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
 
-namespace Apocryph.Agent.FunctionApp.Agents
+namespace SampleAgents.FunctionApp.Agents
 {
     public class AgentTwo
     {

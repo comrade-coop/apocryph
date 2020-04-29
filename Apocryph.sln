@@ -1,18 +1,23 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+# 
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{E7399C0B-BA25-4A4E-B97D-14CE02EFD9C6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apocryph.FunctionApp", "src\Apocryph.FunctionApp\Apocryph.FunctionApp.csproj", "{1E974229-9988-49F5-B9E7-0FF7BF869375}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apocryph.Runtime.FunctionApp", "src\Apocryph.Runtime.FunctionApp\Apocryph.Runtime.FunctionApp.csproj", "{1E974229-9988-49F5-B9E7-0FF7BF869375}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docker", "docker", "{236740A3-41C1-48DB-9C34-B82077F048BE}"
-ProjectSection(SolutionItems) = preProject
-	docker\Dockerfile = docker\Dockerfile
-	docker\docker-compose.yaml = docker\docker-compose.yaml
-EndProjectSection
+	ProjectSection(SolutionItems) = preProject
+		docker\Dockerfile = docker\Dockerfile
+		docker\docker-compose.yaml = docker\docker-compose.yaml
+	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apocryph.Agents.Testbed", "src\Apocryph.Agents.Testbed\Apocryph.Agents.Testbed.csproj", "{803BE683-6C58-43CF-91CE-8324F1496B69}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apocryph.Testbed", "src\Apocryph.Testbed\Apocryph.Testbed.csproj", "{803BE683-6C58-43CF-91CE-8324F1496B69}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apocryph.Agent.FunctionApp", "src\Apocryph.Agent.FunctionApp\Apocryph.Agent.FunctionApp.csproj", "{C6017B68-4471-44CF-9BDF-817C3D102870}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleAgents.FunctionApp", "samples\SampleAgents.FunctionApp\SampleAgents.FunctionApp.csproj", "{C6017B68-4471-44CF-9BDF-817C3D102870}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apocryph.Agent", "src\Apocryph.Agent\Apocryph.Agent.csproj", "{8B5E8CD3-8061-488F-8DC0-6FFB0B3E214F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apocryph.Chain.FunctionApp", "src\Apocryph.Chain.FunctionApp\Apocryph.Chain.FunctionApp.csproj", "{EACA99C5-99C8-42B9-AEB0-D22DF2290983}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,6 +28,8 @@ Global
 		{1E974229-9988-49F5-B9E7-0FF7BF869375} = {E7399C0B-BA25-4A4E-B97D-14CE02EFD9C6}
 		{803BE683-6C58-43CF-91CE-8324F1496B69} = {E7399C0B-BA25-4A4E-B97D-14CE02EFD9C6}
 		{C6017B68-4471-44CF-9BDF-817C3D102870} = {E7399C0B-BA25-4A4E-B97D-14CE02EFD9C6}
+		{8B5E8CD3-8061-488F-8DC0-6FFB0B3E214F} = {E7399C0B-BA25-4A4E-B97D-14CE02EFD9C6}
+		{EACA99C5-99C8-42B9-AEB0-D22DF2290983} = {E7399C0B-BA25-4A4E-B97D-14CE02EFD9C6}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{1E974229-9988-49F5-B9E7-0FF7BF869375}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -37,5 +44,13 @@ Global
 		{C6017B68-4471-44CF-9BDF-817C3D102870}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C6017B68-4471-44CF-9BDF-817C3D102870}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C6017B68-4471-44CF-9BDF-817C3D102870}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8B5E8CD3-8061-488F-8DC0-6FFB0B3E214F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B5E8CD3-8061-488F-8DC0-6FFB0B3E214F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B5E8CD3-8061-488F-8DC0-6FFB0B3E214F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B5E8CD3-8061-488F-8DC0-6FFB0B3E214F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EACA99C5-99C8-42B9-AEB0-D22DF2290983}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EACA99C5-99C8-42B9-AEB0-D22DF2290983}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EACA99C5-99C8-42B9-AEB0-D22DF2290983}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EACA99C5-99C8-42B9-AEB0-D22DF2290983}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
