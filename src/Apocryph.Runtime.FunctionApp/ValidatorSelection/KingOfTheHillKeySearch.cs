@@ -23,6 +23,7 @@ namespace Apocryph.Runtime.FunctionApp.ValidatorSelection
         [FunctionName(nameof(KingOfTheHillKeySearch))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("seenKeysStream")] IAsyncEnumerable<ValidatorKey> seenKeysStream,
+            [PerperStream("saltsStream")] IAsyncEnumerable<(int, byte[])> saltsStream,
             [PerperStream("outputStream")] IAsyncCollector<ECParameters> outputStream,
             CancellationToken cancellationToken)
         {
@@ -42,7 +43,7 @@ namespace Apocryph.Runtime.FunctionApp.ValidatorSelection
                 }
             });
 
-            await KingOfTheHillBase.Run(context, state, seenKeysStream);
+            await KingOfTheHillBase.Run(context, state, seenKeysStream, saltsStream);
         }
     }
 }

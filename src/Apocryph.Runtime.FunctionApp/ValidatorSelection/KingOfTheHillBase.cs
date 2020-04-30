@@ -21,13 +21,15 @@ namespace Apocryph.Runtime.FunctionApp.ValidatorSelection
 
         public class State
         {
-            public ValidatorKey?[] Slots { get; set; }
+            public byte[][] Salts { get; set; } = new byte[0][];
+            public ValidatorKey?[] Slots { get; set; } = new ValidatorKey?[0];
 
             public bool AddKey(ValidatorKey key)
             {
                 var slot = (int)(new BigInteger(key.GetPosition()) % positions);
+                var salt = Salts[slot];
 
-                if (!(Slots[slot] is ValidatorKey slotKey && slotKey.CompareTo(key) < 0)) {
+                if (!(Slots[slot] is ValidatorKey slotKey && new BigInteger(slotKey.GetDifficulty(salt)) < new BigInteger(key.GetDifficulty(salt)))) {
                     Slots[slot] = key;
                     return true;
                 }
@@ -35,21 +37,34 @@ namespace Apocryph.Runtime.FunctionApp.ValidatorSelection
             }
         }
 
-        public static async Task Run<T>(PerperStreamContext context, T state, IAsyncEnumerable<ValidatorKey> seenKeysStream)
+        public static async Task Run<T>(PerperStreamContext context, T state, IAsyncEnumerable<ValidatorKey> seenKeysStream, IAsyncEnumerable<(int, byte[])> saltsStream)
             where T : State
         {
-            if (state.Slots == null || state.Slots.Length != positions)
+            if (state.Slots.Length != positions)
             {
                 state.Slots = new ValidatorKey?[positions];
             }
 
-            await seenKeysStream.ForEachAsync(async key =>
+            if (state.Salts.Length != positions)
             {
-                if (state.AddKey(key))
+                state.Salts = new byte[positions][];
+            }
+
+            await Task.WhenAll(
+                saltsStream.ForEachAsync(async item =>
                 {
+                    var (slot, salt) = item;
+                    state.Salts[slot] = salt;
                     await context.UpdateStateAsync(state);
-                }
-            }, CancellationToken.None);
+                }, CancellationToken.None),
+
+                seenKeysStream.ForEachAsync(async key =>
+                {
+                    if (state.AddKey(key))
+                    {
+                        await context.UpdateStateAsync(state);
+                    }
+                }, CancellationToken.None));
         }
     }
 }

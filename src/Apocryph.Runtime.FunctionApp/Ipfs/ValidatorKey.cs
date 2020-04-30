@@ -52,7 +52,14 @@ namespace Apocryph.Runtime.FunctionApp.Ipfs
 
         public byte[] GetPosition()
         {
-            return Key.Q.X;
+            return Key.Q.X.Concat(new byte[]{ 0 }).ToArray();
+        }
+
+        public byte[] GetDifficulty(byte[] salt)
+        {
+            var concatenated = (Key.Q.Y ?? new byte[]{}).Concat(salt ?? new byte[]{}).ToArray();
+            using var sha256Hash = SHA256.Create();
+            return sha256Hash.ComputeHash(concatenated).Concat(new byte[]{ 0 }).ToArray();
         }
 
         public override int GetHashCode()
