@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Agent;
 using Apocryph.Runtime.FunctionApp.Consensus;
+using Apocryph.Runtime.FunctionApp.Consensus.Core;
 using Apocryph.Runtime.FunctionApp.Ipfs;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
@@ -15,7 +16,7 @@ namespace Apocryph.Runtime.FunctionApp.Communication
     {
         [FunctionName(nameof(CommandSplitter))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("stepsStream")] IAsyncEnumerable<IHashed<AgentBlock>> stepsStream,
+            [PerperStream("stepsStream")] IAsyncEnumerable<IHashed<Block>> stepsStream,
             [PerperStream("outputStream")] IAsyncCollector<AgentCommand> outputStream)
         {
             await stepsStream.ForEachAsync(async output =>

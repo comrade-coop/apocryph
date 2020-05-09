@@ -12,6 +12,7 @@ using Microsoft.Azure.WebJobs;
 using Newtonsoft.Json;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
+using Block = Apocryph.Runtime.FunctionApp.Consensus.Core.Block;
 
 namespace Apocryph.Runtime.FunctionApp.Communication
 {
@@ -21,7 +22,7 @@ namespace Apocryph.Runtime.FunctionApp.Communication
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("agentId")] string agentId,
             [PerperStream("notificationsStream")] IAsyncEnumerable<IHashed<CallNotification>> notificationsStream,
-            [PerperStream("notificationStepSplitterStream")] IAsyncEnumerable<IHashed<AgentBlock>> notificationStepSplitterStream,
+            [PerperStream("notificationStepSplitterStream")] IAsyncEnumerable<IHashed<Block>> notificationStepSplitterStream,
             [PerperStream("outputStream")] IAsyncCollector<(string, object)> outputStream)
         {
             await using var stepSplitterStreamEnumerator = notificationStepSplitterStream.GetAsyncEnumerator();

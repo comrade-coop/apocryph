@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Agent;
 using Apocryph.Runtime.FunctionApp.Consensus;
+using Apocryph.Runtime.FunctionApp.Consensus.Core;
 using Apocryph.Runtime.FunctionApp.Ipfs;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
@@ -18,8 +19,8 @@ namespace Apocryph.Runtime.FunctionApp.Communication
         [FunctionName(nameof(Runtime))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("self")] ValidatorKey self,
-            [PerperStream("inputStream")] IAsyncEnumerable<IHashed<AgentBlock>> inputStream,
-            [PerperStream("outputStream")] IAsyncCollector<AgentBlock> outputStream,
+            [PerperStream("inputStream")] IAsyncEnumerable<IHashed<Block>> inputStream,
+            [PerperStream("outputStream")] IAsyncCollector<Block> outputStream,
             CancellationToken cancellationToken,
             ILogger logger)
         {

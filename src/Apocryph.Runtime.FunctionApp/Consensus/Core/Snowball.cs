@@ -5,55 +5,48 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Apocryph.Runtime.FunctionApp.Consensus
+namespace Apocryph.Runtime.FunctionApp.Consensus.Core
 {
-    public class SnowballLoop<T> where T : class, IEquatable<T>
+    public class Snowball<T> where T : class, IEquatable<T>
     {
         private readonly Node _node;
         private readonly int _k;
         private readonly double _alpha;
         private readonly int _beta;
 
-        private readonly Func<IEnumerable<QueryMessage<T>>, CancellationToken, Task<IAsyncEnumerable<AnswerMessage<T>>>> _query;
+        private readonly Func<Query<T>[], CancellationToken, IAsyncEnumerable<Query<T>>> _send;
 
-        private readonly Func<QueryMessage<T>, T?, T?, AnswerMessage<T>> _answer;
+        private readonly Func<Query<T>, T?, T?, Query<T>> _respond;
         private readonly T? _opinion;
 
         private T? _value;
         private readonly TaskCompletionSource<T> _initialValueTask;
 
-        public SnowballLoop(Node node,
-            Func<IEnumerable<QueryMessage<T>>, CancellationToken, Task<IAsyncEnumerable<AnswerMessage<T>>>> query,
-            Func<QueryMessage<T>, T?, T?, AnswerMessage<T>> answer,
-            T? opinion = null):this(node, 100, 0.6, 10, query, answer, opinion)
-        {
-        }
-
-        public SnowballLoop(Node node,
+        public Snowball(Node node,
             int k, double alpha, int beta,
-            Func<IEnumerable<QueryMessage<T>>, CancellationToken, Task<IAsyncEnumerable<AnswerMessage<T>>>> query,
-            Func<QueryMessage<T>, T?, T?, AnswerMessage<T>> answer,
+            Func<Query<T>[], CancellationToken, IAsyncEnumerable<Query<T>>> send,
+            Func<Query<T>, T?, T?, Query<T>> respond,
             T? opinion = null)
         {
             _node = node;
             _k = k;
             _alpha = alpha;
             _beta = beta;
-            _query = query;
-            _answer = answer;
+            _send = send;
+            _respond = respond;
             _opinion = opinion;
 
             _initialValueTask = new TaskCompletionSource<T>();
         }
 
-        public AnswerMessage<T> Query(QueryMessage<T> message)
+        public Query<T> Query(Query<T> message)
         {
             if (_opinion is null)
             {
                 _initialValueTask.TrySetResult(message.Value);
             }
 
-            return _answer(message, _value, _opinion);
+            return _respond(message, _value, _opinion);
         }
 
         public async Task<T> Run(Node[] receivers,
@@ -66,8 +59,8 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
             while (!cancellationToken.IsCancellationRequested)
             {
                 var subset = receivers.OrderBy(_ => RandomNumberGenerator.GetInt32(receivers.Length)).Take(_k);
-                var messages = subset.Select(receiver => new QueryMessage<T>(_value, _node, receiver));
-                var result = await _query(messages, cancellationToken);
+                var messages = subset.Select(receiver => new Query<T>(_value, _node, receiver, QueryVerb.Request)).ToArray();
+                var result = _send(messages, cancellationToken);
                 var answers = await result.ToArrayAsync(cancellationToken);
                 var answersValues =
                     from message in answers
