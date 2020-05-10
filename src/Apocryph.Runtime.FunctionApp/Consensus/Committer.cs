@@ -14,13 +14,11 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
         [FunctionName(nameof(Committer))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("node")] Node node,
-            [PerperStream("acceptor")] IAsyncEnumerable<Gossip<Block>> acceptor,
+            [PerperStream("acceptor")] IAsyncEnumerable<Message<Block>> acceptor,
             [PerperStream("output")] IAsyncCollector<Block> output,
             CancellationToken cancellationToken)
         {
-            var committedGossip = await acceptor.FirstAsync(
-                gossip => gossip.Signers.Contains(node) && gossip.Verb == GossipVerb.Commit,
-                cancellationToken);
+            var committedGossip = await acceptor.FirstAsync(cancellationToken);
             await output.AddAsync(committedGossip.Value, cancellationToken);
         }
     }

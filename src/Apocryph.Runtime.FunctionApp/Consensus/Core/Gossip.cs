@@ -17,7 +17,6 @@ namespace Apocryph.Runtime.FunctionApp.Consensus.Core
     public enum GossipVerb
     {
         Confirm,
-        Reject,
-        Commit
+        Reject
     }
 }

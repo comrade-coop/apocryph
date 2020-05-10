@@ -18,7 +18,8 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
         private bool _accepted;
 
         private Node? _node;
-        private IAsyncCollector<Query<Block>>? _output;
+        private IAsyncCollector<object>? _output;
+        private Snowball<Block>? _snowball;
 
         public Proposer()
         {
@@ -31,7 +32,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
             [Perper("node")] Node node,
             [Perper("nodes")] Node[] nodes,
             [PerperStream("queries")] IAsyncEnumerable<Query<Block>> queries,
-            [PerperStream("output")] IAsyncCollector<Query<Block>> output,
+            [PerperStream("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
         {
             _node = node;
@@ -43,10 +44,10 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
                 opinion = await Propose();
             }
 
-            var snowball = new Snowball<Block>(_node, 100, 0.6, 3,
+            _snowball = new Snowball<Block>(_node, 100, 0.6, 3,
                 SnowballSend, SnowballRespond, opinion);
             await Task.WhenAll(
-                RunSnowball(snowball, nodes, cancellationToken),
+                RunSnowball(nodes, cancellationToken),
                 HandleQueries(queries, cancellationToken));
         }
 
@@ -61,19 +62,23 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
             {
                 if (_accepted) break;
 
-                if (query.Receiver == _node)
+                if (query.Receiver == _node && query.Verb == QueryVerb.Response)
                 {
                     await _channel.Writer.WriteAsync(query, cancellationToken);
+                }
+                else if (query.Receiver == _node && query.Verb == QueryVerb.Request)
+                {
+                    await _output!.AddAsync(_snowball!.Query(query), cancellationToken);
                 }
             }
         }
 
-        private async Task RunSnowball(Snowball<Block> snowball, Node[] nodes, CancellationToken cancellationToken)
+        private async Task RunSnowball(Node[] nodes, CancellationToken cancellationToken)
         {
-            var acceptedProposal = await snowball.Run(nodes, cancellationToken);
+            var acceptedProposal = await _snowball!.Run(nodes, cancellationToken);
             _accepted = true;
 
-            await _output!.AddAsync(new Query<Block>(acceptedProposal, _node!, _node!, QueryVerb.Accept), cancellationToken);
+            await _output!.AddAsync(new Message<Block>(acceptedProposal, MessageType.Accepted), cancellationToken);
         }
 
         private async IAsyncEnumerable<Query<Block>> SnowballSend(Query<Block>[] queries, [EnumeratorCancellation] CancellationToken cancellationToken)

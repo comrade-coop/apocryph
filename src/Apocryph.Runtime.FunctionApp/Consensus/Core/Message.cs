@@ -14,7 +14,9 @@ namespace Apocryph.Runtime.FunctionApp.Consensus.Core
 
     public enum MessageType
     {
+        Accepted,
         Valid,
-        Invalid
+        Invalid,
+        Committed
     }
 }

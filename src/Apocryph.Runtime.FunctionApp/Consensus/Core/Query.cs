@@ -22,7 +22,6 @@ namespace Apocryph.Runtime.FunctionApp.Consensus.Core
     public enum QueryVerb
     {
         Request,
-        Response,
-        Accept
+        Response
     }
 }

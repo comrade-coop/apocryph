@@ -11,16 +11,18 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
 {
     public class Acceptor
     {
-        private Dictionary<Block, bool> _validBlocks;
+        private readonly Dictionary<Block, bool> _validBlocks;
         private Block? _acceptedBlock;
+        private readonly TaskCompletionSource<bool> _acceptedBlockValidTaskCompletionSource;
         private bool _committed;
 
         private Node? _node;
-        private IAsyncCollector<Gossip<Block>>? _output;
+        private IAsyncCollector<object>? _output;
 
         public Acceptor()
         {
             _validBlocks = new Dictionary<Block, bool>();
+            _acceptedBlockValidTaskCompletionSource = new TaskCompletionSource<bool>();
             _committed = false;
         }
 
@@ -29,9 +31,9 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
             [Perper("node")] Node node,
             [Perper("nodes")] Node[] nodes,
             [PerperStream("gossips")] IAsyncEnumerable<Gossip<Block>> gossips,
-            [PerperStream("proposer")] IAsyncEnumerable<Query<Block>> proposer,
+            [PerperStream("proposer")] IAsyncEnumerable<Message<Block>> proposer,
             [PerperStream("validator")] IAsyncEnumerable<Message<Block>> validator,
-            [PerperStream("output")] IAsyncCollector<Gossip<Block>> output,
+            [PerperStream("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
         {
             _node = node;
@@ -43,15 +45,17 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
                 UpdateValidBlocks(validator, cancellationToken));
         }
 
-        private async Task HandleProposals(IAsyncEnumerable<Query<Block>> proposer,
+        private async Task HandleProposals(IAsyncEnumerable<Message<Block>> proposer,
             CancellationToken cancellationToken)
         {
-            var acceptQuery = await proposer.FirstAsync(
-                query => query.Sender == _node && query.Receiver == _node && query.Verb == QueryVerb.Accept,
-                cancellationToken);
+            var acceptQuery = await proposer.FirstAsync(cancellationToken);
             _acceptedBlock = acceptQuery.Value;
-            await _output!.AddAsync(new Gossip<Block>(_acceptedBlock, new[] {_node!}, GossipVerb.Confirm),
-                cancellationToken);
+
+            var acceptedBlockValid = _validBlocks.TryGetValue(_acceptedBlock, out var value)
+                ? value
+                : await _acceptedBlockValidTaskCompletionSource.Task;
+            await _output!.AddAsync(new Gossip<Block>(_acceptedBlock, new[] {_node!},
+                acceptedBlockValid ? GossipVerb.Confirm : GossipVerb.Reject), cancellationToken);
         }
 
         private async Task HandleGossips(IAsyncEnumerable<Gossip<Block>> gossips,
@@ -65,8 +69,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
                     3 * gossip.Signers.Length > 2 * nodes.Length)
                 {
                     _committed = true;
-                    await _output!.AddAsync(new Gossip<Block>(gossip.Value, gossip.Signers, GossipVerb.Commit),
-                        cancellationToken);
+                    await _output!.AddAsync(new Message<Block>(gossip.Value, MessageType.Committed), cancellationToken);
                     break;
                 }
 
@@ -99,6 +102,11 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
                 if (_committed) break;
 
                 _validBlocks[message.Value] = message.Type == MessageType.Valid;
+
+                if (_acceptedBlock != null && _validBlocks.TryGetValue(_acceptedBlock, out var acceptedBlockValid))
+                {
+                    _acceptedBlockValidTaskCompletionSource.TrySetResult(acceptedBlockValid);
+                }
             }
         }
     }
