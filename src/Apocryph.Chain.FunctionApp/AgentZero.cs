@@ -17,7 +17,6 @@ namespace Apocryph.Chain.FunctionApp
         public class State
         {
             public BalancesState Balances { get; set; } = new BalancesState();
-            public StakesState Stakes { get; set; } = new StakesState();
             public AgentsState Agents { get; set; } = new AgentsState();
         }
 
@@ -43,37 +42,14 @@ namespace Apocryph.Chain.FunctionApp
                     });
                     break;
 
-                case StakeMessage stakeMessage:
-                    context.State.Balances.RemoveTokens(sender, stakeMessage.Amount);
-                    context.State.Stakes.AddStake(sender, stakeMessage.To, stakeMessage.Amount);
-                    context.MakePublication(new StakePublication
-                    {
-                        From = sender,
-                        To = stakeMessage.To,
-                        Amount = stakeMessage.Amount,
-                    });
-                    break;
-
-                case UnstakeMessage unstakeMessage:
-                    context.State.Stakes.RemoveStake(sender, unstakeMessage.From, unstakeMessage.Amount);
-                    context.State.Balances.AddTokens(sender, unstakeMessage.Amount);
-                    context.MakePublication(new StakePublication
-                    {
-                        From = sender,
-                        To = unstakeMessage.From,
-                        Amount = -unstakeMessage.Amount,
-                    });
-                    break;
-
                 case RegisterAgentMessage registerAgentMessage:
                     context.State.Balances.RemoveTokens(sender, registerAgentMessage.InitialBalance);
                     context.State.Balances.AddTokens(registerAgentMessage.AgentId, registerAgentMessage.InitialBalance);
-                    context.State.Agents.RegisterAgent(registerAgentMessage.AgentId);
-                    context.MakePublication(new ValidatorSetPublication
-                    {
-                        AgentId = registerAgentMessage.AgentId,
-                        Weights = context.State.Stakes.Amounts.ToDictionary(kv => kv.Key, kv => kv.Value.Values.Aggregate(BigInteger.Add)),
-                    });
+                    context.State.Agents.SetAgentBlock(registerAgentMessage.AgentId, registerAgentMessage.BlockId);
+                    break;
+
+                case SetAgentBlockMessage setAgentBlockMessage:
+                    context.State.Agents.SetAgentBlock(setAgentBlockMessage.AgentId, setAgentBlockMessage.BlockId);
                     break;
             }
             return context;

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Security.Cryptography;
 using Newtonsoft.Json;
+using Ipfs;
 
 namespace Apocryph.Runtime.FunctionApp.Ipfs
 {
@@ -55,9 +56,9 @@ namespace Apocryph.Runtime.FunctionApp.Ipfs
             return Key.Q.X.Concat(new byte[]{ 0 }).ToArray();
         }
 
-        public byte[] GetDifficulty(byte[] salt)
+        public byte[] GetDifficulty(Cid agentId, byte[] salt)
         {
-            var concatenated = (Key.Q.Y ?? new byte[]{}).Concat(salt ?? new byte[]{}).ToArray();
+            var concatenated = (Key.Q.Y ?? new byte[]{}).Concat(salt ?? new byte[]{}).Concat(agentId.ToArray()).ToArray();
             using var sha256Hash = SHA256.Create();
             return sha256Hash.ComputeHash(concatenated).Concat(new byte[]{ 0 }).ToArray();
         }

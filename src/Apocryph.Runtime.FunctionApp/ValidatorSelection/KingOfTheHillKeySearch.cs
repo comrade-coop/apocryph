@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Agent;
 using Apocryph.Runtime.FunctionApp.Ipfs;
+using Ipfs;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
@@ -18,13 +19,15 @@ namespace Apocryph.Runtime.FunctionApp.ValidatorSelection
     {
         private class State : KingOfTheHillBase.State
         {
+            public HashSet<Cid> AgentIds { get; set; } = new HashSet<Cid>();
         }
 
         [FunctionName(nameof(KingOfTheHillKeySearch))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("seenKeysStream")] IAsyncEnumerable<ValidatorKey> seenKeysStream,
+            [PerperStream("claimsStream")] IAsyncEnumerable<ValidatorSlotClaim> claimsStream,
+            [PerperStream("agentIdsStream")] IAsyncEnumerable<Cid> agentIdsStream,
             [PerperStream("saltsStream")] IAsyncEnumerable<(int, byte[])> saltsStream,
-            [PerperStream("outputStream")] IAsyncCollector<ECParameters> outputStream,
+            [PerperStream("outputStream")] IAsyncCollector<(ECParameters, Cid)> outputStream,
             CancellationToken cancellationToken)
         {
             var state = await context.FetchStateAsync<State>() ?? new State();
@@ -35,15 +38,24 @@ namespace Apocryph.Runtime.FunctionApp.ValidatorSelection
                 {
                     using var dsa = ECDsa.Create(ECCurve.NamedCurves.nistP521);
                     var publicKey = new ValidatorKey{Key = dsa.ExportParameters(false)};
-                    if (state.AddKey(publicKey))
+                    var privateKey = dsa.ExportParameters(true);
+                    foreach (var agentId in state.AgentIds)
                     {
-                        var privateKey = dsa.ExportParameters(true);
-                        outputStream.AddAsync(privateKey);
+                        if (state.AddKey(publicKey, agentId))
+                        {
+                            outputStream.AddAsync((privateKey, agentId));
+                        }
                     }
                 }
             });
 
-            await KingOfTheHillBase.Run(context, state, seenKeysStream, saltsStream);
+            await Task.WhenAll(
+                agentIdsStream.ForEachAsync(async agentId =>
+                {
+                    state.AgentIds.Add(agentId);
+                    await context.UpdateStateAsync(state);
+                }, CancellationToken.None),
+                KingOfTheHillBase.Run(context, state, claimsStream, saltsStream));
         }
     }
 }

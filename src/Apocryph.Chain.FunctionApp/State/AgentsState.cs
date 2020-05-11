@@ -11,15 +11,11 @@ namespace Apocryph.Chain.FunctionApp.State
 {
     public class AgentsState
     {
-        public struct EmptyStruct
-        {
-        }
+        public IDictionary<string, byte[]> Agents { get; set; } = new Dictionary<string, byte[]>();
 
-        public IDictionary<string, EmptyStruct> Agents { get; set; } = new Dictionary<string, EmptyStruct>();
-
-        public void RegisterAgent(string agentId)
+        public void SetAgentBlock(string agentId, byte[] block)
         {
-            Agents[agentId] = new EmptyStruct();
+            Agents[agentId] = block;
         }
     }
 }

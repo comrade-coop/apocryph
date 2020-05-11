@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Numerics;
 using Apocryph.Agent;
 using Apocryph.Runtime.FunctionApp.Ipfs;
+using Ipfs;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
@@ -22,29 +23,34 @@ namespace Apocryph.Runtime.FunctionApp.ValidatorSelection
         public class State
         {
             public byte[][] Salts { get; set; } = new byte[0][];
-            public ValidatorKey?[] Slots { get; set; } = new ValidatorKey?[0];
+            public Dictionary<Cid, ValidatorKey?[]> Slots { get; set; } = new Dictionary<Cid, ValidatorKey?[]>();
 
-            public bool AddKey(ValidatorKey key)
+            public bool AddKey(ValidatorKey key, Cid agentId)
             {
+                if (!Slots.ContainsKey(agentId) || Slots[agentId].Length != positions)
+                {
+                    Slots[agentId] = new ValidatorKey?[positions];
+                }
+
+                var agentSlots = Slots[agentId];
                 var slot = (int)(new BigInteger(key.GetPosition()) % positions);
                 var salt = Salts[slot];
 
-                if (!(Slots[slot] is ValidatorKey slotKey && new BigInteger(slotKey.GetDifficulty(salt)) < new BigInteger(key.GetDifficulty(salt)))) {
-                    Slots[slot] = key;
+                if (!(agentSlots[slot] is ValidatorKey slotKey
+                    && new BigInteger(key.GetDifficulty(agentId, salt)) > new BigInteger(slotKey.GetDifficulty(agentId, salt))))
+                {
+                    agentSlots[slot] = key;
                     return true;
                 }
                 return false;
             }
         }
 
-        public static async Task Run<T>(PerperStreamContext context, T state, IAsyncEnumerable<ValidatorKey> seenKeysStream, IAsyncEnumerable<(int, byte[])> saltsStream)
+        public static async Task Run<T>(PerperStreamContext context, T state,
+            IAsyncEnumerable<ValidatorSlotClaim> claimsStream,
+            IAsyncEnumerable<(int, byte[])> saltsStream)
             where T : State
         {
-            if (state.Slots.Length != positions)
-            {
-                state.Slots = new ValidatorKey?[positions];
-            }
-
             if (state.Salts.Length != positions)
             {
                 state.Salts = new byte[positions][];
@@ -58,9 +64,9 @@ namespace Apocryph.Runtime.FunctionApp.ValidatorSelection
                     await context.UpdateStateAsync(state);
                 }, CancellationToken.None),
 
-                seenKeysStream.ForEachAsync(async key =>
+                claimsStream.ForEachAsync(async claim =>
                 {
-                    if (state.AddKey(key))
+                    if (state.AddKey(claim.Key, claim.AgentId))
                     {
                         await context.UpdateStateAsync(state);
                     }
