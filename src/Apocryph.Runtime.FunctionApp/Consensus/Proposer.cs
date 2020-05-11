@@ -15,7 +15,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
     public class Proposer
     {
         private readonly Channel<Query<Block>> _channel;
-        private bool _accepted;
+        private bool _committed;
 
         private Node? _node;
         private IAsyncCollector<object>? _output;
@@ -24,7 +24,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
         public Proposer()
         {
             _channel = Channel.CreateUnbounded<Query<Block>>();
-            _accepted = false;
+            _committed = false;
         }
 
         [FunctionName(nameof(Proposer))]
@@ -60,7 +60,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
         {
             await foreach (var query in queries.WithCancellation(cancellationToken))
             {
-                if (_accepted) break;
+                if (_committed) break;
 
                 if (query.Receiver == _node && query.Verb == QueryVerb.Response)
                 {
@@ -75,10 +75,10 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
 
         private async Task RunSnowball(Node[] nodes, CancellationToken cancellationToken)
         {
-            var acceptedProposal = await _snowball!.Run(nodes, cancellationToken);
-            _accepted = true;
+            var committedProposal = await _snowball!.Run(nodes, cancellationToken);
+            _committed = true;
 
-            await _output!.AddAsync(new Message<Block>(acceptedProposal, MessageType.Accepted), cancellationToken);
+            await _output!.AddAsync(new Message<Block>(committedProposal, MessageType.Committed), cancellationToken);
         }
 
         private async IAsyncEnumerable<Query<Block>> SnowballSend(Query<Block>[] queries, [EnumeratorCancellation] CancellationToken cancellationToken)

@@ -24,8 +24,8 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
             {
                 var proposer = await context.StreamFunctionAsync(typeof(Proposer), new {node, nodes, queries});
                 var validator = await context.StreamFunctionAsync(typeof(Validator), new {node, queries});
-                var acceptor = await context.StreamFunctionAsync(typeof(Acceptor), new {node, nodes, gossips, proposer, validator});
-                var committer = await context.StreamFunctionAsync(typeof(Committer), new {node, acceptor});
+                var acceptor = await context.StreamFunctionAsync(typeof(Committer), new {node, nodes, gossips, proposer, validator});
+                var committer = await context.StreamFunctionAsync(typeof(Acceptor), new {node, acceptor});
 
                 await Task.WhenAll(new[] {proposer, validator, acceptor, committer}.Select(
                     stream => output.AddAsync(stream, cancellationToken)));

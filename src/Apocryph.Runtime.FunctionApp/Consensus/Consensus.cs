@@ -20,8 +20,8 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
 
             var factory = await context.StreamFunctionAsync(typeof(Factory), new {nodes, queries, gossips});
             await context.StreamFunctionAsync(queries, new {factory, filter = typeof(Proposer)});
-            await context.StreamFunctionAsync(gossips, new {factory, filter = typeof(Acceptor)});
-            await context.StreamFunctionAsync(output, new {factory, filter = typeof(Committer)});
+            await context.StreamFunctionAsync(gossips, new {factory, filter = typeof(Committer)});
+            await context.StreamFunctionAsync(output, new {factory, filter = typeof(Acceptor)});
 
             await context.BindOutput(output, cancellationToken);
         }
