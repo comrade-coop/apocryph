@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Apocryph.Chain.FunctionApp.Messages
+namespace Apocryph.AgentZero.Messages
 {
     public class RegisterAgentMessage : SetAgentBlockMessage
     {

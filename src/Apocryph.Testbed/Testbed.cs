@@ -23,8 +23,8 @@ namespace Apocryph.Testbed
             CancellationToken cancellationToken)
         {
             var runtime = context.DeclareStream(runtimeDelegate);
-            await context.StreamFunctionAsync(runtime, new {agentDelegate, commands = runtime});
-            await context.StreamActionAsync(monitorDelegate, new {commands = runtime});
+            await context.StreamFunctionAsync(runtime, new { agentDelegate, commands = runtime });
+            await context.StreamActionAsync(monitorDelegate, new { commands = runtime });
             await context.BindOutput(cancellationToken);
         }
 
@@ -109,7 +109,7 @@ namespace Apocryph.Testbed
                 new AgentCapability
                 {
                     Issuer = agentId,
-                    MessageTypes = new[] {initMessage.GetType()}
+                    MessageTypes = new[] { initMessage.GetType() }
                 }, initMessage);
             states.Add(agentContext.InternalState);
             await output.AddAsync(agentContext.GetCommands());
@@ -145,7 +145,7 @@ namespace Apocryph.Testbed
                     }
                     else if (command.CommandType == AgentCommandType.Publish && publishers.Contains(commandsBatch.Origin))
                     {
-                        var agentContext = await entryPoint(states.Last(), new AgentCapability {Issuer = agentId}, command.Message);
+                        var agentContext = await entryPoint(states.Last(), new AgentCapability { Issuer = agentId }, command.Message);
                         states.Add(agentContext.InternalState);
                         await output.AddAsync(agentContext.GetCommands(), cancellationToken);
                     }

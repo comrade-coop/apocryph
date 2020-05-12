@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Apocryph.Agent;
-using Apocryph.Chain.FunctionApp.Messages;
-using Apocryph.Chain.FunctionApp.Publications;
-using Apocryph.Chain.FunctionApp.State;
+using Apocryph.AgentZero.Messages;
+using Apocryph.AgentZero.Publications;
+using Apocryph.AgentZero.State;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
 
-namespace Apocryph.Chain.FunctionApp
+namespace Apocryph.AgentZero
 {
     public static class AgentZeroWorker
     {

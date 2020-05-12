@@ -17,7 +17,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleAgents.FunctionApp", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apocryph.Agent", "src\Apocryph.Agent\Apocryph.Agent.csproj", "{8B5E8CD3-8061-488F-8DC0-6FFB0B3E214F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apocryph.Chain.FunctionApp", "src\Apocryph.Chain.FunctionApp\Apocryph.Chain.FunctionApp.csproj", "{EACA99C5-99C8-42B9-AEB0-D22DF2290983}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apocryph.AgentZero", "src\Apocryph.AgentZero\Apocryph.AgentZero.csproj", "{EACA99C5-99C8-42B9-AEB0-D22DF2290983}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

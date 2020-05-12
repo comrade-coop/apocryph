@@ -17,10 +17,10 @@ namespace SampleAgents.FunctionApp.Agents
             var context = new AgentContext(state, self);
             if (message is AgentRootInitMessage rootInitMessage)
             {
-                var cap = context.IssueCapability(new[] {typeof(PingPongMessage)});
-                context.CreateAgent("AgentTwoId", "SampleAgents.FunctionApp.Agents.AgentTwoWrapper.Run", new PingPongMessage {AgentOne = cap}, null);
+                var cap = context.IssueCapability(new[] { typeof(PingPongMessage) });
+                context.CreateAgent("AgentTwoId", "SampleAgents.FunctionApp.Agents.AgentTwoWrapper.Run", new PingPongMessage { AgentOne = cap }, null);
             }
-            else if(message is PingPongMessage pingPongMessage)
+            else if (message is PingPongMessage pingPongMessage)
             {
                 context.SendMessage(pingPongMessage.AgentTwo, new PingPongMessage
                 {

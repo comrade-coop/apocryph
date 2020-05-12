@@ -54,7 +54,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus.Core
         {
             _value = _opinion ?? await _initialValueTask.Task;
             var lastValue = _value;
-            var d = new Dictionary<T, int> {[_value] = 0};
+            var d = new Dictionary<T, int> { [_value] = 0 };
             var count = 0;
             while (!cancellationToken.IsCancellationRequested)
             {

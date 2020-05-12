@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Apocryph.Chain.FunctionApp.Publications
+namespace Apocryph.AgentZero.Publications
 {
     public class TransferPublication
     {

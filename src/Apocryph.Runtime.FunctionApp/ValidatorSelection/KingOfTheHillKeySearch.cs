@@ -7,7 +7,6 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Agent;
-using Apocryph.Runtime.FunctionApp.Ipfs;
 using Ipfs;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
@@ -37,7 +36,7 @@ namespace Apocryph.Runtime.FunctionApp.ValidatorSelection
                 while (true)
                 {
                     using var dsa = ECDsa.Create(ECCurve.NamedCurves.nistP521);
-                    var publicKey = new ValidatorKey{Key = dsa.ExportParameters(false)};
+                    var publicKey = new ValidatorKey { Key = dsa.ExportParameters(false) };
                     var privateKey = dsa.ExportParameters(true);
                     foreach (var agentId in state.AgentIds)
                     {

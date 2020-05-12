@@ -14,16 +14,16 @@ namespace SampleAgents.FunctionApp.Agents
         public Task<AgentContext> Run(object state, AgentCapability self, object message)
         {
             var context = new AgentContext(state, self);
-            if(message is PingPongMessage initMessage && initMessage.AgentTwo == null)
+            if (message is PingPongMessage initMessage && initMessage.AgentTwo == null)
             {
-                var cap = context.IssueCapability(new[] {typeof(PingPongMessage)});
+                var cap = context.IssueCapability(new[] { typeof(PingPongMessage) });
                 context.SendMessage(initMessage.AgentOne, new PingPongMessage
                 {
                     AgentOne = initMessage.AgentOne,
                     AgentTwo = cap
                 }, null);
             }
-            else if(message is PingPongMessage pingPongMessage)
+            else if (message is PingPongMessage pingPongMessage)
             {
                 context.SendMessage(pingPongMessage.AgentOne, new PingPongMessage
                 {

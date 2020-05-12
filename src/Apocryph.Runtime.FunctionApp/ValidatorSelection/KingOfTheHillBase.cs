@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Numerics;
 using Apocryph.Agent;
-using Apocryph.Runtime.FunctionApp.Ipfs;
 using Ipfs;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;

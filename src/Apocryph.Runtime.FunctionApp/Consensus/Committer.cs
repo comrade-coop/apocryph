@@ -54,7 +54,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
             var committedBlockValid = _validBlocks.TryGetValue(_committedBlock, out var value)
                 ? value
                 : await _committedBlockValidTaskCompletionSource.Task;
-            await _output!.AddAsync(new Gossip<Block>(_committedBlock, new[] {_node!},
+            await _output!.AddAsync(new Gossip<Block>(_committedBlock, new[] { _node! },
                 committedBlockValid ? GossipVerb.Confirm : GossipVerb.Reject), cancellationToken);
         }
 
@@ -82,7 +82,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
                 {
                     var signers = gossip.Verb == GossipVerb.Confirm
                         ? gossip.Signers.Append(_node!).ToArray()
-                        : new[] {_node!};
+                        : new[] { _node! };
                     await _output!.AddAsync(new Gossip<Block>(gossip.Value, signers, GossipVerb.Confirm),
                         cancellationToken);
                 }
@@ -90,7 +90,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
                 {
                     var signers = gossip.Verb == GossipVerb.Reject
                         ? gossip.Signers.Append(_node!).ToArray()
-                        : new[] {_node!};
+                        : new[] { _node! };
                     await _output!.AddAsync(new Gossip<Block>(gossip.Value, signers, GossipVerb.Reject),
                         cancellationToken);
                 }

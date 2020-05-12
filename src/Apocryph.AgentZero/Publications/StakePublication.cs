@@ -1,10 +1,12 @@
 using System.Numerics;
 
-namespace Apocryph.Chain.FunctionApp.Messages
+namespace Apocryph.AgentZero.Publications
 {
-    public class TransferMessage
+    public class StakePublication
     {
         public BigInteger Amount { get; set; }
+
+        public string From { get; set; }
 
         public string To { get; set; }
     }

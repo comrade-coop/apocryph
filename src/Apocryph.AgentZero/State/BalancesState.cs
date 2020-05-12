@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Apocryph.Agent;
-using Apocryph.Chain.FunctionApp.Messages;
-using Apocryph.Chain.FunctionApp.Publications;
+using Apocryph.AgentZero.Messages;
+using Apocryph.AgentZero.Publications;
 using Microsoft.Azure.WebJobs;
 
-namespace Apocryph.Chain.FunctionApp.State
+namespace Apocryph.AgentZero.State
 {
     public class BalancesState
     {

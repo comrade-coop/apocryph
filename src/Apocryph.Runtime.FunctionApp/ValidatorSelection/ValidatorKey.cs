@@ -4,24 +4,22 @@ using System.Security.Cryptography;
 using Newtonsoft.Json;
 using Ipfs;
 
-namespace Apocryph.Runtime.FunctionApp.Ipfs
+namespace Apocryph.Runtime.FunctionApp.ValidatorSelection
 {
     public struct ValidatorKey : IComparable<ValidatorKey>
     {
         public ECParameters Key { get; set; }
 
-        public static ValidatorSignature GenerateSignature(ECParameters privateKey, byte[] dataBytes)
+        public static byte[] GenerateSignature(ECParameters privateKey, byte[] dataBytes)
         {
             using var ecdsa = ECDsa.Create(privateKey);
-            return new ValidatorSignature{
-                Bytes = ecdsa.SignData(dataBytes, HashAlgorithmName.SHA256)
-            };
+            return ecdsa.SignData(dataBytes, HashAlgorithmName.SHA256);
         }
 
-        public bool ValidateSignature(byte[] dataBytes, ValidatorSignature signature)
+        public bool ValidateSignature(byte[] dataBytes, byte[] signature)
         {
             using var ecdsa = ECDsa.Create(Key);
-            return ecdsa.VerifyData(dataBytes, signature.Bytes, HashAlgorithmName.SHA256);
+            return ecdsa.VerifyData(dataBytes, signature, HashAlgorithmName.SHA256);
         }
 
         public override bool Equals(object? obj)
@@ -53,14 +51,14 @@ namespace Apocryph.Runtime.FunctionApp.Ipfs
 
         public byte[] GetPosition()
         {
-            return Key.Q.X.Concat(new byte[]{ 0 }).ToArray();
+            return Key.Q.X.Concat(new byte[] { 0 }).ToArray();
         }
 
         public byte[] GetDifficulty(Cid agentId, byte[] salt)
         {
-            var concatenated = (Key.Q.Y ?? new byte[]{}).Concat(salt ?? new byte[]{}).Concat(agentId.ToArray()).ToArray();
+            var concatenated = (Key.Q.Y ?? new byte[] { }).Concat(salt ?? new byte[] { }).Concat(agentId.ToArray()).ToArray();
             using var sha256Hash = SHA256.Create();
-            return sha256Hash.ComputeHash(concatenated).Concat(new byte[]{ 0 }).ToArray();
+            return sha256Hash.ComputeHash(concatenated).Concat(new byte[] { 0 }).ToArray();
         }
 
         public override int GetHashCode()

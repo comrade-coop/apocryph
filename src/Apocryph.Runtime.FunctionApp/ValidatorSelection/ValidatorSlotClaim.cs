@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Security.Cryptography;
-using Apocryph.Runtime.FunctionApp.Ipfs;
 using Ipfs;
 
 namespace Apocryph.Runtime.FunctionApp.ValidatorSelection
