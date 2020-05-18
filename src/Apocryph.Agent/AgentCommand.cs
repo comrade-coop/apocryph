@@ -2,6 +2,7 @@ using System;
 
 namespace Apocryph.Agent
 {
+    [Obsolete]
     public class AgentCommand
     {
         public AgentCommandType CommandType { get; set; }
@@ -15,7 +16,7 @@ namespace Apocryph.Agent
 
         public TimeSpan Timeout { get; set; }
     }
-
+    [Obsolete]
     public enum AgentCommandType
     {
         CreateAgent,

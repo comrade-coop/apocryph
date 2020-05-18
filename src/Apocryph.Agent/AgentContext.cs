@@ -4,6 +4,7 @@ using System.Threading.Channels;
 
 namespace Apocryph.Agent
 {
+    [Obsolete]
     public class AgentContext<T> : AgentContext where T : class
     {
         public T State => (T)InternalState;
@@ -13,6 +14,7 @@ namespace Apocryph.Agent
         }
     }
 
+    [Obsolete]
     public class AgentContext
     {
         public object InternalState { get; }

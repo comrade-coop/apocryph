@@ -10,6 +10,7 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.Testbed
 {
+    [Obsolete]
     public class Testbed
     {
         private readonly ILogger<Testbed> _logger;

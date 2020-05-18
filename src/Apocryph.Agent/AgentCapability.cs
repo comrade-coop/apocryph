@@ -2,6 +2,7 @@ using System;
 
 namespace Apocryph.Agent
 {
+    [Obsolete]
     public class AgentCapability
     {
         public string Issuer { get; set; }

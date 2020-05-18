@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace SampleAgents.FunctionApp
 {
+    [Obsolete]
     public class App
     {
         private readonly Testbed _testbed;
