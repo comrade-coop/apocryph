@@ -3,19 +3,20 @@ namespace Apocryph.Runtime.FunctionApp.Consensus.Core
     public class Gossip<T>
     {
         public T Value { get; }
-        public Node[] Signers { get; }
+        public Node Sender { get; }
         public GossipVerb Verb { get; }
 
-        public Gossip(T value, Node[] signers, GossipVerb verb)
+        public Gossip(T value, Node sender, GossipVerb verb)
         {
             Value = value;
-            Signers = signers;
+            Sender = sender;
             Verb = verb;
         }
     }
 
     public enum GossipVerb
     {
+        // IdentityChanged,
         Confirm,
         Reject
     }

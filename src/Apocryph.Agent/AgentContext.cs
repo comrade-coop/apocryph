@@ -24,7 +24,6 @@ namespace Apocryph.Agent
 
         public AgentContext(object internalState, AgentCapability self)
         {
-
             InternalState = internalState;
 
             _self = self;

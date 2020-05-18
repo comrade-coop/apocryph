@@ -14,7 +14,6 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
         private readonly Dictionary<Block, bool> _validBlocks;
         private Block? _committedBlock;
         private readonly TaskCompletionSource<bool> _committedBlockValidTaskCompletionSource;
-        private bool _accepted;
 
         private Node? _node;
         private IAsyncCollector<object>? _output;
@@ -23,7 +22,6 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
         {
             _validBlocks = new Dictionary<Block, bool>();
             _committedBlockValidTaskCompletionSource = new TaskCompletionSource<bool>();
-            _accepted = false;
         }
 
         [FunctionName(nameof(Committer))]
@@ -41,59 +39,24 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
 
             await Task.WhenAll(
                 HandleProposals(proposer, cancellationToken),
-                HandleGossips(gossips, nodes, cancellationToken),
                 UpdateValidBlocks(validator, cancellationToken));
         }
 
         private async Task HandleProposals(IAsyncEnumerable<Message<Block>> proposer,
             CancellationToken cancellationToken)
         {
-            var commitQuery = await proposer.FirstAsync(cancellationToken);
-            _committedBlock = commitQuery.Value;
-
-            var committedBlockValid = _validBlocks.TryGetValue(_committedBlock, out var value)
-                ? value
-                : await _committedBlockValidTaskCompletionSource.Task;
-            await _output!.AddAsync(new Gossip<Block>(_committedBlock, new[] { _node! },
-                committedBlockValid ? GossipVerb.Confirm : GossipVerb.Reject), cancellationToken);
-        }
-
-        private async Task HandleGossips(IAsyncEnumerable<Gossip<Block>> gossips,
-            Node[] nodes,
-            CancellationToken cancellationToken)
-        {
-            await foreach (var gossip in gossips.WithCancellation(cancellationToken))
+            await foreach (var proposerMessage in proposer)
             {
-                if (gossip.Verb == GossipVerb.Confirm &&
-                    gossip.Signers.Contains(_node) &&
-                    3 * gossip.Signers.Length > 2 * nodes.Length)
-                {
-                    _accepted = true;
-                    await _output!.AddAsync(new Message<Block>(gossip.Value, MessageType.Accepted), cancellationToken);
-                    break;
-                }
+                _committedBlock = proposerMessage.Value;
 
-                if (gossip.Signers.Contains(_node)) continue;
-
-                var committedBlockValid = _validBlocks.TryGetValue(_committedBlock!, out var value)
+                var committedBlockValid = _validBlocks.TryGetValue(_committedBlock, out var value)
                     ? value
                     : await _committedBlockValidTaskCompletionSource.Task;
-                if (gossip.Value.Equals(_committedBlock!) && committedBlockValid)
-                {
-                    var signers = gossip.Verb == GossipVerb.Confirm
-                        ? gossip.Signers.Append(_node!).ToArray()
-                        : new[] { _node! };
-                    await _output!.AddAsync(new Gossip<Block>(gossip.Value, signers, GossipVerb.Confirm),
-                        cancellationToken);
-                }
-                else
-                {
-                    var signers = gossip.Verb == GossipVerb.Reject
-                        ? gossip.Signers.Append(_node!).ToArray()
-                        : new[] { _node! };
-                    await _output!.AddAsync(new Gossip<Block>(gossip.Value, signers, GossipVerb.Reject),
-                        cancellationToken);
-                }
+
+                _committedBlock = null;
+
+                await _output!.AddAsync(new Gossip<Block>(_committedBlock!, _node!,
+                committedBlockValid ? GossipVerb.Confirm : GossipVerb.Reject), cancellationToken);
             }
         }
 
@@ -102,8 +65,6 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
         {
             await foreach (var message in validator.WithCancellation(cancellationToken))
             {
-                if (_accepted) break;
-
                 _validBlocks[message.Value] = message.Type == MessageType.Valid;
 
                 if (_committedBlock != null && _validBlocks.TryGetValue(_committedBlock, out var committedBlockValid))

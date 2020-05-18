@@ -1,13 +1,11 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using Apocryph.Agent;
-using Ipfs;
 
 namespace Apocryph.Runtime.FunctionApp.Consensus.Core
 {
     public class Block : IEquatable<Block>
     {
+        public Node? Proposer { get; set; }
         public byte[]? State { get; }
         public object[] Commands { get; }
         public IDictionary<Guid, (string, string[])> Capabilities { get; }

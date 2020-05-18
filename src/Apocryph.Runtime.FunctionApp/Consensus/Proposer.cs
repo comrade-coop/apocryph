@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -18,16 +18,16 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
     public class Proposer
     {
         private readonly Channel<Query<Block>> _channel;
-        private bool _committed;
 
         private Node? _node;
         private IAsyncCollector<object>? _output;
         private Snowball<Block>? _snowball;
+        private Node[]? _proposers;
+        private Block? _lastBlock;
 
         public Proposer()
         {
             _channel = Channel.CreateUnbounded<Query<Block>>();
-            _committed = false;
         }
 
         [FunctionName(nameof(Proposer))]
@@ -41,29 +41,22 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
         {
             _node = node;
             _output = output;
+            _lastBlock = lastBlock;
 
-            var opinion = default(Block?);
-            if (_node.IsProposer)
-            {
-                opinion = await Propose(context, lastBlock);
-            }
-
-            _snowball = new Snowball<Block>(_node, 100, 0.6, 3,
-                SnowballSend, SnowballRespond, opinion);
             await Task.WhenAll(
-                RunSnowball(nodes, cancellationToken),
+                RunSnowball(context, nodes, cancellationToken),
                 HandleQueries(queries, cancellationToken));
         }
 
-        private async Task<Block> Propose(PerperStreamContext context, Block lastBlock)
+        private async Task<Block> Propose(PerperStreamContext context)
         {
             var executor = new Executor(_node?.ToString()!,
                 async input => await context.CallWorkerAsync<WorkerOutput>("AgentWorker", new {input}, default));
-            var command = lastBlock.Commands.FirstOrDefault(o => o is Invoke || o is Publish || o is Remind);
+            var command = _lastBlock.Commands.FirstOrDefault(o => o is Invoke || o is Publish || o is Remind);
             if (command != null)
             {
                 var (newState, newCommands, newCapabilities) = await executor.Execute(
-                    lastBlock.State, command, lastBlock.Capabilities);
+                    _lastBlock.State, command, _lastBlock.Capabilities);
                 return new Block(newState, newCommands, newCapabilities);
             }
             // Include historical blocks as per protocol
@@ -74,7 +67,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
         {
             await foreach (var query in queries.WithCancellation(cancellationToken))
             {
-                if (_committed) break;
+                if (_snowball is null) continue;
 
                 if (query.Receiver == _node && query.Verb == QueryVerb.Response)
                 {
@@ -87,12 +80,27 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
             }
         }
 
-        private async Task RunSnowball(Node[] nodes, CancellationToken cancellationToken)
+        private async Task RunSnowball(PerperStreamContext context, Node[] nodes, CancellationToken cancellationToken)
         {
-            var committedProposal = await _snowball!.Run(nodes, cancellationToken);
-            _committed = true;
+            while (true)
+            {
+                var proposerCount = nodes.Length / 10; // TODO: Move constant to parameter
+                _proposers = nodes.Take(proposerCount).ToArray(); // TODO: Do a random walk based on last block hash
 
-            await _output!.AddAsync(new Message<Block>(committedProposal, MessageType.Committed), cancellationToken);
+                var opinion = default(Block?);
+                if (Array.IndexOf(_proposers, _node) != -1)
+                {
+                    opinion = await Propose(context);
+                }
+
+                _snowball = new Snowball<Block>(_node!, 100, 0.6, 3,
+                                                SnowballSend, SnowballRespond, opinion);
+
+                var committedProposal = await _snowball!.Run(nodes, cancellationToken);
+
+                await _output!.AddAsync(new Message<Block>(
+                    committedProposal, MessageType.Committed), cancellationToken);
+            }
         }
 
         private async IAsyncEnumerable<Query<Block>> SnowballSend(Query<Block>[] queries, [EnumeratorCancellation] CancellationToken cancellationToken)
@@ -104,10 +112,19 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
             }
         }
 
-        private static Query<Block> SnowballRespond(Query<Block> query, Block? value, Block? opinion)
+        private Query<Block> SnowballRespond(Query<Block> query, Block? value, Block? opinion)
         {
-            var result = opinion ?? (value ?? query.Value);
+            var result = opinion ??
+                         (value is null || IsNewBlockBetter(value, query.Value) ? query.Value : value);
             return new Query<Block>(result, query.Receiver, query.Sender, QueryVerb.Response);
+        }
+
+        private bool IsNewBlockBetter(Block current, Block suggested)
+        {
+            var currentProposerOrder = Array.IndexOf(_proposers!, current.Proposer);
+            var suggestedProposerOrder = Array.IndexOf(_proposers!, suggested.Proposer);
+
+            return suggestedProposerOrder != -1 && suggestedProposerOrder < currentProposerOrder;
         }
     }
 }
