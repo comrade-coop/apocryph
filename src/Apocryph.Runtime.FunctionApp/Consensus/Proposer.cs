@@ -5,6 +5,9 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Apocryph.Agent.Command;
+using Apocryph.Agent.Core;
+using Apocryph.Agent.Worker;
 using Apocryph.Runtime.FunctionApp.Consensus.Core;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
@@ -31,6 +34,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("node")] Node node,
             [Perper("nodes")] Node[] nodes,
+            [Perper("lastBlock")] Block lastBlock,
             [PerperStream("queries")] IAsyncEnumerable<Query<Block>> queries,
             [PerperStream("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
@@ -41,7 +45,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
             var opinion = default(Block?);
             if (_node.IsProposer)
             {
-                opinion = await Propose();
+                opinion = await Propose(context, lastBlock);
             }
 
             _snowball = new Snowball<Block>(_node, 100, 0.6, 3,
@@ -51,9 +55,18 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
                 HandleQueries(queries, cancellationToken));
         }
 
-        private Task<Block> Propose()
+        private async Task<Block> Propose(PerperStreamContext context, Block lastBlock)
         {
-            throw new NotImplementedException();
+            var executor = new Executor(_node?.ToString()!,
+                async input => await context.CallWorkerAsync<WorkerOutput>("AgentWorker", new {input}, default));
+            var command = lastBlock.Commands.FirstOrDefault(o => o is Invoke || o is Publish || o is Remind);
+            if (command != null)
+            {
+                var (newState, newCommands, newCapabilities) = await executor.Execute(
+                    lastBlock.State, command, lastBlock.Capabilities);
+                return new Block(newState, newCommands, newCapabilities);
+            }
+            return default!; //What to return?
         }
 
         private async Task HandleQueries(IAsyncEnumerable<Query<Block>> queries, CancellationToken cancellationToken)
@@ -92,8 +105,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
 
         private static Query<Block> SnowballRespond(Query<Block> query, Block? value, Block? opinion)
         {
-            var result = opinion ??
-                         (value is null || query.Value.ProposerStake > value.ProposerStake ? query.Value : value);
+            var result = opinion ?? (value ?? query.Value);
             return new Query<Block>(result, query.Receiver, query.Sender, QueryVerb.Response);
         }
     }

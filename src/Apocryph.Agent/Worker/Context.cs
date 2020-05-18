@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Security.Cryptography;
 using System.Text.Json;
 using Apocryph.Agent.Api;
 
@@ -11,24 +13,29 @@ namespace Apocryph.Agent.Worker
         public T? State { get; set; }
 
         private readonly Dictionary<Guid, string[]> _createdReferences;
-        private readonly Dictionary<Guid, string> _attachedReferences;
+        private readonly Dictionary<Guid, object> _attachedReferences;
         private readonly List<(string, object[])> _actions;
+        private readonly Dictionary<Type, Type> _registrations;
 
         public Context()
         {
             _createdReferences = new Dictionary<Guid, string[]>();
-            _attachedReferences = new Dictionary<string, (object, string)>();
+            _attachedReferences = new Dictionary<Guid, object>();
             _actions = new List<(string, object[])>();
+            _registrations = new Dictionary<Type, Type>();
         }
 
         public void RegisterInstance<TInterface, TClass>()
         {
-            throw new NotImplementedException();
+            _registrations.Add(typeof(TInterface), typeof(TClass));
         }
 
-        public TInterface CreateInstance<TInterface>()
+        public TInterface CreateInstance<TInterface>(Action<TInterface> initializer = null)
         {
-            throw new NotImplementedException();
+            var result = DispatchProxy.Create<TInterface, ReferenceProxy>();
+            var classType = _registrations[typeof(TInterface)];
+            (result as ReferenceProxy)?.Init(Activator.CreateInstance(classType)!, _attachedReferences);
+            return result;
         }
 
         public Guid CreateReference(Type[] messageTypes)
@@ -40,22 +47,33 @@ namespace Apocryph.Agent.Worker
 
         public void Create(string agent, object message)
         {
-            _actions.Add((nameof(Create), new[] {agent, message}));
+            Invoke(Guid.Empty, message);
         }
 
         public void Invoke(Guid receiver, object message)
         {
-            _actions.Add((nameof(Invoke), new[] {receiver, message}));
+            _actions.Add((nameof(Invoke), new object[]
+            {
+                receiver,
+                (message.GetType().FullName!, JsonSerializer.SerializeToUtf8Bytes(message))
+            }));
         }
 
         public void Remind(DateTime dueDateTime, object message)
         {
-            _actions.Add((nameof(Remind), new[] {dueDateTime, message}));
+            _actions.Add((nameof(Remind), new object[]
+            {
+                dueDateTime,
+                (message.GetType().FullName!, JsonSerializer.SerializeToUtf8Bytes(message))
+            }));
         }
 
         public void Publish(object message)
         {
-            _actions.Add((nameof(Publish), new[] {message}));
+            _actions.Add((nameof(Publish), new object[]
+            {
+                (message.GetType().FullName!, JsonSerializer.SerializeToUtf8Bytes(message))
+            }));
         }
 
         public void Subscribe(string target)
@@ -71,7 +89,13 @@ namespace Apocryph.Agent.Worker
         public (byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>) Save()
         {
             var state = State is null ? null : JsonSerializer.SerializeToUtf8Bytes(State);
-            return (state, _actions.ToArray(), _createdReferences, _attachedReferences);
+            var attachedReferences = _attachedReferences.ToDictionary(pair => pair.Key,pair =>
+            {
+                var payload = JsonSerializer.SerializeToUtf8Bytes(pair.Value);
+                using var sha1 = new SHA1CryptoServiceProvider();
+                return Convert.ToBase64String(sha1.ComputeHash(payload));
+            });
+            return (state, _actions.ToArray(), _createdReferences, attachedReferences);
         }
     }
 }

@@ -7,16 +7,16 @@ namespace Apocryph.Agent.Core
 {
     public class CapabilityValidator
     {
-        private readonly Dictionary<Guid, (string, string[])> _capabilities;
+        private readonly IDictionary<Guid, (string, string[])> _capabilities;
         private readonly HashSet<string> _carriers;
 
-        public CapabilityValidator(Dictionary<Guid, (string, string[])> capabilities)
+        public CapabilityValidator(IDictionary<Guid, (string, string[])> capabilities)
         {
             _capabilities = capabilities;
             _carriers = new HashSet<string>();
         }
 
-        public void AddCapabilities(Dictionary<Guid, (string, string[])> capabilities)
+        public void AddCapabilities(IDictionary<Guid, (string, string[])> capabilities)
         {
             foreach (var (key, value) in capabilities)
             {

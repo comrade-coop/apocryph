@@ -18,8 +18,8 @@ namespace Apocryph.Agent.Core
             _callWorker = callWorker;
         }
 
-        public async Task<(byte[]?, object[], Dictionary<Guid, (string, string[])>)> Execute(
-            byte[]? state, object command, Dictionary<Guid, (string, string[])> capabilities)
+        public async Task<(byte[]?, object[], IDictionary<Guid, (string, string[])>)> Execute(
+            byte[]? state, object command, IDictionary<Guid, (string, string[])> capabilities)
         {
             var capabilityValidator = new CapabilityValidator(capabilities);
 
@@ -46,7 +46,6 @@ namespace Apocryph.Agent.Core
                 {
                     object? newCommand = name switch
                     {
-                        nameof(Create) => new Create((string) @params[0], ((string, byte[])) @params[1]),
                         nameof(Invoke) => capabilityValidator.ValidateMessageAndRegisterAsCarrier((Guid) @params[0], ((string, byte[])) @params[1])
                             ? new Invoke((Guid) @params[0], ((string, byte[])) @params[1])
                             : null,
