@@ -1,12 +1,12 @@
+using System;
 using Apocryph.Agent;
 
 namespace SampleAgents.FunctionApp.Agents
 {
-    public class PingPongMessage
+    public class PingPongMessage : IPingPongMessage
     {
-        public AgentCapability AgentOne { get; set; }
-        public AgentCapability AgentTwo { get; set; }
-
-        public string Content { get; set; }
+        public Guid? AgentOne { get; set; }
+        public Guid? AgentTwo { get; set; }
+        public string? Content { get; set; }
     }
 }

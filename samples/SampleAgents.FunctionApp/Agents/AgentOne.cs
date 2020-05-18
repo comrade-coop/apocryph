@@ -1,57 +1,54 @@
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Apocryph.Testbed;
 using Apocryph.Agent;
+using Apocryph.Agent.Api;
+using Apocryph.Agent.Worker;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
 
 namespace SampleAgents.FunctionApp.Agents
 {
-    public class AgentOne
+    public class AgentOne : IAgent<object>
     {
-        public Task<AgentContext> Run(object state, AgentCapability self, object message)
+        public void Setup(IContext<object> context)
         {
-            var context = new AgentContext(state, self);
-            if (message is AgentRootInitMessage rootInitMessage)
+            context.RegisterInstance<IPingPongMessage, PingPongMessage>();
+        }
+
+        public Task Run(IContext<object> context, object message, Guid? reference)
+        {
+            switch (message)
             {
-                var cap = context.IssueCapability(new[] { typeof(PingPongMessage) });
-                context.CreateAgent("AgentTwoId", "SampleAgents.FunctionApp.Agents.AgentTwoWrapper.Run", new PingPongMessage { AgentOne = cap }, null);
+                case AgentRootInitMessage _:
+                    context.Create(typeof(AgentTwo).FullName!,
+                        context.CreateInstance<IPingPongMessage>(i =>
+                        {
+                            i.AgentOne = context.CreateReference(new[] {typeof(PingPongMessage)});
+                        }));
+                    break;
+                case IPingPongMessage pingPongMessage:
+                    context.Invoke(pingPongMessage.AgentTwo!.Value, context.CreateInstance<IPingPongMessage>(i =>
+                    {
+                        i.AgentOne = pingPongMessage.AgentOne;
+                        i.AgentTwo = pingPongMessage.AgentTwo;
+                        i.Content = "Ping";
+                    }));
+                    break;
             }
-            else if (message is PingPongMessage pingPongMessage)
-            {
-                context.SendMessage(pingPongMessage.AgentTwo, new PingPongMessage
-                {
-                    AgentOne = pingPongMessage.AgentOne,
-                    AgentTwo = pingPongMessage.AgentTwo,
-                    Content = "Ping"
-                }, null);
-            }
+
             return Task.FromResult(context);
         }
     }
 
     public class AgentOneWrapper
     {
-        private readonly Testbed _testbed;
-
-        public AgentOneWrapper(Testbed testbed)
+        [FunctionName(nameof(AgentOneWrapper))]
+        public async Task<WorkerOutput> Run([PerperWorkerTrigger] PerperWorkerContext context,
+            [Perper("input")] WorkerInput input, CancellationToken cancellationToken)
         {
-            _testbed = testbed;
-        }
-
-        [FunctionName("AgentOne")]
-        public async Task AgentOne(
-            [PerperStreamTrigger] PerperStreamContext context,
-            [Perper("agentId")] string agentId,
-            [Perper("initMessage")] object initMessage,
-            [PerperStream("commands")] IAsyncEnumerable<AgentCommands> commands,
-            [PerperStream("output")] IAsyncCollector<AgentCommands> output,
-            CancellationToken cancellationToken)
-        {
-            await _testbed.Agent(new AgentOne().Run, agentId, initMessage, commands, output, cancellationToken);
+            return await new Worker<object>(new AgentOne()).Run(input);
         }
     }
 }

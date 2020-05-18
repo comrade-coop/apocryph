@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# 
+#
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{E7399C0B-BA25-4A4E-B97D-14CE02EFD9C6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apocryph.Runtime.FunctionApp", "src\Apocryph.Runtime.FunctionApp\Apocryph.Runtime.FunctionApp.csproj", "{1E974229-9988-49F5-B9E7-0FF7BF869375}"
@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apocryph.Agent", "src\Apocr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apocryph.AgentZero", "src\Apocryph.AgentZero\Apocryph.AgentZero.csproj", "{EACA99C5-99C8-42B9-AEB0-D22DF2290983}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{BF13ABAB-4B0F-4E13-88C7-D387B2DDFB58}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,9 +29,9 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{1E974229-9988-49F5-B9E7-0FF7BF869375} = {E7399C0B-BA25-4A4E-B97D-14CE02EFD9C6}
 		{803BE683-6C58-43CF-91CE-8324F1496B69} = {E7399C0B-BA25-4A4E-B97D-14CE02EFD9C6}
-		{C6017B68-4471-44CF-9BDF-817C3D102870} = {E7399C0B-BA25-4A4E-B97D-14CE02EFD9C6}
 		{8B5E8CD3-8061-488F-8DC0-6FFB0B3E214F} = {E7399C0B-BA25-4A4E-B97D-14CE02EFD9C6}
 		{EACA99C5-99C8-42B9-AEB0-D22DF2290983} = {E7399C0B-BA25-4A4E-B97D-14CE02EFD9C6}
+		{C6017B68-4471-44CF-9BDF-817C3D102870} = {BF13ABAB-4B0F-4E13-88C7-D387B2DDFB58}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{1E974229-9988-49F5-B9E7-0FF7BF869375}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
