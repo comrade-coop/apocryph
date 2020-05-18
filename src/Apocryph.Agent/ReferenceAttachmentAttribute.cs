@@ -1,6 +1,6 @@
 using System;
 
-namespace Apocryph.Agent.Api
+namespace Apocryph.Agent
 {
     [AttributeUsage(AttributeTargets.Property)]
     public class ReferenceAttachmentAttribute : Attribute

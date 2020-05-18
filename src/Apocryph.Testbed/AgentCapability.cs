@@ -1,8 +1,7 @@
 using System;
 
-namespace Apocryph.Agent
+namespace Apocryph.Testbed
 {
-    [Obsolete]
     public class AgentCapability
     {
         public string Issuer { get; set; }

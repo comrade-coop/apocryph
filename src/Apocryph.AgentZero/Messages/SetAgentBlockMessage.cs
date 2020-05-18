@@ -1,5 +1,3 @@
-using System.Numerics;
-
 namespace Apocryph.AgentZero.Messages
 {
     public class SetAgentBlockMessage

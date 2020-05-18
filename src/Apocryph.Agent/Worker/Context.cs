@@ -4,11 +4,10 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
-using Apocryph.Agent.Api;
 
 namespace Apocryph.Agent.Worker
 {
-    public class Context<T> : IContext<T> where T:class
+    public class Context<T> : IContext<T> where T : class
     {
         public T? State { get; set; }
 
@@ -78,7 +77,7 @@ namespace Apocryph.Agent.Worker
 
         public void Subscribe(string target)
         {
-            _actions.Add((nameof(Subscribe), new object[] {target}));
+            _actions.Add((nameof(Subscribe), new object[] { target }));
         }
 
         public void Load(byte[]? state)
@@ -89,12 +88,12 @@ namespace Apocryph.Agent.Worker
         public (byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>) Save()
         {
             var state = State is null ? null : JsonSerializer.SerializeToUtf8Bytes(State);
-            var attachedReferences = _attachedReferences.ToDictionary(pair => pair.Key,pair =>
-            {
-                var payload = JsonSerializer.SerializeToUtf8Bytes(pair.Value);
-                using var sha1 = new SHA1CryptoServiceProvider();
-                return Convert.ToBase64String(sha1.ComputeHash(payload));
-            });
+            var attachedReferences = _attachedReferences.ToDictionary(pair => pair.Key, pair =>
+             {
+                 var payload = JsonSerializer.SerializeToUtf8Bytes(pair.Value);
+                 using var sha1 = new SHA1CryptoServiceProvider();
+                 return Convert.ToBase64String(sha1.ComputeHash(payload));
+             });
             return (state, _actions.ToArray(), _createdReferences, attachedReferences);
         }
     }

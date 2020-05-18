@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Threading.Channels;
 
-namespace Apocryph.Agent
+namespace Apocryph.Testbed
 {
-    [Obsolete]
     public class AgentContext<T> : AgentContext where T : class
     {
         public T State => (T)InternalState;
@@ -14,7 +12,6 @@ namespace Apocryph.Agent
         }
     }
 
-    [Obsolete]
     public class AgentContext
     {
         public object InternalState { get; }
@@ -47,7 +44,7 @@ namespace Apocryph.Agent
 
         public AgentCallTicket RequestCallTicket(AgentCapability agent)
         {
-            return null;
+            return default!;
         }
 
         public void CreateAgent(string id, string agent, object initMessage, AgentCallTicket callTicket)

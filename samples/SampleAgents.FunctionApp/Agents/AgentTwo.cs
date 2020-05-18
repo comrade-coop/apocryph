@@ -1,7 +1,8 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Apocryph.Agent.Api;
+using Apocryph.Agent;
+using Apocryph.Agent.Protocol;
 using Apocryph.Agent.Worker;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
@@ -24,7 +25,7 @@ namespace SampleAgents.FunctionApp.Agents
                     context.Invoke(pingPongMessage.AgentTwo!.Value, context.CreateInstance<IPingPongMessage>(i =>
                     {
                         i.AgentOne = pingPongMessage.AgentOne;
-                        i.AgentTwo = context.CreateReference(new[] {typeof(PingPongMessage)});
+                        i.AgentTwo = context.CreateReference(new[] { typeof(PingPongMessage) });
                     }));
                     break;
                 case PingPongMessage pingPongMessage:

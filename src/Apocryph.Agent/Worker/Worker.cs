@@ -1,7 +1,7 @@
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Apocryph.Agent.Api;
+using Apocryph.Agent.Protocol;
 
 namespace Apocryph.Agent.Worker
 {

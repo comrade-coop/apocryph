@@ -1,9 +1,9 @@
 using System;
 using System.Threading.Tasks;
 
-namespace Apocryph.Agent.Api
+namespace Apocryph.Agent
 {
-    public interface IAgent<T> where T:class
+    public interface IAgent<T> where T : class
     {
         void Setup(IContext<T> context);
         Task Run(IContext<T> context, object message, Guid? reference);

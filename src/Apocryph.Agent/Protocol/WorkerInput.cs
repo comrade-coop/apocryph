@@ -1,6 +1,6 @@
 using System;
 
-namespace Apocryph.Agent.Worker
+namespace Apocryph.Agent.Protocol
 {
     public class WorkerInput
     {

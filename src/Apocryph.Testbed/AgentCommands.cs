@@ -1,8 +1,5 @@
-using System;
-
-namespace Apocryph.Agent
+namespace Apocryph.Testbed
 {
-    [Obsolete]
     public class AgentCommands
     {
         public string Origin;

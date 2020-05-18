@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 
-namespace Apocryph.Agent.Core
+namespace Apocryph.Runtime.FunctionApp.Execution
 {
     public class CapabilityValidator
     {

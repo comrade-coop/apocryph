@@ -1,10 +1,10 @@
 using System;
 
-namespace Apocryph.Agent.Api
+namespace Apocryph.Agent
 {
     public interface IContext<T> where T : class
     {
-        T State { get; set; }
+        T? State { get; set; }
 
         void RegisterInstance<TInterface, TClass>();
         TInterface CreateInstance<TInterface>(Action<TInterface> initializer = null);

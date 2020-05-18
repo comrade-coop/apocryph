@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Apocryph.Agent.Command;
-using Apocryph.Agent.Worker;
+using Apocryph.Agent.Protocol;
+using Apocryph.Runtime.FunctionApp.Execution.Command;
 
-namespace Apocryph.Agent.Core
+namespace Apocryph.Runtime.FunctionApp.Execution
 {
     public class Executor
     {
@@ -27,7 +27,6 @@ namespace Apocryph.Agent.Core
             {
                 Remind cmd => await ExecuteRemindCommandAsync(state, cmd),
                 Invoke cmd => await ExecuteInvokeCommandAsync(state, cmd),
-                Publish cmd => await ExecutePublishCommandAsync(state, cmd),
                 _ => throw new ArgumentException()
             };
 
@@ -46,12 +45,12 @@ namespace Apocryph.Agent.Core
                 {
                     object? newCommand = name switch
                     {
-                        nameof(Invoke) => capabilityValidator.ValidateMessageAndRegisterAsCarrier((Guid) @params[0], ((string, byte[])) @params[1])
-                            ? new Invoke((Guid) @params[0], ((string, byte[])) @params[1])
+                        nameof(Invoke) => capabilityValidator.ValidateMessageAndRegisterAsCarrier((Guid)@params[0], ((string, byte[]))@params[1])
+                            ? new Invoke((Guid)@params[0], ((string, byte[]))@params[1])
                             : null,
-                        nameof(Remind) => new Remind((DateTime) @params[0], ((string, byte[])) @params[1]),
-                        nameof(Publish) => new Publish(((string, byte[])) @params[0]),
-                        nameof(Subscribe) => new Subscribe((string) @params[0]),
+                        nameof(Remind) => new Remind((DateTime)@params[0], ((string, byte[]))@params[1]),
+                        nameof(Publish) => new Publish(((string, byte[]))@params[0]),
+                        nameof(Subscribe) => new Subscribe((string)@params[0]),
                         _ => throw new ArgumentException()
                     };
                     if (newCommand != null) newCommands.Add(newCommand);
@@ -92,15 +91,6 @@ namespace Apocryph.Agent.Core
             {
                 State = state,
                 Reference = command.Reference
-            };
-            return await _callWorker(input);
-        }
-
-        private async Task<WorkerOutput> ExecutePublishCommandAsync(byte[]? state, Publish command)
-        {
-            var input = new WorkerInput(command.Message)
-            {
-                State = state
             };
             return await _callWorker(input);
         }

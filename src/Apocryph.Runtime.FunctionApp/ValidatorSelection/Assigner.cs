@@ -18,21 +18,21 @@ namespace Apocryph.Runtime.FunctionApp.ValidatorSelection
         }
 
         private Node[]? _nodes;
-        private byte[]? _agentId;
+        private byte[]? _chainId;
         private Dictionary<Node, NodeData> _nodeData { get; set; } = new Dictionary<Node, NodeData>();
         private IAsyncCollector<object>? _output;
 
         [FunctionName(nameof(Assigner))]
         public async Task Run<T>([PerperStreamTrigger] PerperStreamContext context,
             [Perper("nodes")] Node[] nodes,
-            [Perper("agentId")] byte[] agentId,
+            [Perper("chainId")] byte[] chainId,
             [PerperStream("gossips")] IAsyncEnumerable<SlotClaim> gossip,
             [PerperStream("salts")] IAsyncEnumerable<(Node, byte[])> salts,
             [PerperStream("keys")] IAsyncEnumerable<PrivateKey> keys,
             [PerperStream("output")] IAsyncCollector<object> output)
         {
             _nodes = nodes;
-            _agentId = agentId;
+            _chainId = chainId;
             _output = output;
 
             foreach (var node in nodes)
@@ -48,7 +48,7 @@ namespace Apocryph.Runtime.FunctionApp.ValidatorSelection
 
         private async Task ProcessSalts(IAsyncEnumerable<(Node, byte[])> salts)
         {
-            await foreach(var (node, salt) in salts)
+            await foreach (var (node, salt) in salts)
             {
                 _nodeData[node].Salt = salt;
             }
@@ -56,11 +56,11 @@ namespace Apocryph.Runtime.FunctionApp.ValidatorSelection
 
         private async Task ProcessGeneratedKeys(IAsyncEnumerable<PrivateKey> keys)
         {
-            await foreach(var privateKey in keys)
+            await foreach (var privateKey in keys)
             {
                 if (AddKey(privateKey.PublicKey))
                 {
-                    await _output!.AddAsync(new SlotClaim { Key = privateKey.PublicKey, AgentId = _agentId! }); // Gossip
+                    await _output!.AddAsync(new SlotClaim { Key = privateKey.PublicKey, ChainId = _chainId! }); // Gossip
                     await _output!.AddAsync((true, GetNodeForKey(privateKey.PublicKey))); // Local Node
                 }
             }
@@ -68,9 +68,9 @@ namespace Apocryph.Runtime.FunctionApp.ValidatorSelection
 
         private async Task ProcessClaims(IAsyncEnumerable<SlotClaim> claims)
         {
-            await foreach(var claim in claims)
+            await foreach (var claim in claims)
             {
-                if (claim.AgentId == _agentId)
+                if (claim.ChainId == _chainId)
                 {
                     if (AddKey(claim.Key))
                     {
@@ -92,7 +92,7 @@ namespace Apocryph.Runtime.FunctionApp.ValidatorSelection
             var nodeData = _nodeData[node];
 
             if (nodeData.Key is PublicKey slotKey
-                && slotKey.GetDifficulty(_agentId!, nodeData.Salt) > key.GetDifficulty(_agentId!, nodeData.Salt))
+                && slotKey.GetDifficulty(_chainId!, nodeData.Salt) > key.GetDifficulty(_chainId!, nodeData.Salt))
             {
                 return false;
             }

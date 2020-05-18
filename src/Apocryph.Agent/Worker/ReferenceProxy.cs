@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Apocryph.Agent.Api;
 
 namespace Apocryph.Agent.Worker
 {
@@ -21,7 +20,7 @@ namespace Apocryph.Agent.Worker
         {
             if (targetMethod.GetCustomAttributes<ReferenceAttachmentAttribute>().Any())
             {
-                _attachedReferences[(Guid) args.Single()] = _impl;
+                _attachedReferences[(Guid)args.Single()] = _impl;
             }
 
             return targetMethod.Invoke(_impl, args);

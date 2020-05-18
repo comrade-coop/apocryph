@@ -9,9 +9,9 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.Runtime.FunctionApp
 {
-    public class Agent
+    public class Chain
     {
-        [FunctionName(nameof(Agent))]
+        [FunctionName(nameof(Chain))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("nodes")] Node[] nodes,
             [PerperStream("localNodes")] IAsyncDisposable localNodes,

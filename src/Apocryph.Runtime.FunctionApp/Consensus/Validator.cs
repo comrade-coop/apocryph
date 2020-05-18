@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Apocryph.Agent.Command;
-using Apocryph.Agent.Core;
-using Apocryph.Agent.Worker;
+using Apocryph.Agent.Protocol;
 using Apocryph.Runtime.FunctionApp.Consensus.Core;
+using Apocryph.Runtime.FunctionApp.Execution.Command;
+using Apocryph.Runtime.FunctionApp.Execution;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
@@ -36,7 +36,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
         private async Task<bool> Validate(PerperStreamContext context, Node node, Block lastBlock, Block block)
         {
             var executor = new Executor(node?.ToString()!,
-                async input => await context.CallWorkerAsync<WorkerOutput>("AgentWorker", new {input}, default));
+                async input => await context.CallWorkerAsync<WorkerOutput>("AgentWorker", new { input }, default));
             var command = lastBlock.Commands.FirstOrDefault(o => o is Invoke || o is Publish || o is Remind);
             var (newState, newCommands, newCapabilities) = await executor.Execute(
                 lastBlock.State, command, lastBlock.Capabilities);

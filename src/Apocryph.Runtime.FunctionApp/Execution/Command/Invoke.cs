@@ -1,6 +1,6 @@
 using System;
 
-namespace Apocryph.Agent.Command
+namespace Apocryph.Runtime.FunctionApp.Execution.Command
 {
     public class Invoke
     {

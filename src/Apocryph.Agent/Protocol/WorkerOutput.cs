@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Apocryph.Agent.Worker
+namespace Apocryph.Agent.Protocol
 {
     public class WorkerOutput
     {
