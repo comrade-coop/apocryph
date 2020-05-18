@@ -66,6 +66,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
                     lastBlock.State, command, lastBlock.Capabilities);
                 return new Block(newState, newCommands, newCapabilities);
             }
+            // Include historical blocks as per protocol
             return default!; //What to return?
         }
 

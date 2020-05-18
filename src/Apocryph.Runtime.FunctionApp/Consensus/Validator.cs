@@ -44,6 +44,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
                    && block.Commands.SequenceEqual(newCommands)
                    && block.Capabilities.Count == newCapabilities.Count
                    && !block.Capabilities.Except(newCapabilities).Any();
+            // Validate historical blocks as per protocol
         }
     }
 }
