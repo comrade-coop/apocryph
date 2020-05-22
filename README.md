@@ -18,8 +18,8 @@ Consensus Network for Autonomous Agents
   - [Run your first multi-agent distributed application](#run-your-first-multi-agent-distributed-application)
 - [Apocryph Architecture Overview](#apocryph-architecture-overview)
   - [Agent Model](#agent-model)
-    - [Reminders](#reminders)
     - [State](#state)
+    - [Reminders](#reminders)
     - [Publish and Subscribe](#publish-and-subscribe)
     - [Object Capability Security Model](#object-capability-security-model)
     - [Call Balances](#call-balances)
@@ -445,6 +445,12 @@ and linters for writing deterministic code, for example: *use deterministic seed
 pseudo-random number generation; avoid floating point types or use them with extra caution; 
 avoid random language features (dictionary iterators, uninitialized memory and etc)*.
 
+#### State
+
+Apocryph agents can be viewed as state machine - receive messages, update their state and 
+output new messages (in the form of commands). The internal state of the agent is opaque 
+object for the network and its structure is known only to its agent owner. 
+
 #### Reminders
 
 Reminded command allows agents to be activated when a specific deadline (point of time)
@@ -453,12 +459,6 @@ specified at the time when the command has been emitted.
 
 > **Time:** There is no guarantee of the time gap between the time of agent activation 
 and the requested deadline by the agent.
-
-#### State
-
-Apocryph agents can be viewed as state machine - receive messages, update their state and 
-output new messages (in the form of commands). The internal state of the agent is opaque 
-object for the network and its structure is known only to its agent owner. 
 
 #### Publish and Subscribe
 
