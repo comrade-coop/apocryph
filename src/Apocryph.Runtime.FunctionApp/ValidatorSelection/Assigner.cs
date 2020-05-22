@@ -28,7 +28,7 @@ namespace Apocryph.Runtime.FunctionApp.ValidatorSelection
             [Perper("chainId")] byte[] chainId,
             [PerperStream("gossips")] IAsyncEnumerable<SlotClaim> gossip,
             [PerperStream("salts")] IAsyncEnumerable<(Node, byte[])> salts,
-            [PerperStream("keys")] IAsyncEnumerable<PrivateKey> keys,
+            [PerperStream("miner")] IAsyncEnumerable<PrivateKey> miner,
             [PerperStream("output")] IAsyncCollector<object> output)
         {
             _nodes = nodes;
@@ -43,7 +43,7 @@ namespace Apocryph.Runtime.FunctionApp.ValidatorSelection
             await Task.WhenAll(
                 ProcessSalts(salts),
                 ProcessClaims(gossip),
-                ProcessGeneratedKeys(keys));
+                ProcessGeneratedKeys(miner));
         }
 
         private async Task ProcessSalts(IAsyncEnumerable<(Node, byte[])> salts)
@@ -54,9 +54,9 @@ namespace Apocryph.Runtime.FunctionApp.ValidatorSelection
             }
         }
 
-        private async Task ProcessGeneratedKeys(IAsyncEnumerable<PrivateKey> keys)
+        private async Task ProcessGeneratedKeys(IAsyncEnumerable<PrivateKey> miner)
         {
-            await foreach (var privateKey in keys)
+            await foreach (var privateKey in miner)
             {
                 if (AddKey(privateKey.PublicKey))
                 {

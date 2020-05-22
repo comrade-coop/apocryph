@@ -16,6 +16,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("nodes")] Node[] nodes,
             [Perper("localNodes")] IAsyncEnumerable<Node> localNodes,
+            [Perper("ibc")] IAsyncDisposable ibc,
             [Perper("queries")] IAsyncDisposable queries,
             [Perper("gossips")] IAsyncDisposable gossips,
             [PerperStream("output")] IAsyncCollector<IAsyncDisposable> output,
@@ -24,8 +25,8 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
             // TODO: Have a way to remove local nodes
             await foreach (var node in localNodes)
             {
-                var proposer = await context.StreamFunctionAsync(typeof(Proposer), new { node, nodes, queries });
-                var validator = await context.StreamFunctionAsync(typeof(Validator), new { node, queries });
+                var proposer = await context.StreamFunctionAsync(typeof(Proposer), new { node, nodes, queries, ibc });
+                var validator = await context.StreamFunctionAsync(typeof(Validator), new { node, queries, ibc });
                 var committer = await context.StreamFunctionAsync(typeof(Committer), new { node, nodes, gossips, proposer, validator });
 
                 await Task.WhenAll(new[] { proposer, validator, committer }.Select(

@@ -7,12 +7,14 @@ namespace Apocryph.Runtime.FunctionApp.Consensus.Core
     {
         public Node? Proposer { get; set; }
         public byte[]? State { get; }
+        public object[] InputCommands { get; }
         public object[] Commands { get; }
         public IDictionary<Guid, (string, string[])> Capabilities { get; }
 
-        public Block(byte[]? state, object[] commands, IDictionary<Guid, (string, string[])> capabilities)
+        public Block(byte[]? state, object[] inputCommands, object[] commands, IDictionary<Guid, (string, string[])> capabilities)
         {
             State = state;
+            InputCommands = inputCommands;
             Commands = commands;
             Capabilities = capabilities;
         }

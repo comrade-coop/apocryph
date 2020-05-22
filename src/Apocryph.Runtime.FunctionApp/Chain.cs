@@ -15,12 +15,13 @@ namespace Apocryph.Runtime.FunctionApp
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("nodes")] Node[] nodes,
             [PerperStream("localNodes")] IAsyncDisposable localNodes,
+            [PerperStream("ibc")] IAsyncDisposable ibc,
             CancellationToken cancellationToken)
         {
             var queries = context.DeclareStream(typeof(Peering));
             var gossips = context.DeclareStream(typeof(Peering));
 
-            var factory = await context.StreamFunctionAsync(typeof(Factory), new { nodes, localNodes, queries, gossips });
+            var factory = await context.StreamFunctionAsync(typeof(Factory), new { nodes, localNodes, ibc, queries, gossips });
             await context.StreamFunctionAsync(queries, new { factory, filter = typeof(Proposer) });
             await context.StreamFunctionAsync(gossips, new { factory, filter = typeof(Committer) });
 

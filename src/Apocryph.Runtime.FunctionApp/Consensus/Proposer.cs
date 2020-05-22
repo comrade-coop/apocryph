@@ -7,7 +7,6 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using Apocryph.Agent.Protocol;
 using Apocryph.Runtime.FunctionApp.Consensus.Core;
-using Apocryph.Runtime.FunctionApp.Execution.Command;
 using Apocryph.Runtime.FunctionApp.Execution;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
@@ -24,6 +23,8 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
         private Snowball<Block>? _snowball;
         private Node[]? _proposers;
         private Block? _lastBlock;
+        private List<object>? _pendingCommands;
+        private TaskCompletionSource<bool>? _pendingCommandsTaskCompletionSource;
 
         public Proposer()
         {
@@ -35,6 +36,8 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
             [Perper("node")] Node node,
             [Perper("nodes")] Node[] nodes,
             [Perper("lastBlock")] Block lastBlock,
+            [Perper("pendingCommands")] List<object> pendingCommands,
+            [PerperStream("ibc")] IAsyncEnumerable<Block> ibc,
             [PerperStream("queries")] IAsyncEnumerable<Query<Block>> queries,
             [PerperStream("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
@@ -42,9 +45,11 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
             _node = node;
             _output = output;
             _lastBlock = lastBlock;
+            _pendingCommands = pendingCommands;
 
             await Task.WhenAll(
                 RunSnowball(context, nodes, cancellationToken),
+                HandleIBC(ibc, cancellationToken),
                 HandleQueries(queries, cancellationToken));
         }
 
@@ -52,15 +57,30 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
         {
             var executor = new Executor(_node?.ToString()!,
                 async input => await context.CallWorkerAsync<WorkerOutput>("AgentWorker", new { input }, default));
-            var command = _lastBlock.Commands.FirstOrDefault(o => o is Invoke || o is Publish || o is Remind);
-            if (command != null)
+            if (_pendingCommands!.Count == 0)
             {
-                var (newState, newCommands, newCapabilities) = await executor.Execute(
-                    _lastBlock.State, command, _lastBlock.Capabilities);
-                return new Block(newState, newCommands, newCapabilities);
+                _pendingCommandsTaskCompletionSource = new TaskCompletionSource<bool>();
+                // TODO: Possible race condition if TrySetResult happens before assigning a new completion source
+                await _pendingCommandsTaskCompletionSource.Task;
+                _pendingCommandsTaskCompletionSource = null;
             }
+            var inputCommands = _pendingCommands.ToArray();
+            _pendingCommands.Clear();
+            var (newState, newCommands, newCapabilities) = await executor.Execute(
+                _lastBlock!.State, inputCommands, _lastBlock.Capabilities);
             // Include historical blocks as per protocol
-            return default!; //What to return?
+            return new Block(newState, inputCommands, newCommands, newCapabilities);
+        }
+
+        private async Task HandleIBC(IAsyncEnumerable<Block> ibc, CancellationToken cancellationToken)
+        {
+            var executor = new Executor(_node?.ToString()!, default!);
+
+            await foreach (var block in ibc.WithCancellation(cancellationToken))
+            {
+                _pendingCommandsTaskCompletionSource?.TrySetResult(true);
+                _pendingCommands!.AddRange(block.Commands.Where(x => executor.FilterCommand(x)));
+            }
         }
 
         private async Task HandleQueries(IAsyncEnumerable<Query<Block>> queries, CancellationToken cancellationToken)
