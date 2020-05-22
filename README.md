@@ -465,20 +465,20 @@ and the requested deadline by the agent.
 Publish and subscribe commands allows the agents to observe and change the environment 
 by indirectly exchanging messages. Every agent has a public topic associated with the 
 agent identifier where the agent can emit arbitrary information and the subscribing agents
-gets activate on new publications. An agent can dynamically subscribe to an arbitrary number
+gets activated on new publications. An agent can dynamically subscribe to an arbitrary number
 of public topics of other agents.
 
 #### Object Capability Security Model
 
 Apocryph agents can directly interact between each other over [object capabilities](https://wiki.c2.com/?ObjectCapabilityModel). Apocryph
 object capability contain whitelisted message types and it is created locally by the agent. Then
-the agent can distribute the newly created capability by embedding. Apocryph agents can store 
+the agent can distribute the newly created capability by embedding it in messages. Apocryph agents can store 
 capabilities (both their own capabilities and capabilities received from other agents) in their 
 state for later use.
 
 Security and unforgeability of all object capabilities used by the agents is implemented as part
 of the decentralized network that hosts the agents. All object capabilities are embedded in the 
-blocks and their the network has to agree on their authenticity.     
+blocks and the network has to agree on their authenticity.     
 
 #### Call Balances
 
@@ -492,7 +492,7 @@ as it requires full propagation of the updated balance to prevent double spendin
 
 #### Invocations
 
-Invocations commands represent the direct communication between agents. Invocation command encapsulate
+Invocation commands represent the direct communication between agents. Invocation command encapsulate
 a specific message exchanged between two agents and the respective object capability. For the underlying
 decentralized network, the message is opaque object. Therefore it is up to the communicating agents to
 agree upon a protocol and serialization mechanism. The messages are also the mechanism for propagating
@@ -510,16 +510,16 @@ selecting virtual nodes, the respective role and forming the proof-of-work netwo
 
 Another building block of Apocryph protocol are *facts*. Facts can be: slot claims, confirmed blocks,
 rejected block or externally signed blocks. The high level goal of the protocol is to enable virtual nodes
-to determine find the "ground truth" by combining their knowledge with observations of the facts produced
-by other nodes. Virtual nodes gather knowledge by using *querying* other virtual nodes and validating the
+to find the "ground truth" by combining their knowledge with observations of the facts produced
+by other nodes. Virtual nodes gather knowledge by using *querying* other virtual nodes and validating their
 responses. The observation of facts by a virtual node is achieved with *gossiping*.  
 
 #### Selection
 
 Virtual nodes selection is done using algorithm inspired by [King of the Hill](https://automaton.network/#i_koh). 
-For every consensus instance there is matrix of slots identified by bytes prefix. For every slot there is random salt that changes 
-periodically. Every node that participates in the network try to produce private key the corresponds to 
-a public key with a slot prefix using an algorithm similar to [Vanitygen](https://en.bitcoin.it/wiki/Vanitygen). Upon discovery of a pair
+For every consensus instance there is matrix of slots identified by bytes prefix. For every slot there is a random salt that changes 
+periodically. Every node that participates in the network tries to produce private key the corresponds to 
+a public key with a bytes prefix using an algorithm similar to [Vanitygen](https://en.bitcoin.it/wiki/Vanitygen). Upon discovery of a pair
 of public and private keys with the desired properties the following procedure is initiated:
 
 1. Prefix of public key is used for selecting a slot
@@ -528,26 +528,26 @@ of public and private keys with the desired properties the following procedure i
     - the public key;
     - the corresponding difficulty;
     - role (proposer or validator), randomly selected from the slots with the oldest salt. 
-4. Fact gossip of the slot claim is distributed in the network.
+4. Gossip of the slot claim is distributed across the network.
 5. The virtual node is selected based on the highest difficulty for the slot.
 
 The selection algorithm has the following properties:
 
 1. If different KotH networks share the same cryptography they can have shared miners
-2. Keys with lower difficulty for a specific salt, might have higher difficulty for other salt,
-so nodes might have incentive to store the keys.  
+2. Keys with lower difficulty for a specific salt, might have higher difficulty for another salt,
+so nodes have incentive to store the keys.  
 
 #### Querying
 
 Virtual nodes queries each other to reach consensus for the next block proposal. The querying
 mechanism is following [Snowball](https://ipfs.io/ipfs/QmUy4jh5mGNZvLkjies1RWM4YuvJh5o2FYopNPVYwrRVGV) algorithm:
 
-1. If a node is proposal, it generates block proposal and responds with it to all queries.
+1. If a node is proposer, it generates block proposal and responds with it to all queries.
 2. All virtual nodes start [Snowball](https://ipfs.io/ipfs/QmUy4jh5mGNZvLkjies1RWM4YuvJh5o2FYopNPVYwrRVGV) queries to each other and respond with:
     - their opinion (if proposers) OR
-    - accept the query block proposal if it comes from a higher proposer (proposer that precedes another proposer in the proposer list) OR
-    - respond with the block proposal that they already have
-3. In parallel with (2) all block proposals that are received from queries gets validated (in priority queue)
+    - accept the query block proposal if it comes from a higher proposer (proposer preceeding current proposer in the proposers list) OR
+    - the block proposal that they already have
+3. In parallel with (2) all block proposals that are received from queries get validated (in priority queue)
 4. Virtual node *commit* on the block proposal to which [Snowball](https://ipfs.io/ipfs/QmUy4jh5mGNZvLkjies1RWM4YuvJh5o2FYopNPVYwrRVGV) have converged.
 
 In addition to the well known properties, Apocryph blocks have the following structure:
@@ -562,11 +562,11 @@ In addition to the well known properties, Apocryph blocks have the following str
 Every virtual node, validates the committed block and based on the validation result the block is either *confirmed* or *rejected* (if invalid).
 When a virtual node confirms or rejects a block it generates a fact and starts gossiping it. Every validator, gossips only facts
 that are consistent with his observations. When 2/3 of virtual nodes sign a gossip it gets accepted. If the accepted gossip
-is not consistent with the virtual node observations (ex. it is invalid), then the virtual node doesn't accept the block and branches. 
+is not consistent with the virtual node observations (ex. it is invalid), then the virtual node doesn't accept the block and forks. 
 
 #### Agent Zero
 
-Apocryph network contains one publicly available agent, called Agent Zero that generates the economic environment. Agent Zero is 
+Apocryph network contains one well known agent, called Agent Zero that generates the economic environment. Agent Zero is 
 a regular agent that holds the following information in its state:
 
 1. Main token balances
@@ -578,49 +578,49 @@ It also responds to the following inter-agent communication messages:
 2. Deposit / withdraw of funds to call balances
 
 Agent Zero chain (also referred as *main chain*) has the same consensus as any other chain. All agents include reference to the 
-last block of the main chain in their blocks.
+last block of the main chain in their blocks to maintain unified economic model.
 
 #### Inter Blockchain Communication
 
 Gossiping exchanges facts across the whole network. Based on the gossips, the virtual nodes observe not only their chain, 
-but also other chains in the network. When a virtual node with the role proposal, observes a fact containing accepted block
-with invocation, the proposer includes the invocation command in the next proposal for the current chain, using the following process:
+but also other chains in the network. When a virtual node with proposer role, observes a fact containing accepted block
+with invocation to his chain, the virtual node includes the invocation command in the next proposal for the current chain, using the following process:
 
 1. It validates the provided capabilities in the block from the other chain.
-2. It checks if call balance is sufficient, by referring to last known block on the main chain. 
+2. It checks if call balance is sufficient, by referring to the last known block on the main chain. 
 3. Generates new block proposal, using the state from the last accepted block on the current chain.
 
 ### Network Nodes
 
 Apocryph is built on top of [Peprer](https://github.com/obecto/perper) - stream-based, horizontally 
 scalable framework for asynchronous data processing. This enable Apocryph to run on physical nodes 
-with various size: from single machine (using docker-compose) to a datacenter grade cluster environment
+with various sizes: from single machine (using docker-compose) to a datacenter grade cluster environment
 using [Kubernetes](http://kubernetes.io/). All physical (network) nodes form a decentralized network and communicate
 with each other using [IPFS](https://ipfs.io/).
 
 Every network node has the following components running on it:
 
 1. Runtime
-2. Agents (*)
+2. Agents
 3. Client
-4. Services (*)
+4. Services
 
 All of the components runs in separate containers, where the components running user code (Agents and Services) run in sandboxed 
 container environments usign [gVisor](https://gvisor.dev/) 
 
 #### Clients and Services
 
-Client and Services are built-in mechanisms in Apocryph for interaction with the external environment. Client comprises of Websocket
-that allows thin clients (like mobile apps) to connect to observe the Apocryph environment by watching for certain facts that are gossiped.
-Clients enable also end-users to interact with the environment by enabling them to gossip a specific facts (ex. deposit of funds) that might
+Client and Services are built-in mechanisms in Apocryph for interaction with the external world. Client exposes a Websocket
+that allows thin clients (like mobile apps) to connect and observe Apocryph environment by watching for certain facts that are gossiped.
+Clients enable also end-users to interact with the Apocryph environment by enabling them to gossip a specific facts (ex. deposit of funds) that might
 be picked up by the proposers if they are valid. 
 
-Services can be considered as automated clients, that directly watch and interact with the environment by observing / gossiping specific facts, 
+Services can be considered as automated clients, that directly watch and interact with the Apocryph environment by observing / gossiping specific facts, 
 typically to assist agents with specific operations (ex. training a neural network).
 
 #### Availability
 
-Separation between network and virtual nodes, enable high availability of the network. If network node, becomes unavailable, 
+Separation between network nodes and virtual nodes, enable high availability of the network. If network node, becomes unavailable, 
 then another network node (that has mined the same key) can host the virtual node for the specific slot. 
 
 In case of temporal network partition, the two networks will progress independently and lately converge as part of the querying process. 
