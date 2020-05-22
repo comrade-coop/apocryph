@@ -19,17 +19,21 @@ Consensus Network for Autonomous Agents
 - [Apocryph Architecture Overview](#apocryph-architecture-overview)
   - [Agent Model](#agent-model)
     - [Reminders](#reminders)
+    - [State](#state)
     - [Publish and Subscribe](#publish-and-subscribe)
     - [Object Capability Security Model](#object-capability-security-model)
-    - [Call Tickets](#call-tickets)
+    - [Call Balances](#call-balances)
     - [Invocations](#invocations)
-    - [Services](#services)
   - [Consensus](#consenus)
-    - [Modularity](#modularity)
+    - [Selection](#selection)
+    - [Querying](#querying)
+    - [Gossiping](#gossiping)
+    - [Agent Zero](#agent-zero)
     - [Inter Blockchain Communication](#inter-blockchain-communication)
   - [Network Nodes](#network-nodes)
-    - [Scalability](#scalability)
-    - [Developer Node](#developer-node)
+    - [Client and Services](#client-and-services)
+    - [Availability](#availability)
+- [Test Harness](#test-harness)
 - [Contributing](#contributing)
 
 ## Overview
@@ -54,12 +58,12 @@ Apocryph is an architecture:
 Apocryph is a framework:
 
 - has built-in library for building multi-agent systems
-- supports both proactive and passive agents
+- supports both active and passive agents
 
 Apocryph is a blockchain *(implementation in-progress)*:
 
-- implements highly scalable DPoS BFT consensus 
-- designed to be inter-blockchain communication ready
+- implements highly scalable leaderless consensus 
+- designed in mind with inter-blockchain communication
 
 Apocryph is an economy *(implementation in-progress)*:
 
@@ -417,50 +421,211 @@ func start --build
 
 ## Apocryph Architecture Overview
 
-![Architecture Overview](docs/images/architecture_overview.jpg "Architecture Overview")
+From architecture standpoint Apocryph can be viewed as a framework for
+developing multi-agent systems running on a decentralized network. The framework
+comprises of three main layers: Agent Model, Consensus and Network Nodes.
  
 ### Agent Model
 
+Multi-agent systems typically consists of number of agents that interact with 
+their environment. Apocryph agents follow the same model, they can observe 
+the environment by subscribing to the output of other agents, services and 
+based on these observations, the agents can emit own publications or pro-actively
+engage with other agents. Therefore, Apocryph support both passive, active and
+cognitive agents.
+
+Every interaction between the agents and the environment or between the agents
+is represented as a command. This allows agents to be executed asynchronously
+in a reproducible way.
+
+> **Determinism:** Apocryph agents are implemented using high level languages - 
+C# and Python. It is developer responsibility to write deterministic agents that can 
+reach consensus on the decentralized network. There are variety of well known practices
+and linters for writing deterministic code, for example: *use deterministic seed for 
+pseudo-random number generation; avoid floating point types or use them with extra caution; 
+avoid random language features (dictionary iterators, uninitialized memory and etc)*.
+
 #### Reminders
+
+Reminded command allows agents to be activated when a specific deadline (point of time)
+has passed. Upon activation the agent receives a message 
+specified at the time when the command has been emitted. 
+
+> **Time:** There is no guarantee of the time gap between the time of agent activation 
+and the requested deadline by the agent.
+
+#### State
+
+Apocryph agents can be viewed as state machine - receive messages, update their state and 
+output new messages (in the form of commands). The internal state of the agent is opaque 
+object for the network and its structure is known only to its agent owner. 
 
 #### Publish and Subscribe
 
+Publish and subscribe commands allows the agents to observe and change the environment 
+by indirectly exchanging messages. Every agent has a public topic associated with the 
+agent identifier where the agent can emit arbitrary information and the subscribing agents
+gets activate on new publications. An agent can dynamically subscribe to an arbitrary number
+of public topics of other agents.
+
 #### Object Capability Security Model
 
-#### Call Tickets
+Apocryph agents can directly interact between each other over [object capabilities](https://wiki.c2.com/?ObjectCapabilityModel). Apocryph
+object capability contain whitelisted message types and it is created locally by the agent. Then
+the agent can distribute the newly created capability by embedding. Apocryph agents can store 
+capabilities (both their own capabilities and capabilities received from other agents) in their 
+state for later use.
+
+Security and unforgeability of all object capabilities used by the agents is implemented as part
+of the decentralized network that hosts the agents. All object capabilities are embedded in the 
+blocks and their the network has to agree on their authenticity.     
+
+#### Call Balances
+
+Direct inter-agent interactions incur costs for the receiving agents. To cover for these costs
+every agent has associated call balance and the respective costs are deducted form the balance
+one every interaction. Therefore the agent initiating the interaction has to transfer (directly or indirectly)
+the necessary funds in the receiving agent's call balance in prior of making the call. These
+balances are managed by a special public agent, named *Agent Zero* and are propagated through
+the network. Withdraws of funds from the call balances is possible, however it is slower a operation, 
+as it requires full propagation of the updated balance to prevent double spending.  
 
 #### Invocations
 
-#### Services
+Invocations commands represent the direct communication between agents. Invocation command encapsulate
+a specific message exchanged between two agents and the respective object capability. For the underlying
+decentralized network, the message is opaque object. Therefore it is up to the communicating agents to
+agree upon a protocol and serialization mechanism. The messages are also the mechanism for propagating
+state changes across the network and also carriers of object capabilities.
 
-Apocryph services are comprised of custom logic which allows Agents to communicate with 
-the outside world. They allow one to extend the consensus algorithm and provide additional 
-ways to receive inputs and produce outputs for an agent.
+### Consensus
 
-While service execution is not covered by consensus between nodes (in the way agent execution is), 
-the different instances of services running on different nodes are expected to give the same outputs 
-on most nodes, so that the nodes can reach consensus on the input to the agent.
+From consensus standpoint, Apocryph is proof-of-work network augmented with leaderless Byzantine fault
+tolerance protocol inspired by [Wavelet](https://wavelet.perlin.net/whitepaper.pdf) and [Himitsu](https://www.youtube.com/watch?v=C542HhQKzKQ). 
 
-### Consenus
+Every group of agents is operated by a separate blockchain with a separate consensus that runs in 
+parallel with other's blockchain consensus instances. Every consensus instance runs over a 
+number of dedicated virtual nodes with different roles (proposers or validators). The process of 
+selecting virtual nodes, the respective role and forming the proof-of-work network is called *selection*.
 
-Apocryph consensus implementation is using serverless, stream-based architecture to 
-achieve high concurrency and throughput. For intra-node communication it is using [Peprer](https://github.com/obecto/perper) 
-and for inter-node communication and persistence it is using [IPFS](https://ipfs.io/).
+Another building block of Apocryph protocol are *facts*. Facts can be: slot claims, confirmed blocks,
+rejected block or externally signed blocks. The high level goal of the protocol is to enable virtual nodes
+to determine find the "ground truth" by combining their knowledge with observations of the facts produced
+by other nodes. Virtual nodes gather knowledge by using *querying* other virtual nodes and validating the
+responses. The observation of facts by a virtual node is achieved with *gossiping*.  
 
-#### Modularity
+#### Selection
+
+Virtual nodes selection is done using algorithm inspired by [King of the Hill](https://automaton.network/#i_koh). 
+For every consensus instance there is matrix of slots identified by bytes prefix. For every slot there is random salt that changes 
+periodically. Every node that participates in the network try to produce private key the corresponds to 
+a public key with a slot prefix using an algorithm similar to [Vanitygen](https://en.bitcoin.it/wiki/Vanitygen). Upon discovery of a pair
+of public and private keys with the desired properties the following procedure is initiated:
+
+1. Prefix of public key is used for selecting a slot
+2. The suffix of the public key is combined with the salt and hashed to produce the difficulty of the current pair.
+3. Slot claim is produced using:
+    - the public key;
+    - the corresponding difficulty;
+    - role (proposer or validator), randomly selected from the slots with the oldest salt. 
+4. Fact gossip of the slot claim is distributed in the network.
+5. The virtual node is selected based on the highest difficulty for the slot.
+
+The selection algorithm has the following properties:
+
+1. If different KotH networks share the same cryptography they can have shared miners
+2. Keys with lower difficulty for a specific salt, might have higher difficulty for other salt,
+so nodes might have incentive to store the keys.  
+
+#### Querying
+
+Virtual nodes queries each other to reach consensus for the next block proposal. The querying
+mechanism is following [Snowball](https://ipfs.io/ipfs/QmUy4jh5mGNZvLkjies1RWM4YuvJh5o2FYopNPVYwrRVGV) algorithm:
+
+1. If a node is proposal, it generates block proposal and responds with it to all queries.
+2. All virtual nodes start [Snowball](https://ipfs.io/ipfs/QmUy4jh5mGNZvLkjies1RWM4YuvJh5o2FYopNPVYwrRVGV) queries to each other and respond with:
+    - their opinion (if proposers) OR
+    - accept the query block proposal if it comes from a higher proposer (proposer that precedes another proposer in the proposer list) OR
+    - respond with the block proposal that they already have
+3. In parallel with (2) all block proposals that are received from queries gets validated (in priority queue)
+4. Virtual node *commit* on the block proposal to which [Snowball](https://ipfs.io/ipfs/QmUy4jh5mGNZvLkjies1RWM4YuvJh5o2FYopNPVYwrRVGV) have converged.
+
+In addition to the well known properties, Apocryph blocks have the following structure:
+
+1. State
+2. Commands
+3. Object Capabilities
+4. History (validators signatures from the last N valid blocks) 
+
+#### Gossiping
+
+Every virtual node, validates the committed block and based on the validation result the block is either *confirmed* or *rejected* (if invalid).
+When a virtual node confirms or rejects a block it generates a fact and starts gossiping it. Every validator, gossips only facts
+that are consistent with his observations. When 2/3 of virtual nodes sign a gossip it gets accepted. If the accepted gossip
+is not consistent with the virtual node observations (ex. it is invalid), then the virtual node doesn't accept the block and branches. 
+
+#### Agent Zero
+
+Apocryph network contains one publicly available agent, called Agent Zero that generates the economic environment. Agent Zero is 
+a regular agent that holds the following information in its state:
+
+1. Main token balances
+2. Agents call balances
+
+It also responds to the following inter-agent communication messages:
+
+1. Creating agents / chains
+2. Deposit / withdraw of funds to call balances
+
+Agent Zero chain (also referred as *main chain*) has the same consensus as any other chain. All agents include reference to the 
+last block of the main chain in their blocks.
 
 #### Inter Blockchain Communication
+
+Gossiping exchanges facts across the whole network. Based on the gossips, the virtual nodes observe not only their chain, 
+but also other chains in the network. When a virtual node with the role proposal, observes a fact containing accepted block
+with invocation, the proposer includes the invocation command in the next proposal for the current chain, using the following process:
+
+1. It validates the provided capabilities in the block from the other chain.
+2. It checks if call balance is sufficient, by referring to last known block on the main chain. 
+3. Generates new block proposal, using the state from the last accepted block on the current chain.
 
 ### Network Nodes
 
 Apocryph is built on top of [Peprer](https://github.com/obecto/perper) - stream-based, horizontally 
-scalable framework for asynchronous data processing. This allows Apocryph Nodes to both
-work on a single machine (using docker-compose) or in a datacenter grade cluster environment
-using [Kubernetes](http://kubernetes.io/).
+scalable framework for asynchronous data processing. This enable Apocryph to run on physical nodes 
+with various size: from single machine (using docker-compose) to a datacenter grade cluster environment
+using [Kubernetes](http://kubernetes.io/). All physical (network) nodes form a decentralized network and communicate
+with each other using [IPFS](https://ipfs.io/).
 
-#### Scalability
+Every network node has the following components running on it:
 
-#### Developer Node
+1. Runtime
+2. Agents (*)
+3. Client
+4. Services (*)
+
+All of the components runs in separate containers, where the components running user code (Agents and Services) run in sandboxed 
+container environments usign [gVisor](https://gvisor.dev/) 
+
+#### Clients and Services
+
+Client and Services are built-in mechanisms in Apocryph for interaction with the external environment. Client comprises of Websocket
+that allows thin clients (like mobile apps) to connect to observe the Apocryph environment by watching for certain facts that are gossiped.
+Clients enable also end-users to interact with the environment by enabling them to gossip a specific facts (ex. deposit of funds) that might
+be picked up by the proposers if they are valid. 
+
+Services can be considered as automated clients, that directly watch and interact with the environment by observing / gossiping specific facts, 
+typically to assist agents with specific operations (ex. training a neural network).
+
+#### Availability
+
+Separation between network and virtual nodes, enable high availability of the network. If network node, becomes unavailable, 
+then another network node (that has mined the same key) can host the virtual node for the specific slot. 
+
+In case of temporal network partition, the two networks will progress independently and lately converge as part of the querying process. 
+
+### Test Harness
 
 Using Docker Compose to run Apocryph runtime is the recommended way for users that
 would like to run Apocryph Developer Node.
