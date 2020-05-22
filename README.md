@@ -516,7 +516,7 @@ responses. The observation of facts by a virtual node is achieved with *gossipin
 
 #### Selection
 
-Virtual nodes selection is done using algorithm inspired by [King of the Hill](https://automaton.network/#i_koh). 
+Virtual nodes selection is done using algorithm inspired by [Automaton](https://automaton.network/#i_koh)'s King of the Hill. 
 For every consensus instance there is matrix of slots identified by bytes prefix. For every slot there is a random salt that changes 
 periodically. Every node that participates in the network tries to produce private key the corresponds to 
 a public key with a bytes prefix using an algorithm similar to [Vanitygen](https://en.bitcoin.it/wiki/Vanitygen). Upon discovery of a pair
