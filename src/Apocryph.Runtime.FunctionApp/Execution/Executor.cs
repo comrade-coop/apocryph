@@ -18,8 +18,8 @@ namespace Apocryph.Runtime.FunctionApp.Execution
             _callWorker = callWorker;
         }
 
-        public async Task<(byte[]?, object[], IDictionary<Guid, (string, string[])>)> Execute(
-            byte[]? state, object[] commands, IDictionary<Guid, (string, string[])> capabilities)
+        public async Task<(IDictionary<string, byte[]>, object[], IDictionary<Guid, (string, string[])>)> Execute(
+            IDictionary<string, byte[]> states, object[] commands, IDictionary<Guid, (string, string[])> capabilities)
         {
             var capabilityValidator = new CapabilityValidator(capabilities);
 
@@ -27,15 +27,25 @@ namespace Apocryph.Runtime.FunctionApp.Execution
 
             foreach (var command in commands)
             {
+                var targetReference = GetTargetReference(command);
+
+                var targetState = capabilities[targetReference].Item1;
+
                 var result = command switch
                 {
-                    Remind cmd => await ExecuteRemindCommandAsync(state, cmd),
-                    Invoke cmd => await ExecuteInvokeCommandAsync(state, cmd),
+                    Invoke cmd => await ExecuteInvokeCommandAsync(states[targetState], cmd),
                     _ => throw new ArgumentException()
                 };
 
-                state = result.State;
-                if (state != null) capabilityValidator.RegisterCarrier(state);
+                if (result.State != null)
+                {
+                    capabilityValidator.RegisterCarrier(result.State);
+                    states[targetState] = result.State;
+                }
+                else
+                {
+                    states.Remove(targetState);
+                }
 
                 var newCapabilities = result.CreatedReferences.ToDictionary(
                     @ref => @ref.Key,
@@ -74,31 +84,22 @@ namespace Apocryph.Runtime.FunctionApp.Execution
                 capabilities = newCapabilities;
             }
 
-            return (state, newCommands.ToArray(), capabilities);
+            return (states, newCommands.ToArray(), capabilities);
         }
 
-        public bool FilterCommand(object command)
+        public bool FilterCommand(object command, IDictionary<Guid, (string, string[])> capabilities)
+        {
+            var targetReference = GetTargetReference(command);
+            return capabilities.ContainsKey(targetReference);
+        }
+
+        private Guid GetTargetReference(object command)
         {
             return command switch
             {
-                Remind cmd => true,
-                Invoke cmd => true, // TODO
+                Invoke cmd => cmd.Reference,
                 _ => throw new ArgumentException()
             };
-        }
-
-        private async Task<WorkerOutput> ExecuteRemindCommandAsync(byte[]? state, Remind command)
-        {
-            if (command.DueDateTime > DateTime.UtcNow)
-            {
-                await Task.Delay(command.DueDateTime.Subtract(DateTime.UtcNow));
-            }
-
-            var input = new WorkerInput(command.Message)
-            {
-                State = state
-            };
-            return await _callWorker(input);
         }
 
         private async Task<WorkerOutput> ExecuteInvokeCommandAsync(byte[]? state, Invoke command)

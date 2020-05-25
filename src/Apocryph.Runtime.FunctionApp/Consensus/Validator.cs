@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -41,12 +40,9 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
         {
             var executor = new Executor(node?.ToString()!,
                 async input => await context.CallWorkerAsync<WorkerOutput>("AgentWorker", new { input }, default));
-            var (newState, newCommands, newCapabilities) = await executor.Execute(
-                _lastBlock!.State, block.InputCommands, _lastBlock!.Capabilities);
-            return block.State.SequenceEqual(newState)
-                   && block.Commands.SequenceEqual(newCommands)
-                   && block.Capabilities.Count == newCapabilities.Count
-                   && !block.Capabilities.Except(newCapabilities).Any();
+            var (newStates, newCommands, newCapabilities) = await executor.Execute(
+                _lastBlock!.States, block.InputCommands, _lastBlock!.Capabilities);
+            return block.Equals(new Block(newStates, block.InputCommands, newCommands, newCapabilities));
             // Validate historical blocks as per protocol
         }
 
@@ -58,7 +54,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
             {
                 foreach (var command in block.Commands)
                 {
-                    if (executor.FilterCommand(command))
+                    if (executor.FilterCommand(command, _lastBlock!.Capabilities))
                     {
                         _pendingCommands!.Add(command);
                     }

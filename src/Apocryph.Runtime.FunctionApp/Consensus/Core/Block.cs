@@ -6,14 +6,14 @@ namespace Apocryph.Runtime.FunctionApp.Consensus.Core
     public class Block : IEquatable<Block>
     {
         public Node? Proposer { get; set; }
-        public byte[]? State { get; }
         public object[] InputCommands { get; }
         public object[] Commands { get; }
+        public IDictionary<string, byte[]> States { get; }
         public IDictionary<Guid, (string, string[])> Capabilities { get; }
 
-        public Block(byte[]? state, object[] inputCommands, object[] commands, IDictionary<Guid, (string, string[])> capabilities)
+        public Block(IDictionary<string, byte[]> states, object[] inputCommands, object[] commands, IDictionary<Guid, (string, string[])> capabilities)
         {
-            State = state;
+            States = states;
             InputCommands = inputCommands;
             Commands = commands;
             Capabilities = capabilities;
@@ -23,7 +23,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus.Core
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Equals(State, other.State) && Commands.Equals(other.Commands) && Capabilities.Equals(other.Capabilities);
+            return States.Equals(other.States) && InputCommands.Equals(other.InputCommands) && Commands.Equals(other.Commands) && Capabilities.Equals(other.Capabilities);
         }
 
         public override bool Equals(object? obj)
@@ -36,7 +36,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus.Core
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(State, Commands, Capabilities);
+            return HashCode.Combine(States, InputCommands, Commands, Capabilities);
         }
     }
 }

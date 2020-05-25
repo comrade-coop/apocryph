@@ -67,7 +67,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
             var inputCommands = _pendingCommands.ToArray();
             _pendingCommands.Clear();
             var (newState, newCommands, newCapabilities) = await executor.Execute(
-                _lastBlock!.State, inputCommands, _lastBlock.Capabilities);
+                _lastBlock!.States, inputCommands, _lastBlock.Capabilities);
             // Include historical blocks as per protocol
             return new Block(newState, inputCommands, newCommands, newCapabilities);
         }
@@ -79,7 +79,7 @@ namespace Apocryph.Runtime.FunctionApp.Consensus
             await foreach (var block in ibc.WithCancellation(cancellationToken))
             {
                 _pendingCommandsTaskCompletionSource?.TrySetResult(true);
-                _pendingCommands!.AddRange(block.Commands.Where(x => executor.FilterCommand(x)));
+                _pendingCommands!.AddRange(block.Commands.Where(x => executor.FilterCommand(x, _lastBlock!.Capabilities)));
             }
         }
 
