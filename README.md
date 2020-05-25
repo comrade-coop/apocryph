@@ -271,59 +271,57 @@ in a single C# file.
 *Agents\AgentOne.cs*
 ```csharp
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Apocryph.Testbed;
 using Apocryph.Agent;
+using Apocryph.Agent.Protocol;
+using Apocryph.Agent.Worker;
+using Apocryph.Testbed;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
 
-namespace SampleApp.Agents
+namespace SampleAgents.FunctionApp.Agents
 {
-    public class AgentOne
+    public class AgentOne : IAgent<object>
     {
-        public Task<AgentContext> Run(object state, AgentCapability self, object message)
+        public void Setup(IContext<object> context)
         {
-            var context = new AgentContext(state, self);
-            if (message is AgentRootInitMessage rootInitMessage)
+            context.RegisterInstance<IPingPongMessage, PingPongMessage>();
+        }
+
+        public Task Run(IContext<object> context, object message, Guid? reference)
+        {
+            switch (message)
             {
-                var cap = context.IssueCapability(new[] {typeof(PingPongMessage)});
-                context.CreateAgent("AgentTwo", "AgentTwo", new PingPongMessage {AgentOne = cap}, null);
+                case AgentRootInitMessage _:
+                    context.Create(typeof(AgentTwo).FullName!,
+                        context.CreateInstance<IPingPongMessage>(i =>
+                        {
+                            i.AgentOne = context.CreateReference(new[] { typeof(PingPongMessage) });
+                        }));
+                    break;
+                case IPingPongMessage pingPongMessage:
+                    context.Invoke(pingPongMessage.AgentTwo!.Value, context.CreateInstance<IPingPongMessage>(i =>
+                    {
+                        i.AgentOne = pingPongMessage.AgentOne;
+                        i.AgentTwo = pingPongMessage.AgentTwo;
+                        i.Content = "Ping";
+                    }));
+                    break;
             }
-            else if(message is PingPongMessage pingPongMessage)
-            {
-                context.SendMessage(pingPongMessage.AgentTwo, new PingPongMessage
-                {
-                    AgentOne = pingPongMessage.AgentOne,
-                    AgentTwo = pingPongMessage.AgentTwo,
-                    Content = "Ping"
-                }, null);
-            }
+
             return Task.FromResult(context);
         }
     }
 
     public class AgentOneWrapper
     {
-        private readonly Testbed _testbed;
-
-        public AgentOneWrapper(Testbed testbed)
+        [FunctionName(nameof(AgentOneWrapper))]
+        public async Task<WorkerOutput> Run([PerperWorkerTrigger] PerperWorkerContext context,
+            [Perper("input")] WorkerInput input, CancellationToken cancellationToken)
         {
-            _testbed = testbed;
-        }
-
-        [FunctionName("AgentOne")]
-        public async Task AgentOne(
-            [PerperStreamTrigger] PerperStreamContext context,
-            [Perper("agentId")] string agentId,
-            [Perper("initMessage")] object initMessage,
-            [PerperStream("commands")] IAsyncEnumerable<AgentCommands> commands,
-            [PerperStream("output")] IAsyncCollector<AgentCommands> output,
-            CancellationToken cancellationToken)
-        {
-            await _testbed.Agent(new AgentOne().Run, agentId, initMessage, commands, output, cancellationToken);
+            return await new Worker<object>(new AgentOne()).Run(input);
         }
     }
 }
@@ -338,63 +336,57 @@ similar way we can create the source code of our second agent ("AgentTwo").
 
 *Agents\AgentTwo.cs*
 ```csharp
-using System.Collections.Generic;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Apocryph.Testbed;
 using Apocryph.Agent;
+using Apocryph.Agent.Protocol;
+using Apocryph.Agent.Worker;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
 
 namespace SampleAgents.FunctionApp.Agents
 {
-    public class AgentTwo
+    public class AgentTwo : IAgent<object>
     {
-        public Task<AgentContext> Run(object state, AgentCapability self, object message)
+        public void Setup(IContext<object> context)
         {
-            var context = new AgentContext(state, self);
-            if(message is PingPongMessage initMessage && initMessage.AgentTwo == null)
+            context.RegisterInstance<IPingPongMessage, PingPongMessage>();
+        }
+
+        public Task Run(IContext<object> context, object message, Guid? reference)
+        {
+            switch (message)
             {
-                var cap = context.IssueCapability(new[] {typeof(PingPongMessage)});
-                context.SendMessage(initMessage.AgentOne, new PingPongMessage
-                {
-                    AgentOne = initMessage.AgentOne,
-                    AgentTwo = cap
-                }, null);
+                case PingPongMessage pingPongMessage when pingPongMessage.AgentTwo == null:
+                    context.Invoke(pingPongMessage.AgentTwo!.Value, context.CreateInstance<IPingPongMessage>(i =>
+                    {
+                        i.AgentOne = pingPongMessage.AgentOne;
+                        i.AgentTwo = context.CreateReference(new[] { typeof(PingPongMessage) });
+                    }));
+                    break;
+                case PingPongMessage pingPongMessage:
+                    context.Invoke(pingPongMessage.AgentTwo!.Value, context.CreateInstance<IPingPongMessage>(i =>
+                    {
+                        i.AgentOne = pingPongMessage.AgentOne;
+                        i.AgentTwo = pingPongMessage.AgentTwo;
+                        i.Content = "Ping";
+                    }));
+                    break;
             }
-            else if(message is PingPongMessage pingPongMessage)
-            {
-                context.SendMessage(pingPongMessage.AgentOne, new PingPongMessage
-                {
-                    AgentOne = pingPongMessage.AgentOne,
-                    AgentTwo = pingPongMessage.AgentTwo,
-                    Content = "Pong"
-                }, null);
-            }
+
             return Task.FromResult(context);
         }
     }
 
     public class AgentTwoWrapper
     {
-        private readonly Testbed _testbed;
-
-        public AgentTwoWrapper(Testbed testbed)
+        [FunctionName(nameof(AgentTwoWrapper))]
+        public async Task<WorkerOutput> Run([PerperWorkerTrigger] PerperWorkerContext context,
+            [Perper("input")] WorkerInput input, CancellationToken cancellationToken)
         {
-            _testbed = testbed;
-        }
-
-        [FunctionName("AgentTwo")]
-        public async Task AgentTwo(
-            [PerperStreamTrigger] PerperStreamContext context,
-            [Perper("agentId")] string agentId,
-            [Perper("initMessage")] object initMessage,
-            [PerperStream("commands")] IAsyncEnumerable<AgentCommands> commands,
-            [PerperStream("output")] IAsyncCollector<AgentCommands> output,
-            CancellationToken cancellationToken)
-        {
-            await _testbed.Agent(new AgentTwo().Run, agentId, initMessage, commands, output, cancellationToken);
+            return await new Worker<object>(new AgentTwo()).Run(input);
         }
     }
 }
@@ -511,12 +503,13 @@ selecting virtual nodes, the respective role and forming the proof-of-work netwo
 Another building block of Apocryph protocol are *facts*. Facts can be: slot claims, confirmed blocks,
 rejected block or externally signed blocks. The high level goal of the protocol is to enable virtual nodes
 to find the "ground truth" by combining their knowledge with observations of the facts produced
-by other nodes. Virtual nodes gather knowledge by using *querying* other virtual nodes and validating their
+by other nodes. Virtual nodes gather knowledge by *querying* other virtual nodes and validating their
 responses. The observation of facts by a virtual node is achieved with *gossiping*.  
 
 #### Selection
 
-Virtual nodes selection is done using algorithm inspired by [Automaton](https://automaton.network/#i_koh)'s King of the Hill. 
+Virtual nodes selection is done using algorithm inspired by 
+[Automaton's King of the Hill](https://automaton.network/#i_koh). 
 For every consensus instance there is matrix of slots identified by bytes prefix. For every slot there is a random salt that changes 
 periodically. Every node that participates in the network tries to produce private key the corresponds to 
 a public key with a bytes prefix using an algorithm similar to [Vanitygen](https://en.bitcoin.it/wiki/Vanitygen). Upon discovery of a pair
