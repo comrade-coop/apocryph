@@ -529,7 +529,7 @@ The selection algorithm has the following properties:
 2. Keys with lower difficulty for a specific salt might have higher difficulty for another salt,
 so nodes have incentive to store generated keys for later attempts.
 
-![Selection overview](docs/images/architecture_selection.png)
+![Selection overview](docs/images/architecture_slots.png)
 
 #### Querying
 
@@ -552,7 +552,7 @@ In addition to the well known properties, Apocryph blocks have the following str
 3. Object Capabilities
 4. History (validators signatures from the last N valid blocks) 
 
-![Query overview](docs/images/architecture_query.png)
+![Query overview](docs/images/architecture_virtual_nodes.png)
 
 #### Gossiping
 
