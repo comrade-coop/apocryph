@@ -1,5 +1,5 @@
 using System;
-using Apocryph.Agent;
+using Apocryph.Core.Agent;
 
 namespace SampleAgents.FunctionApp.Agents
 {

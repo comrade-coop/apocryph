@@ -1,9 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Apocryph.Runtime.FunctionApp.Consensus.Core;
-using Apocryph.Runtime.FunctionApp.Consensus;
-using Apocryph.Runtime.FunctionApp.ValidatorSelection;
+using Apocryph.Core.Consensus.VirtualNodes;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
@@ -17,7 +15,7 @@ namespace Apocryph.Runtime.FunctionApp
             [Perper("chains")] IAsyncDisposable chains,
             CancellationToken cancellationToken)
         {
-            var miner = await context.StreamFunctionAsync(typeof(Miner), new {});
+            var miner = await context.StreamFunctionAsync(typeof(Miner), new { });
             var gossips = context.DeclareStream(typeof(Peering));
             var ibc = context.DeclareStream(typeof(Peering));
 

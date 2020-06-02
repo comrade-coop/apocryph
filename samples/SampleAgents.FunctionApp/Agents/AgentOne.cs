@@ -1,10 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Apocryph.Agent;
-using Apocryph.Agent.Protocol;
-using Apocryph.Agent.Worker;
-using Apocryph.Testbed;
+using Apocryph.Core.Agent;
+using Apocryph.Core.Agent.Worker;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
@@ -22,7 +21,7 @@ namespace SampleAgents.FunctionApp.Agents
         {
             switch (message)
             {
-                case AgentRootInitMessage _:
+                case string _:
                     context.Create(typeof(AgentTwo).FullName!,
                         context.CreateInstance<IPingPongMessage>(i =>
                         {
@@ -46,8 +45,8 @@ namespace SampleAgents.FunctionApp.Agents
     public class AgentOneWrapper
     {
         [FunctionName(nameof(AgentOneWrapper))]
-        public async Task<WorkerOutput> Run([PerperWorkerTrigger] PerperWorkerContext context,
-            [Perper("input")] WorkerInput input, CancellationToken cancellationToken)
+        public async Task<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)> Run([PerperWorkerTrigger] PerperWorkerContext context,
+            [Perper("input")] (byte[]?, (string, byte[]), Guid?) input, CancellationToken cancellationToken)
         {
             return await new Worker<object>(new AgentOne()).Run(input);
         }
