@@ -18,13 +18,13 @@
     </ItemGroup>
     
     <ItemGroup>
-      <ProjectReference Include="..\..\src\Apocryph.Core.Agent\Apocryph.Core.Agent.csproj" />
-      <ProjectReference Include="..\..\src\Apocryph.Testbed\Apocryph.Testbed.csproj" />
+      <ProjectReference Include="..\..\src\Apocryph.Core.Consensus\Apocryph.Core.Consensus.csproj" />
     </ItemGroup>
     
     <ItemGroup>
       <PackageReference Include="Microsoft.Azure.Functions.Extensions" Version="1.0.0" />
       <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="3.0.5" />
+      <PackageReference Include="Perper.WebJobs.Extensions" Version="0.3.16" />
     </ItemGroup>
 
 </Project>

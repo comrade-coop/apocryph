@@ -8,7 +8,7 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="3.0.2" />
         <PackageReference Include="System.Linq.Async" Version="4.0.0" />
-        <PackageReference Include="Perper.WebJobs.Extensions" Version="0.3.12" />
+        <PackageReference Include="Perper.WebJobs.Extensions" Version="0.3.16" />
     </ItemGroup>
     <ItemGroup>
         <None Update="host.json">
@@ -20,7 +20,6 @@
         </None>
     </ItemGroup>
     <ItemGroup>
-      <ProjectReference Include="..\Apocryph.Core.Agent\Apocryph.Core.Agent.csproj" />
       <ProjectReference Include="..\Apocryph.Core.Consensus\Apocryph.Core.Consensus.csproj" />
     </ItemGroup>
 </Project>
