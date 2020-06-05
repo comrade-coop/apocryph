@@ -23,14 +23,15 @@ namespace Apocryph.Runtime.FunctionApp
         private HashSet<object>? _pendingCommands;
         private IAsyncCollector<Message<Block>>? _output;
         private Guid _chainId;
+        private Node _node;
 
         [FunctionName(nameof(Validator))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
+            [PerperStream("assigner")] IAsyncEnumerable<(Node, Node[])> assigner,
             [Perper("chainId")] Guid chainId,
-            [Perper("node")] Node node,
             [Perper("lastBlock")] Block lastBlock,
             [Perper("pendingCommands")] HashSet<object> pendingCommands,
-            [PerperStream("ibc")] IAsyncEnumerable<Block> ibc,
+            [PerperStream("gossips")] IAsyncEnumerable<Block> gossips,
             [PerperStream("queries")] IAsyncEnumerable<Query<Block>> queries,
             [PerperStream("output")] IAsyncCollector<Message<Block>> output,
             CancellationToken cancellationToken)
@@ -41,8 +42,17 @@ namespace Apocryph.Runtime.FunctionApp
             _output = output;
 
             await Task.WhenAll(
-                HandleIBC(ibc, node, cancellationToken),
-                HandleQueries(context, queries, node, cancellationToken));
+                HandleAssigner(assigner),
+                HandleIBC(gossips, cancellationToken),
+                HandleQueries(context, queries, cancellationToken));
+        }
+
+        private async Task HandleAssigner(IAsyncEnumerable<(Node, Node[])> assigner)
+        {
+            await foreach (var (node, nodes) in assigner)
+            {
+                _node = node;
+            }
         }
 
         private async Task<bool> Validate(PerperStreamContext context, Node node, Block block)
@@ -85,9 +95,9 @@ namespace Apocryph.Runtime.FunctionApp
             // Validate historical blocks as per protocol
         }
 
-        private async Task HandleIBC(IAsyncEnumerable<Block> ibc, Node node, CancellationToken cancellationToken)
+        private async Task HandleIBC(IAsyncEnumerable<Block> ibc, CancellationToken cancellationToken)
         {
-            var executor = new Executor(node?.ToString()!, default!);
+            var executor = new Executor(_node.Chain, default!);
 
             await foreach (var block in ibc.WithCancellation(cancellationToken))
             {
@@ -116,14 +126,14 @@ namespace Apocryph.Runtime.FunctionApp
             }
         }
 
-        private async Task HandleQueries(PerperStreamContext context, IAsyncEnumerable<Query<Block>> queries, Node node, CancellationToken cancellationToken)
+        private async Task HandleQueries(PerperStreamContext context, IAsyncEnumerable<Query<Block>> queries, CancellationToken cancellationToken)
         {
             await foreach (var query in queries.WithCancellation(cancellationToken))
             {
-                if (query.Receiver != node) continue;
+                if (query.Receiver != _node) continue;
 
                 var block = query.Value;
-                var valid = await Validate(context, node, block);
+                var valid = await Validate(context, _node, block);
                 await _output!.AddAsync(new Message<Block>(block, valid ? MessageType.Valid : MessageType.Invalid), cancellationToken);
             }
         }

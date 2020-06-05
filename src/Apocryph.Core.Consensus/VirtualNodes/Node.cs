@@ -5,6 +5,7 @@ namespace Apocryph.Core.Consensus.VirtualNodes
     public class Node : IEquatable<Node>
     {
         public int Id { get; set; }
+        public string Chain { get; set; }
 
         public bool Equals(Node? other)
         {

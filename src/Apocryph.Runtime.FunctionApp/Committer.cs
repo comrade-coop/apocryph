@@ -27,20 +27,27 @@ namespace Apocryph.Runtime.FunctionApp
 
         [FunctionName(nameof(Committer))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [Perper("node")] Node node,
-            [Perper("nodes")] Node[] nodes,
+            [PerperStream("assigner")] IAsyncEnumerable<(Node, Node[])> assigner,
             [PerperStream("gossips")] IAsyncEnumerable<Gossip<Block>> gossips,
             [PerperStream("proposer")] IAsyncEnumerable<Message<Block>> proposer,
             [PerperStream("validator")] IAsyncEnumerable<Message<Block>> validator,
             [PerperStream("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
         {
-            _node = node;
             _output = output;
 
             await Task.WhenAll(
+                HandleAssigner(assigner),
                 HandleProposals(proposer, cancellationToken),
                 UpdateValidBlocks(validator, cancellationToken));
+        }
+
+        private async Task HandleAssigner(IAsyncEnumerable<(Node, Node[])> assigner)
+        {
+            await foreach (var (node, _) in assigner)
+            {
+                _node = node;
+            }
         }
 
         private async Task HandleProposals(IAsyncEnumerable<Message<Block>> proposer,

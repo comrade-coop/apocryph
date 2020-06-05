@@ -8,8 +8,6 @@ namespace Apocryph.Core.Consensus.Communication
         public Node Sender { get; }
         public GossipVerb Verb { get; }
 
-        public Node[] Signers { get; set; }
-
         public Gossip(T value, Node sender, GossipVerb verb)
         {
             Value = value;

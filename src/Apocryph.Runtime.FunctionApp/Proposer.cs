@@ -27,6 +27,7 @@ namespace Apocryph.Runtime.FunctionApp
         private Guid _chainId;
         private Guid _proposerAccount;
         private Node? _node;
+        private Node[] _nodes;
         private IAsyncCollector<object>? _output;
         private Snowball<Block>? _snowball;
         private Node[]? _proposers;
@@ -43,31 +44,39 @@ namespace Apocryph.Runtime.FunctionApp
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("chainId")] Guid chainId,
             [Perper("proposerAccount")] Guid proposerAccount,
-            [Perper("node")] Node node,
-            [Perper("nodes")] Node[] nodes,
+            [PerperStream("assigner")] IAsyncEnumerable<(Node, Node[])> assigner,
             [Perper("lastBlock")] Block lastBlock,
             [Perper("pendingCommands")] List<object> pendingCommands,
-            [PerperStream("ibc")] IAsyncEnumerable<Block> ibc,
+            [PerperStream("gossips")] IAsyncEnumerable<Block> gossips,
             [PerperStream("queries")] IAsyncEnumerable<Query<Block>> queries,
             [PerperStream("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
         {
             _chainId = chainId;
             _proposerAccount = proposerAccount;
-            _node = node;
             _output = output;
             _lastBlock = lastBlock;
             _pendingCommands = pendingCommands;
 
             await Task.WhenAll(
-                RunSnowball(context, nodes, cancellationToken),
-                HandleIBC(ibc, cancellationToken),
+                HandleAssigner(assigner),
+                RunSnowball(context, cancellationToken),
+                HandleIBC(gossips, cancellationToken),
                 HandleQueries(queries, cancellationToken));
+        }
+
+        private async Task HandleAssigner(IAsyncEnumerable<(Node, Node[])> assigner)
+        {
+            await foreach (var (node, nodes) in assigner)
+            {
+                _node = node;
+                _nodes = nodes;
+            }
         }
 
         private async Task<Block> Propose(PerperStreamContext context)
         {
-            var executor = new Executor(_node?.ToString()!,
+            var executor = new Executor(_node.Chain,
                 async input => await context.CallWorkerAsync<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>("AgentWorker", new { input }, default));
             if (_pendingCommands!.Count == 0)
             {
@@ -140,12 +149,12 @@ namespace Apocryph.Runtime.FunctionApp
             }
         }
 
-        private async Task RunSnowball(PerperStreamContext context, Node[] nodes, CancellationToken cancellationToken)
+        private async Task RunSnowball(PerperStreamContext context, CancellationToken cancellationToken)
         {
             while (true)
             {
-                var proposerCount = nodes.Length / 10; // TODO: Move constant to parameter
-                _proposers = nodes.Take(proposerCount).ToArray(); // TODO: Do a random walk based on last block hash
+                var proposerCount = _nodes.Length / 10; // TODO: Move constant to parameter
+                _proposers = _nodes.Take(proposerCount).ToArray(); // TODO: Do a random walk based on last block hash
 
                 var opinion = default(Block?);
                 if (Array.IndexOf(_proposers, _node) != -1)
@@ -156,7 +165,7 @@ namespace Apocryph.Runtime.FunctionApp
                 _snowball = new Snowball<Block>(_node!, 100, 0.6, 3,
                                                 SnowballSend, SnowballRespond, opinion);
 
-                var committedProposal = await _snowball!.Run(nodes, cancellationToken);
+                var committedProposal = await _snowball!.Run(_nodes, cancellationToken);
 
                 await _output!.AddAsync(new Message<Block>(
                     committedProposal, MessageType.Committed), cancellationToken);

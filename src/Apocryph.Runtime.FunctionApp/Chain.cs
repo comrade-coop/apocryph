@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Core.Consensus.VirtualNodes;
@@ -12,21 +14,25 @@ namespace Apocryph.Runtime.FunctionApp
     {
         [FunctionName(nameof(Chain))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [Perper("nodes")] Node[] nodes,
-            [PerperStream("localNodes")] IAsyncDisposable localNodes,
-            [PerperStream("ibc")] IAsyncDisposable ibc,
+            [PerperStream("miner")] IAsyncEnumerable<(PrivateKey, string)> miner,
+            [Perper("gossips")] IAsyncDisposable gossips,
+            [Perper("queries")] IAsyncDisposable queries,
+            [PerperStream("output")] IAsyncCollector<IAsyncDisposable> output,
             CancellationToken cancellationToken)
         {
-            var queries = context.DeclareStream(typeof(Peering));
-            var gossips = context.DeclareStream(typeof(Peering));
+            await foreach (var (privateKey, chain) in miner.WithCancellation(cancellationToken))
+            {
+                IAsyncDisposable salts = default!;
 
-            var factory = await context.StreamFunctionAsync(typeof(Factory), new { nodes, localNodes, ibc, queries, gossips });
-            await context.StreamFunctionAsync(queries, new { factory, filter = typeof(Proposer) });
-            await context.StreamFunctionAsync(gossips, new { factory, filter = typeof(Committer) });
+                var assigner = await context.StreamFunctionAsync(typeof(Assigner), new {chain, privateKey, gossips, salts});
+                var proposer = await context.StreamFunctionAsync(typeof(Proposer), new {assigner, queries});
+                var validator = await context.StreamFunctionAsync(typeof(Validator), new {assigner, queries});
+                var committer = await context.StreamFunctionAsync(typeof(Committer),
+                    new {assigner, gossips, proposer, validator});
 
-            var output = await context.StreamFunctionAsync(typeof(Acceptor), new { nodes, gossips });
-
-            await context.BindOutput(output, cancellationToken);
+                await Task.WhenAll(new[] {assigner, proposer, validator, committer}.Select(
+                    stream => output.AddAsync(stream, cancellationToken)));
+            }
         }
     }
 }

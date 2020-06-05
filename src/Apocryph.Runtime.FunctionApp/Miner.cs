@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,7 +13,8 @@ namespace Apocryph.Runtime.FunctionApp
     {
         [FunctionName(nameof(Miner))]
         public static async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("output")] IAsyncCollector<PrivateKey> output,
+            [Perper("chains")] IDictionary<byte[], string> chains,
+            [PerperStream("output")] IAsyncCollector<(PrivateKey, string)> output,
             CancellationToken cancellationToken)
         {
 
@@ -20,10 +22,15 @@ namespace Apocryph.Runtime.FunctionApp
             // TODO: Maybe run multiple threads in parallel
             while (!cancellationToken.IsCancellationRequested)
             {
-                dsa.GenerateKey(PrivateKey.Curve);
+                dsa.GenerateKey(PrivateKey.Curve); // Pass chains.keys as prefixes
                 var privateKey = new PrivateKey(dsa.ExportParameters(true));
-                await output.AddAsync(privateKey);
+                await output.AddAsync((privateKey, chains[GetPrefix(privateKey)]));
             }
+        }
+
+        private static byte[] GetPrefix(PrivateKey privateKey)
+        {
+            return default!; //prefix of the private key
         }
     }
 }

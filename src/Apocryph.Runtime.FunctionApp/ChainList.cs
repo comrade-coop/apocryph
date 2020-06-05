@@ -1,7 +1,6 @@
-using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Apocryph.Core.Consensus.VirtualNodes;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
@@ -12,19 +11,31 @@ namespace Apocryph.Runtime.FunctionApp
     {
         [FunctionName(nameof(ChainList))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [Perper("chains")] IAsyncDisposable chains,
+            [Perper("chains")] IDictionary<byte[], string> chains,
             CancellationToken cancellationToken)
         {
-            var miner = await context.StreamFunctionAsync(typeof(Miner), new { });
             var gossips = context.DeclareStream(typeof(Peering));
-            var ibc = context.DeclareStream(typeof(Peering));
+            var queries = context.DeclareStream(typeof(Peering));
 
-            var factory = await context.StreamFunctionAsync(typeof(ChainFactory), new { chains, miner, gossips, ibc });
-            await context.StreamFunctionAsync(ibc, new { factory, filter = typeof(Chain) });
-            await context.StreamFunctionAsync(gossips, new { factory, filter = typeof(Assigner) });
+            var miner = await context.StreamFunctionAsync(typeof(Miner), new { chains });
 
-            var nodes = new Node[] { new Node { Id = 1 } };
-            var chain = await context.StreamFunctionAsync(typeof(Chain), new { localNodes = miner });
+            var chain = await context.StreamFunctionAsync(typeof(Chain), new { miner, gossips, queries });
+            await context.StreamFunctionAsync(gossips, new
+            {
+                chain, filter = new[]
+                {
+                    typeof(Assigner),
+                    typeof(Proposer),
+                    typeof(Committer)
+                }
+            });
+            await context.StreamFunctionAsync(queries, new
+            {
+                chain, filter = new[]
+                {
+                    typeof(Proposer)
+                }
+            });
         }
     }
 }
