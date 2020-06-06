@@ -25,12 +25,11 @@ namespace Apocryph.Runtime.FunctionApp
                 IAsyncDisposable salts = default!;
 
                 var assigner = await context.StreamFunctionAsync(typeof(Assigner), new {chain, privateKey, gossips, salts});
-                var proposer = await context.StreamFunctionAsync(typeof(Proposer), new {assigner, queries});
+                var acceptor = await context.StreamFunctionAsync(typeof(Acceptor), new { assigner, gossips });
+                var proposer = await context.StreamFunctionAsync(typeof(Proposer), new {assigner, acceptor, queries });
                 var validator = await context.StreamFunctionAsync(typeof(Validator), new {assigner, queries});
-                var committer = await context.StreamFunctionAsync(typeof(Committer),
-                    new {assigner, gossips, proposer, validator});
-
-                await Task.WhenAll(new[] {assigner, proposer, validator, committer}.Select(
+                var committer = await context.StreamFunctionAsync(typeof(Committer), new {assigner, proposer, validator});
+                await Task.WhenAll(new[] {assigner, acceptor, proposer, validator, committer}.Select(
                     stream => output.AddAsync(stream, cancellationToken)));
             }
         }

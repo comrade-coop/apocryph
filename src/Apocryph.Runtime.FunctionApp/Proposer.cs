@@ -42,17 +42,15 @@ namespace Apocryph.Runtime.FunctionApp
 
         [FunctionName(nameof(Proposer))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [Perper("chainId")] Guid chainId,
             [Perper("proposerAccount")] Guid proposerAccount,
             [PerperStream("assigner")] IAsyncEnumerable<(Node, Node[])> assigner,
             [Perper("lastBlock")] Block lastBlock,
+            [PerperStream("acceptor")] IAsyncEnumerable<Block> acceptor,
             [Perper("pendingCommands")] List<object> pendingCommands,
-            [PerperStream("gossips")] IAsyncEnumerable<Block> gossips,
             [PerperStream("queries")] IAsyncEnumerable<Query<Block>> queries,
             [PerperStream("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
         {
-            _chainId = chainId;
             _proposerAccount = proposerAccount;
             _output = output;
             _lastBlock = lastBlock;
@@ -61,7 +59,7 @@ namespace Apocryph.Runtime.FunctionApp
             await Task.WhenAll(
                 HandleAssigner(assigner),
                 RunSnowball(context, cancellationToken),
-                HandleIBC(gossips, cancellationToken),
+                HandleIBC(acceptor, cancellationToken),
                 HandleQueries(queries, cancellationToken));
         }
 
@@ -70,6 +68,7 @@ namespace Apocryph.Runtime.FunctionApp
             await foreach (var (node, nodes) in assigner)
             {
                 _node = node;
+                _chainId = new Guid(); //Get Prefix from _node?
                 _nodes = nodes;
             }
         }

@@ -18,6 +18,7 @@
     </ItemGroup>
     
     <ItemGroup>
+      <ProjectReference Include="..\..\src\Apocryph.Core.Agent\Apocryph.Core.Agent.csproj" />
       <ProjectReference Include="..\..\src\Apocryph.Core.Consensus\Apocryph.Core.Consensus.csproj" />
     </ItemGroup>
     

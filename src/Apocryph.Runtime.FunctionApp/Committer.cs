@@ -28,7 +28,6 @@ namespace Apocryph.Runtime.FunctionApp
         [FunctionName(nameof(Committer))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("assigner")] IAsyncEnumerable<(Node, Node[])> assigner,
-            [PerperStream("gossips")] IAsyncEnumerable<Gossip<Block>> gossips,
             [PerperStream("proposer")] IAsyncEnumerable<Message<Block>> proposer,
             [PerperStream("validator")] IAsyncEnumerable<Message<Block>> validator,
             [PerperStream("output")] IAsyncCollector<object> output,

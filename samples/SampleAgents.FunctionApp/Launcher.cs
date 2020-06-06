@@ -19,7 +19,7 @@ namespace SampleAgents.FunctionApp
             {
                 chains = new Dictionary<byte[], string>
                 {
-                    {new byte[0], nameof(AgentOne)}
+                    {new byte[0], typeof(AgentOneWrapper).FullName!}
                 }
             });
 
