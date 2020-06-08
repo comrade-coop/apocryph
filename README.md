@@ -59,12 +59,12 @@ Apocryph is a framework:
 - has built-in library for building multi-agent systems
 - supports both active and passive agents
 
-Apocryph is a blockchain *(implementation in-progress)*:
+Apocryph is a blockchain:
 
 - implements highly scalable leaderless consensus 
 - designed in mind with inter-blockchain communication
 
-Apocryph is an economy *(implementation in-progress)*:
+Apocryph is an economy:
 
 - supports fully programmable digital economy model
 - accommodates both humans and AI actors 
@@ -72,8 +72,7 @@ Apocryph is an economy *(implementation in-progress)*:
 ## Getting Started
 
 This is a quick start guide of how to create a simple multi-agent system
-using Apocryph. The guide will walk you through our 
-the [sample agent application](https://github.com/comrade-coop/apocryph/tree/master/samples/SampleAgents.FunctionApp) in our repo.
+using Apocryph. The guide explains [sample agent application](https://github.com/comrade-coop/apocryph/tree/master/samples/SampleAgents.FunctionApp) in our repo.
 
 ### Prerequisite
 
@@ -89,8 +88,8 @@ Before running this guide, you must have the following:
 that is referenced by the function app project.
 
 The most suitable project type for Apocryph Agent development is Azure Functions Project.
-The [project](https://github.com/comrade-coop/apocryph/blob/master/samples/SampleAgents.FunctionApp/SampleAgents.FunctionApp.csproj) can contain a single agent or multiple agents running on the same chain. 
-The project has dependency to [Perper](https://github.com/obecto/perper) and [Apocryph Agent Library](https://github.com/comrade-coop/apocryph/blob/master/src/Apocryph.Core.Agent/Apocryph.Core.Agent.csproj)
+The [project](https://github.com/comrade-coop/apocryph/blob/master/samples/SampleAgents.FunctionApp) can contain a single agent or multiple agents running on the same chain. 
+The [project](https://github.com/comrade-coop/apocryph/blob/master/samples/SampleAgents.FunctionApp/SampleAgents.FunctionApp.csproj) has dependency to [Perper](https://github.com/obecto/perper) and [Apocryph Agent Library](https://github.com/comrade-coop/apocryph/blob/master/src/Apocryph.Core.Agent/Apocryph.Core.Agent.csproj)
 
 ### Local Development
 
@@ -117,7 +116,7 @@ in the docker folder of our [repo](https://github.com/comrade-coop/apocryph/tree
 
 From architecture standpoint Apocryph can be viewed as a framework for
 developing multi-agent systems running on a decentralized network. The framework
-comprises of three main layers: Agent Model, Consensus and Network Nodes.
+comprises of three main layers: [Agent Model](#agent-model), [Consensus](#consenus), and [Network Nodes](#network-nodes).
  
 ### Agent Model
 
