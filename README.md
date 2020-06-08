@@ -116,7 +116,7 @@ in the docker folder of our [repo](https://github.com/comrade-coop/apocryph/tree
 
 From architecture standpoint Apocryph can be viewed as a framework for
 developing multi-agent systems running on a decentralized network. The framework
-comprises of three main layers: [Agent Model](#agent-model), [Consensus](#consenus), and [Network Nodes](#network-nodes).
+comprises of three main layers: [Agent Model](#agent-model), [Consensus](#consensus), and [Network Nodes](#network-nodes).
  
 ### Agent Model
 
