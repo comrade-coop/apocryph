@@ -22,13 +22,11 @@ namespace Apocryph.Runtime.FunctionApp
         private HashSet<byte[]>? _pendingSetChainBlockMessages = new HashSet<byte[]>();
         private HashSet<object>? _pendingCommands;
         private IAsyncCollector<Message<Block>>? _output;
-        private Guid _chainId;
-        private Node _node;
+        private Node? _node;
 
         [FunctionName(nameof(Validator))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("assigner")] IAsyncEnumerable<(Node, Node[])> assigner,
-            [Perper("chainId")] Guid chainId,
+            [Perper("node")] Node node,
             [Perper("lastBlock")] Block lastBlock,
             [Perper("pendingCommands")] HashSet<object> pendingCommands,
             [PerperStream("gossips")] IAsyncEnumerable<Block> gossips,
@@ -36,23 +34,14 @@ namespace Apocryph.Runtime.FunctionApp
             [PerperStream("output")] IAsyncCollector<Message<Block>> output,
             CancellationToken cancellationToken)
         {
-            _chainId = chainId;
             _lastBlock = lastBlock;
             _pendingCommands = pendingCommands;
             _output = output;
+            _node = node;
 
             await Task.WhenAll(
-                HandleAssigner(assigner),
                 HandleIBC(gossips, cancellationToken),
                 HandleQueries(context, queries, cancellationToken));
-        }
-
-        private async Task HandleAssigner(IAsyncEnumerable<(Node, Node[])> assigner)
-        {
-            await foreach (var (node, nodes) in assigner)
-            {
-                _node = node;
-            }
         }
 
         private async Task<bool> Validate(PerperStreamContext context, Node node, Block block)
@@ -60,7 +49,7 @@ namespace Apocryph.Runtime.FunctionApp
             var _sawClaimRewardMessage = false;
             foreach (var inputCommand in block.InputCommands)
             {
-                if (_chainId == Guid.Empty && inputCommand is Invoke invokation)
+                if (_node!.ChainId.Length == 0 && inputCommand is Invoke invokation)
                 {
                     if (invokation.Message.Item1 == typeof(ClaimRewardMessage).FullName)
                     {
@@ -86,18 +75,18 @@ namespace Apocryph.Runtime.FunctionApp
                 }
             }
 
-            var executor = new Executor(node?.ToString()!,
+            var executor = new Executor(_node!.ChainId,
                 async input => await context.CallWorkerAsync<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>("AgentWorker", new { input }, default));
             var (newStates, newCommands, newCapabilities) = await executor.Execute(
                 _lastBlock!.States, block.InputCommands, _lastBlock!.Capabilities);
 
-            return block.Equals(new Block(_chainId, block.ProposerAccount, newStates, block.InputCommands, newCommands, newCapabilities));
+            return block.Equals(new Block(_node!.ChainId, block.ProposerAccount, newStates, block.InputCommands, newCommands, newCapabilities));
             // Validate historical blocks as per protocol
         }
 
         private async Task HandleIBC(IAsyncEnumerable<Block> ibc, CancellationToken cancellationToken)
         {
-            var executor = new Executor(_node.Chain, default!);
+            var executor = new Executor(_node!.ChainId, default!);
 
             await foreach (var block in ibc.WithCancellation(cancellationToken))
             {
@@ -109,7 +98,7 @@ namespace Apocryph.Runtime.FunctionApp
                     }
                 }
 
-                if (_chainId == Guid.Empty)
+                if (_node!.ChainId.Length == 0)
                 {
                     _pendingSetChainBlockMessages!.Add(JsonSerializer.SerializeToUtf8Bytes(new SetChainBlockMessage
                     {

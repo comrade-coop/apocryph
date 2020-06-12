@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,27 +12,38 @@ namespace Apocryph.Runtime.FunctionApp
     {
         [FunctionName(nameof(ChainList))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [Perper("chains")] IDictionary<byte[], string> chains,
+            [Perper("slotGossips")] IAsyncDisposable slotGossips,
+            [Perper("chains")] IDictionary<byte[], int> chains,
+            [PerperStream("output")] IAsyncCollector<IAsyncDisposable> output,
             CancellationToken cancellationToken)
         {
             var gossips = context.DeclareStream(typeof(Peering));
             var queries = context.DeclareStream(typeof(Peering));
+            var salts = (IAsyncDisposable)default!;
 
-            var miner = await context.StreamFunctionAsync(typeof(Miner), new { chains });
+            var chainStreams = new List<IAsyncDisposable>();
+            foreach (var (chainId, slotCount) in chains)
+            {
+                var chain = await context.StreamFunctionAsync(typeof(Chain), new { chainId, slotCount, gossips, queries, salts, slotGossips });
+                chainStreams.Add(chain);
 
-            var chain = await context.StreamFunctionAsync(typeof(Chain), new { miner, gossips, queries });
+                await output.AddAsync(chain);
+            }
+
             await context.StreamFunctionAsync(gossips, new
             {
-                chain, filter = new[]
+                factory = chainStreams.ToArray(),
+                filter = new[]
                 {
-                    typeof(Assigner),
                     typeof(Proposer),
                     typeof(Committer)
                 }
             });
+
             await context.StreamFunctionAsync(queries, new
             {
-                chain, filter = new[]
+                factory = chainStreams.ToArray(),
+                filter = new[]
                 {
                     typeof(Proposer)
                 }

@@ -34,7 +34,7 @@ namespace TestHarness.FunctionApp
             var pongReference = Guid.NewGuid();
 
             var pingBlock = new Block(
-                Guid.NewGuid(),
+                new byte[0],
                 Guid.NewGuid(),
                 new Dictionary<string, byte[]>
                 {
@@ -43,14 +43,14 @@ namespace TestHarness.FunctionApp
                         JsonSerializer.SerializeToUtf8Bytes(new ChainAgentState {OtherReference = pongReference})
                     }
                 },
-                new object[]{},
-                new object[]{},
+                new object[] { },
+                new object[] { },
                 new Dictionary<Guid, (string, string[])>
                 {
                     {pongReference, (typeof(ChainAgentPong).FullName!, new[] {typeof(string).FullName!})}
                 });
             var pongBlock = new Block(
-                Guid.NewGuid(),
+                new byte[0],
                 Guid.NewGuid(),
                 new Dictionary<string, byte[]>
                 {
@@ -59,7 +59,7 @@ namespace TestHarness.FunctionApp
                         JsonSerializer.SerializeToUtf8Bytes(new ChainAgentState {OtherReference = pingReference})
                     }
                 },
-                new object[]{},
+                new object[] { },
                 new object[]
                 {
                     new Invoke(pingReference, (typeof(string).FullName!, JsonSerializer.SerializeToUtf8Bytes("Pong")))

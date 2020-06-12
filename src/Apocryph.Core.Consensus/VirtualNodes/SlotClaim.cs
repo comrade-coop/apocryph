@@ -1,6 +1,4 @@
-using Apocryph.Core.Consensus.VirtualNodes;
-
-namespace Apocryph.Core.Consensus.Communication
+namespace Apocryph.Core.Consensus.VirtualNodes
 {
     public struct SlotClaim
     {

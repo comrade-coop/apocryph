@@ -24,10 +24,9 @@ namespace Apocryph.Runtime.FunctionApp
     {
         private readonly Channel<Query<Block>> _channel;
 
-        private Guid _chainId;
         private Guid _proposerAccount;
         private Node? _node;
-        private Node[] _nodes;
+        private Node[]? _nodes;
         private IAsyncCollector<object>? _output;
         private Snowball<Block>? _snowball;
         private Node[]? _proposers;
@@ -43,7 +42,8 @@ namespace Apocryph.Runtime.FunctionApp
         [FunctionName(nameof(Proposer))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("proposerAccount")] Guid proposerAccount,
-            [PerperStream("assigner")] IAsyncEnumerable<(Node, Node[])> assigner,
+            [Perper("node")] Node node,
+            [Perper("nodes")] Node[] nodes,
             [Perper("lastBlock")] Block lastBlock,
             [PerperStream("acceptor")] IAsyncEnumerable<Block> acceptor,
             [Perper("pendingCommands")] List<object> pendingCommands,
@@ -55,27 +55,18 @@ namespace Apocryph.Runtime.FunctionApp
             _output = output;
             _lastBlock = lastBlock;
             _pendingCommands = pendingCommands;
+            _node = node;
+            _nodes = nodes;
 
             await Task.WhenAll(
-                HandleAssigner(assigner),
                 RunSnowball(context, cancellationToken),
                 HandleIBC(acceptor, cancellationToken),
                 HandleQueries(queries, cancellationToken));
         }
 
-        private async Task HandleAssigner(IAsyncEnumerable<(Node, Node[])> assigner)
-        {
-            await foreach (var (node, nodes) in assigner)
-            {
-                _node = node;
-                _chainId = new Guid(); //Get Prefix from _node?
-                _nodes = nodes;
-            }
-        }
-
         private async Task<Block> Propose(PerperStreamContext context)
         {
-            var executor = new Executor(_node.Chain,
+            var executor = new Executor(_node!.ChainId,
                 async input => await context.CallWorkerAsync<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>("AgentWorker", new { input }, default));
             if (_pendingCommands!.Count == 0)
             {
@@ -88,7 +79,7 @@ namespace Apocryph.Runtime.FunctionApp
             var inputCommands = _pendingCommands.ToArray();
             _pendingCommands.Clear();
 
-            if (_chainId == Guid.Empty)
+            if (_node!.ChainId.Length == 0)
             {
                 inputCommands = inputCommands.Concat(new object[] {
                     new Invoke(_proposerAccount, (
@@ -100,25 +91,25 @@ namespace Apocryph.Runtime.FunctionApp
             var (newState, newCommands, newCapabilities) = await executor.Execute(
                 _lastBlock!.States, inputCommands, _lastBlock.Capabilities);
             // Include historical blocks as per protocol
-            return new Block(_chainId, _proposerAccount, newState, inputCommands, newCommands, newCapabilities);
+            return new Block(_node!.ChainId, _proposerAccount, newState, inputCommands, newCommands, newCapabilities);
         }
 
         private async Task HandleIBC(IAsyncEnumerable<Block> ibc, CancellationToken cancellationToken)
         {
-            var executor = new Executor(_node?.ToString()!, default!);
+            var executor = new Executor(_node!.ChainId, default!);
 
             await foreach (var block in ibc.WithCancellation(cancellationToken))
             {
                 _pendingCommandsTaskCompletionSource?.TrySetResult(true);
                 _pendingCommands!.AddRange(block.Commands.Where(x => executor.FilterCommand(x, _lastBlock!.Capabilities)));
 
-                if (_chainId == Guid.Empty)
+                if (_node!.ChainId.Length == 0)
                 {
                     _pendingCommands!.Add(new Invoke(_proposerAccount, (
                         typeof(SetChainBlockMessage).FullName!,
                         JsonSerializer.SerializeToUtf8Bytes(new SetChainBlockMessage
                         {
-                            ChainId = block.ChainId,
+                            ChainId = block!.ChainId,
                             BlockId = new byte[] { },
                             ProcessedCommands = new Dictionary<Guid, BigInteger>()
                             {
@@ -152,7 +143,7 @@ namespace Apocryph.Runtime.FunctionApp
         {
             while (true)
             {
-                var proposerCount = _nodes.Length / 10; // TODO: Move constant to parameter
+                var proposerCount = _nodes!.Length / 10; // TODO: Move constant to parameter
                 _proposers = _nodes.Take(proposerCount).ToArray(); // TODO: Do a random walk based on last block hash
 
                 var opinion = default(Block?);

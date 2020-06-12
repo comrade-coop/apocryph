@@ -8,12 +8,12 @@ namespace Apocryph.Core.Consensus
 {
     public class Executor
     {
-        private readonly string _agent;
+        private readonly string _chain;
         private readonly Func<(byte[]?, (string, byte[]), Guid?), Task<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>> _callWorker;
 
-        public Executor(string agent, Func<(byte[]?, (string, byte[]), Guid?), Task<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>> callWorker)
+        public Executor(byte[] chain, Func<(byte[]?, (string, byte[]), Guid?), Task<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>> callWorker)
         {
-            _agent = agent;
+            _chain = Convert.ToBase64String(chain); // TODO: Remove conversion
             _callWorker = callWorker;
         }
 
@@ -48,7 +48,7 @@ namespace Apocryph.Core.Consensus
 
                 var newCapabilities = createdReferences.ToDictionary(
                     @ref => @ref.Key,
-                    @ref => (_agent, @ref.Value));
+                    @ref => (_chain, @ref.Value));
                 capabilityValidator.AddCapabilities(newCapabilities);
 
                 if (actions != null)

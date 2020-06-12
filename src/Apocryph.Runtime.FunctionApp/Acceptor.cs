@@ -18,30 +18,23 @@ namespace Apocryph.Runtime.FunctionApp
         private readonly HashSet<Block> _acceptedBlocks = new HashSet<Block>();
 
         private IAsyncCollector<Block>? _output;
-        private Node _node;
-        private Node[] _nodes;
+        private Node? _node;
+        private Node[]? _nodes;
 
         [FunctionName(nameof(Acceptor))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("assigner")] IAsyncEnumerable<(Node, Node[])> assigner,
+            [Perper("node")] Node node,
+            [Perper("nodes")] Node[] nodes,
             [PerperStream("gossips")] IAsyncEnumerable<Gossip<Block>> gossips,
             [PerperStream("output")] IAsyncCollector<Block> output,
             CancellationToken cancellationToken)
         {
             _output = output;
+            _node = node;
+            _nodes = nodes;
 
             await Task.WhenAll(
-                HandleAssigner(assigner),
                 HandleGossips(gossips, cancellationToken));
-        }
-
-        private async Task HandleAssigner(IAsyncEnumerable<(Node, Node[])> assigner)
-        {
-            await foreach (var (node, nodes) in assigner)
-            {
-                _node = node;
-                _nodes = nodes;
-            }
         }
 
         private async Task HandleGossips(IAsyncEnumerable<Gossip<Block>> gossips,
@@ -49,14 +42,14 @@ namespace Apocryph.Runtime.FunctionApp
         {
             await foreach (var gossip in gossips.WithCancellation(cancellationToken))
             {
-                if (!_nodes.Contains(gossip.Sender) || _acceptedBlocks.Contains(gossip.Value))
+                if (!_nodes!.Contains(gossip.Sender) || _acceptedBlocks.Contains(gossip.Value))
                     continue;
 
                 if (gossip.Verb == GossipVerb.Confirm)
                 {
                     GetGossipConfirmations(gossip.Value).Add(gossip.Sender);
 
-                    if (3 * GetGossipConfirmations(gossip.Value).Count > 2 * _nodes.Length)
+                    if (3 * GetGossipConfirmations(gossip.Value).Count > 2 * _nodes!.Length)
                     {
                         _acceptedBlocks.Add(gossip.Value);
                         // TODO: Check block validity and forward gossip

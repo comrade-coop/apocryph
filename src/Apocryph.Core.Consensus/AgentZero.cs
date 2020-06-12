@@ -55,34 +55,32 @@ namespace Apocryph.Core.Consensus
 
                 case SetChainBlockMessage setChainBlockMessage:
                     {
-                        var chain = state.Balances.GetOrCreate(setChainBlockMessage.ChainId);
+                        var chainId = new Guid(setChainBlockMessage.ChainId); // TODO: Remove conversion
+                        var chain = state.Balances.GetOrCreate(chainId);
                         var agentZeroProposer = state.Balances.GetOrCreate(reference!.Value);
 
-                        foreach (var usedTicked in setChainBlockMessage.UsedTickets)
+                        foreach (var (otherChain, amount) in setChainBlockMessage.UsedTickets)
                         {
-                            var (otherChain, amount) = usedTicked;
-                            var ticket = state.Tickets[(setChainBlockMessage.ChainId, otherChain)];
+                            var ticket = state.Tickets[(chainId, otherChain)];
                             ticket.Transfer(chain, amount);
                         }
 
-                        foreach (var unlockedTicket in setChainBlockMessage.UnlockedTickets)
+                        foreach (var (otherChain, amount) in setChainBlockMessage.UnlockedTickets)
                         {
-                            var (otherChain, amount) = unlockedTicket;
-                            var ticket = state.Tickets[(setChainBlockMessage.ChainId, otherChain)];
+                            var ticket = state.Tickets[(chainId, otherChain)];
                             var original = state.Balances.GetOrCreate(otherChain);
                             ticket.Transfer(original, amount);
                         }
 
-                        foreach (var processedCommand in setChainBlockMessage.ProcessedCommands)
+                        foreach (var (proposerReference, amount) in setChainBlockMessage.ProcessedCommands)
                         {
-                            var (proposerReference, amount) = processedCommand;
                             var proposer = state.Balances[proposerReference];
                             var cut = amount * ChainRewardCut.Item1 / ChainRewardCut.Item2;
                             chain.Transfer(agentZeroProposer, cut);
                             chain.Transfer(proposer, amount - cut);
                         }
 
-                        state.Chains[setChainBlockMessage.ChainId].LatestBlock = setChainBlockMessage.BlockId;
+                        state.Chains[chainId].LatestBlock = setChainBlockMessage.BlockId;
                     }
                     break;
 
