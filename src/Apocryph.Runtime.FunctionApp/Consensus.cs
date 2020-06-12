@@ -20,7 +20,7 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.Runtime.FunctionApp
 {
-    public class Proposer
+    public class Consensus
     {
         private readonly Channel<Query<Block>> _channel;
 
@@ -34,18 +34,18 @@ namespace Apocryph.Runtime.FunctionApp
         private List<object>? _pendingCommands;
         private TaskCompletionSource<bool>? _pendingCommandsTaskCompletionSource;
 
-        public Proposer()
+        public Consensus()
         {
             _channel = Channel.CreateUnbounded<Query<Block>>();
         }
 
-        [FunctionName(nameof(Proposer))]
+        [FunctionName(nameof(Consensus))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("proposerAccount")] Guid proposerAccount,
             [Perper("node")] Node node,
             [Perper("nodes")] Node[] nodes,
             [Perper("lastBlock")] Block lastBlock,
-            [PerperStream("acceptor")] IAsyncEnumerable<Block> acceptor,
+            [PerperStream("filter")] IAsyncEnumerable<Block> filter,
             [Perper("pendingCommands")] List<object> pendingCommands,
             [PerperStream("queries")] IAsyncEnumerable<Query<Block>> queries,
             [PerperStream("output")] IAsyncCollector<object> output,
@@ -60,7 +60,7 @@ namespace Apocryph.Runtime.FunctionApp
 
             await Task.WhenAll(
                 RunSnowball(context, cancellationToken),
-                HandleIBC(acceptor, cancellationToken),
+                HandleFilter(filter, cancellationToken),
                 HandleQueries(queries, cancellationToken));
         }
 
@@ -94,7 +94,7 @@ namespace Apocryph.Runtime.FunctionApp
             return new Block(_node!.ChainId, _proposerAccount, newState, inputCommands, newCommands, newCapabilities);
         }
 
-        private async Task HandleIBC(IAsyncEnumerable<Block> ibc, CancellationToken cancellationToken)
+        private async Task HandleFilter(IAsyncEnumerable<Block> ibc, CancellationToken cancellationToken)
         {
             var executor = new Executor(_node!.ChainId, default!);
 
@@ -157,8 +157,7 @@ namespace Apocryph.Runtime.FunctionApp
 
                 var committedProposal = await _snowball!.Run(_nodes, cancellationToken);
 
-                await _output!.AddAsync(new Message<Block>(
-                    committedProposal, MessageType.Committed), cancellationToken);
+                await _output!.AddAsync(new Message<Block>(committedProposal, MessageType.Proposed), cancellationToken);
             }
         }
 

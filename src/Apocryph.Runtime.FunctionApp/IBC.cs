@@ -11,22 +11,22 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.Runtime.FunctionApp
 {
-    public class Acceptor
+    public class IBC
     {
         private readonly Dictionary<Block, HashSet<Node>> _gossipConfirmations = new Dictionary<Block, HashSet<Node>>();
-        private readonly Dictionary<Block, bool> _validatedBlocks = new Dictionary<Block, bool>();
         private readonly HashSet<Block> _acceptedBlocks = new HashSet<Block>();
-
-        private IAsyncCollector<Block>? _output;
+        private Message<Block>? _committingMessage;
         private Node? _node;
         private Node[]? _nodes;
+        private IAsyncCollector<object>? _output;
 
-        [FunctionName(nameof(Acceptor))]
+        [FunctionName(nameof(IBC))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("node")] Node node,
             [Perper("nodes")] Node[] nodes,
+            [PerperStream("validator")] IAsyncEnumerable<Message<Block>> validator,
             [PerperStream("gossips")] IAsyncEnumerable<Gossip<Block>> gossips,
-            [PerperStream("output")] IAsyncCollector<Block> output,
+            [PerperStream("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
         {
             _output = output;
@@ -34,7 +34,23 @@ namespace Apocryph.Runtime.FunctionApp
             _nodes = nodes;
 
             await Task.WhenAll(
+                HandleValidator(validator, cancellationToken),
                 HandleGossips(gossips, cancellationToken));
+        }
+
+        private async Task HandleValidator(IAsyncEnumerable<Message<Block>> validator,
+            CancellationToken cancellationToken)
+        {
+            await foreach (var message in validator)
+            {
+                var block = message.Value;
+                var isValid = message.Type == MessageType.Valid;
+
+                _committingMessage = message;
+
+                await _output!.AddAsync(new Gossip<Block>(block, _node!,
+                isValid ? GossipVerb.Confirm : GossipVerb.Reject), cancellationToken);
+            }
         }
 
         private async Task HandleGossips(IAsyncEnumerable<Gossip<Block>> gossips,
@@ -45,32 +61,24 @@ namespace Apocryph.Runtime.FunctionApp
                 if (!_nodes!.Contains(gossip.Sender) || _acceptedBlocks.Contains(gossip.Value))
                     continue;
 
-                if (gossip.Verb == GossipVerb.Confirm)
+                if (gossip.Verb == GossipVerb.Confirm) // TODO: Count rejections
                 {
-                    GetGossipConfirmations(gossip.Value).Add(gossip.Sender);
+                    if (!_gossipConfirmations.ContainsKey(gossip.Value))
+                    {
+                        _gossipConfirmations[gossip.Value] = new HashSet<Node>();
+                    }
+                    var confirmations = _gossipConfirmations[gossip.Value];
 
-                    if (3 * GetGossipConfirmations(gossip.Value).Count > 2 * _nodes!.Length)
+                    confirmations.Add(gossip.Sender);
+
+                    if (3 * confirmations.Count > 2 * _nodes!.Length)
                     {
                         _acceptedBlocks.Add(gossip.Value);
-                        // TODO: Check block validity and forward gossip
-                        await _output!.AddAsync(gossip.Value, cancellationToken);
+                        await _output!.AddAsync(new Message<Block>(gossip.Value, MessageType.Accepted), cancellationToken);
                     }
                 }
-
-                // if (gossip.Verb == GossipVerb.IdentityChanged)
-                // {
-                //     GetGossipConfirmations(gossip.Value).Remove(gossip.Sender);
-                // }
+                // Forward gossip
             }
-        }
-
-        private HashSet<Node> GetGossipConfirmations(Block block)
-        {
-            if (!_gossipConfirmations.ContainsKey(block))
-            {
-                _gossipConfirmations[block] = new HashSet<Node>();
-            }
-            return _gossipConfirmations[block];
         }
     }
 }

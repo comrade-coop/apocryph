@@ -19,6 +19,7 @@ namespace Apocryph.Runtime.FunctionApp
     public class Validator
     {
         private Block? _lastBlock;
+        private Dictionary<Block, Task<bool>> _validatedBlocks = new Dictionary<Block, Task<bool>>();
         private HashSet<byte[]>? _pendingSetChainBlockMessages = new HashSet<byte[]>();
         private HashSet<object>? _pendingCommands;
         private IAsyncCollector<Message<Block>>? _output;
@@ -29,7 +30,8 @@ namespace Apocryph.Runtime.FunctionApp
             [Perper("node")] Node node,
             [Perper("lastBlock")] Block lastBlock,
             [Perper("pendingCommands")] HashSet<object> pendingCommands,
-            [PerperStream("gossips")] IAsyncEnumerable<Block> gossips,
+            [PerperStream("consensus")] IAsyncEnumerable<Message<Block>> consensus,
+            [PerperStream("filter")] IAsyncEnumerable<Block> filter,
             [PerperStream("queries")] IAsyncEnumerable<Query<Block>> queries,
             [PerperStream("output")] IAsyncCollector<Message<Block>> output,
             CancellationToken cancellationToken)
@@ -40,7 +42,8 @@ namespace Apocryph.Runtime.FunctionApp
             _node = node;
 
             await Task.WhenAll(
-                HandleIBC(gossips, cancellationToken),
+                HandleFilter(filter, cancellationToken),
+                HandleConsensus(context, consensus, cancellationToken),
                 HandleQueries(context, queries, cancellationToken));
         }
 
@@ -84,11 +87,11 @@ namespace Apocryph.Runtime.FunctionApp
             // Validate historical blocks as per protocol
         }
 
-        private async Task HandleIBC(IAsyncEnumerable<Block> ibc, CancellationToken cancellationToken)
+        private async Task HandleFilter(IAsyncEnumerable<Block> filter, CancellationToken cancellationToken)
         {
             var executor = new Executor(_node!.ChainId, default!);
 
-            await foreach (var block in ibc.WithCancellation(cancellationToken))
+            await foreach (var block in filter.WithCancellation(cancellationToken))
             {
                 foreach (var command in block.Commands)
                 {
@@ -115,15 +118,36 @@ namespace Apocryph.Runtime.FunctionApp
             }
         }
 
+
+        private async Task HandleConsensus(PerperStreamContext context, IAsyncEnumerable<Message<Block>> consensus, CancellationToken cancellationToken)
+        {
+            await foreach (var message in consensus.WithCancellation(cancellationToken))
+            {
+                if (message.Type != MessageType.Proposed) continue;
+
+                var block = message.Value;
+                if (!_validatedBlocks.ContainsKey(block))
+                {
+                    _validatedBlocks[block] = Validate(context, _node!, block);
+                }
+
+                var valid = await _validatedBlocks[block];
+                await _output!.AddAsync(new Message<Block>(block, valid ? MessageType.Valid : MessageType.Invalid), cancellationToken);
+            }
+        }
+
         private async Task HandleQueries(PerperStreamContext context, IAsyncEnumerable<Query<Block>> queries, CancellationToken cancellationToken)
         {
+            // Validate blocks from queries before they are fully confirmed, saving a tiny bit of time
             await foreach (var query in queries.WithCancellation(cancellationToken))
             {
                 if (query.Receiver != _node) continue;
 
                 var block = query.Value;
-                var valid = await Validate(context, _node, block);
-                await _output!.AddAsync(new Message<Block>(block, valid ? MessageType.Valid : MessageType.Invalid), cancellationToken);
+                if (!_validatedBlocks.ContainsKey(block))
+                {
+                    _validatedBlocks[block] = Validate(context, _node, block);
+                }
             }
         }
     }

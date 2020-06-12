@@ -35,8 +35,7 @@ namespace Apocryph.Runtime.FunctionApp
                 factory = chainStreams.ToArray(),
                 filter = new[]
                 {
-                    typeof(Proposer),
-                    typeof(Committer)
+                    typeof(IBC)
                 }
             });
 
@@ -45,7 +44,7 @@ namespace Apocryph.Runtime.FunctionApp
                 factory = chainStreams.ToArray(),
                 filter = new[]
                 {
-                    typeof(Proposer)
+                    typeof(Consensus)
                 }
             });
         }

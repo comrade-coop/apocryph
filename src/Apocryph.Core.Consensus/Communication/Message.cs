@@ -14,7 +14,7 @@ namespace Apocryph.Core.Consensus.Communication
 
     public enum MessageType
     {
-        Committed,
+        Proposed,
         Valid,
         Invalid,
         Accepted

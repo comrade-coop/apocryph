@@ -75,14 +75,15 @@ namespace Apocryph.Runtime.FunctionApp
             var nodes = _nodes!;
             var node = new Node(_chainId!, slot);
 
-            var acceptor = await _context!.StreamFunctionAsync(typeof(Acceptor), new { gossips, nodes, node });
-            var proposer = await _context!.StreamFunctionAsync(typeof(Proposer), new { acceptor, queries, nodes, node });
-            var validator = await _context!.StreamFunctionAsync(typeof(Validator), new { queries, nodes, node });
-            var committer = await _context!.StreamFunctionAsync(typeof(Committer), new { proposer, validator, node });
+            var filter = _context!.DeclareStream(typeof(Filter));
+            var consensus = await _context!.StreamFunctionAsync(typeof(Consensus), new { filter, queries, nodes, node });
+            var validator = await _context!.StreamFunctionAsync(typeof(Validator), new { consensus, queries, nodes, node });
+            var ibc = await _context!.StreamFunctionAsync(typeof(IBC), new { validator, gossips, node });
+            await _context!.StreamFunctionAsync(filter, new { ibc, gossips, nodes, node });
 
-            _streams[privateKey] = new[] { acceptor, proposer, validator, committer };
+            _streams[privateKey] = new[] { filter, consensus, validator, ibc };
 
-            await Task.WhenAll(new[] { acceptor, proposer, validator, committer }.Select(
+            await Task.WhenAll(new[] { filter, consensus, validator, ibc }.Select(
                 stream => _output!.AddAsync(stream)));
 
             await _output!.AddAsync(new SlotClaim { Key = privateKey.PublicKey, ChainId = _chainId! });
