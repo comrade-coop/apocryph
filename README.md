@@ -211,7 +211,7 @@ responses. The observation of facts by a virtual node is achieved with *gossipin
 
 #### Selection
 
-Virtual nodes selection is done using algorithm inspired by [Automaton's King of the Hill](https://automaton.network/#i_koh) protocol. 
+Virtual nodes selection is done using algorithm inspired by [Automaton's King of the Hill](https://www.youtube.com/watch?v=UBmwzstJ5Fo) protocol. 
 For every consensus instance there is matrix of slots (virtual nodes) which can be claimed by different 
 physical nodes. For every slot there is also a random salt that changes periodically. Every node participating 
 in the network tries to produce a private key with a public key which has a bytes prefix that corresponds to one 
@@ -258,7 +258,7 @@ In addition to the well known properties, Apocryph blocks have the following str
 #### Gossiping
 
 Every virtual node validates the committed block and, based on the validation result, either marks the block as
-*confirmed* (if valid) or *rejected* (if invalid). The virtual node the proceeds to gossiping the fact that it 
+*confirmed* (if valid) or *rejected* (if invalid). The virtual node then proceeds to gossiping the fact that it 
 confirmed or rejected the block. Every other validator, gossips only facts that are consistent with its observations. 
 When two thirds of the virtual nodes support a gossip, it gets accepted. If the accepted gossip is not consistent 
 with the virtual node's observations (ex. a block determined as invalid is confirmed by most virtual nodes), then that 
