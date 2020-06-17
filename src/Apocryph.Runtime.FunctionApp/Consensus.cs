@@ -1,17 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Apocryph.Core.Consensus;
 using Apocryph.Core.Consensus.Blocks;
-using Apocryph.Core.Consensus.Blocks.Command;
-using Apocryph.Core.Consensus.Blocks.Messages;
 using Apocryph.Core.Consensus.Communication;
 using Apocryph.Core.Consensus.VirtualNodes;
 using Microsoft.Azure.WebJobs;
@@ -24,15 +19,12 @@ namespace Apocryph.Runtime.FunctionApp
     {
         private readonly Channel<Query<Block>> _channel;
 
-        private Guid _proposerAccount;
         private Node? _node;
         private Node[]? _nodes;
-        private IAsyncCollector<object>? _output;
-        private Snowball<Block>? _snowball;
         private Node[]? _proposers;
-        private Block? _lastBlock;
-        private List<object>? _pendingCommands;
-        private TaskCompletionSource<bool>? _pendingCommandsTaskCompletionSource;
+        private Snowball<Block>? _snowball;
+        private Proposer? _proposer;
+        private IAsyncCollector<object>? _output;
 
         public Consensus()
         {
@@ -45,7 +37,7 @@ namespace Apocryph.Runtime.FunctionApp
             [Perper("nodes")] Node[] nodes,
             [Perper("proposerAccount")] Guid proposerAccount,
             [Perper("lastBlock")] Block lastBlock,
-            [Perper("pendingCommands")] List<object> pendingCommands,
+            [Perper("pendingCommands")] HashSet<object> pendingCommands,
             [PerperStream("filter")] IAsyncEnumerable<Block> filter,
             [PerperStream("chain")] IAsyncEnumerable<Message<(byte[], Node?[])>> chain,
             [PerperStream("queries")] IAsyncEnumerable<Query<Block>> queries,
@@ -53,11 +45,12 @@ namespace Apocryph.Runtime.FunctionApp
             CancellationToken cancellationToken)
         {
             _output = output;
-            _proposerAccount = proposerAccount;
-            _lastBlock = lastBlock;
-            _pendingCommands = pendingCommands;
             _node = node;
             _nodes = nodes;
+
+            var executor = new Executor(_node!.ChainId,
+                async input => await context.CallWorkerAsync<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>("AgentWorker", new { input }, default));
+            _proposer = new Proposer(executor, _node!.ChainId, lastBlock, pendingCommands, proposerAccount);
 
             await Task.WhenAll(
                 RunSnowball(context, cancellationToken),
@@ -66,34 +59,9 @@ namespace Apocryph.Runtime.FunctionApp
                 HandleQueries(queries, cancellationToken));
         }
 
-        private async Task<Block> Propose(PerperStreamContext context)
+        private Task<Block> Propose(PerperStreamContext context)
         {
-            var executor = new Executor(_node!.ChainId,
-                async input => await context.CallWorkerAsync<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>("AgentWorker", new { input }, default));
-            if (_pendingCommands!.Count == 0)
-            {
-                _pendingCommandsTaskCompletionSource = new TaskCompletionSource<bool>();
-                // TODO: Possible race condition if TrySetResult happens before assigning a new completion source
-                await _pendingCommandsTaskCompletionSource.Task;
-                _pendingCommandsTaskCompletionSource = null;
-            }
-
-            var inputCommands = _pendingCommands.ToArray();
-            _pendingCommands.Clear();
-
-            if (_node!.ChainId.Length == 0)
-            {
-                inputCommands = inputCommands.Concat(new object[] {
-                    new Invoke(_proposerAccount, (
-                        "Apocryph.AgentZero.Messages.ClaimRewardMessage, Apocryph.AgentZero",
-                        Encoding.UTF8.GetBytes("{}")))
-                }).ToArray();
-            }
-
-            var (newState, newCommands, newCapabilities) = await executor.Execute(
-                _lastBlock!.States, inputCommands, _lastBlock.Capabilities);
-            // Include historical blocks as per protocol
-            return new Block(_node!.ChainId, _proposerAccount, newState, inputCommands, newCommands, newCapabilities);
+            return _proposer!.Propose();
         }
 
         private async Task HandleChain(IAsyncEnumerable<Message<(byte[], Node?[])>> chain, CancellationToken cancellationToken)
@@ -109,31 +77,11 @@ namespace Apocryph.Runtime.FunctionApp
             }
         }
 
-        private async Task HandleFilter(IAsyncEnumerable<Block> ibc, CancellationToken cancellationToken)
+        private async Task HandleFilter(IAsyncEnumerable<Block> filter, CancellationToken cancellationToken)
         {
-            var executor = new Executor(_node!.ChainId, default!);
-
-            await foreach (var block in ibc.WithCancellation(cancellationToken))
+            await foreach (var block in filter.WithCancellation(cancellationToken))
             {
-                _pendingCommandsTaskCompletionSource?.TrySetResult(true);
-                _pendingCommands!.AddRange(block.Commands.Where(x => executor.FilterCommand(x, _lastBlock!.Capabilities)));
-
-                if (_node!.ChainId.Length == 0)
-                {
-                    _pendingCommands!.Add(new Invoke(_proposerAccount, (
-                        typeof(SetChainBlockMessage).FullName!,
-                        JsonSerializer.SerializeToUtf8Bytes(new SetChainBlockMessage
-                        {
-                            ChainId = block!.ChainId,
-                            BlockId = new byte[] { },
-                            ProcessedCommands = new Dictionary<Guid, BigInteger>()
-                            {
-                                [block.ProposerAccount] = block.InputCommands.Length,
-                            },
-                            UsedTickets = new Dictionary<Guid, BigInteger>() { }, // TODO: Keep track of tickets
-                            UnlockedTickets = new Dictionary<Guid, BigInteger>() { },
-                        }))));
-                }
+                _proposer!.AddConfirmedBlock(block);
             }
         }
 

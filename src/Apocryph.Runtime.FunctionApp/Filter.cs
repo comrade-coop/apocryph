@@ -4,8 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Core.Consensus;
 using Apocryph.Core.Consensus.Blocks;
-using Apocryph.Core.Consensus.Blocks.Command;
-using Apocryph.Core.Consensus.Blocks.Messages;
 using Apocryph.Core.Consensus.Communication;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
@@ -15,68 +13,37 @@ namespace Apocryph.Runtime.FunctionApp
 {
     public class Filter
     {
-        private Block? _lastBlock;
+        private Dictionary<byte[], Validator> _validators = new Dictionary<byte[], Validator>();
         private Dictionary<Block, Task<bool>> _validatedBlocks = new Dictionary<Block, Task<bool>>();
-        private HashSet<byte[]>? _pendingSetChainBlockMessages = new HashSet<byte[]>();
-        private HashSet<object>? _pendingCommands;
         private IAsyncCollector<Block>? _output;
+        private Validator? _validator;
 
         [FunctionName(nameof(Filter))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [Perper("lastBlock")] Block lastBlock,
-            [Perper("pendingCommands")] HashSet<object> pendingCommands,
+            [PerperStream("lastBlocks")] Dictionary<byte[], Block> lastBlocks,
+            [PerperStream("pendingCommands")] Dictionary<byte[], HashSet<object>> pendingCommands,
             [PerperStream("ibc")] IAsyncEnumerable<Message<Block>> ibc,
             [PerperStream("gossips")] IAsyncEnumerable<Gossip<Block>> gossips,
             [PerperStream("output")] IAsyncCollector<Block> output,
             CancellationToken cancellationToken)
         {
-            _lastBlock = lastBlock;
-            _pendingCommands = pendingCommands;
             _output = output;
+
+            foreach (var (chainId, lastBlock) in lastBlocks)
+            {
+                var executor = new Executor(chainId,
+                    async input => await context.CallWorkerAsync<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>("AgentWorker", new { input }, default));
+                _validators[chainId] = new Validator(executor, chainId, lastBlock, pendingCommands[chainId]);
+            }
 
             await Task.WhenAll(
                 HandleIBC(context, ibc, cancellationToken),
                 HandleGossips(context, gossips, cancellationToken));
         }
 
-        private async Task<bool> Validate(PerperStreamContext context, Block block)
+        private Task<bool> Validate(PerperStreamContext context, Block block)
         {
-            var _sawClaimRewardMessage = false;
-            foreach (var inputCommand in block.InputCommands)
-            {
-                if (block.ChainId.Length == 0 && inputCommand is Invoke invokation)
-                {
-                    if (invokation.Message.Item1 == typeof(ClaimRewardMessage).FullName)
-                    {
-                        if (_sawClaimRewardMessage)
-                        {
-                            return false;
-                        }
-                        _sawClaimRewardMessage = true;
-                        continue;
-                    }
-                    else if (invokation.Message.Item1 == typeof(SetChainBlockMessage).FullName)
-                    {
-                        if (!_pendingSetChainBlockMessages!.Contains(invokation.Message.Item2))
-                        {
-                            return false;
-                        }
-                        continue;
-                    }
-                }
-                if (!_pendingCommands!.Contains(inputCommand))
-                {
-                    return false;
-                }
-            }
-
-            var executor = new Executor(block.ChainId,
-                async input => await context.CallWorkerAsync<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>("AgentWorker", new { input }, default));
-            var (newStates, newCommands, newCapabilities) = await executor.Execute(
-                _lastBlock!.States, block.InputCommands, _lastBlock!.Capabilities);
-
-            return block.Equals(new Block(block.ChainId, block.ProposerAccount, newStates, block.InputCommands, newCommands, newCapabilities));
-            // Validate historical blocks as per protocol
+            return _validators[block.ChainId].Validate(block);
         }
 
         private async Task HandleIBC(PerperStreamContext context, IAsyncEnumerable<Message<Block>> ibc, CancellationToken cancellationToken)
@@ -94,6 +61,11 @@ namespace Apocryph.Runtime.FunctionApp
                 var valid = await _validatedBlocks[block];
                 if (valid)
                 {
+                    foreach (var (chainId, validator) in _validators)
+                    {
+                        validator.AddConfirmedBlock(block);
+                    }
+
                     await _output!.AddAsync(block, cancellationToken);
                 }
             }

@@ -94,7 +94,7 @@ namespace Apocryph.Runtime.FunctionApp
 
                     var filter = _context!.DeclareStream(typeof(Filter));
                     var consensus = await _context!.StreamFunctionAsync(typeof(Consensus), new { chain, filter, queries, node, nodes = assigner.GetNodes(chainId) });
-                    var validator = await _context!.StreamFunctionAsync(typeof(Validator), new { consensus, queries, node });
+                    var validator = await _context!.StreamFunctionAsync(typeof(ValidatorStream), new { consensus, queries, node });
                     var ibc = await _context!.StreamFunctionAsync(typeof(IBC), new { chain, validator, gossips, node, nodes = assigner.GetNodes() });
                     await _context!.StreamFunctionAsync(filter, new { ibc, gossips, node });
 
