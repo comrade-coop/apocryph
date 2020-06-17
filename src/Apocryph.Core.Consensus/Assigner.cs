@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+using System.Collections.Generic;
 using Apocryph.Core.Consensus.VirtualNodes;
 
 namespace Apocryph.Core.Consensus
@@ -13,55 +15,60 @@ namespace Apocryph.Core.Consensus
             public PrivateKey? PrivateKey { get; set; }
         }
 
-        private byte[] _chainId;
-        private Slot[] _slots;
+        private Dictionary<byte[], Slot[]> _slots = new Dictionary<byte[], Slot[]>();
 
-        private Action<int, PrivateKey> _addPrivateKey;
-        private Action<int, PrivateKey> _removePrivateKey;
+        private Func<byte[], int, PublicKey, PrivateKey?, Node> _createNode;
 
-        public Assigner(int slotCount, byte[] chainId, Action<int, PrivateKey> addPrivateKey, Action<int, PrivateKey> removePrivateKey)
+        public Assigner(Func<byte[], int, PublicKey, PrivateKey?, Node> createNode)
         {
-            _slots = new Slot[slotCount];
-            _chainId = chainId;
-            _addPrivateKey = addPrivateKey;
-            _removePrivateKey = removePrivateKey;
+            _createNode = createNode;
         }
 
-        public void SetSalt(int slot, byte[] salt)
+        public void SetSalt(byte[] chainId, int slot, byte[] salt)
         {
-            _slots[slot].Salt = salt;
+            _slots[chainId][slot].Salt = salt;
         }
 
-        public bool AddKey(PublicKey key, PrivateKey? privateKey)
+        public void AddChain(byte[] chainId, int slotCount)
         {
-            var slotIndex = GetSlotForKey(key);
-            var slot = _slots[slotIndex];
+            _slots[chainId] = new Slot[slotCount];
+        }
+
+        public void AddKey(PublicKey key, PrivateKey? privateKey)
+        {
+            foreach (var (chainId, _) in _slots)
+            {
+                AddKey(chainId, key, privateKey);
+            }
+        }
+
+        public bool AddKey(byte[] chainId, PublicKey key, PrivateKey? privateKey)
+        {
+            var slotIndex = (int)(key.GetPosition() % _slots[chainId].Length);
+            var slot = _slots[chainId][slotIndex];
 
             if (slot.PublicKey is PublicKey slotKey
-                && slotKey.GetDifficulty(_chainId, slot.Salt) > key.GetDifficulty(_chainId, slot.Salt))
+                && slotKey.GetDifficulty(chainId, slot.Salt) > key.GetDifficulty(chainId, slot.Salt))
             {
                 return false;
-            }
-
-            if (slot.PrivateKey != null)
-            {
-                _removePrivateKey.Invoke(slotIndex, slot.PrivateKey.Value);
             }
 
             slot.PublicKey = key;
             slot.PrivateKey = privateKey;
 
-            if (slot.PrivateKey != null)
-            {
-                _addPrivateKey.Invoke(slotIndex, slot.PrivateKey.Value);
-            }
+            slot.Occupant = _createNode.Invoke(chainId, slotIndex, slot.PublicKey.Value, slot.PrivateKey);
 
             return true;
         }
 
-        private int GetSlotForKey(PublicKey key)
+        public Node?[] GetNodes(byte[] chainId)
         {
-            return (int)(key.GetPosition() % _slots.Length);
+            return _slots[chainId].Select(x => x.Occupant).ToArray();
+        }
+
+        public Dictionary<byte[], Node?[]> GetNodes()
+        {
+            return _slots.ToDictionary(kv => kv.Key, kv => kv.Value.Select(x => x.Occupant).ToArray());
         }
     }
 }

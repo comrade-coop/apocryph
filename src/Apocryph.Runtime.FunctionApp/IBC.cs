@@ -17,13 +17,14 @@ namespace Apocryph.Runtime.FunctionApp
         private readonly HashSet<Block> _acceptedBlocks = new HashSet<Block>();
         private Message<Block>? _committingMessage;
         private Node? _node;
-        private Node[]? _nodes;
+        private Dictionary<byte[], Node?[]>? _nodes;
         private IAsyncCollector<object>? _output;
 
         [FunctionName(nameof(IBC))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("node")] Node node,
-            [Perper("nodes")] Node[] nodes,
+            [Perper("nodes")] Dictionary<byte[], Node?[]> nodes,
+            [PerperStream("queries")] IAsyncEnumerable<Message<(byte[], Node?[])>> chain,
             [PerperStream("validator")] IAsyncEnumerable<Message<Block>> validator,
             [PerperStream("gossips")] IAsyncEnumerable<Gossip<Block>> gossips,
             [PerperStream("output")] IAsyncCollector<object> output,
@@ -34,6 +35,7 @@ namespace Apocryph.Runtime.FunctionApp
             _nodes = nodes;
 
             await Task.WhenAll(
+                HandleChain(chain, cancellationToken),
                 HandleValidator(validator, cancellationToken),
                 HandleGossips(gossips, cancellationToken));
         }
@@ -53,12 +55,22 @@ namespace Apocryph.Runtime.FunctionApp
             }
         }
 
+        private async Task HandleChain(IAsyncEnumerable<Message<(byte[], Node?[])>> chain, CancellationToken cancellationToken)
+        {
+            await foreach (var message in chain.WithCancellation(cancellationToken))
+            {
+                var (chainId, nodes) = message.Value;
+
+                _nodes![chainId] = nodes;
+            }
+        }
+
         private async Task HandleGossips(IAsyncEnumerable<Gossip<Block>> gossips,
             CancellationToken cancellationToken)
         {
             await foreach (var gossip in gossips.WithCancellation(cancellationToken))
             {
-                if (!_nodes!.Contains(gossip.Sender) || _acceptedBlocks.Contains(gossip.Value))
+                if (!_nodes![gossip.Sender.ChainId].Contains(gossip.Sender) || _acceptedBlocks.Contains(gossip.Value))
                     continue;
 
                 if (gossip.Verb == GossipVerb.Confirm) // TODO: Count rejections
@@ -71,7 +83,7 @@ namespace Apocryph.Runtime.FunctionApp
 
                     confirmations.Add(gossip.Sender);
 
-                    if (3 * confirmations.Count > 2 * _nodes!.Length)
+                    if (3 * confirmations.Count > 2 * _nodes![gossip.Sender.ChainId].Length)
                     {
                         _acceptedBlocks.Add(gossip.Value);
                         await _output!.AddAsync(new Message<Block>(gossip.Value, MessageType.Accepted), cancellationToken);

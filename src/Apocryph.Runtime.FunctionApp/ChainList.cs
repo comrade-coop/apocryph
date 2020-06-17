@@ -21,18 +21,12 @@ namespace Apocryph.Runtime.FunctionApp
             var queries = context.DeclareStream(typeof(Peering));
             var salts = (IAsyncDisposable)default!;
 
-            var chainStreams = new List<IAsyncDisposable>();
-            foreach (var (chainId, slotCount) in chains)
-            {
-                var chain = await context.StreamFunctionAsync(typeof(Chain), new { chainId, slotCount, gossips, queries, salts, slotGossips });
-                chainStreams.Add(chain);
-
-                await output.AddAsync(chain);
-            }
+            var chain = await context.StreamFunctionAsync(typeof(Chain), new { chains, gossips, queries, salts, slotGossips });
+            await output.AddAsync(chain);
 
             await context.StreamFunctionAsync(gossips, new
             {
-                factory = chainStreams.ToArray(),
+                factory = chain,
                 filter = new[]
                 {
                     typeof(IBC)
@@ -41,7 +35,7 @@ namespace Apocryph.Runtime.FunctionApp
 
             await context.StreamFunctionAsync(queries, new
             {
-                factory = chainStreams.ToArray(),
+                factory = chain,
                 filter = new[]
                 {
                     typeof(Consensus)

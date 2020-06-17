@@ -41,18 +41,19 @@ namespace Apocryph.Runtime.FunctionApp
 
         [FunctionName(nameof(Consensus))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [Perper("proposerAccount")] Guid proposerAccount,
             [Perper("node")] Node node,
             [Perper("nodes")] Node[] nodes,
+            [Perper("proposerAccount")] Guid proposerAccount,
             [Perper("lastBlock")] Block lastBlock,
-            [PerperStream("filter")] IAsyncEnumerable<Block> filter,
             [Perper("pendingCommands")] List<object> pendingCommands,
+            [PerperStream("filter")] IAsyncEnumerable<Block> filter,
+            [PerperStream("chain")] IAsyncEnumerable<Message<(byte[], Node?[])>> chain,
             [PerperStream("queries")] IAsyncEnumerable<Query<Block>> queries,
             [PerperStream("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
         {
-            _proposerAccount = proposerAccount;
             _output = output;
+            _proposerAccount = proposerAccount;
             _lastBlock = lastBlock;
             _pendingCommands = pendingCommands;
             _node = node;
@@ -60,6 +61,7 @@ namespace Apocryph.Runtime.FunctionApp
 
             await Task.WhenAll(
                 RunSnowball(context, cancellationToken),
+                HandleChain(chain, cancellationToken),
                 HandleFilter(filter, cancellationToken),
                 HandleQueries(queries, cancellationToken));
         }
@@ -92,6 +94,19 @@ namespace Apocryph.Runtime.FunctionApp
                 _lastBlock!.States, inputCommands, _lastBlock.Capabilities);
             // Include historical blocks as per protocol
             return new Block(_node!.ChainId, _proposerAccount, newState, inputCommands, newCommands, newCapabilities);
+        }
+
+        private async Task HandleChain(IAsyncEnumerable<Message<(byte[], Node?[])>> chain, CancellationToken cancellationToken)
+        {
+            await foreach (var message in chain.WithCancellation(cancellationToken))
+            {
+                var (chainId, nodes) = message.Value;
+
+                if (_node!.ChainId.SequenceEqual(chainId))
+                {
+                    _nodes = nodes as Node[]; // TODO: Remove cast
+                }
+            }
         }
 
         private async Task HandleFilter(IAsyncEnumerable<Block> ibc, CancellationToken cancellationToken)

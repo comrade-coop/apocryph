@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Core.Consensus;
 using Apocryph.Core.Consensus.VirtualNodes;
+using Apocryph.Core.Consensus.Communication;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
@@ -16,88 +17,98 @@ namespace Apocryph.Runtime.FunctionApp
         private PerperStreamContext? _context;
         private IAsyncDisposable? _gossips;
         private IAsyncDisposable? _queries;
+        private Assigner assigner;
         private IAsyncCollector<object>? _output;
-        private byte[]? _chainId;
-        private Node[]? _nodes;
 
-        private Dictionary<PrivateKey, IEnumerable<IAsyncDisposable>> _streams = new Dictionary<PrivateKey, IEnumerable<IAsyncDisposable>>();
+        private Dictionary<int, IEnumerable<IAsyncDisposable>> _streams = new Dictionary<int, IEnumerable<IAsyncDisposable>>();
+
+        public Chain()
+        {
+            assigner = new Assigner(CreateNode);
+        }
 
         [FunctionName(nameof(Chain))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [Perper("chainId")] byte[] chainId,
-            [Perper("slotCount")] int slotCount,
+            [Perper("chains")] Dictionary<byte[], int> chains,
             [Perper("gossips")] IAsyncDisposable gossips,
             [Perper("queries")] IAsyncDisposable queries,
             [PerperStream("slotGossips")] IAsyncEnumerable<SlotClaim> slotGossips,
-            [PerperStream("salts")] IAsyncEnumerable<(int, byte[])> salts,
+            [PerperStream("salts")] IAsyncEnumerable<(byte[], int, byte[])> salts,
             [PerperStream("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
         {
-            _chainId = chainId;
             _context = context;
             _gossips = gossips;
             _queries = queries;
             _output = output;
-            _nodes = Enumerable.Range(0, slotCount).Select(slot => new Node(_chainId!, slot)).ToArray();
 
-            var assigner = new Assigner(slotCount, _chainId, AddPrivateKey, RemovePrivateKey);
+            foreach (var (chainId, slotCount) in chains)
+            {
+                assigner.AddChain(chainId, slotCount);
+            }
 
             await Task.WhenAll(
-                ProcessGossip(assigner, slotGossips),
-                ProcessSalts(assigner, salts),
+                ProcessGossip(slotGossips),
+                ProcessSalts(salts),
                 Miner.RunAsync(assigner, cancellationToken));
         }
 
-        private async Task ProcessGossip(Assigner assigner, IAsyncEnumerable<SlotClaim> slotGossips)
+        private async Task ProcessGossip(IAsyncEnumerable<SlotClaim> slotGossips)
         {
             await foreach (var gossip in slotGossips)
             {
-                if (gossip.ChainId.SequenceEqual(_chainId))
+                assigner.AddKey(gossip.ChainId, gossip.Key, null);
+                // Forward gossip
+            }
+        }
+
+        private async Task ProcessSalts(IAsyncEnumerable<(byte[], int, byte[])> salts)
+        {
+            await foreach (var (chainId, slot, salt) in salts)
+            {
+                assigner.SetSalt(chainId, slot, salt);
+            }
+        }
+
+        private Node CreateNode(byte[] chainId, int slot, PublicKey publicKey, PrivateKey? privateKey)
+        {
+            var node = new Node(chainId, slot);
+            Task.Run(async () =>
+            {
+                if (_streams.ContainsKey(slot))
                 {
-                    assigner.AddKey(gossip.Key, null);
-                    // Forward gossip
+                    foreach (var stream in _streams[slot])
+                    {
+                        // TODO: Remove from peering instead?
+                        await stream.DisposeAsync();
+                    }
+
+                    _streams.Remove(slot);
                 }
-            }
-        }
 
-        private async Task ProcessSalts(Assigner assigner, IAsyncEnumerable<(int, byte[])> salts)
-        {
-            await foreach (var (slot, salt) in salts)
-            {
-                assigner.SetSalt(slot, salt);
-            }
-        }
+                if (privateKey != null)
+                {
+                    var queries = _queries!;
+                    var gossips = _gossips!;
+                    var chain = _context!.GetStream();
 
-        private async void AddPrivateKey(int slot, PrivateKey privateKey)
-        {
-            var queries = _queries!;
-            var gossips = _gossips!;
-            var nodes = _nodes!;
-            var node = new Node(_chainId!, slot);
+                    var filter = _context!.DeclareStream(typeof(Filter));
+                    var consensus = await _context!.StreamFunctionAsync(typeof(Consensus), new { chain, filter, queries, node, nodes = assigner.GetNodes(chainId) });
+                    var validator = await _context!.StreamFunctionAsync(typeof(Validator), new { consensus, queries, node });
+                    var ibc = await _context!.StreamFunctionAsync(typeof(IBC), new { chain, validator, gossips, node, nodes = assigner.GetNodes() });
+                    await _context!.StreamFunctionAsync(filter, new { ibc, gossips, node });
 
-            var filter = _context!.DeclareStream(typeof(Filter));
-            var consensus = await _context!.StreamFunctionAsync(typeof(Consensus), new { filter, queries, nodes, node });
-            var validator = await _context!.StreamFunctionAsync(typeof(Validator), new { consensus, queries, nodes, node });
-            var ibc = await _context!.StreamFunctionAsync(typeof(IBC), new { validator, gossips, node });
-            await _context!.StreamFunctionAsync(filter, new { ibc, gossips, nodes, node });
+                    _streams[slot] = new[] { filter, consensus, validator, ibc };
 
-            _streams[privateKey] = new[] { filter, consensus, validator, ibc };
+                    await Task.WhenAll(new[] { filter, consensus, validator, ibc }.Select(
+                        stream => _output!.AddAsync(stream)));
+                    await _output!.AddAsync(new SlotClaim { Key = privateKey.Value.PublicKey, ChainId = chainId });
+                }
 
-            await Task.WhenAll(new[] { filter, consensus, validator, ibc }.Select(
-                stream => _output!.AddAsync(stream)));
+                await _output!.AddAsync(new Message<(byte[], Node?[])>((chainId, assigner.GetNodes(chainId)), MessageType.Valid));
+            });
 
-            await _output!.AddAsync(new SlotClaim { Key = privateKey.PublicKey, ChainId = _chainId! });
-        }
-
-        private async void RemovePrivateKey(int slot, PrivateKey privateKey)
-        {
-            foreach (var stream in _streams[privateKey])
-            {
-                // TODO: Remove from peering instead?
-                await stream.DisposeAsync();
-            }
-
-            _streams.Remove(privateKey);
+            return node;
         }
     }
 }
