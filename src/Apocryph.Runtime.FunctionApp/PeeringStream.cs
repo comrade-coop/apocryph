@@ -9,9 +9,9 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.Runtime.FunctionApp
 {
-    public class Peering
+    public class PeeringStream
     {
-        [FunctionName(nameof(Peering))]
+        [FunctionName(nameof(PeeringStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("factory")] IAsyncEnumerable<IAsyncDisposable> factory,
             [Perper("filter")] Type filter,

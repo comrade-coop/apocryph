@@ -18,7 +18,7 @@ namespace TestHarness.FunctionApp
             PerperStreamContext context,
             CancellationToken cancellationToken)
         {
-            await context.StreamActionAsync("ChainList", new
+            await context.StreamActionAsync("Apocryph.Runtime.FunctionApp.ChainListStream", new
             {
                 chains = new Dictionary<byte[], string>
                 {

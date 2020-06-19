@@ -12,7 +12,7 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.Runtime.FunctionApp
 {
-    public class IBC
+    public class IBCStream
     {
         private readonly HashSet<Block> _finalizedBlocks = new HashSet<Block>();
         private Node? _node;
@@ -20,7 +20,7 @@ namespace Apocryph.Runtime.FunctionApp
         private Committer? _committer;
         private IAsyncCollector<object>? _output;
 
-        [FunctionName(nameof(IBC))]
+        [FunctionName(nameof(IBCStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("node")] Node node,
             [Perper("nodes")] Dictionary<byte[], Node?[]> nodes,

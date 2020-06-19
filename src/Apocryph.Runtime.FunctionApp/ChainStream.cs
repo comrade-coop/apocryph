@@ -12,7 +12,7 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.Runtime.FunctionApp
 {
-    public class Chain
+    public class ChainStream
     {
         private PerperStreamContext? _context;
         private IAsyncDisposable? _gossips;
@@ -22,12 +22,12 @@ namespace Apocryph.Runtime.FunctionApp
 
         private Dictionary<int, IEnumerable<IAsyncDisposable>> _streams = new Dictionary<int, IEnumerable<IAsyncDisposable>>();
 
-        public Chain()
+        public ChainStream()
         {
             assigner = new Assigner(CreateNode);
         }
 
-        [FunctionName(nameof(Chain))]
+        [FunctionName(nameof(ChainStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("chains")] Dictionary<byte[], int> chains,
             [Perper("gossips")] IAsyncDisposable gossips,
@@ -73,6 +73,7 @@ namespace Apocryph.Runtime.FunctionApp
         private Node CreateNode(byte[] chainId, int slot, PublicKey publicKey, PrivateKey? privateKey)
         {
             var node = new Node(chainId, slot);
+
             Task.Run(async () =>
             {
                 if (_streams.ContainsKey(slot))
@@ -92,10 +93,10 @@ namespace Apocryph.Runtime.FunctionApp
                     var gossips = _gossips!;
                     var chain = _context!.GetStream();
 
-                    var filter = _context!.DeclareStream(typeof(Filter));
-                    var consensus = await _context!.StreamFunctionAsync(typeof(Consensus), new { chain, filter, queries, node, nodes = assigner.GetNodes(chainId) });
+                    var filter = _context!.DeclareStream(typeof(FilterStream));
+                    var consensus = await _context!.StreamFunctionAsync(typeof(ConsensusStream), new { chain, filter, queries, node, nodes = assigner.GetNodes(chainId) });
                     var validator = await _context!.StreamFunctionAsync(typeof(ValidatorStream), new { consensus, queries, node });
-                    var ibc = await _context!.StreamFunctionAsync(typeof(IBC), new { chain, validator, gossips, node, nodes = assigner.GetNodes() });
+                    var ibc = await _context!.StreamFunctionAsync(typeof(IBCStream), new { chain, validator, gossips, node, nodes = assigner.GetNodes() });
                     await _context!.StreamFunctionAsync(filter, new { ibc, gossips, node });
 
                     _streams[slot] = new[] { filter, consensus, validator, ibc };

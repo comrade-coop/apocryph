@@ -15,7 +15,7 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.Runtime.FunctionApp
 {
-    public class Consensus
+    public class ConsensusStream
     {
         private readonly Channel<Query<Block>> _channel;
 
@@ -26,12 +26,12 @@ namespace Apocryph.Runtime.FunctionApp
         private Proposer? _proposer;
         private IAsyncCollector<object>? _output;
 
-        public Consensus()
+        public ConsensusStream()
         {
             _channel = Channel.CreateUnbounded<Query<Block>>();
         }
 
-        [FunctionName(nameof(Consensus))]
+        [FunctionName(nameof(ConsensusStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("node")] Node node,
             [Perper("nodes")] Node[] nodes,

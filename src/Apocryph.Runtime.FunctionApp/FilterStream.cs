@@ -11,14 +11,14 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.Runtime.FunctionApp
 {
-    public class Filter
+    public class FilterStream
     {
         private Dictionary<byte[], Validator> _validators = new Dictionary<byte[], Validator>();
         private Dictionary<Block, Task<bool>> _validatedBlocks = new Dictionary<Block, Task<bool>>();
         private IAsyncCollector<Block>? _output;
         private Validator? _validator;
 
-        [FunctionName(nameof(Filter))]
+        [FunctionName(nameof(FilterStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [PerperStream("lastBlocks")] Dictionary<byte[], Block> lastBlocks,
             [PerperStream("pendingCommands")] Dictionary<byte[], HashSet<object>> pendingCommands,

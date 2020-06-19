@@ -8,20 +8,20 @@ using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.Runtime.FunctionApp
 {
-    public class ChainList
+    public class ChainListStream
     {
-        [FunctionName(nameof(ChainList))]
+        [FunctionName(nameof(ChainListStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("slotGossips")] IAsyncDisposable slotGossips,
             [Perper("chains")] IDictionary<byte[], int> chains,
             [PerperStream("output")] IAsyncCollector<IAsyncDisposable> output,
             CancellationToken cancellationToken)
         {
-            var gossips = context.DeclareStream(typeof(Peering));
-            var queries = context.DeclareStream(typeof(Peering));
+            var gossips = context.DeclareStream(typeof(PeeringStream));
+            var queries = context.DeclareStream(typeof(PeeringStream));
             var salts = (IAsyncDisposable)default!;
 
-            var chain = await context.StreamFunctionAsync(typeof(Chain), new { chains, gossips, queries, salts, slotGossips });
+            var chain = await context.StreamFunctionAsync(typeof(ChainStream), new { chains, gossips, queries, salts, slotGossips });
             await output.AddAsync(chain);
 
             await context.StreamFunctionAsync(gossips, new
@@ -29,7 +29,7 @@ namespace Apocryph.Runtime.FunctionApp
                 factory = chain,
                 filter = new[]
                 {
-                    typeof(IBC)
+                    typeof(IBCStream)
                 }
             });
 
@@ -38,7 +38,7 @@ namespace Apocryph.Runtime.FunctionApp
                 factory = chain,
                 filter = new[]
                 {
-                    typeof(Consensus)
+                    typeof(ConsensusStream)
                 }
             });
         }
