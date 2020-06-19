@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Core.Consensus;
+using Apocryph.Core.Consensus.Blocks;
 using Apocryph.Core.Consensus.VirtualNodes;
 using Apocryph.Core.Consensus.Communication;
 using Microsoft.Azure.WebJobs;
@@ -15,6 +16,7 @@ namespace Apocryph.Runtime.FunctionApp
     public class ChainStream
     {
         private PerperStreamContext? _context;
+        private Dictionary<byte[], Chain>? _chains;
         private IAsyncDisposable? _gossips;
         private IAsyncDisposable? _queries;
         private Assigner assigner;
@@ -29,7 +31,7 @@ namespace Apocryph.Runtime.FunctionApp
 
         [FunctionName(nameof(ChainStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [Perper("chains")] Dictionary<byte[], int> chains,
+            [Perper("chains")] Dictionary<byte[], Chain> chains,
             [Perper("gossips")] IAsyncDisposable gossips,
             [Perper("queries")] IAsyncDisposable queries,
             [PerperStream("slotGossips")] IAsyncEnumerable<SlotClaim> slotGossips,
@@ -38,13 +40,14 @@ namespace Apocryph.Runtime.FunctionApp
             CancellationToken cancellationToken)
         {
             _context = context;
+            _chains = chains;
             _gossips = gossips;
             _queries = queries;
             _output = output;
 
-            foreach (var (chainId, slotCount) in chains)
+            foreach (var (chainId, chain) in chains)
             {
-                assigner.AddChain(chainId, slotCount);
+                assigner.AddChain(chainId, chain.SlotCount);
             }
 
             await Task.WhenAll(
@@ -89,15 +92,17 @@ namespace Apocryph.Runtime.FunctionApp
 
                 if (privateKey != null)
                 {
+                    var chains = _chains!;
+                    var chainData = _chains![chainId];
                     var queries = _queries!;
                     var gossips = _gossips!;
                     var chain = _context!.GetStream();
 
                     var filter = _context!.DeclareStream(typeof(FilterStream));
-                    var consensus = await _context!.StreamFunctionAsync(typeof(ConsensusStream), new { chain, filter, queries, node, nodes = assigner.GetNodes(chainId) });
-                    var validator = await _context!.StreamFunctionAsync(typeof(ValidatorStream), new { consensus, queries, node });
+                    var consensus = await _context!.StreamFunctionAsync(typeof(ConsensusStream), new { chain, filter, queries, chainData, node, nodes = assigner.GetNodes(chainId) });
+                    var validator = await _context!.StreamFunctionAsync(typeof(ValidatorStream), new { consensus, filter, queries, chainData, node });
                     var ibc = await _context!.StreamFunctionAsync(typeof(IBCStream), new { chain, validator, gossips, node, nodes = assigner.GetNodes() });
-                    await _context!.StreamFunctionAsync(filter, new { ibc, gossips, node });
+                    await _context!.StreamFunctionAsync(filter, new { ibc, gossips, chains, node });
 
                     _streams[slot] = new[] { filter, consensus, validator, ibc };
 

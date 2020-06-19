@@ -33,11 +33,10 @@ namespace Apocryph.Runtime.FunctionApp
 
         [FunctionName(nameof(ConsensusStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
+            [Perper("proposerAccount")] Guid proposerAccount,
             [Perper("node")] Node node,
             [Perper("nodes")] Node[] nodes,
-            [Perper("proposerAccount")] Guid proposerAccount,
-            [Perper("lastBlock")] Block lastBlock,
-            [Perper("pendingCommands")] HashSet<object> pendingCommands,
+            [Perper("chainData")] Chain chainData,
             [PerperStream("filter")] IAsyncEnumerable<Block> filter,
             [PerperStream("chain")] IAsyncEnumerable<Message<(byte[], Node?[])>> chain,
             [PerperStream("queries")] IAsyncEnumerable<Query<Block>> queries,
@@ -50,7 +49,7 @@ namespace Apocryph.Runtime.FunctionApp
 
             var executor = new Executor(_node!.ChainId,
                 async input => await context.CallWorkerAsync<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>("AgentWorker", new { input }, default));
-            _proposer = new Proposer(executor, _node!.ChainId, lastBlock, pendingCommands, proposerAccount);
+            _proposer = new Proposer(executor, _node!.ChainId, chainData.GenesisBlock, new HashSet<object>(), proposerAccount);
 
             await Task.WhenAll(
                 RunSnowball(context, cancellationToken),

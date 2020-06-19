@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
+using Apocryph.Core.Consensus.Blocks;
 
 namespace Apocryph.Runtime.FunctionApp
 {
@@ -13,7 +14,7 @@ namespace Apocryph.Runtime.FunctionApp
         [FunctionName(nameof(ChainListStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("slotGossips")] IAsyncDisposable slotGossips,
-            [Perper("chains")] IDictionary<byte[], int> chains,
+            [Perper("chains")] IDictionary<byte[], Chain> chains,
             [PerperStream("output")] IAsyncCollector<IAsyncDisposable> output,
             CancellationToken cancellationToken)
         {

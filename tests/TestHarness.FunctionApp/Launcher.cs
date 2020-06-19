@@ -18,56 +18,55 @@ namespace TestHarness.FunctionApp
             PerperStreamContext context,
             CancellationToken cancellationToken)
         {
-            await context.StreamActionAsync("Apocryph.Runtime.FunctionApp.ChainListStream", new
-            {
-                chains = new Dictionary<byte[], string>
-                {
-                    {new byte[0], typeof(ChainAgentPing).FullName!},
-                    {new byte[0], typeof(ChainAgentPong).FullName!}
-                }
-            });
-
-            // Exchange references between independent agents (publications?)
+            var slotCount = 30;
 
             // For test harness we create seed blocks with valid references in the states
             var pingReference = Guid.NewGuid();
             var pongReference = Guid.NewGuid();
 
-            var pingBlock = new Block(
-                new byte[0],
-                Guid.NewGuid(),
-                new Dictionary<string, byte[]>
+            await context.StreamActionAsync("Apocryph.Runtime.FunctionApp.ChainListStream", new
+            {
+                chains = new Dictionary<byte[], Chain>
                 {
-                    {
-                        typeof(ChainAgentPing).FullName!,
-                        JsonSerializer.SerializeToUtf8Bytes(new ChainAgentState {OtherReference = pongReference})
-                    }
-                },
-                new object[] { },
-                new object[] { },
-                new Dictionary<Guid, (string, string[])>
-                {
-                    {pongReference, (typeof(ChainAgentPong).FullName!, new[] {typeof(string).FullName!})}
-                });
-            var pongBlock = new Block(
-                new byte[0],
-                Guid.NewGuid(),
-                new Dictionary<string, byte[]>
-                {
-                    {
-                        typeof(ChainAgentPong).FullName!,
-                        JsonSerializer.SerializeToUtf8Bytes(new ChainAgentState {OtherReference = pingReference})
-                    }
-                },
-                new object[] { },
-                new object[]
-                {
-                    new Invoke(pingReference, (typeof(string).FullName!, JsonSerializer.SerializeToUtf8Bytes("Pong")))
-                },
-                new Dictionary<Guid, (string, string[])>
-                {
-                    {pingReference, (typeof(ChainAgentPing).FullName!, new[] {typeof(string).FullName!})}
-                });
+                    {new byte[] {0}, new Chain(slotCount, new Block(
+                        new byte[0],
+                        Guid.NewGuid(),
+                        new Dictionary<string, byte[]>
+                        {
+                            {
+                                typeof(ChainAgentPing).FullName!,
+                                JsonSerializer.SerializeToUtf8Bytes(new ChainAgentState {OtherReference = pongReference})
+                            }
+                        },
+                        new object[] { },
+                        new object[] { },
+                        new Dictionary<Guid, (string, string[])>
+                        {
+                            {pongReference, (typeof(ChainAgentPong).FullName!, new[] {typeof(string).FullName!})}
+                        }))},
+                    {new byte[] {1}, new Chain(slotCount, new Block(
+                        new byte[0],
+                        Guid.NewGuid(),
+                        new Dictionary<string, byte[]>
+                        {
+                            {
+                                typeof(ChainAgentPong).FullName!,
+                                JsonSerializer.SerializeToUtf8Bytes(new ChainAgentState {OtherReference = pingReference})
+                            }
+                        },
+                        new object[] { },
+                        new object[]
+                        {
+                            new Invoke(pingReference, (typeof(string).FullName!, JsonSerializer.SerializeToUtf8Bytes("Pong")))
+                        },
+                        new Dictionary<Guid, (string, string[])>
+                        {
+                            {pingReference, (typeof(ChainAgentPing).FullName!, new[] {typeof(string).FullName!})}
+                        }))}
+                }
+            });
+
+            // Exchange references between independent agents (publications?)
 
             await context.BindOutput(cancellationToken);
         }

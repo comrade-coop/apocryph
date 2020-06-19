@@ -22,8 +22,7 @@ namespace Apocryph.Runtime.FunctionApp
         [FunctionName(nameof(ValidatorStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("node")] Node node,
-            [Perper("lastBlock")] Block lastBlock,
-            [Perper("pendingCommands")] HashSet<object> pendingCommands,
+            [Perper("chainData")] Chain chainData,
             [PerperStream("consensus")] IAsyncEnumerable<Message<Block>> consensus,
             [PerperStream("filter")] IAsyncEnumerable<Block> filter,
             [PerperStream("queries")] IAsyncEnumerable<Query<Block>> queries,
@@ -35,7 +34,7 @@ namespace Apocryph.Runtime.FunctionApp
 
             var executor = new Executor(_node!.ChainId,
                 async input => await context.CallWorkerAsync<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>("AgentWorker", new { input }, default));
-            _validator = new Validator(executor, _node!.ChainId, lastBlock, pendingCommands);
+            _validator = new Validator(executor, _node!.ChainId, chainData.GenesisBlock, new HashSet<object>());
 
             await Task.WhenAll(
                 HandleFilter(filter, cancellationToken),

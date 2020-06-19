@@ -16,12 +16,10 @@ namespace Apocryph.Runtime.FunctionApp
         private Dictionary<byte[], Validator> _validators = new Dictionary<byte[], Validator>();
         private Dictionary<Block, Task<bool>> _validatedBlocks = new Dictionary<Block, Task<bool>>();
         private IAsyncCollector<Block>? _output;
-        private Validator? _validator;
 
         [FunctionName(nameof(FilterStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("lastBlocks")] Dictionary<byte[], Block> lastBlocks,
-            [PerperStream("pendingCommands")] Dictionary<byte[], HashSet<object>> pendingCommands,
+            [PerperStream("chains")] Dictionary<byte[], Chain> chains,
             [PerperStream("ibc")] IAsyncEnumerable<Message<Block>> ibc,
             [PerperStream("gossips")] IAsyncEnumerable<Gossip<Block>> gossips,
             [PerperStream("output")] IAsyncCollector<Block> output,
@@ -29,11 +27,22 @@ namespace Apocryph.Runtime.FunctionApp
         {
             _output = output;
 
-            foreach (var (chainId, lastBlock) in lastBlocks)
+            foreach (var (chainId, chain) in chains)
             {
                 var executor = new Executor(chainId,
                     async input => await context.CallWorkerAsync<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>("AgentWorker", new { input }, default));
-                _validators[chainId] = new Validator(executor, chainId, lastBlock, pendingCommands[chainId]);
+                _validators[chainId] = new Validator(executor, chainId, chain.GenesisBlock, new HashSet<object>());
+            }
+
+            // Second loop, as we want to distribute all genesis blocks to all chains
+            foreach (var (chainId, chain) in chains)
+            {
+                foreach (var (_chainId, validator) in _validators)
+                {
+                    validator.AddConfirmedBlock(chain.GenesisBlock);
+                }
+
+                await _output!.AddAsync(chain.GenesisBlock, cancellationToken);
             }
 
             await Task.WhenAll(
