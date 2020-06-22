@@ -6,6 +6,7 @@ using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
 using Apocryph.Core.Consensus.Blocks;
+using Apocryph.Core.Consensus.VirtualNodes;
 
 namespace Apocryph.Runtime.FunctionApp
 {
@@ -20,10 +21,16 @@ namespace Apocryph.Runtime.FunctionApp
         {
             var gossips = context.DeclareStream(typeof(PeeringStream));
             var queries = context.DeclareStream(typeof(PeeringStream));
-            var salts = (IAsyncDisposable)default!;
+            var salts = context.DeclareStream(typeof(SaltsStream));
 
             var chain = await context.StreamFunctionAsync(typeof(ChainStream), new { chains, gossips, queries, salts, slotGossips });
             await output.AddAsync(chain);
+
+            var node = new Node(new byte[0], -1);
+            var ibc = await context.StreamFunctionAsync(typeof(IBCStream), new { chain, gossips, node, nodes = new Dictionary<byte[], Node?[]>() });
+            var filter = await context.StreamFunctionAsync(typeof(FilterStream), new { ibc, gossips, chains, node });
+
+            await context.StreamFunctionAsync(salts, new { chains, filter });
 
             await context.StreamFunctionAsync(gossips, new
             {
