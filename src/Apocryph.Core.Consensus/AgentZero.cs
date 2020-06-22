@@ -13,13 +13,13 @@ namespace Apocryph.Core.Consensus
         public Balance RewardPool { get; set; } = new Balance();
     }
 
-    public class AgentZero
+    public static class AgentZero
     {
         public static ValueTuple<int, int> ChainRewardCut { get; } = (1, 10);
         public static ValueTuple<int, int> CallTicketCut { get; } = (1, 10);
         public static ValueTuple<int, int> RewardCut { get; } = (1, 100);
 
-        public AgentZeroState Run(AgentZeroState state, object message, Guid? reference)
+        public static AgentZeroState Run(AgentZeroState state, object message, Guid? reference)
         {
             switch (message)
             {

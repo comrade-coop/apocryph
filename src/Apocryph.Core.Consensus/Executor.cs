@@ -9,9 +9,9 @@ namespace Apocryph.Core.Consensus
     public class Executor
     {
         private readonly string _chain;
-        private readonly Func<(byte[]?, (string, byte[]), Guid?), Task<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>> _callWorker;
+        private readonly Func<string, (byte[]?, (string, byte[]), Guid?), Task<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>> _callWorker;
 
-        public Executor(byte[] chain, Func<(byte[]?, (string, byte[]), Guid?), Task<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>> callWorker)
+        public Executor(byte[] chain, Func<string, (byte[]?, (string, byte[]), Guid?), Task<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>> callWorker)
         {
             _chain = Convert.ToBase64String(chain); // TODO: Remove conversion
             _callWorker = callWorker;
@@ -32,7 +32,7 @@ namespace Apocryph.Core.Consensus
 
                 var (state, actions, createdReferences, attachedReferences) = command switch
                 {
-                    Invoke cmd => await _callWorker((states[targetState], cmd.Message, cmd.Reference)),
+                    Invoke cmd => await _callWorker(targetState, (states[targetState], cmd.Message, cmd.Reference)),
                     _ => throw new ArgumentException()
                 };
 

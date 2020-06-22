@@ -30,7 +30,7 @@ namespace Apocryph.Runtime.FunctionApp
             foreach (var (chainId, chain) in chains)
             {
                 var executor = new Executor(chainId,
-                    async input => await context.CallWorkerAsync<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>("AgentWorker", new { input }, default));
+                    async (worker, input) => await context.CallWorkerAsync<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>(worker, new { input }, default));
                 _validators[chainId] = new Validator(executor, chainId, chain.GenesisBlock, new HashSet<object>());
             }
 

@@ -48,7 +48,7 @@ namespace Apocryph.Runtime.FunctionApp
             _nodes = nodes;
 
             var executor = new Executor(_node!.ChainId,
-                async input => await context.CallWorkerAsync<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>("AgentWorker", new { input }, default));
+                async (worker, input) => await context.CallWorkerAsync<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>(worker, new { input }, default));
             _proposer = new Proposer(executor, _node!.ChainId, chainData.GenesisBlock, new HashSet<object>(), proposerAccount);
 
             await Task.WhenAll(

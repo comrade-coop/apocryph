@@ -33,7 +33,7 @@ namespace Apocryph.Runtime.FunctionApp
             _node = node;
 
             var executor = new Executor(_node!.ChainId,
-                async input => await context.CallWorkerAsync<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>("AgentWorker", new { input }, default));
+                async (worker, input) => await context.CallWorkerAsync<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>(worker, new { input }, default));
             _validator = new Validator(executor, _node!.ChainId, chainData.GenesisBlock, new HashSet<object>());
 
             await Task.WhenAll(
