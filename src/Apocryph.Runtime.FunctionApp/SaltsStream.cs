@@ -15,9 +15,9 @@ namespace Apocryph.Runtime.FunctionApp
     {
         [FunctionName(nameof(SaltsStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("chains")] Dictionary<byte[], Chain> chains,
-            [PerperStream("filter")] IAsyncEnumerable<Block> filter,
-            [PerperStream("output")] IAsyncCollector<(byte[], int, byte[])> output,
+            [Perper("chains")] Dictionary<byte[], Chain> chains,
+            [Perper("filter")] IAsyncEnumerable<Block> filter,
+            [Perper("output")] IAsyncCollector<(byte[], int, byte[])> output,
             CancellationToken cancellationToken)
         {
             await foreach (var block in filter)

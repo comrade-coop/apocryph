@@ -24,7 +24,7 @@
     <ItemGroup>
       <PackageReference Include="Microsoft.Azure.Functions.Extensions" Version="1.0.0" />
       <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="3.0.5" />
-      <PackageReference Include="Perper.WebJobs.Extensions" Version="0.3.16" />
+      <PackageReference Include="Perper.WebJobs.Extensions" Version="0.3.24" />
     </ItemGroup>
 
 </Project>

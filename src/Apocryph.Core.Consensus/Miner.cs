@@ -1,3 +1,4 @@
+using System;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,16 +10,26 @@ namespace Apocryph.Core.Consensus
     {
         public static Task RunAsync(Assigner assigner, CancellationToken cancellationToken = default)
         {
-            using var dsa = ECDsa.Create();
             // TODO: Maybe run multiple threads in parallel
-            return Task.Run(() =>
+            return Task.Run(async () =>
             {
-                while (!cancellationToken.IsCancellationRequested)
+                using var dsa = ECDsa.Create();
+                try
                 {
-                    dsa.GenerateKey(PrivateKey.Curve);
-                    var privateKey = new PrivateKey(dsa.ExportParameters(true));
+                    while (!cancellationToken.IsCancellationRequested)
+                    {
+                        dsa.GenerateKey(PrivateKey.Curve);
+                        var privateKey = new PrivateKey(dsa.ExportParameters(true));
 
-                    assigner.AddKey(privateKey.PublicKey, privateKey);
+                        assigner.AddKey(privateKey.PublicKey, privateKey);
+
+                        await Task.Delay(100);
+                    }
+                }
+                catch (Exception err)
+                {
+                    Console.WriteLine(err.ToString());
+                    throw;
                 }
             });
         }

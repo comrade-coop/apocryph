@@ -13,7 +13,7 @@ namespace Apocryph.Core.Consensus.VirtualNodes
 
         public PublicKey(ECParameters parameters)
         {
-            if (!parameters.Curve.Oid.Equals(Curve.Oid))
+            if (parameters.Curve.Oid.Value != Curve.Oid.Value)
             {
                 throw new ArgumentOutOfRangeException("");
             }

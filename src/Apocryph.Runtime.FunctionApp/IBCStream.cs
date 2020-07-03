@@ -24,10 +24,10 @@ namespace Apocryph.Runtime.FunctionApp
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("node")] Node node,
             [Perper("nodes")] Dictionary<byte[], Node?[]> nodes,
-            [PerperStream("queries")] IAsyncEnumerable<Message<(byte[], Node?[])>> chain,
-            [PerperStream("validator")] IAsyncEnumerable<Message<Block>> validator,
-            [PerperStream("gossips")] IAsyncEnumerable<Gossip<Block>> gossips,
-            [PerperStream("output")] IAsyncCollector<object> output,
+            [Perper("chain")] IAsyncEnumerable<Message<(byte[], Node?[])>> chain,
+            [Perper("validator")] IAsyncEnumerable<Message<Block>> validator,
+            [Perper("gossips")] IAsyncEnumerable<Gossip<Block>> gossips,
+            [Perper("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
         {
             _output = output;

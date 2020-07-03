@@ -13,11 +13,11 @@ namespace Apocryph.Runtime.FunctionApp
     {
         [FunctionName(nameof(PeeringStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("factory")] IAsyncEnumerable<IAsyncDisposable> factory,
+            [Perper("factory")] IAsyncEnumerable<IPerperStream> factory,
             [Perper("filter")] Type filter,
             CancellationToken cancellationToken)
         {
-            var output = new List<IAsyncDisposable>();
+            var output = new List<IPerperStream>();
             var peers = factory.Where(stream => stream.GetType() == filter);
             await foreach (var peer in peers.WithCancellation(cancellationToken))
             {

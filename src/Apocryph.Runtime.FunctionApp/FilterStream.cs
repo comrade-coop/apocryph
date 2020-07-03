@@ -19,10 +19,10 @@ namespace Apocryph.Runtime.FunctionApp
 
         [FunctionName(nameof(FilterStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [PerperStream("chains")] Dictionary<byte[], Chain> chains,
-            [PerperStream("ibc")] IAsyncEnumerable<Message<Block>> ibc,
-            [PerperStream("gossips")] IAsyncEnumerable<Gossip<Block>> gossips,
-            [PerperStream("output")] IAsyncCollector<Block> output,
+            [Perper("chains")] Dictionary<byte[], Chain> chains,
+            [Perper("ibc")] IAsyncEnumerable<Message<Block>> ibc,
+            [Perper("gossips")] IAsyncEnumerable<Gossip<Block>> gossips,
+            [Perper("output")] IAsyncCollector<Block> output,
             CancellationToken cancellationToken)
         {
             _output = output;
@@ -35,7 +35,7 @@ namespace Apocryph.Runtime.FunctionApp
             }
 
             // Second loop, as we want to distribute all genesis blocks to all chains
-            foreach (var (chainId, chain) in chains)
+            /*foreach (var (chainId, chain) in chains) // TODO: This somehow results in "Connection timed out"
             {
                 foreach (var (_chainId, validator) in _validators)
                 {
@@ -43,7 +43,7 @@ namespace Apocryph.Runtime.FunctionApp
                 }
 
                 await _output!.AddAsync(chain.GenesisBlock, cancellationToken);
-            }
+            }*/
 
             await Task.WhenAll(
                 HandleIBC(context, ibc, cancellationToken),

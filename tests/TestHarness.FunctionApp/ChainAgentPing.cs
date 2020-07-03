@@ -12,6 +12,7 @@ namespace TestHarness.FunctionApp
     public class ChainAgentPing
     {
         [FunctionName(nameof(ChainAgentPing))]
+        [return: Perper("$return")]
         public Task<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)> Run([PerperWorkerTrigger] PerperWorkerContext context,
             [Perper("input")] (byte[]?, (string, byte[]), Guid?) input, CancellationToken cancellationToken)
         {

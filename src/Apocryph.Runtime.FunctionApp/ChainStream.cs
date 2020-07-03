@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -17,12 +16,12 @@ namespace Apocryph.Runtime.FunctionApp
     {
         private PerperStreamContext? _context;
         private Dictionary<byte[], Chain>? _chains;
-        private IAsyncDisposable? _gossips;
-        private IAsyncDisposable? _queries;
+        private IPerperStream? _gossips;
+        private IPerperStream? _queries;
         private Assigner assigner;
         private IAsyncCollector<object>? _output;
 
-        private Dictionary<int, IEnumerable<IAsyncDisposable>> _streams = new Dictionary<int, IEnumerable<IAsyncDisposable>>();
+        private Dictionary<int, IEnumerable<IPerperStream>> _streams = new Dictionary<int, IEnumerable<IPerperStream>>();
 
         public ChainStream()
         {
@@ -32,11 +31,11 @@ namespace Apocryph.Runtime.FunctionApp
         [FunctionName(nameof(ChainStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("chains")] Dictionary<byte[], Chain> chains,
-            [Perper("gossips")] IAsyncDisposable gossips,
-            [Perper("queries")] IAsyncDisposable queries,
-            [PerperStream("slotGossips")] IAsyncEnumerable<SlotClaim> slotGossips,
-            [PerperStream("salts")] IAsyncEnumerable<(byte[], int, byte[])> salts,
-            [PerperStream("output")] IAsyncCollector<object> output,
+            [Perper("gossips")] IPerperStream gossips,
+            [Perper("queries")] IPerperStream queries,
+            [Perper("slotGossips")] IAsyncEnumerable<SlotClaim> slotGossips,
+            [Perper("salts")] IAsyncEnumerable<(byte[], int, byte[])> salts,
+            [Perper("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
         {
             _context = context;
@@ -99,10 +98,42 @@ namespace Apocryph.Runtime.FunctionApp
                     var chain = _context!.GetStream();
 
                     var filter = _context!.DeclareStream(typeof(FilterStream));
-                    var consensus = await _context!.StreamFunctionAsync(typeof(ConsensusStream), new { chain, filter, queries, chainData, node, nodes = assigner.GetNodes(chainId) });
-                    var validator = await _context!.StreamFunctionAsync(typeof(ValidatorStream), new { consensus, filter, queries, chainData, node });
-                    var ibc = await _context!.StreamFunctionAsync(typeof(IBCStream), new { chain, validator, gossips, node, nodes = assigner.GetNodes() });
-                    await _context!.StreamFunctionAsync(filter, new { ibc, gossips, chains, node });
+
+                    var consensus = await _context!.StreamFunctionAsync(typeof(ConsensusStream), new
+                    {
+                        chain = chain.Subscribe(),
+                        filter = filter.Subscribe(),
+                        queries = queries.Subscribe(),
+                        chainData,
+                        node,
+                        nodes = assigner.GetNodes(chainId)
+                    });
+
+                    var validator = await _context!.StreamFunctionAsync(typeof(ValidatorStream), new
+                    {
+                        consensus = consensus.Subscribe(),
+                        filter = filter.Subscribe(),
+                        queries = queries.Subscribe(),
+                        chainData,
+                        node
+                    });
+
+                    var ibc = await _context!.StreamFunctionAsync(typeof(IBCStream), new
+                    {
+                        chain = chain.Subscribe(),
+                        validator = validator.Subscribe(),
+                        gossips = gossips.Subscribe(),
+                        node,
+                        nodes = assigner.GetNodes()
+                    });
+
+                    await _context!.StreamFunctionAsync(filter, new
+                    {
+                        ibc = ibc.Subscribe(),
+                        gossips = gossips.Subscribe(),
+                        chains,
+                        node
+                    });
 
                     _streams[slot] = new[] { filter, consensus, validator, ibc };
 

@@ -14,8 +14,8 @@ namespace TestHarness.FunctionApp
     public static class Launcher
     {
         [FunctionName("Launcher")]
-        public static async Task RunAsync([PerperStreamTrigger(RunOnStartup = true)]
-            PerperStreamContext context,
+        public static async Task RunAsync([PerperModuleTrigger(RunOnStartup = true)]
+            PerperModuleContext context,
             CancellationToken cancellationToken)
         {
             var slotCount = 30;
@@ -24,8 +24,11 @@ namespace TestHarness.FunctionApp
             var pingReference = Guid.NewGuid();
             var pongReference = Guid.NewGuid();
 
-            await context.StreamActionAsync("Apocryph.Runtime.FunctionApp.ChainListStream", new
+            var chainList = context.DeclareStream("Apocryph.Runtime.FunctionApp.ChainListStream.Run");
+
+            await context.StreamActionAsync(chainList, new
             {
+                slotGossips = chainList,
                 chains = new Dictionary<byte[], Chain>
                 {
                     {new byte[] {0}, new Chain(slotCount, new Block(
@@ -65,7 +68,6 @@ namespace TestHarness.FunctionApp
                         }))}
                 }
             });
-
             // Exchange references between independent agents (publications?)
 
             await context.BindOutput(cancellationToken);

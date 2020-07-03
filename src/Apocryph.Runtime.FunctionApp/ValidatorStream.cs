@@ -23,10 +23,10 @@ namespace Apocryph.Runtime.FunctionApp
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("node")] Node node,
             [Perper("chainData")] Chain chainData,
-            [PerperStream("consensus")] IAsyncEnumerable<Message<Block>> consensus,
-            [PerperStream("filter")] IAsyncEnumerable<Block> filter,
-            [PerperStream("queries")] IAsyncEnumerable<Query<Block>> queries,
-            [PerperStream("output")] IAsyncCollector<Message<Block>> output,
+            [Perper("consensus")] IAsyncEnumerable<Message<Block>> consensus,
+            [Perper("filter")] IAsyncEnumerable<Block> filter,
+            [Perper("queries")] IAsyncEnumerable<Query<Block>> queries,
+            [Perper("output")] IAsyncCollector<Message<Block>> output,
             CancellationToken cancellationToken)
         {
             _output = output;

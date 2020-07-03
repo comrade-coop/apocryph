@@ -31,7 +31,7 @@ namespace Apocryph.Core.Consensus
 
         public void AddChain(byte[] chainId, int slotCount)
         {
-            _slots[chainId] = new Slot[slotCount];
+            _slots[chainId] = Enumerable.Range(0, slotCount).Select(x => new Slot()).ToArray();
         }
 
         public void AddKey(PublicKey key, PrivateKey? privateKey)

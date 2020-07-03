@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,41 +13,60 @@ namespace Apocryph.Runtime.FunctionApp
     {
         [FunctionName(nameof(ChainListStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [Perper("slotGossips")] IAsyncDisposable slotGossips,
+            [Perper("slotGossips")] IPerperStream slotGossips,
             [Perper("chains")] IDictionary<byte[], Chain> chains,
-            [PerperStream("output")] IAsyncCollector<IAsyncDisposable> output,
+            [Perper("output")] IAsyncCollector<IPerperStream> output,
             CancellationToken cancellationToken)
         {
-            var gossips = context.DeclareStream(typeof(PeeringStream));
-            var queries = context.DeclareStream(typeof(PeeringStream));
-            var salts = context.DeclareStream(typeof(SaltsStream));
+            await using var gossips = context.DeclareStream(typeof(PeeringStream));
+            await using var queries = context.DeclareStream(typeof(PeeringStream));
+            await using var salts = context.DeclareStream(typeof(SaltsStream));
 
-            var chain = await context.StreamFunctionAsync(typeof(ChainStream), new { chains, gossips, queries, salts, slotGossips });
+            var chain = await context.StreamFunctionAsync(typeof(ChainStream), new
+            {
+                chains,
+                gossips,
+                queries,
+                salts,
+                slotGossips
+            });
             await output.AddAsync(chain);
 
             var node = new Node(new byte[0], -1);
-            var ibc = await context.StreamFunctionAsync(typeof(IBCStream), new { chain, gossips, node, nodes = new Dictionary<byte[], Node?[]>() });
-            var filter = await context.StreamFunctionAsync(typeof(FilterStream), new { ibc, gossips, chains, node });
-
-            await context.StreamFunctionAsync(salts, new { chains, filter });
-
-            await context.StreamFunctionAsync(gossips, new
+            var ibc = await context.StreamFunctionAsync(typeof(IBCStream), new
             {
-                factory = chain,
-                filter = new[]
-                {
-                    typeof(IBCStream)
-                }
+                chain = chain.Subscribe(),
+                gossips = gossips.Subscribe(),
+                node,
+                nodes = new Dictionary<byte[], Node?[]>()
+            });
+            var filter = await context.StreamFunctionAsync(typeof(FilterStream), new
+            {
+                ibc = ibc.Subscribe(),
+                gossips = gossips.Subscribe(),
+                chains,
+                node
             });
 
-            await context.StreamFunctionAsync(queries, new
+            await context.StreamActionAsync(salts, new
             {
-                factory = chain,
-                filter = new[]
-                {
-                    typeof(ConsensusStream)
-                }
+                chains,
+                filter = filter.Subscribe()
             });
+
+            await context.StreamActionAsync(gossips, new
+            {
+                factory = chain.Subscribe(),
+                filter = typeof(IBCStream)
+            });
+
+            await context.StreamActionAsync(queries, new
+            {
+                factory = chain.Subscribe(),
+                filter = typeof(ConsensusStream)
+            });
+
+            await context.BindOutput(cancellationToken);
         }
     }
 }

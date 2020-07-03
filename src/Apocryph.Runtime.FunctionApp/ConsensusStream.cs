@@ -37,10 +37,10 @@ namespace Apocryph.Runtime.FunctionApp
             [Perper("node")] Node node,
             [Perper("nodes")] Node[] nodes,
             [Perper("chainData")] Chain chainData,
-            [PerperStream("filter")] IAsyncEnumerable<Block> filter,
-            [PerperStream("chain")] IAsyncEnumerable<Message<(byte[], Node?[])>> chain,
-            [PerperStream("queries")] IAsyncEnumerable<Query<Block>> queries,
-            [PerperStream("output")] IAsyncCollector<object> output,
+            [Perper("filter")] IAsyncEnumerable<Block> filter,
+            [Perper("chain")] IAsyncEnumerable<Message<(byte[], Node?[])>> chain,
+            [Perper("queries")] IAsyncEnumerable<Query<Block>> queries,
+            [Perper("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
         {
             _output = output;
