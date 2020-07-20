@@ -13,13 +13,13 @@ namespace Apocryph.Runtime.FunctionApp
 {
     public class FilterStream
     {
-        private Dictionary<byte[], Validator> _validators = new Dictionary<byte[], Validator>();
+        private Dictionary<Guid, Validator> _validators = new Dictionary<Guid, Validator>();
         private Dictionary<Block, Task<bool>> _validatedBlocks = new Dictionary<Block, Task<bool>>();
         private IAsyncCollector<Block>? _output;
 
         [FunctionName(nameof(FilterStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [Perper("chains")] Dictionary<byte[], Chain> chains,
+            [Perper("chains")] Dictionary<Guid, Chain> chains,
             [Perper("ibc")] IAsyncEnumerable<Message<Block>> ibc,
             [Perper("gossips")] IAsyncEnumerable<Gossip<Block>> gossips,
             [Perper("output")] IAsyncCollector<Block> output,
@@ -30,22 +30,26 @@ namespace Apocryph.Runtime.FunctionApp
             foreach (var (chainId, chain) in chains)
             {
                 var executor = new Executor(chainId,
-                    async (worker, input) => await context.CallWorkerAsync<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>(worker, new { input }, default));
+                    async (worker, input) => await context.CallWorkerAsync<(byte[]?, (string, object[])[], Dictionary<Guid, string[]>, Dictionary<Guid, string>)>(worker, new { input }, default));
                 _validators[chainId] = new Validator(executor, chainId, chain.GenesisBlock, new HashSet<object>());
             }
 
-            // Second loop, as we want to distribute all genesis blocks to all chains
-            /*foreach (var (chainId, chain) in chains) // TODO: This somehow results in "Connection timed out"
-            {
-                foreach (var (_chainId, validator) in _validators)
+            await TaskHelper.WhenAllOrFail(
+                Task.Run(async () =>
                 {
-                    validator.AddConfirmedBlock(chain.GenesisBlock);
-                }
 
-                await _output!.AddAsync(chain.GenesisBlock, cancellationToken);
-            }*/
+                    // Second loop, as we want to distribute all genesis blocks to all chains
+                    foreach (var (chainId, chain) in chains)
+                    {
+                        await Task.Delay(500);
+                        foreach (var (_chainId, validator) in _validators)
+                        {
+                            validator.AddConfirmedBlock(chain.GenesisBlock);
+                        }
 
-            await Task.WhenAll(
+                        await _output!.AddAsync(chain.GenesisBlock, cancellationToken);
+                    }
+                }),
                 HandleIBC(context, ibc, cancellationToken),
                 HandleGossips(context, gossips, cancellationToken));
         }

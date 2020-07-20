@@ -6,7 +6,7 @@ namespace Apocryph.Core.Consensus.Blocks.Messages
 {
     public class SetChainBlockMessage
     {
-        public byte[] ChainId { get; set; }
+        public Guid ChainId { get; set; }
         public byte[] BlockId { get; set; }
 
         public Dictionary<Guid, BigInteger> ProcessedCommands { get; set; } // Proposer => Amount

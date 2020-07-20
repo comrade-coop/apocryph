@@ -2,7 +2,6 @@
     "IsEncrypted": false,
     "Values": {
         "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-        "FUNCTIONS_WORKER_RUNTIME": "dotnet",
-        "PerperStreamTypesAssembly": "Apocryph.Runtime.FunctionApp"
+        "FUNCTIONS_WORKER_RUNTIME": "dotnet"
     }
 }

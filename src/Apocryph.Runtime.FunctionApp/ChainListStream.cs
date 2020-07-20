@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +15,7 @@ namespace Apocryph.Runtime.FunctionApp
         [FunctionName(nameof(ChainListStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("slotGossips")] IPerperStream slotGossips,
-            [Perper("chains")] IDictionary<byte[], Chain> chains,
+            [Perper("chains")] IDictionary<Guid, Chain> chains,
             [Perper("output")] IAsyncCollector<IPerperStream> output,
             CancellationToken cancellationToken)
         {
@@ -32,13 +33,13 @@ namespace Apocryph.Runtime.FunctionApp
             });
             await output.AddAsync(chain);
 
-            var node = new Node(new byte[0], -1);
+            var node = new Node(Guid.Empty, -1);
             var ibc = await context.StreamFunctionAsync(typeof(IBCStream), new
             {
                 chain = chain.Subscribe(),
                 gossips = gossips.Subscribe(),
                 node,
-                nodes = new Dictionary<byte[], Node?[]>()
+                nodes = new Dictionary<Guid, Node?[]>()
             });
             var filter = await context.StreamFunctionAsync(typeof(FilterStream), new
             {

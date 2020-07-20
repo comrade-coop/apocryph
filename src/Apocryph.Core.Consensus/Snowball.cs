@@ -78,7 +78,7 @@ namespace Apocryph.Core.Consensus
                         _value = answerValue;
                     }
 
-                    if (answerValue != lastValue)
+                    if (!answerValue.Equals(lastValue))
                     {
                         lastValue = answerValue;
                         count = 0;

@@ -18,7 +18,10 @@ namespace TestHarness.FunctionApp
             PerperModuleContext context,
             CancellationToken cancellationToken)
         {
-            var slotCount = 30;
+            var slotCount = 1; //30
+
+            var pingChainId = Guid.NewGuid();
+            var pongChainId = Guid.NewGuid();
 
             // For test harness we create seed blocks with valid references in the states
             var pingReference = Guid.NewGuid();
@@ -29,10 +32,10 @@ namespace TestHarness.FunctionApp
             await context.StreamActionAsync(chainList, new
             {
                 slotGossips = chainList,
-                chains = new Dictionary<byte[], Chain>
+                chains = new Dictionary<Guid, Chain>
                 {
-                    {new byte[] {0}, new Chain(slotCount, new Block(
-                        new byte[0],
+                    {pingChainId, new Chain(slotCount, new Block(
+                        pingChainId,
                         Guid.NewGuid(),
                         new Dictionary<string, byte[]>
                         {
@@ -47,8 +50,8 @@ namespace TestHarness.FunctionApp
                         {
                             {pongReference, (typeof(ChainAgentPong).FullName!, new[] {typeof(string).FullName!})}
                         }))},
-                    {new byte[] {1}, new Chain(slotCount, new Block(
-                        new byte[0],
+                    {pongChainId, new Chain(slotCount, new Block(
+                        pongChainId,
                         Guid.NewGuid(),
                         new Dictionary<string, byte[]>
                         {
@@ -68,7 +71,6 @@ namespace TestHarness.FunctionApp
                         }))}
                 }
             });
-            // Exchange references between independent agents (publications?)
 
             await context.BindOutput(cancellationToken);
         }

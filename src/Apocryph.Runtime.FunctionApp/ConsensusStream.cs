@@ -35,23 +35,23 @@ namespace Apocryph.Runtime.FunctionApp
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("proposerAccount")] Guid proposerAccount,
             [Perper("node")] Node node,
-            [Perper("nodes")] Node[] nodes,
+            [Perper("nodes")] List<Node> nodes,
             [Perper("chainData")] Chain chainData,
             [Perper("filter")] IAsyncEnumerable<Block> filter,
-            [Perper("chain")] IAsyncEnumerable<Message<(byte[], Node?[])>> chain,
+            [Perper("chain")] IAsyncEnumerable<Message<(Guid, Node?[])>> chain,
             [Perper("queries")] IAsyncEnumerable<Query<Block>> queries,
             [Perper("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
         {
             _output = output;
             _node = node;
-            _nodes = nodes;
+            _nodes = nodes.ToArray();
 
             var executor = new Executor(_node!.ChainId,
-                async (worker, input) => await context.CallWorkerAsync<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>(worker, new { input }, default));
+                async (worker, input) => await context.CallWorkerAsync<(byte[]?, (string, object[])[], Dictionary<Guid, string[]>, Dictionary<Guid, string>)>(worker, new { input }, default));
             _proposer = new Proposer(executor, _node!.ChainId, chainData.GenesisBlock, new HashSet<object>(), proposerAccount);
 
-            await Task.WhenAll(
+            await TaskHelper.WhenAllOrFail(
                 RunSnowball(context, cancellationToken),
                 HandleChain(chain, cancellationToken),
                 HandleFilter(filter, cancellationToken),
@@ -63,13 +63,13 @@ namespace Apocryph.Runtime.FunctionApp
             return _proposer!.Propose();
         }
 
-        private async Task HandleChain(IAsyncEnumerable<Message<(byte[], Node?[])>> chain, CancellationToken cancellationToken)
+        private async Task HandleChain(IAsyncEnumerable<Message<(Guid, Node?[])>> chain, CancellationToken cancellationToken)
         {
             await foreach (var message in chain.WithCancellation(cancellationToken))
             {
                 var (chainId, nodes) = message.Value;
 
-                if (_node!.ChainId.SequenceEqual(chainId))
+                if (_node!.ChainId == chainId)
                 {
                     _nodes = nodes as Node[]; // TODO: Remove cast
                 }
@@ -88,13 +88,13 @@ namespace Apocryph.Runtime.FunctionApp
         {
             await foreach (var query in queries.WithCancellation(cancellationToken))
             {
-                if (_snowball is null) continue;
+                if (_snowball is null || !query.Receiver.Equals(_node)) continue;
 
-                if (query.Receiver == _node && query.Verb == QueryVerb.Response)
+                if (query.Verb == QueryVerb.Response)
                 {
                     await _channel.Writer.WriteAsync(query, cancellationToken);
                 }
-                else if (query.Receiver == _node && query.Verb == QueryVerb.Request)
+                else if (query.Verb == QueryVerb.Request)
                 {
                     await _output!.AddAsync(_snowball!.Query(query), cancellationToken);
                 }
@@ -105,7 +105,7 @@ namespace Apocryph.Runtime.FunctionApp
         {
             while (true)
             {
-                var proposerCount = _nodes!.Length / 10; // TODO: Move constant to parameter
+                var proposerCount = _nodes!.Length / 10 + 1; // TODO: Move constant to parameter
                 _proposers = _nodes.Take(proposerCount).ToArray(); // TODO: Do a random walk based on last block hash
 
                 var opinion = default(Block?);

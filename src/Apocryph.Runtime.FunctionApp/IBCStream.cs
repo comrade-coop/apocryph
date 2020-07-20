@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -16,15 +17,15 @@ namespace Apocryph.Runtime.FunctionApp
     {
         private readonly HashSet<Block> _finalizedBlocks = new HashSet<Block>();
         private Node? _node;
-        private Dictionary<byte[], Node?[]>? _nodes;
+        private Dictionary<Guid, Node?[]>? _nodes;
         private Committer? _committer;
         private IAsyncCollector<object>? _output;
 
         [FunctionName(nameof(IBCStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("node")] Node node,
-            [Perper("nodes")] Dictionary<byte[], Node?[]> nodes,
-            [Perper("chain")] IAsyncEnumerable<Message<(byte[], Node?[])>> chain,
+            [Perper("nodes")] Dictionary<Guid, Node?[]> nodes,
+            [Perper("chain")] IAsyncEnumerable<Message<(Guid, Node?[])>> chain,
             [Perper("validator")] IAsyncEnumerable<Message<Block>> validator,
             [Perper("gossips")] IAsyncEnumerable<Gossip<Block>> gossips,
             [Perper("output")] IAsyncCollector<object> output,
@@ -35,7 +36,7 @@ namespace Apocryph.Runtime.FunctionApp
             _nodes = nodes;
             _committer = new Committer();
 
-            await Task.WhenAll(
+            await TaskHelper.WhenAllOrFail(
                 HandleChain(chain, cancellationToken),
                 HandleValidator(validator, cancellationToken),
                 HandleGossips(gossips, cancellationToken));
@@ -54,7 +55,7 @@ namespace Apocryph.Runtime.FunctionApp
             }
         }
 
-        private async Task HandleChain(IAsyncEnumerable<Message<(byte[], Node?[])>> chain, CancellationToken cancellationToken)
+        private async Task HandleChain(IAsyncEnumerable<Message<(Guid, Node?[])>> chain, CancellationToken cancellationToken)
         {
             await foreach (var message in chain.WithCancellation(cancellationToken))
             {

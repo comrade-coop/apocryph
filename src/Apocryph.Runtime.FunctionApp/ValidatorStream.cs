@@ -33,10 +33,10 @@ namespace Apocryph.Runtime.FunctionApp
             _node = node;
 
             var executor = new Executor(_node!.ChainId,
-                async (worker, input) => await context.CallWorkerAsync<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>(worker, new { input }, default));
+                async (worker, input) => await context.CallWorkerAsync<(byte[]?, (string, object[])[], Dictionary<Guid, string[]>, Dictionary<Guid, string>)>(worker, new { input }, default));
             _validator = new Validator(executor, _node!.ChainId, chainData.GenesisBlock, new HashSet<object>());
 
-            await Task.WhenAll(
+            await TaskHelper.WhenAllOrFail(
                 HandleFilter(filter, cancellationToken),
                 HandleConsensus(context, consensus, cancellationToken),
                 HandleQueries(context, queries, cancellationToken));
@@ -79,7 +79,7 @@ namespace Apocryph.Runtime.FunctionApp
             // Validate blocks from queries before they are fully confirmed, saving a tiny bit of time
             await foreach (var query in queries.WithCancellation(cancellationToken))
             {
-                if (query.Receiver != _node) continue;
+                if (!query.Receiver.Equals(_node)) continue;
 
                 var block = query.Value;
                 if (!_validatedBlocks.ContainsKey(block))

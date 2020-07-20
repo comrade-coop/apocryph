@@ -55,7 +55,7 @@ namespace Apocryph.Core.Consensus
 
                 case SetChainBlockMessage setChainBlockMessage:
                     {
-                        var chainId = new Guid(setChainBlockMessage.ChainId); // TODO: Remove conversion
+                        var chainId = setChainBlockMessage.ChainId;
                         var chain = state.Balances.GetOrCreate(chainId);
                         var agentZeroProposer = state.Balances.GetOrCreate(reference!.Value);
 

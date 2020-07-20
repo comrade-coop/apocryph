@@ -58,9 +58,9 @@ namespace Apocryph.Core.Consensus.VirtualNodes
             return new BigInteger(Point.X.Concat(new byte[] { 0 }).ToArray());
         }
 
-        public BigInteger GetDifficulty(byte[] chainId, byte[] salt)
+        public BigInteger GetDifficulty(Guid chainId, byte[] salt)
         {
-            var concatenated = (Point.Y ?? new byte[] { }).Concat(salt ?? new byte[] { }).Concat(chainId ?? new byte[] { }).ToArray();
+            var concatenated = (Point.Y ?? new byte[] { }).Concat(salt ?? new byte[] { }).Concat(chainId.ToByteArray()).ToArray();
             using var sha256Hash = SHA256.Create();
             var hash = sha256Hash.ComputeHash(concatenated);
             return new BigInteger(hash.Concat(new byte[] { 0 }).ToArray());

@@ -9,16 +9,16 @@ namespace Apocryph.Core.Consensus
     public class Executor
     {
         private readonly string _chain;
-        private readonly Func<string, (byte[]?, (string, byte[]), Guid?), Task<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>> _callWorker;
+        private readonly Func<string, (byte[]?, (string, byte[]), Guid?), Task<(byte[]?, (string, object[])[], Dictionary<Guid, string[]>, Dictionary<Guid, string>)>> _callWorker;
 
-        public Executor(byte[] chain, Func<string, (byte[]?, (string, byte[]), Guid?), Task<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>> callWorker)
+        public Executor(Guid chain, Func<string, (byte[]?, (string, byte[]), Guid?), Task<(byte[]?, (string, object[])[], Dictionary<Guid, string[]>, Dictionary<Guid, string>)>> callWorker)
         {
-            _chain = Convert.ToBase64String(chain); // TODO: Remove conversion
+            _chain = chain.ToString(); // TODO: Remove conversion
             _callWorker = callWorker;
         }
 
-        public async Task<(IDictionary<string, byte[]>, object[], IDictionary<Guid, (string, string[])>)> Execute(
-            IDictionary<string, byte[]> states, object[] commands, IDictionary<Guid, (string, string[])> capabilities)
+        public async Task<(Dictionary<string, byte[]>, object[], Dictionary<Guid, (string, string[])>)> Execute(
+            Dictionary<string, byte[]> states, object[] commands, Dictionary<Guid, (string, string[])> capabilities)
         {
             var capabilityValidator = new CapabilityValidator(capabilities);
 

@@ -18,7 +18,7 @@ namespace Apocryph.Runtime.FunctionApp
             CancellationToken cancellationToken)
         {
             var output = new List<IPerperStream>();
-            var peers = factory.Where(stream => stream.GetType() == filter);
+            var peers = factory; //.Where(stream => stream.GetDelegate() == filter);
             await foreach (var peer in peers.WithCancellation(cancellationToken))
             {
                 output.Add(peer);

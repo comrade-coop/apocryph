@@ -1,14 +1,13 @@
 using System;
-using System.Linq;
 
 namespace Apocryph.Core.Consensus.VirtualNodes
 {
     public class Node : IEquatable<Node>
     {
         public int Id { get; set; }
-        public byte[] ChainId { get; set; }
+        public Guid ChainId { get; set; }
 
-        public Node(byte[] chainId, int id)
+        public Node(Guid chainId, int id)
         {
             ChainId = chainId;
             Id = id;
@@ -18,7 +17,7 @@ namespace Apocryph.Core.Consensus.VirtualNodes
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Id == other.Id && ChainId.SequenceEqual(other.ChainId);
+            return Id == other.Id && ChainId == other.ChainId;
         }
 
         public override bool Equals(object? obj)
@@ -31,7 +30,12 @@ namespace Apocryph.Core.Consensus.VirtualNodes
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(Id, Convert.ToBase64String(ChainId));
+            return HashCode.Combine(Id, ChainId);
+        }
+
+        public override string ToString()
+        {
+            return $"{ChainId}-{Id}";
         }
     }
 }

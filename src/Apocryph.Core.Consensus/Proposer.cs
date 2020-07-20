@@ -13,14 +13,14 @@ namespace Apocryph.Core.Consensus
 {
     public class Proposer
     {
-        private byte[] _chainId;
+        private Guid _chainId;
         private Block _lastBlock;
         private Guid _proposerAccount;
         private HashSet<object> _pendingCommands;
         private TaskCompletionSource<bool>? _pendingCommandsTaskCompletionSource;
         private Executor _executor;
 
-        public Proposer(Executor executor, byte[] chainId, Block lastBlock, HashSet<object> pendingCommands, Guid proposerAccount)
+        public Proposer(Executor executor, Guid chainId, Block lastBlock, HashSet<object> pendingCommands, Guid proposerAccount)
         {
             _executor = executor;
             _chainId = chainId;
@@ -43,7 +43,7 @@ namespace Apocryph.Core.Consensus
             var inputCommands = _pendingCommands.ToArray();
             _pendingCommands.Clear();
 
-            if (_chainId.Length == 0)
+            if (_chainId == Guid.Empty)
             {
                 inputCommands = inputCommands.Concat(new object[] {
                     new Invoke(_proposerAccount, (
@@ -65,7 +65,7 @@ namespace Apocryph.Core.Consensus
             _pendingCommandsTaskCompletionSource?.TrySetResult(true);
             _pendingCommands!.UnionWith(block.Commands.Where(x => _executor.FilterCommand(x, _lastBlock!.Capabilities)));
 
-            if (_chainId.Length == 0)
+            if (_chainId == Guid.Empty)
             {
                 _pendingCommands!.Add(new Invoke(_proposerAccount, (
                     typeof(SetChainBlockMessage).FullName!,
@@ -82,7 +82,7 @@ namespace Apocryph.Core.Consensus
                     }))));
             }
 
-            if (_chainId.SequenceEqual(block.ChainId))
+            if (_chainId == block.ChainId)
             {
                 _lastBlock = block;
                 _pendingCommands.ExceptWith(block.InputCommands);

@@ -6,15 +6,15 @@ namespace Apocryph.Core.Consensus.Blocks
 {
     public class Block : IEquatable<Block>
     {
-        public byte[] ChainId { get; set; }
+        public Guid ChainId { get; set; }
         public Guid ProposerAccount { get; set; }
         public Node? Proposer { get; set; }
         public object[] InputCommands { get; }
         public object[] Commands { get; }
-        public IDictionary<string, byte[]> States { get; }
-        public IDictionary<Guid, (string, string[])> Capabilities { get; }
+        public Dictionary<string, byte[]> States { get; }
+        public Dictionary<Guid, (string, string[])> Capabilities { get; }
 
-        public Block(byte[] chainId, Guid proposerAccount, IDictionary<string, byte[]> states, object[] inputCommands, object[] commands, IDictionary<Guid, (string, string[])> capabilities)
+        public Block(Guid chainId, Guid proposerAccount, Dictionary<string, byte[]> states, object[] inputCommands, object[] commands, Dictionary<Guid, (string, string[])> capabilities)
         {
             ChainId = chainId;
             ProposerAccount = proposerAccount;

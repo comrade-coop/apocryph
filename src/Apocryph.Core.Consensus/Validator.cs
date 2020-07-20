@@ -12,13 +12,13 @@ namespace Apocryph.Core.Consensus
 {
     public class Validator
     {
-        private byte[] _chainId;
+        private Guid _chainId;
         private Block _lastBlock;
         private HashSet<object> _pendingCommands;
         private HashSet<byte[]>? _pendingSetChainBlockMessages = new HashSet<byte[]>();
         private Executor _executor;
 
-        public Validator(Executor executor, byte[] chainId, Block lastBlock, HashSet<object> pendingCommands)
+        public Validator(Executor executor, Guid chainId, Block lastBlock, HashSet<object> pendingCommands)
         {
             _executor = executor;
             _chainId = chainId;
@@ -31,7 +31,7 @@ namespace Apocryph.Core.Consensus
             var _sawClaimRewardMessage = false;
             foreach (var inputCommand in block.InputCommands)
             {
-                if (_chainId.Length == 0 && inputCommand is Invoke invokation)
+                if (_chainId == Guid.Empty && inputCommand is Invoke invokation)
                 {
                     if (invokation.Message.Item1 == typeof(ClaimRewardMessage).FullName)
                     {
@@ -74,7 +74,7 @@ namespace Apocryph.Core.Consensus
 
             _pendingCommands!.UnionWith(block.Commands.Where(x => _executor.FilterCommand(x, _lastBlock!.Capabilities)));
 
-            if (_chainId.Length == 0)
+            if (_chainId == Guid.Empty)
             {
                 _pendingSetChainBlockMessages!.Add(JsonSerializer.SerializeToUtf8Bytes(new SetChainBlockMessage
                 {
@@ -89,7 +89,7 @@ namespace Apocryph.Core.Consensus
                 }));
             }
 
-            if (_chainId.SequenceEqual(block.ChainId))
+            if (_chainId == block.ChainId)
             {
                 _lastBlock = block;
                 _pendingCommands.ExceptWith(block.InputCommands);

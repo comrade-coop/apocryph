@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -15,15 +16,23 @@ namespace Apocryph.Runtime.FunctionApp
     {
         [FunctionName(nameof(SaltsStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [Perper("chains")] Dictionary<byte[], Chain> chains,
+            [Perper("chains")] Dictionary<Guid, Chain> chains,
             [Perper("filter")] IAsyncEnumerable<Block> filter,
-            [Perper("output")] IAsyncCollector<(byte[], int, byte[])> output,
+            [Perper("output")] IAsyncCollector<(Guid, int, byte[])> output,
             CancellationToken cancellationToken)
         {
+            var options = new JsonSerializerOptions
+            {
+                Converters =
+                {
+                    { new NonStringKeyDictionaryConverter() }
+                }
+            };
+
             await foreach (var block in filter)
             {
                 var chain = chains[block.ChainId];
-                foreach (var (slot, salt) in RandomWalk.Run(JsonSerializer.SerializeToUtf8Bytes(block)).Take(chain.SlotCount / 10))
+                foreach (var (slot, salt) in RandomWalk.Run(JsonSerializer.SerializeToUtf8Bytes(block, options)).Take(1 + chain.SlotCount / 10))
                 {
                     await output.AddAsync((block.ChainId, (int)(slot % chain.SlotCount), salt));
                 }

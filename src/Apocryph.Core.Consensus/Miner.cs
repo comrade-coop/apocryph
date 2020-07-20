@@ -24,6 +24,7 @@ namespace Apocryph.Core.Consensus
                         assigner.AddKey(privateKey.PublicKey, privateKey);
 
                         await Task.Delay(100);
+                        return;
                     }
                 }
                 catch (Exception err)

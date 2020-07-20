@@ -15,21 +15,21 @@ namespace Apocryph.Core.Consensus
             public PrivateKey? PrivateKey { get; set; }
         }
 
-        private Dictionary<byte[], Slot[]> _slots = new Dictionary<byte[], Slot[]>();
+        private Dictionary<Guid, Slot[]> _slots = new Dictionary<Guid, Slot[]>();
 
-        private Func<byte[], int, PublicKey, PrivateKey?, Node> _createNode;
+        private Func<Guid, int, PublicKey, PrivateKey?, Node> _createNode;
 
-        public Assigner(Func<byte[], int, PublicKey, PrivateKey?, Node> createNode)
+        public Assigner(Func<Guid, int, PublicKey, PrivateKey?, Node> createNode)
         {
             _createNode = createNode;
         }
 
-        public void SetSalt(byte[] chainId, int slot, byte[] salt)
+        public void SetSalt(Guid chainId, int slot, byte[] salt)
         {
             _slots[chainId][slot].Salt = salt;
         }
 
-        public void AddChain(byte[] chainId, int slotCount)
+        public void AddChain(Guid chainId, int slotCount)
         {
             _slots[chainId] = Enumerable.Range(0, slotCount).Select(x => new Slot()).ToArray();
         }
@@ -42,7 +42,7 @@ namespace Apocryph.Core.Consensus
             }
         }
 
-        public bool AddKey(byte[] chainId, PublicKey key, PrivateKey? privateKey)
+        public bool AddKey(Guid chainId, PublicKey key, PrivateKey? privateKey)
         {
             var slotIndex = (int)(key.GetPosition() % _slots[chainId].Length);
             var slot = _slots[chainId][slotIndex];
@@ -61,12 +61,12 @@ namespace Apocryph.Core.Consensus
             return true;
         }
 
-        public Node?[] GetNodes(byte[] chainId)
+        public Node?[] GetNodes(Guid chainId)
         {
             return _slots[chainId].Select(x => x.Occupant).ToArray();
         }
 
-        public Dictionary<byte[], Node?[]> GetNodes()
+        public Dictionary<Guid, Node?[]> GetNodes()
         {
             return _slots.ToDictionary(kv => kv.Key, kv => kv.Value.Select(x => x.Occupant).ToArray());
         }

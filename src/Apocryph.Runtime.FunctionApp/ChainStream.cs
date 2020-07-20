@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -15,7 +16,7 @@ namespace Apocryph.Runtime.FunctionApp
     public class ChainStream
     {
         private PerperStreamContext? _context;
-        private Dictionary<byte[], Chain>? _chains;
+        private Dictionary<Guid, Chain>? _chains;
         private IPerperStream? _gossips;
         private IPerperStream? _queries;
         private Assigner assigner;
@@ -30,11 +31,11 @@ namespace Apocryph.Runtime.FunctionApp
 
         [FunctionName(nameof(ChainStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [Perper("chains")] Dictionary<byte[], Chain> chains,
+            [Perper("chains")] Dictionary<Guid, Chain> chains,
             [Perper("gossips")] IPerperStream gossips,
             [Perper("queries")] IPerperStream queries,
             [Perper("slotGossips")] IAsyncEnumerable<SlotClaim> slotGossips,
-            [Perper("salts")] IAsyncEnumerable<(byte[], int, byte[])> salts,
+            [Perper("salts")] IAsyncEnumerable<(Guid, int, byte[])> salts,
             [Perper("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
         {
@@ -49,7 +50,7 @@ namespace Apocryph.Runtime.FunctionApp
                 assigner.AddChain(chainId, chain.SlotCount);
             }
 
-            await Task.WhenAll(
+            await TaskHelper.WhenAllOrFail(
                 ProcessGossip(slotGossips),
                 ProcessSalts(salts),
                 Miner.RunAsync(assigner, cancellationToken));
@@ -64,7 +65,7 @@ namespace Apocryph.Runtime.FunctionApp
             }
         }
 
-        private async Task ProcessSalts(IAsyncEnumerable<(byte[], int, byte[])> salts)
+        private async Task ProcessSalts(IAsyncEnumerable<(Guid, int, byte[])> salts)
         {
             await foreach (var (chainId, slot, salt) in salts)
             {
@@ -72,7 +73,7 @@ namespace Apocryph.Runtime.FunctionApp
             }
         }
 
-        private Node CreateNode(byte[] chainId, int slot, PublicKey publicKey, PrivateKey? privateKey)
+        private Node CreateNode(Guid chainId, int slot, PublicKey publicKey, PrivateKey? privateKey)
         {
             var node = new Node(chainId, slot);
 
@@ -106,7 +107,8 @@ namespace Apocryph.Runtime.FunctionApp
                         queries = queries.Subscribe(),
                         chainData,
                         node,
-                        nodes = assigner.GetNodes(chainId)
+                        proposerAccount = Guid.NewGuid(),
+                        nodes = assigner.GetNodes(chainId).ToList()
                     });
 
                     var validator = await _context!.StreamFunctionAsync(typeof(ValidatorStream), new
@@ -142,7 +144,7 @@ namespace Apocryph.Runtime.FunctionApp
                     await _output!.AddAsync(new SlotClaim { Key = privateKey.Value.PublicKey, ChainId = chainId });
                 }
 
-                await _output!.AddAsync(new Message<(byte[], Node?[])>((chainId, assigner.GetNodes(chainId)), MessageType.Valid));
+                await _output!.AddAsync(new Message<(Guid, Node?[])>((chainId, assigner.GetNodes(chainId)), MessageType.Valid));
             });
 
             return node;
