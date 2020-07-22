@@ -70,6 +70,7 @@ namespace Apocryph.Runtime.FunctionApp
                 }
 
                 var valid = await _validatedBlocks[block];
+
                 await _output!.AddAsync(new Message<Block>(block, valid ? MessageType.Valid : MessageType.Invalid), cancellationToken);
             }
         }

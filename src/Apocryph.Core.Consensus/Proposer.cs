@@ -5,6 +5,7 @@ using System.Numerics;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Apocryph.Core.Consensus.VirtualNodes;
 using Apocryph.Core.Consensus.Blocks;
 using Apocryph.Core.Consensus.Blocks.Command;
 using Apocryph.Core.Consensus.Blocks.Messages;
@@ -15,23 +16,31 @@ namespace Apocryph.Core.Consensus
     {
         private Guid _chainId;
         private Block _lastBlock;
+        private Node? _proposer;
         private Guid _proposerAccount;
         private HashSet<object> _pendingCommands;
         private TaskCompletionSource<bool>? _pendingCommandsTaskCompletionSource;
         private Executor _executor;
 
-        public Proposer(Executor executor, Guid chainId, Block lastBlock, HashSet<object> pendingCommands, Guid proposerAccount)
+        public Proposer(Executor executor, Guid chainId, Block lastBlock, HashSet<object> pendingCommands, Node? proposer, Guid proposerAccount)
         {
             _executor = executor;
             _chainId = chainId;
             _lastBlock = lastBlock;
             _pendingCommands = pendingCommands;
+            _proposer = proposer;
             _proposerAccount = proposerAccount;
         }
 
+
+        public Block GetLastBlock()
+        {
+            return _lastBlock;
+        }
+
+
         public async Task<Block> Propose()
         {
-
             if (_pendingCommands!.Count == 0)
             {
                 _pendingCommandsTaskCompletionSource = new TaskCompletionSource<bool>();
@@ -41,7 +50,6 @@ namespace Apocryph.Core.Consensus
             }
 
             var inputCommands = _pendingCommands.ToArray();
-            _pendingCommands.Clear();
 
             if (_chainId == Guid.Empty)
             {
@@ -54,16 +62,19 @@ namespace Apocryph.Core.Consensus
 
             var (newState, newCommands, newCapabilities) = await _executor.Execute(
                 _lastBlock!.States, inputCommands, _lastBlock.Capabilities);
+
             // Include historical blocks as per protocol
-            return new Block(_chainId, _proposerAccount, newState, inputCommands, newCommands, newCapabilities);
+            return new Block(_chainId, _proposer, _proposerAccount, newState, inputCommands, newCommands, newCapabilities);
         }
 
 
         public void AddConfirmedBlock(Block block)
         {
-
-            _pendingCommandsTaskCompletionSource?.TrySetResult(true);
             _pendingCommands!.UnionWith(block.Commands.Where(x => _executor.FilterCommand(x, _lastBlock!.Capabilities)));
+            if (_pendingCommands!.Count > 0)
+            {
+                _pendingCommandsTaskCompletionSource?.TrySetResult(true);
+            }
 
             if (_chainId == Guid.Empty)
             {

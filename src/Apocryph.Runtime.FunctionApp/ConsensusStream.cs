@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -17,11 +18,20 @@ namespace Apocryph.Runtime.FunctionApp
 {
     public class ConsensusStream
     {
+
+        private static JsonSerializerOptions jsonSerializerOptions = new JsonSerializerOptions
+        {
+            Converters =
+            {
+                { new NonStringKeyDictionaryConverter() }
+            }
+        };
+
         private readonly Channel<Query<Block>> _channel;
 
         private Node? _node;
-        private Node[]? _nodes;
-        private Node[]? _proposers;
+        private Node?[]? _nodes;
+        private Node?[]? _proposers;
         private Snowball<Block>? _snowball;
         private Proposer? _proposer;
         private IAsyncCollector<object>? _output;
@@ -49,7 +59,7 @@ namespace Apocryph.Runtime.FunctionApp
 
             var executor = new Executor(_node!.ChainId,
                 async (worker, input) => await context.CallWorkerAsync<(byte[]?, (string, object[])[], Dictionary<Guid, string[]>, Dictionary<Guid, string>)>(worker, new { input }, default));
-            _proposer = new Proposer(executor, _node!.ChainId, chainData.GenesisBlock, new HashSet<object>(), proposerAccount);
+            _proposer = new Proposer(executor, _node!.ChainId, chainData.GenesisBlock, new HashSet<object>(), _node, proposerAccount);
 
             await TaskHelper.WhenAllOrFail(
                 RunSnowball(context, cancellationToken),
@@ -71,7 +81,7 @@ namespace Apocryph.Runtime.FunctionApp
 
                 if (_node!.ChainId == chainId)
                 {
-                    _nodes = nodes as Node[]; // TODO: Remove cast
+                    _nodes = nodes;
                 }
             }
         }
@@ -106,7 +116,8 @@ namespace Apocryph.Runtime.FunctionApp
             while (true)
             {
                 var proposerCount = _nodes!.Length / 10 + 1; // TODO: Move constant to parameter
-                _proposers = _nodes.Take(proposerCount).ToArray(); // TODO: Do a random walk based on last block hash
+                var serializedBlock = JsonSerializer.SerializeToUtf8Bytes(_proposer!.GetLastBlock(), jsonSerializerOptions);
+                _proposers = RandomWalk.Run(serializedBlock).Select(selected => _nodes[(int)(selected.Item1 % _nodes.Length)]).Take(proposerCount).ToArray();
 
                 var opinion = default(Block?);
                 if (Array.IndexOf(_proposers, _node) != -1)
@@ -114,12 +125,14 @@ namespace Apocryph.Runtime.FunctionApp
                     opinion = await Propose(context);
                 }
 
-                _snowball = new Snowball<Block>(_node!, 100, 0.6, 3,
+                var k = _nodes!.Length / 10 + 1; // TODO: Move constant to parameter
+                _snowball = new Snowball<Block>(_node!, k, 0.6, 3,
                                                 SnowballSend, SnowballRespond, opinion);
 
                 var committedProposal = await _snowball!.Run(_nodes, cancellationToken);
 
                 await _output!.AddAsync(new Message<Block>(committedProposal, MessageType.Proposed), cancellationToken);
+                await Task.Delay(1000);
             }
         }
 

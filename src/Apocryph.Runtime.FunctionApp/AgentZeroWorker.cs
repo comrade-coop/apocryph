@@ -14,7 +14,7 @@ namespace Apocryph.Runtime.FunctionApp
     {
         [FunctionName(nameof(AgentZeroWorker))]
         [return: Perper("$return")]
-        public Task<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)> Run([PerperWorkerTrigger] PerperWorkerContext context,
+        public Task<(byte[]?, (string, object[])[], Dictionary<Guid, string[]>, Dictionary<Guid, string>)> Run([PerperWorkerTrigger] PerperWorkerContext context,
             [Perper("input")] (byte[]?, (string, byte[]), Guid?) input, CancellationToken cancellationToken)
         {
             var (serializedState, (messageType, serializedMessage), sender) = input;
@@ -25,7 +25,7 @@ namespace Apocryph.Runtime.FunctionApp
 
             state = AgentZero.Run(state, message, sender);
 
-            return Task.FromResult<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>((JsonSerializer.SerializeToUtf8Bytes(state), new (string, object[])[0], null, null)!);
+            return Task.FromResult(((byte[]?)JsonSerializer.SerializeToUtf8Bytes(state), new (string, object[])[0], new Dictionary<Guid, string[]>(), new Dictionary<Guid, string>())!);
         }
     }
 }

@@ -59,13 +59,12 @@ namespace Apocryph.Core.Consensus
             }
 
             var inputCommands = _pendingCommands.ToArray();
-            _pendingCommands.Clear();
 
             var (newState, newCommands, newCapabilities) = await _executor.Execute(
                 _lastBlock!.States, block.InputCommands, _lastBlock!.Capabilities);
 
             // Validate historical blocks as per protocol
-            return block.Equals(new Block(_chainId, block.ProposerAccount, newState, block.InputCommands, newCommands, newCapabilities));
+            return block.Equals(new Block(_chainId, block.Proposer, block.ProposerAccount, newState, block.InputCommands, newCommands, newCapabilities));
         }
 
 

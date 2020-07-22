@@ -36,6 +36,7 @@ namespace TestHarness.FunctionApp
                 {
                     {pingChainId, new Chain(slotCount, new Block(
                         pingChainId,
+                        null,
                         Guid.NewGuid(),
                         new Dictionary<string, byte[]>
                         {
@@ -52,6 +53,7 @@ namespace TestHarness.FunctionApp
                         }))},
                     {pongChainId, new Chain(slotCount, new Block(
                         pongChainId,
+                        null,
                         Guid.NewGuid(),
                         new Dictionary<string, byte[]>
                         {

@@ -48,7 +48,7 @@ namespace Apocryph.Core.Consensus
             var slot = _slots[chainId][slotIndex];
 
             if (slot.PublicKey is PublicKey slotKey
-                && slotKey.GetDifficulty(chainId, slot.Salt) > key.GetDifficulty(chainId, slot.Salt))
+                )// && slotKey.GetDifficulty(chainId, slot.Salt) > key.GetDifficulty(chainId, slot.Salt))
             {
                 return false;
             }

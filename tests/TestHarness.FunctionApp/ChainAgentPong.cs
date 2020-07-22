@@ -13,7 +13,7 @@ namespace TestHarness.FunctionApp
     {
         [FunctionName(nameof(ChainAgentPong))]
         [return: Perper("$return")]
-        public Task<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)> Run([PerperWorkerTrigger] PerperWorkerContext context,
+        public Task<(byte[]?, (string, object[])[], Dictionary<Guid, string[]>, Dictionary<Guid, string>)> Run([PerperWorkerTrigger] PerperWorkerContext context,
             [Perper("input")] (byte[]?, (string, byte[]), Guid?) input, CancellationToken cancellationToken)
         {
             var (state, (_, _), _) = input;
@@ -25,7 +25,7 @@ namespace TestHarness.FunctionApp
                     (typeof(string).FullName!, JsonSerializer.SerializeToUtf8Bytes("Pong"))
                 })
             };
-            return Task.FromResult<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)>((state, actions.ToArray(), null, null)!);
+            return Task.FromResult<(byte[]?, (string, object[])[], Dictionary<Guid, string[]>, Dictionary<Guid, string>)>((state, actions.ToArray(), null, null)!);
         }
     }
 }

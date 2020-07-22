@@ -51,7 +51,7 @@ namespace Apocryph.Core.Consensus
             return _respond(message, _value, _opinion);
         }
 
-        public async Task<T> Run(Node[] receivers,
+        public async Task<T> Run(Node?[] receivers,
             CancellationToken cancellationToken)
         {
             _value = _opinion ?? await _initialValueTask.Task;
@@ -61,7 +61,7 @@ namespace Apocryph.Core.Consensus
             while (!cancellationToken.IsCancellationRequested)
             {
                 var subset = receivers.OrderBy(_ => RandomNumberGenerator.GetInt32(receivers.Length)).Take(_k);
-                var messages = subset.Select(receiver => new Query<T>(_value, _node, receiver, QueryVerb.Request)).ToArray();
+                var messages = subset.Where(receiver => receiver != null).Select(receiver => new Query<T>(_value, _node, receiver!, QueryVerb.Request)).ToArray();
                 var result = _send(messages, cancellationToken);
                 var answers = await result.ToArrayAsync(cancellationToken);
                 var answersValues =
