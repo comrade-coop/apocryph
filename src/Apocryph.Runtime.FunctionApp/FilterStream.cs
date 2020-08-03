@@ -31,7 +31,7 @@ namespace Apocryph.Runtime.FunctionApp
             {
                 var executor = new Executor(chainId,
                     async (worker, input) => await context.CallWorkerAsync<(byte[]?, (string, object[])[], Dictionary<Guid, string[]>, Dictionary<Guid, string>)>(worker, new { input }, default));
-                _validators[chainId] = new Validator(executor, chainId, chain.GenesisBlock, new HashSet<object>());
+                _validators[chainId] = new Validator(executor, chainId, chain.GenesisBlock, new HashSet<Block>(), new HashSet<object>());
             }
 
             await TaskHelper.WhenAllOrFail(
@@ -41,7 +41,7 @@ namespace Apocryph.Runtime.FunctionApp
                     // Second loop, as we want to distribute all genesis blocks to all chains
                     foreach (var (chainId, chain) in chains)
                     {
-                        await Task.Delay(500);
+                        await Task.Delay(2000);
                         foreach (var (_chainId, validator) in _validators)
                         {
                             validator.AddConfirmedBlock(chain.GenesisBlock);
@@ -72,6 +72,7 @@ namespace Apocryph.Runtime.FunctionApp
                 }
 
                 var valid = await _validatedBlocks[block];
+
                 if (valid)
                 {
                     foreach (var (chainId, validator) in _validators)

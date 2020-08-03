@@ -18,15 +18,17 @@ namespace Apocryph.Core.Consensus
         private Block _lastBlock;
         private Node? _proposer;
         private Guid _proposerAccount;
+        private HashSet<Block> _confirmedBlocks;
         private HashSet<object> _pendingCommands;
         private TaskCompletionSource<bool>? _pendingCommandsTaskCompletionSource;
         private Executor _executor;
 
-        public Proposer(Executor executor, Guid chainId, Block lastBlock, HashSet<object> pendingCommands, Node? proposer, Guid proposerAccount)
+        public Proposer(Executor executor, Guid chainId, Block lastBlock, HashSet<Block> confirmedBlocks, HashSet<object> pendingCommands, Node? proposer, Guid proposerAccount)
         {
             _executor = executor;
             _chainId = chainId;
             _lastBlock = lastBlock;
+            _confirmedBlocks = confirmedBlocks;
             _pendingCommands = pendingCommands;
             _proposer = proposer;
             _proposerAccount = proposerAccount;
@@ -64,12 +66,18 @@ namespace Apocryph.Core.Consensus
                 _lastBlock!.States, inputCommands, _lastBlock.Capabilities);
 
             // Include historical blocks as per protocol
-            return new Block(_chainId, _proposer, _proposerAccount, newState, inputCommands, newCommands, newCapabilities);
+            var result = new Block(_chainId, _proposer, _proposerAccount, newState, inputCommands, newCommands, newCapabilities);
+
+            _proposerAccount = Guid.NewGuid();
+
+            return result;
         }
 
 
         public void AddConfirmedBlock(Block block)
         {
+            if (!_confirmedBlocks.Add(block)) return;
+
             _pendingCommands!.UnionWith(block.Commands.Where(x => _executor.FilterCommand(x, _lastBlock!.Capabilities)));
             if (_pendingCommands!.Count > 0)
             {

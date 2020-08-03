@@ -15,8 +15,9 @@ namespace Apocryph.Core.Consensus
         private readonly int _k;
         private readonly double _alpha;
         private readonly int _beta;
+        private readonly int _round;
 
-        private readonly Func<Query<T>[], CancellationToken, IAsyncEnumerable<Query<T>>> _send;
+        private readonly Func<Query<T>, CancellationToken, Task<Query<T>>> _send;
 
         private readonly Func<Query<T>, T?, T?, Query<T>> _respond;
         private readonly T? _opinion;
@@ -25,8 +26,8 @@ namespace Apocryph.Core.Consensus
         private readonly TaskCompletionSource<T> _initialValueTask;
 
         public Snowball(Node node,
-            int k, double alpha, int beta,
-            Func<Query<T>[], CancellationToken, IAsyncEnumerable<Query<T>>> send,
+            int k, double alpha, int beta, int round,
+            Func<Query<T>, CancellationToken, Task<Query<T>>> send,
             Func<Query<T>, T?, T?, Query<T>> respond,
             T? opinion = null)
         {
@@ -34,6 +35,7 @@ namespace Apocryph.Core.Consensus
             _k = k;
             _alpha = alpha;
             _beta = beta;
+            _round = round;
             _send = send;
             _respond = respond;
             _opinion = opinion;
@@ -61,11 +63,15 @@ namespace Apocryph.Core.Consensus
             while (!cancellationToken.IsCancellationRequested)
             {
                 var subset = receivers.OrderBy(_ => RandomNumberGenerator.GetInt32(receivers.Length)).Take(_k);
-                var messages = subset.Where(receiver => receiver != null).Select(receiver => new Query<T>(_value, _node, receiver!, QueryVerb.Request)).ToArray();
-                var result = _send(messages, cancellationToken);
-                var answers = await result.ToArrayAsync(cancellationToken);
+                var messages = subset.Where(receiver => receiver != null).Select(receiver => new Query<T>(_value, _node, receiver!, _round, QueryVerb.Request)).ToArray();
+
+                var timeoutTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeoutTokenSource.CancelAfter(TimeSpan.FromMilliseconds(800));
+
+                var answers = await Task.WhenAll(messages.Select(message => _send(message, timeoutTokenSource.Token).ContinueWith(t => t.IsCanceled ? null : t.Result)).ToArray());
                 var answersValues =
                     from message in answers
+                    where message != null
                     group message by message.Value
                     into valueGroup
                     where valueGroup.Count() > _alpha * _k

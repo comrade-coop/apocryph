@@ -77,6 +77,8 @@ namespace Apocryph.Runtime.FunctionApp
 
                 _committer!.AddGossip(gossip);
 
+                // Console.WriteLine("{0} got gossip {1} ({2})", _node, string.Join(":", _committer!.GetConfirmations(gossip.Value, GossipVerb.Confirm, nodes)), string.Join(":", _committer!.GetConfirmations(gossip.Value, GossipVerb.Reject, nodes)));
+
                 if (_committer!.IsGossipConfirmed(gossip.Value, GossipVerb.Reject, nodes))
                 {
                     _finalizedBlocks.Add(gossip.Value);

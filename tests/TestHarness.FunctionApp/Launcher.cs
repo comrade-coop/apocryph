@@ -18,7 +18,7 @@ namespace TestHarness.FunctionApp
             PerperModuleContext context,
             CancellationToken cancellationToken)
         {
-            var slotCount = 1; //30
+            var slotCount = 6; //30
 
             var pingChainId = Guid.NewGuid();
             var pongChainId = Guid.NewGuid();
@@ -27,11 +27,11 @@ namespace TestHarness.FunctionApp
             var pingReference = Guid.NewGuid();
             var pongReference = Guid.NewGuid();
 
-            var chainList = context.DeclareStream("Apocryph.Runtime.FunctionApp.ChainListStream.Run");
+            var slotGossips = await context.StreamFunctionAsync("DummyStream", new { });
 
-            await context.StreamActionAsync(chainList, new
+            await context.StreamActionAsync("Apocryph.Runtime.FunctionApp.ChainListStream.Run", new
             {
-                slotGossips = chainList,
+                slotGossips,
                 chains = new Dictionary<Guid, Chain>
                 {
                     {pingChainId, new Chain(slotCount, new Block(
@@ -41,35 +41,23 @@ namespace TestHarness.FunctionApp
                         new Dictionary<string, byte[]>
                         {
                             {
-                                typeof(ChainAgentPing).FullName!,
+                                typeof(ChainAgentPing).FullName! + ".Run",
                                 JsonSerializer.SerializeToUtf8Bytes(new ChainAgentState {OtherReference = pongReference})
-                            }
-                        },
-                        new object[] { },
-                        new object[] { },
-                        new Dictionary<Guid, (string, string[])>
-                        {
-                            {pongReference, (typeof(ChainAgentPong).FullName!, new[] {typeof(string).FullName!})}
-                        }))},
-                    {pongChainId, new Chain(slotCount, new Block(
-                        pongChainId,
-                        null,
-                        Guid.NewGuid(),
-                        new Dictionary<string, byte[]>
-                        {
+                            },
                             {
-                                typeof(ChainAgentPong).FullName!,
+                                typeof(ChainAgentPong).FullName! + ".Run",
                                 JsonSerializer.SerializeToUtf8Bytes(new ChainAgentState {OtherReference = pingReference})
                             }
                         },
                         new object[] { },
                         new object[]
                         {
-                            new Invoke(pingReference, (typeof(string).FullName!, JsonSerializer.SerializeToUtf8Bytes("Pong")))
+                            new Invoke(pingReference, (typeof(string).FullName!, JsonSerializer.SerializeToUtf8Bytes("Init")))
                         },
                         new Dictionary<Guid, (string, string[])>
                         {
-                            {pingReference, (typeof(ChainAgentPing).FullName!, new[] {typeof(string).FullName!})}
+                            {pongReference, (typeof(ChainAgentPong).FullName! + ".Run", new[] {typeof(string).FullName!})},
+                            {pingReference, (typeof(ChainAgentPing).FullName! + ".Run", new[] {typeof(string).FullName!})}
                         }))}
                 }
             });

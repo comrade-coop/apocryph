@@ -25,6 +25,16 @@ namespace Apocryph.Core.Consensus
             _gossips[fact].Add(gossip.Sender);
         }
 
+        public IEnumerable<Node> GetConfirmations(Block block, GossipVerb verb, Node?[] nodes)
+        {
+            var fact = (block, verb);
+            if (!_gossips.ContainsKey(fact))
+            {
+                return new List<Node>();
+            }
+            return _gossips[(block, verb)].Intersect(nodes)!;
+        }
+
         public bool IsGossipConfirmed(Block block, GossipVerb verb, Node?[] nodes)
         {
             var fact = (block, verb);

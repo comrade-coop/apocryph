@@ -35,7 +35,7 @@ namespace Apocryph.Core.Consensus.VirtualNodes
 
         public override string ToString()
         {
-            return $"{ChainId}-{Id}";
+            return $"{ChainId.ToString().Substring(30)}-{Id}";
         }
     }
 }

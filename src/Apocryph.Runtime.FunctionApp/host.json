@@ -4,6 +4,8 @@
         "logLevel": {
             "Function": "Trace",
             "Perper.WebJobs.Extensions": "Trace",
+            "Perper.WebJobs.Extensions": "Information",
+            "Perper.WebJobs.Extensions": "Warning",
         }
     }
 }

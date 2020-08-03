@@ -39,6 +39,7 @@ namespace Apocryph.Runtime.FunctionApp
             [Perper("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
         {
+            await Task.Delay(1000);
             _context = context;
             _chains = chains;
             _gossips = gossips;
@@ -79,72 +80,82 @@ namespace Apocryph.Runtime.FunctionApp
 
             Task.Run(async () =>
             {
-                if (_streams.ContainsKey(slot))
+                try
                 {
-                    foreach (var stream in _streams[slot])
+                    if (_streams.ContainsKey(slot))
                     {
-                        // TODO: Remove from peering instead?
-                        await stream.DisposeAsync();
+                        foreach (var stream in _streams[slot])
+                        {
+                            // TODO: Remove from peering instead?
+                            await stream.DisposeAsync();
+                        }
+
+                        _streams.Remove(slot);
                     }
 
-                    _streams.Remove(slot);
-                }
+                    if (privateKey != null)
+                    {
+                        var chains = _chains!;
+                        var chainData = _chains![chainId];
+                        var queries = _queries!;
+                        var gossips = _gossips!;
+                        var chain = _context!.GetStream();
 
-                if (privateKey != null)
+                        var filter = _context!.DeclareStream($"Filter-{node}", typeof(FilterStream));
+                        var validator = _context!.DeclareStream($"Validator-{node}", typeof(ValidatorStream));
+
+                        var consensus = await _context!.StreamFunctionAsync($"Consensus-{node}", typeof(ConsensusStream), new
+                        {
+                            chain = chain.Subscribe(),
+                            validator = validator.Subscribe(),
+                            filter = filter.Subscribe(),
+                            queries = queries.Subscribe(),
+                            chainData,
+                            node,
+                            proposerAccount = Guid.NewGuid(),
+                            nodes = assigner.GetNodes(chainId).ToList()
+                        });
+
+                        await _context!.StreamFunctionAsync(validator, new
+                        {
+                            consensus = consensus.Subscribe(),
+                            filter = filter.Subscribe(),
+                            queries = queries.Subscribe(),
+                            chainData,
+                            node
+                        });
+
+                        var ibc = await _context!.StreamFunctionAsync($"IBC-{node}", typeof(IBCStream), new
+                        {
+                            chain = chain.Subscribe(),
+                            validator = validator.Subscribe(),
+                            gossips = gossips.Subscribe(),
+                            node,
+                            nodes = assigner.GetNodes()
+                        });
+
+                        await _context!.StreamFunctionAsync(filter, new
+                        {
+                            ibc = ibc.Subscribe(),
+                            gossips = gossips.Subscribe(),
+                            chains,
+                            node
+                        });
+
+                        _streams[slot] = new[] { filter, consensus, validator, ibc };
+
+                        await Task.WhenAll(new[] { filter, consensus, validator, ibc }.Select(
+                            stream => _output!.AddAsync(stream)));
+                        await _output!.AddAsync(new SlotClaim { Key = privateKey.Value.PublicKey, ChainId = chainId });
+                    }
+
+                    await _output!.AddAsync(new Message<(Guid, Node?[])>((chainId, assigner.GetNodes(chainId)), MessageType.Valid));
+                }
+                catch (Exception e)
                 {
-                    var chains = _chains!;
-                    var chainData = _chains![chainId];
-                    var queries = _queries!;
-                    var gossips = _gossips!;
-                    var chain = _context!.GetStream();
-
-                    var filter = _context!.DeclareStream(typeof(FilterStream));
-
-                    var consensus = await _context!.StreamFunctionAsync(typeof(ConsensusStream), new
-                    {
-                        chain = chain.Subscribe(),
-                        filter = filter.Subscribe(),
-                        queries = queries.Subscribe(),
-                        chainData,
-                        node,
-                        proposerAccount = Guid.NewGuid(),
-                        nodes = assigner.GetNodes(chainId).ToList()
-                    });
-
-                    var validator = await _context!.StreamFunctionAsync(typeof(ValidatorStream), new
-                    {
-                        consensus = consensus.Subscribe(),
-                        filter = filter.Subscribe(),
-                        queries = queries.Subscribe(),
-                        chainData,
-                        node
-                    });
-
-                    var ibc = await _context!.StreamFunctionAsync(typeof(IBCStream), new
-                    {
-                        chain = chain.Subscribe(),
-                        validator = validator.Subscribe(),
-                        gossips = gossips.Subscribe(),
-                        node,
-                        nodes = assigner.GetNodes()
-                    });
-
-                    await _context!.StreamFunctionAsync(filter, new
-                    {
-                        ibc = ibc.Subscribe(),
-                        gossips = gossips.Subscribe(),
-                        chains,
-                        node
-                    });
-
-                    _streams[slot] = new[] { filter, consensus, validator, ibc };
-
-                    await Task.WhenAll(new[] { filter, consensus, validator, ibc }.Select(
-                        stream => _output!.AddAsync(stream)));
-                    await _output!.AddAsync(new SlotClaim { Key = privateKey.Value.PublicKey, ChainId = chainId });
+                    Console.WriteLine(e);
+                    throw;
                 }
-
-                await _output!.AddAsync(new Message<(Guid, Node?[])>((chainId, assigner.GetNodes(chainId)), MessageType.Valid));
             });
 
             return node;
