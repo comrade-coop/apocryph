@@ -18,7 +18,7 @@ namespace TestHarness.FunctionApp
             PerperModuleContext context,
             CancellationToken cancellationToken)
         {
-            var slotCount = 6; //30
+            var slotCount = 10; // 30
 
             var pingChainId = Guid.NewGuid();
             var pongChainId = Guid.NewGuid();

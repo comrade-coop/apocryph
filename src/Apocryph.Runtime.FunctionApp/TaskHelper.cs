@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 
 namespace Apocryph.Runtime.FunctionApp
@@ -9,7 +10,7 @@ namespace Apocryph.Runtime.FunctionApp
             var taskCompletionSource = new TaskCompletionSource<bool>();
             foreach (var task in tasks)
             {
-                task.ContinueWith(t => { taskCompletionSource.SetException(t.Exception!); }, TaskContinuationOptions.OnlyOnFaulted);
+                task.ContinueWith(t => { Console.WriteLine(t.Exception); taskCompletionSource.SetException(t.Exception!); }, TaskContinuationOptions.OnlyOnFaulted);
             }
             return Task.WhenAny(taskCompletionSource.Task, Task.WhenAll(tasks));
         }

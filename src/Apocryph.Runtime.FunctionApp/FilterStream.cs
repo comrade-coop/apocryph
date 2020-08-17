@@ -41,7 +41,7 @@ namespace Apocryph.Runtime.FunctionApp
                     // Second loop, as we want to distribute all genesis blocks to all chains
                     foreach (var (chainId, chain) in chains)
                     {
-                        await Task.Delay(2000);
+                        await Task.Delay(4000);
                         foreach (var (_chainId, validator) in _validators)
                         {
                             validator.AddConfirmedBlock(chain.GenesisBlock);

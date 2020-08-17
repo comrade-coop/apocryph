@@ -18,18 +18,17 @@ namespace Apocryph.Core.Consensus
         private readonly int _round;
 
         private readonly Func<Query<T>, CancellationToken, Task<Query<T>>> _send;
-
-        private readonly Func<Query<T>, T?, T?, Query<T>> _respond;
-        private readonly T? _opinion;
+        private readonly Func<Query<T>, T?, Query<T>> _respond;
 
         private T? _value;
+        private readonly Dictionary<T, int> _d;
         private readonly TaskCompletionSource<T> _initialValueTask;
 
         public Snowball(Node node,
             int k, double alpha, int beta, int round,
             Func<Query<T>, CancellationToken, Task<Query<T>>> send,
-            Func<Query<T>, T?, T?, Query<T>> respond,
-            T? opinion = null)
+            Func<Query<T>, T?, Query<T>> respond,
+            T? initialValue = null)
         {
             _node = node;
             _k = k;
@@ -38,27 +37,45 @@ namespace Apocryph.Core.Consensus
             _round = round;
             _send = send;
             _respond = respond;
-            _opinion = opinion;
+            _value = initialValue;
 
             _initialValueTask = new TaskCompletionSource<T>();
+            if (initialValue != null)
+            {
+                _initialValueTask.TrySetResult(initialValue);
+            }
+            _d = new Dictionary<T, int> {};
         }
 
         public Query<T> Query(Query<T> message)
         {
-            if (_opinion is null)
+            var result = _respond(message, _value);
+
+            if (!_d.ContainsKey(result.Value))
             {
-                _initialValueTask.TrySetResult(message.Value);
+                _d[result.Value] = 0;
             }
 
-            return _respond(message, _value, _opinion);
+            if (_value is null)
+            {
+                _value = result.Value;
+                _initialValueTask.TrySetResult(result.Value);
+            }
+            else
+            {
+                _value = result.Value;
+            }
+
+            return result;
         }
 
         public async Task<T> Run(Node?[] receivers,
             CancellationToken cancellationToken)
         {
-            _value = _opinion ?? await _initialValueTask.Task;
+            await _initialValueTask.Task;
+            if (_value == null) throw new NullReferenceException();
+
             var lastValue = _value;
-            var d = new Dictionary<T, int> { [_value] = 0 };
             var count = 0;
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -66,7 +83,7 @@ namespace Apocryph.Core.Consensus
                 var messages = subset.Where(receiver => receiver != null).Select(receiver => new Query<T>(_value, _node, receiver!, _round, QueryVerb.Request)).ToArray();
 
                 var timeoutTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                timeoutTokenSource.CancelAfter(TimeSpan.FromMilliseconds(800));
+                timeoutTokenSource.CancelAfter(TimeSpan.FromMilliseconds(3000));
 
                 var answers = await Task.WhenAll(messages.Select(message => _send(message, timeoutTokenSource.Token).ContinueWith(t => t.IsCanceled ? null : t.Result)).ToArray());
                 var answersValues =
@@ -78,8 +95,8 @@ namespace Apocryph.Core.Consensus
                     select valueGroup.Key;
                 foreach (var answerValue in answersValues)
                 {
-                    d[answerValue] = d.TryGetValue(answerValue, out var answerCount) ? answerCount + 1 : 1;
-                    if (d[answerValue] > d[_value])
+                    _d[answerValue] = _d.TryGetValue(answerValue, out var answerCount) ? answerCount + 1 : 1;
+                    if (_d[answerValue] > _d[_value])
                     {
                         _value = answerValue;
                     }

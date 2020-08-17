@@ -23,7 +23,7 @@ namespace Apocryph.Runtime.FunctionApp
 
         [FunctionName(nameof(IBCStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [Perper("node")] Node node,
+            [Perper("node")] Node? node,
             [Perper("nodes")] Dictionary<Guid, Node?[]> nodes,
             [Perper("chain")] IAsyncEnumerable<Message<(Guid, Node?[])>> chain,
             [Perper("validator")] IAsyncEnumerable<Message<Block>> validator,
@@ -49,6 +49,8 @@ namespace Apocryph.Runtime.FunctionApp
             {
                 var block = message.Value;
                 var isValid = message.Type == MessageType.Valid;
+
+                // Console.WriteLine("{0} sends gossip {1}", _node!, isValid);
 
                 await _output!.AddAsync(new Gossip<Block>(block, _node!,
                 isValid ? GossipVerb.Confirm : GossipVerb.Reject), cancellationToken);
@@ -77,7 +79,7 @@ namespace Apocryph.Runtime.FunctionApp
 
                 _committer!.AddGossip(gossip);
 
-                // Console.WriteLine("{0} got gossip {1} ({2})", _node, string.Join(":", _committer!.GetConfirmations(gossip.Value, GossipVerb.Confirm, nodes)), string.Join(":", _committer!.GetConfirmations(gossip.Value, GossipVerb.Reject, nodes)));
+                if (_node is null) Console.WriteLine("got gossip {0} ({1})", string.Join(",", _committer!.GetConfirmations(gossip.Value, GossipVerb.Confirm, nodes)), string.Join(",", _committer!.GetConfirmations(gossip.Value, GossipVerb.Reject, nodes)));
 
                 if (_committer!.IsGossipConfirmed(gossip.Value, GossipVerb.Reject, nodes))
                 {

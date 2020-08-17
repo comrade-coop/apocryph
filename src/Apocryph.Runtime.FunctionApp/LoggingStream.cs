@@ -1,11 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Apocryph.Core.Consensus;
 using Apocryph.Core.Consensus.Blocks;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;

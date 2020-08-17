@@ -132,10 +132,10 @@ namespace Apocryph.Runtime.FunctionApp
 
         private async Task RunSnowball(PerperStreamContext context, CancellationToken cancellationToken)
         {
-            await Task.Delay(2000);
+            await Task.Delay(4000);
             while (true)
             {
-                await Task.Delay(1000);
+                await Task.Delay(2000);
                 var proposerCount = _nodes!.Length / 10 + 1; // TODO: Move constant to parameter
                 var serializedBlock = JsonSerializer.SerializeToUtf8Bytes(_proposer!.GetLastBlock(), jsonSerializerOptions);
                 _proposers = RandomWalk.Run(serializedBlock).Select(selected => _nodes[(int)(selected.Item1 % _nodes.Length)]).Take(proposerCount).ToArray();
@@ -146,10 +146,10 @@ namespace Apocryph.Runtime.FunctionApp
                     opinion = await Propose(context);
                 }
 
-                var k = _nodes!.Length / 3 + 1; // TODO: Move constants to parameters
+                var k = _nodes!.Length / 3 + 2; // TODO: Move constants to parameters
                 var beta = _nodes!.Length * 2; // TODO: Move constants to parameters
 
-                // Console.WriteLine("{0} starts new round! {1} {2}", _node, _round, string.Join(":", (IEnumerable<Node?>)_proposers));
+                // Console.WriteLine("{0} starts new round! {1} {2}", _node, _round, string.Join(",", (IEnumerable<Node?>)_proposers));
                 _snowball = new Snowball<Block>(_node!, k, 0.6, beta, _round,
                                                 SnowballSend, SnowballRespond, opinion);
 
@@ -171,10 +171,9 @@ namespace Apocryph.Runtime.FunctionApp
             return await taskCompletionSource.Task;
         }
 
-        private Query<Block> SnowballRespond(Query<Block> query, Block? value, Block? opinion)
+        private Query<Block> SnowballRespond(Query<Block> query, Block? value)
         {
-            var result = opinion ??
-                         (value is null || IsNewBlockBetter(value, query.Value) ? query.Value : value);
+            var result = (value is null || IsNewBlockBetter(value, query.Value) ? query.Value : value);
             return new Query<Block>(result, query.Receiver, query.Sender, query.Round, QueryVerb.Response);
         }
 

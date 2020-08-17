@@ -32,8 +32,6 @@ namespace Apocryph.Runtime.FunctionApp
                 slotGossips = slotGossips.Subscribe()
             });
 
-            var node = new Node(Guid.Empty, -1);
-
             await using var validator = await context.StreamFunctionAsync("DummyStream", new {
                 queries = queries.Subscribe(), // HACK: Make sure the queries peering receives all streams
                 gossips = gossips.Subscribe(), // HACK: Make sure the gossips peering receives all streams
@@ -43,16 +41,15 @@ namespace Apocryph.Runtime.FunctionApp
             {
                 chain = chain.Subscribe(),
                 validator = validator.Subscribe(),
-                node,
                 gossips = gossips.Subscribe(),
-                nodes = new Dictionary<Guid, Node?[]>()
+                nodes = new Dictionary<Guid, Node?[]>(),
+                node = default(Node?)
             });
             await using var filter = await context.StreamFunctionAsync("Filter-global", typeof(FilterStream), new
             {
                 ibc = ibc.Subscribe(),
                 gossips = gossips.Subscribe(),
-                chains,
-                node
+                chains
             });
 
             await context.StreamFunctionAsync(salts, new

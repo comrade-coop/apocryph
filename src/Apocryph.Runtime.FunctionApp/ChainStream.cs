@@ -130,8 +130,8 @@ namespace Apocryph.Runtime.FunctionApp
                             chain = chain.Subscribe(),
                             validator = validator.Subscribe(),
                             gossips = gossips.Subscribe(),
-                            node,
-                            nodes = assigner.GetNodes()
+                            nodes = assigner.GetNodes(),
+                            node
                         });
 
                         await _context!.StreamFunctionAsync(filter, new
@@ -149,6 +149,7 @@ namespace Apocryph.Runtime.FunctionApp
                         await _output!.AddAsync(new SlotClaim { Key = privateKey.Value.PublicKey, ChainId = chainId });
                     }
 
+                    await Task.Delay(100);
                     await _output!.AddAsync(new Message<(Guid, Node?[])>((chainId, assigner.GetNodes(chainId)), MessageType.Valid));
                 }
                 catch (Exception e)
