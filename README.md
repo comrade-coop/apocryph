@@ -41,7 +41,12 @@ Apocryph is a new consensus network for autonomous agents. From developer perspe
 we have put a great focus on selecting a technology stack comprising widely adopted platforms,
 tools and development paradigms.
 
-Below, you can see a short video of how easy it is to setup Apocryph test node on your 
+Apocryph is built on top of [Perper](https://github.com/obecto/perper) — a stream-based, horizontally 
+scalable framework for asynchronous data processing. You can learn more about Perper and Apocryph in the video below:
+
+[![Apache Ignite Virtual Meetup](https://img.youtube.com/vi/lCiZ3x8IRvI/0.jpg)](https://www.youtube.com/watch?v=lCiZ3x8IRvI)
+
+Also, you can see a short video of how easy it is to setup Apocryph test node on your 
 local development machine using only Docker and Docker-Compose:
 
 [![asciicast](docs/images/developer_node_rec.png)](https://asciinema.org/a/295036?speed=2&rows=30)
