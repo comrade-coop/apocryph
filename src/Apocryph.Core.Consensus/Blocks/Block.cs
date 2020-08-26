@@ -54,14 +54,14 @@ namespace Apocryph.Core.Consensus.Blocks
             hash.Add(ChainId);
             hash.Add(ProposerAccount);
             hash.Add(Proposer);
-            foreach(var (key, state) in States)
+            foreach (var (key, state) in States)
             {
                 hash.Add(key);
                 Array.ForEach(state, hash.Add);
             }
             Array.ForEach(InputCommands, hash.Add);
             Array.ForEach(Commands, hash.Add);
-            foreach(var (key, capability) in Capabilities)
+            foreach (var (key, capability) in Capabilities)
             {
                 hash.Add(key);
                 hash.Add(capability.Item1);

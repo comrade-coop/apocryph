@@ -21,6 +21,7 @@ namespace Apocryph.Runtime.FunctionApp
         {
             await using var gossips = context.DeclareStream("Peering-gossips", typeof(PeeringStream));
             await using var queries = context.DeclareStream("Peering-queries", typeof(PeeringStream));
+            await using var reports = context.DeclareStream("Peering-reports", typeof(PeeringStream));
             await using var salts = context.DeclareStream("Salts", typeof(SaltsStream));
 
             await using var chain = await context.StreamFunctionAsync("Chain", typeof(ChainStream), new
@@ -32,9 +33,11 @@ namespace Apocryph.Runtime.FunctionApp
                 slotGossips = slotGossips.Subscribe()
             });
 
-            await using var validator = await context.StreamFunctionAsync("DummyStream", new {
+            await using var validator = await context.StreamFunctionAsync("DummyStream", new
+            {
                 queries = queries.Subscribe(), // HACK: Make sure the queries peering receives all streams
                 gossips = gossips.Subscribe(), // HACK: Make sure the gossips peering receives all streams
+                reports = reports.Subscribe(),
             });
 
             await using var ibc = await context.StreamFunctionAsync("IBC-global", typeof(IBCStream), new
@@ -70,9 +73,18 @@ namespace Apocryph.Runtime.FunctionApp
                 filter = typeof(ConsensusStream)
             });
 
+            await context.StreamFunctionAsync(reports, new
+            {
+                factory = chain.Subscribe(),
+                filter = typeof(ConsensusStream)
+            });
+
             await using var loggingStream = await context.StreamActionAsync(typeof(LoggingStream), new
             {
-                filter = filter.Subscribe()
+                chain = chain.Subscribe(),
+                nodes = new Dictionary<Guid, Node?[]>(),
+                filter = filter.Subscribe(),
+                reports = reports.Subscribe()
             });
 
             await context.BindOutput(cancellationToken);

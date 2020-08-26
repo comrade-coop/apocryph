@@ -44,7 +44,7 @@ namespace Apocryph.Core.Consensus
             {
                 _initialValueTask.TrySetResult(initialValue);
             }
-            _d = new Dictionary<T, int> {};
+            _d = new Dictionary<T, int> { };
         }
 
         public Query<T> Query(Query<T> message)
@@ -114,6 +114,11 @@ namespace Apocryph.Core.Consensus
             }
 
             throw new OperationCanceledException();
+        }
+
+        public IDictionary<T, int> GetConfirmedValues()
+        {
+            return _d;
         }
     }
 }

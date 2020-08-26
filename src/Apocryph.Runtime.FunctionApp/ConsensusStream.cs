@@ -17,7 +17,7 @@ namespace Apocryph.Runtime.FunctionApp
     public class ConsensusStream
     {
 
-        private static JsonSerializerOptions jsonSerializerOptions = new JsonSerializerOptions
+        public static readonly JsonSerializerOptions JsonSerializerOptions = new JsonSerializerOptions
         {
             Converters =
             {
@@ -58,6 +58,7 @@ namespace Apocryph.Runtime.FunctionApp
             _proposer = new Proposer(executor, _node!.ChainId, chainData.GenesisBlock, new HashSet<Block>(), new HashSet<object>(), _node, proposerAccount);
 
             await TaskHelper.WhenAllOrFail(
+                RunReports(context, cancellationToken),
                 RunSnowball(context, cancellationToken),
                 HandleChain(chain, cancellationToken),
                 HandleValidator(validator, cancellationToken),
@@ -136,8 +137,10 @@ namespace Apocryph.Runtime.FunctionApp
             while (true)
             {
                 await Task.Delay(2000);
+                await _output!.AddAsync(new ConsensusReport(_node!, _round, _proposer!.GetLastBlock()), cancellationToken);
+
                 var proposerCount = _nodes!.Length / 10 + 1; // TODO: Move constant to parameter
-                var serializedBlock = JsonSerializer.SerializeToUtf8Bytes(_proposer!.GetLastBlock(), jsonSerializerOptions);
+                var serializedBlock = JsonSerializer.SerializeToUtf8Bytes(_proposer!.GetLastBlock(), JsonSerializerOptions);
                 _proposers = RandomWalk.Run(serializedBlock).Select(selected => _nodes[(int)(selected.Item1 % _nodes.Length)]).Take(proposerCount).ToArray();
 
                 var opinion = default(Block?);
@@ -156,9 +159,22 @@ namespace Apocryph.Runtime.FunctionApp
                 var committedProposal = await _snowball!.Run(_nodes, cancellationToken);
 
                 _pastBlocks[_round] = committedProposal;
-                _round ++;
+                _round++;
 
                 await _output!.AddAsync(new Message<Block>(committedProposal, MessageType.Proposed), cancellationToken);
+            }
+        }
+
+        private async Task RunReports(PerperStreamContext context, CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                await Task.Delay(1000, cancellationToken);
+
+                if (_snowball != null)
+                {
+                    await _output!.AddAsync(new SnowballReport(_node!, _snowball.GetConfirmedValues()), cancellationToken);
+                }
             }
         }
 

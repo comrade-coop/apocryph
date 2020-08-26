@@ -29,7 +29,7 @@ namespace TestHarness.FunctionApp
             };
             using var sha1 = new SHA1CryptoServiceProvider();
             var carrier = Convert.ToBase64String(sha1.ComputeHash(state));
-            return Task.FromResult((state, actions.ToArray(), new Dictionary<Guid, string[]>(), new Dictionary<Guid, string>(){{otherReference, carrier}, {ownReference!.Value, carrier}}));
+            return Task.FromResult((state, actions.ToArray(), new Dictionary<Guid, string[]>(), new Dictionary<Guid, string>() { { otherReference, carrier }, { ownReference!.Value, carrier } }));
         }
     }
 }
