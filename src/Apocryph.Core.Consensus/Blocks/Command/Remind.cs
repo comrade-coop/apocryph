@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Apocryph.Core.Consensus.Blocks.Command
 {
-    public class Remind : IEquatable<Remind>
+    public class Remind : IEquatable<Remind>, ICommand
     {
         public DateTime DueDateTime { get; }
         public (string, byte[]) Message { get; }

@@ -1,7 +1,8 @@
 using System;
-using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using Apocryph.Core.Consensus.Blocks.Command;
 using Apocryph.Core.Consensus.VirtualNodes;
 
 namespace Apocryph.Core.Consensus.Blocks
@@ -11,12 +12,12 @@ namespace Apocryph.Core.Consensus.Blocks
         public Guid ChainId { get; set; }
         public Guid ProposerAccount { get; set; }
         public Node? Proposer { get; set; }
-        public object[] InputCommands { get; }
-        public object[] Commands { get; }
+        public ICommand[] InputCommands { get; }
+        public ICommand[] Commands { get; }
         public Dictionary<string, byte[]> States { get; }
         public Dictionary<Guid, (string, string[])> Capabilities { get; }
 
-        public Block(Guid chainId, Node? proposer, Guid proposerAccount, Dictionary<string, byte[]> states, object[] inputCommands, object[] commands, Dictionary<Guid, (string, string[])> capabilities)
+        public Block(Guid chainId, Node? proposer, Guid proposerAccount, Dictionary<string, byte[]> states, ICommand[] inputCommands, ICommand[] commands, Dictionary<Guid, (string, string[])> capabilities)
         {
             ChainId = chainId;
             Proposer = proposer;
@@ -72,7 +73,7 @@ namespace Apocryph.Core.Consensus.Blocks
 
         public override string ToString()
         {
-            return $"Block({ChainId}, {Proposer}, {ProposerAccount}, InputCommands = [{string.Join(", ", InputCommands)}], Commands = [{string.Join(", ", Commands)}], States = [{string.Join(", ", States.Keys)}], Capabilities = [{string.Join(", ", Capabilities.Keys)}])";
+            return $"Block({ChainId}, {Proposer}, {ProposerAccount}, InputCommands = [{string.Join(", ", (object[])InputCommands)}], Commands = [{string.Join(", ", (object[])Commands)}], States = [{string.Join(", ", States.Keys)}], Capabilities = [{string.Join(", ", Capabilities.Keys)}])";
         }
     }
 }

@@ -17,12 +17,12 @@ namespace Apocryph.Core.Consensus
             _callWorker = callWorker;
         }
 
-        public async Task<(Dictionary<string, byte[]>, object[], Dictionary<Guid, (string, string[])>)> Execute(
-            Dictionary<string, byte[]> states, object[] commands, Dictionary<Guid, (string, string[])> capabilities)
+        public async Task<(Dictionary<string, byte[]>, ICommand[], Dictionary<Guid, (string, string[])>)> Execute(
+            Dictionary<string, byte[]> states, ICommand[] commands, Dictionary<Guid, (string, string[])> capabilities)
         {
             var capabilityValidator = new CapabilityValidator(capabilities);
 
-            var newCommands = new List<object>();
+            var newCommands = new List<ICommand>();
 
             foreach (var command in commands)
             {
@@ -55,7 +55,7 @@ namespace Apocryph.Core.Consensus
                 {
                     foreach (var (name, @params) in actions)
                     {
-                        object? newCommand = name switch
+                        ICommand? newCommand = name switch
                         {
                             nameof(Invoke) => capabilityValidator.ValidateMessageAndRegisterAsCarrier((Guid)@params[0], ((string, byte[]))@params[1])
                                 ? new Invoke((Guid)@params[0], ((string, byte[]))@params[1])
@@ -86,13 +86,13 @@ namespace Apocryph.Core.Consensus
             return (states, newCommands.ToArray(), capabilities);
         }
 
-        public bool FilterCommand(object command, IDictionary<Guid, (string, string[])> capabilities)
+        public bool FilterCommand(ICommand command, IDictionary<Guid, (string, string[])> capabilities)
         {
             var targetReference = GetTargetReference(command);
             return capabilities.ContainsKey(targetReference);
         }
 
-        private Guid GetTargetReference(object command)
+        private Guid GetTargetReference(ICommand command)
         {
             return command switch
             {

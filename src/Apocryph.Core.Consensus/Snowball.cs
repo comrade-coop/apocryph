@@ -116,7 +116,7 @@ namespace Apocryph.Core.Consensus
             throw new OperationCanceledException();
         }
 
-        public IDictionary<T, int> GetConfirmedValues()
+        public Dictionary<T, int> GetConfirmedValues()
         {
             return _d;
         }

@@ -6,7 +6,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Core.Consensus;
 using Apocryph.Core.Consensus.Blocks;
+using Apocryph.Core.Consensus.Blocks.Command;
 using Apocryph.Core.Consensus.Communication;
+using Apocryph.Core.Consensus.Serialization;
 using Apocryph.Core.Consensus.VirtualNodes;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
@@ -16,16 +18,6 @@ namespace Apocryph.Runtime.FunctionApp
 {
     public class ConsensusStream
     {
-
-        public static readonly JsonSerializerOptions JsonSerializerOptions = new JsonSerializerOptions
-        {
-            Converters =
-            {
-                { new NonStringKeyDictionaryConverter() }
-            }
-        };
-
-
         private Node? _node;
         private Node?[]? _nodes;
         private Node?[]? _proposers;
@@ -55,7 +47,7 @@ namespace Apocryph.Runtime.FunctionApp
 
             var executor = new Executor(_node!.ChainId,
                 async (worker, input) => await context.CallWorkerAsync<(byte[]?, (string, object[])[], Dictionary<Guid, string[]>, Dictionary<Guid, string>)>(worker, new { input }, default));
-            _proposer = new Proposer(executor, _node!.ChainId, chainData.GenesisBlock, new HashSet<Block>(), new HashSet<object>(), _node, proposerAccount);
+            _proposer = new Proposer(executor, _node!.ChainId, chainData.GenesisBlock, new HashSet<Block>(), new HashSet<ICommand>(), _node, proposerAccount);
 
             await TaskHelper.WhenAllOrFail(
                 RunReports(context, cancellationToken),
@@ -137,11 +129,12 @@ namespace Apocryph.Runtime.FunctionApp
             while (true)
             {
                 await Task.Delay(2000);
-                await _output!.AddAsync(new ConsensusReport(_node!, _round, _proposer!.GetLastBlock()), cancellationToken);
 
                 var proposerCount = _nodes!.Length / 10 + 1; // TODO: Move constant to parameter
-                var serializedBlock = JsonSerializer.SerializeToUtf8Bytes(_proposer!.GetLastBlock(), JsonSerializerOptions);
+                var serializedBlock = JsonSerializer.SerializeToUtf8Bytes(_proposer!.GetLastBlock(), ApocryphSerializationOptions.JsonSerializerOptions);
                 _proposers = RandomWalk.Run(serializedBlock).Select(selected => _nodes[(int)(selected.Item1 % _nodes.Length)]).Take(proposerCount).ToArray();
+
+                await _output!.AddAsync(new ConsensusReport(_node!, _proposers, _round, _proposer!.GetLastBlock()), cancellationToken);
 
                 var opinion = default(Block?);
                 if (Array.IndexOf(_proposers, _node) != -1)

@@ -16,9 +16,9 @@ namespace Apocryph.Core.Consensus.Communication
 
     public class SnowballReport : Report
     {
-        public IDictionary<Block, int> BlockCounts { get; }
+        public Dictionary<Block, int> BlockCounts { get; }
 
-        public SnowballReport(Node source, IDictionary<Block, int> blockCounts) : base(source)
+        public SnowballReport(Node source, Dictionary<Block, int> blockCounts) : base(source)
         {
             BlockCounts = blockCounts;
         }
@@ -27,11 +27,13 @@ namespace Apocryph.Core.Consensus.Communication
     public class ConsensusReport : Report
     {
         public int Round { get; }
+        public Node?[] Proposers { get; }
         public Block LastBlock { get; }
 
-        public ConsensusReport(Node source, int round, Block lastBlock) : base(source)
+        public ConsensusReport(Node source, Node?[] proposers, int round, Block lastBlock) : base(source)
         {
             Round = round;
+            Proposers = proposers;
             LastBlock = lastBlock;
         }
     }

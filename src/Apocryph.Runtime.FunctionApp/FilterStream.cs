@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Core.Consensus;
 using Apocryph.Core.Consensus.Blocks;
+using Apocryph.Core.Consensus.Blocks.Command;
 using Apocryph.Core.Consensus.Communication;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
@@ -31,7 +32,7 @@ namespace Apocryph.Runtime.FunctionApp
             {
                 var executor = new Executor(chainId,
                     async (worker, input) => await context.CallWorkerAsync<(byte[]?, (string, object[])[], Dictionary<Guid, string[]>, Dictionary<Guid, string>)>(worker, new { input }, default));
-                _validators[chainId] = new Validator(executor, chainId, chain.GenesisBlock, new HashSet<Block>(), new HashSet<object>());
+                _validators[chainId] = new Validator(executor, chainId, chain.GenesisBlock, new HashSet<Block>(), new HashSet<ICommand>());
             }
 
             await TaskHelper.WhenAllOrFail(

@@ -2,7 +2,7 @@ using System;
 
 namespace Apocryph.Core.Consensus.Blocks.Command
 {
-    public class Subscribe : IEquatable<Subscribe>
+    public class Subscribe : IEquatable<Subscribe>, ICommand
     {
         public string Target { get; }
 

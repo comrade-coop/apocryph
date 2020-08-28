@@ -4,8 +4,8 @@ namespace Apocryph.Core.Consensus.VirtualNodes
 {
     public class Node : IEquatable<Node>
     {
-        public int Id { get; set; }
         public Guid ChainId { get; set; }
+        public int Id { get; set; }
 
         public Node(Guid chainId, int id)
         {

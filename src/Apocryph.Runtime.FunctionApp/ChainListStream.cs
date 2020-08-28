@@ -79,7 +79,7 @@ namespace Apocryph.Runtime.FunctionApp
                 filter = typeof(ConsensusStream)
             });
 
-            await using var loggingStream = await context.StreamActionAsync(typeof(LoggingStream), new
+            await using var reportsStream = await context.StreamActionAsync(typeof(ReportsStream), new
             {
                 chain = chain.Subscribe(),
                 nodes = new Dictionary<Guid, Node?[]>(),

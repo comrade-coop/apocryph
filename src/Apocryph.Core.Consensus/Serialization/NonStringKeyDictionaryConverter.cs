@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Apocryph.Runtime.FunctionApp
+namespace Apocryph.Core.Consensus.Serialization
 {
     public class NonStringKeyDictionaryConverter : JsonConverterFactory
     {
         public override bool CanConvert(Type type)
         {
-            return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Dictionary<,>);
+            return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Dictionary<,>) && type.GenericTypeArguments[0] != typeof(string);
         }
 
         public override JsonConverter CreateConverter(Type type, JsonSerializerOptions options)

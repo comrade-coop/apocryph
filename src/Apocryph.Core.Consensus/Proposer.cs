@@ -19,11 +19,11 @@ namespace Apocryph.Core.Consensus
         private Node? _proposer;
         private Guid _proposerAccount;
         private HashSet<Block> _confirmedBlocks;
-        private HashSet<object> _pendingCommands;
+        private HashSet<ICommand> _pendingCommands;
         private TaskCompletionSource<bool>? _pendingCommandsTaskCompletionSource;
         private Executor _executor;
 
-        public Proposer(Executor executor, Guid chainId, Block lastBlock, HashSet<Block> confirmedBlocks, HashSet<object> pendingCommands, Node? proposer, Guid proposerAccount)
+        public Proposer(Executor executor, Guid chainId, Block lastBlock, HashSet<Block> confirmedBlocks, HashSet<ICommand> pendingCommands, Node? proposer, Guid proposerAccount)
         {
             _executor = executor;
             _chainId = chainId;
@@ -55,7 +55,7 @@ namespace Apocryph.Core.Consensus
 
             if (_chainId == Guid.Empty)
             {
-                inputCommands = inputCommands.Concat(new object[] {
+                inputCommands = inputCommands.Concat(new ICommand[] {
                     new Invoke(_proposerAccount, (
                         "Apocryph.AgentZero.Messages.ClaimRewardMessage, Apocryph.AgentZero",
                         Encoding.UTF8.GetBytes("{}")))

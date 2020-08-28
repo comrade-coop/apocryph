@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Apocryph.Core.Consensus.Blocks.Command
 {
-    public class Invoke : IEquatable<Invoke>
+    public class Invoke : IEquatable<Invoke>, ICommand
     {
         public Guid Reference { get; }
         public (string, byte[]) Message { get; }

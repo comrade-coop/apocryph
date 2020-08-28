@@ -49,8 +49,8 @@ namespace TestHarness.FunctionApp
                                 JsonSerializer.SerializeToUtf8Bytes(new ChainAgentState {OtherReference = pingReference})
                             }
                         },
-                        new object[] { },
-                        new object[]
+                        new ICommand[] { },
+                        new ICommand[]
                         {
                             new Invoke(pingReference, (typeof(string).FullName!, JsonSerializer.SerializeToUtf8Bytes("Init")))
                         },

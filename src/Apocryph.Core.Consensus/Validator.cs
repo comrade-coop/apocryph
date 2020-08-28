@@ -15,11 +15,11 @@ namespace Apocryph.Core.Consensus
         private Guid _chainId;
         private Block _lastBlock;
         private HashSet<Block> _confirmedBlocks;
-        private HashSet<object> _pendingCommands;
+        private HashSet<ICommand> _pendingCommands;
         private HashSet<byte[]>? _pendingSetChainBlockMessages = new HashSet<byte[]>();
         private Executor _executor;
 
-        public Validator(Executor executor, Guid chainId, Block lastBlock, HashSet<Block> confirmedBlocks, HashSet<object> pendingCommands)
+        public Validator(Executor executor, Guid chainId, Block lastBlock, HashSet<Block> confirmedBlocks, HashSet<ICommand> pendingCommands)
         {
             _executor = executor;
             _chainId = chainId;

@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Apocryph.Core.Consensus.Blocks.Command
 {
-    public class Publish : IEquatable<Publish>
+    public class Publish : IEquatable<Publish>, ICommand
     {
         public (string, byte[]) Message { get; }
 
