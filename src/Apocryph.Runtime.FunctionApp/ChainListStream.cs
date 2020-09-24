@@ -19,25 +19,39 @@ namespace Apocryph.Runtime.FunctionApp
             [Perper("output")] IAsyncCollector<int> output,
             CancellationToken cancellationToken)
         {
-            await using var gossips = context.DeclareStream("Peering-gossips", typeof(PeeringStream));
-            await using var queries = context.DeclareStream("Peering-queries", typeof(PeeringStream));
-            await using var reports = context.DeclareStream("Peering-reports", typeof(PeeringStream));
+            await using var peering = context.DeclareStream("Peering", typeof(PeeringStream));
+            var gossips = peering;
+            var queries = peering;
+            var reports = peering;
+            var hashes = peering;
             await using var salts = context.DeclareStream("Salts", typeof(SaltsStream));
+
+            await using var hashRegistry = await context.StreamFunctionAsync("HashRegistry", typeof(HashRegistryStream), new
+            {
+                filter = typeof(Block),
+                input = hashes.Subscribe()
+            }, typeof(HashRegistryEntry));
+
+            await context.StreamActionAsync("DummyStream", new
+            {
+                hashRegistry = hashRegistry.Subscribe() // HACK: Ensure hash registry is started up before anything else
+            });
 
             await using var chain = await context.StreamFunctionAsync("Chain", typeof(ChainStream), new
             {
                 chains,
                 gossips,
                 queries,
+                hashRegistry,
                 salts = salts.Subscribe(),
                 slotGossips = slotGossips.Subscribe()
             });
 
+            // HACK: Create an empty stream for the global IBC
             await using var validator = await context.StreamFunctionAsync("DummyStream", new
             {
-                queries = queries.Subscribe(), // HACK: Make sure the queries peering receives all streams
-                gossips = gossips.Subscribe(), // HACK: Make sure the gossips peering receives all streams
-                reports = reports.Subscribe(),
+                peering = peering.Subscribe(), // HACK: Ensure peering is started before it starts receiving streams
+                hashRegistry = hashRegistry.Subscribe() // HACK: Ensure hash registry is started up
             });
 
             await using var ibc = await context.StreamFunctionAsync("IBC-global", typeof(IBCStream), new
@@ -52,35 +66,26 @@ namespace Apocryph.Runtime.FunctionApp
             {
                 ibc = ibc.Subscribe(),
                 gossips = gossips.Subscribe(),
+                hashRegistry,
                 chains
             });
 
             await context.StreamFunctionAsync(salts, new
             {
                 chains,
+                hashRegistry = hashRegistry,
                 filter = filter.Subscribe()
             });
 
-            await context.StreamFunctionAsync(gossips, new
+            await context.StreamFunctionAsync(peering, new
             {
                 factory = chain.Subscribe(),
-                filter = typeof(IBCStream)
-            });
-
-            await context.StreamFunctionAsync(queries, new
-            {
-                factory = chain.Subscribe(),
-                filter = typeof(ConsensusStream)
-            });
-
-            await context.StreamFunctionAsync(reports, new
-            {
-                factory = chain.Subscribe(),
-                filter = typeof(ConsensusStream)
+                initial = new List<IPerperStream>() { filter },
             });
 
             await using var reportsStream = await context.StreamActionAsync(typeof(ReportsStream), new
             {
+                hashRegistry = hashRegistry,
                 chain = chain.Subscribe(),
                 nodes = new Dictionary<Guid, Node?[]>(),
                 filter = filter.Subscribe(),

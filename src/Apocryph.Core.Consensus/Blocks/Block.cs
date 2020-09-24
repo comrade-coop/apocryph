@@ -9,6 +9,7 @@ namespace Apocryph.Core.Consensus.Blocks
 {
     public class Block : IEquatable<Block>
     {
+        public Hash Previous { get; set; }
         public Guid ChainId { get; set; }
         public Guid ProposerAccount { get; set; }
         public Node? Proposer { get; set; }
@@ -17,8 +18,9 @@ namespace Apocryph.Core.Consensus.Blocks
         public Dictionary<string, byte[]> States { get; }
         public Dictionary<Guid, (string, string[])> Capabilities { get; }
 
-        public Block(Guid chainId, Node? proposer, Guid proposerAccount, Dictionary<string, byte[]> states, ICommand[] inputCommands, ICommand[] commands, Dictionary<Guid, (string, string[])> capabilities)
+        public Block(Hash previous, Guid chainId, Node? proposer, Guid proposerAccount, Dictionary<string, byte[]> states, ICommand[] inputCommands, ICommand[] commands, Dictionary<Guid, (string, string[])> capabilities)
         {
+            Previous = previous;
             ChainId = chainId;
             Proposer = proposer;
             ProposerAccount = proposerAccount;

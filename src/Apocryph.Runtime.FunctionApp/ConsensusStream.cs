@@ -1,14 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Core.Consensus;
 using Apocryph.Core.Consensus.Blocks;
 using Apocryph.Core.Consensus.Blocks.Command;
 using Apocryph.Core.Consensus.Communication;
-using Apocryph.Core.Consensus.Serialization;
 using Apocryph.Core.Consensus.VirtualNodes;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
@@ -21,12 +19,13 @@ namespace Apocryph.Runtime.FunctionApp
         private Node? _node;
         private Node?[]? _nodes;
         private Node?[]? _proposers;
-        private Snowball<Block>? _snowball;
-        private Dictionary<int, Block> _pastBlocks = new Dictionary<int, Block>();
+        private Snowball<Hash>? _snowball;
+        private Dictionary<int, Hash> _pastBlocks = new Dictionary<int, Hash>();
         private int _round = 0;
         private Proposer? _proposer;
+        private IQueryable<HashRegistryEntry>? _hashRegistry;
         private IAsyncCollector<object>? _output;
-        private Dictionary<Node, TaskCompletionSource<Query<Block>>> _receiveCompletionSources = new Dictionary<Node, TaskCompletionSource<Query<Block>>>();
+        private Dictionary<Node, TaskCompletionSource<Query<Hash>>> _receiveCompletionSources = new Dictionary<Node, TaskCompletionSource<Query<Hash>>>();
 
         [FunctionName(nameof(ConsensusStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
@@ -34,20 +33,22 @@ namespace Apocryph.Runtime.FunctionApp
             [Perper("node")] Node node,
             [Perper("nodes")] List<Node> nodes,
             [Perper("chainData")] Chain chainData,
-            [Perper("filter")] IAsyncEnumerable<Block> filter,
-            [Perper("validator")] IAsyncEnumerable<Message<Block>> validator,
+            [Perper("filter")] IAsyncEnumerable<Hash> filter,
+            [Perper("validator")] IAsyncEnumerable<Message<Hash>> validator,
             [Perper("chain")] IAsyncEnumerable<Message<(Guid, Node?[])>> chain,
-            [Perper("queries")] IAsyncEnumerable<Query<Block>> queries,
+            [Perper("queries")] IAsyncEnumerable<Query<Hash>> queries,
+            [Perper("hashRegistry")] IPerperStream hashRegistry,
             [Perper("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
         {
             _output = output;
             _node = node;
             _nodes = nodes.ToArray();
+            _hashRegistry = context.Query<HashRegistryEntry>(hashRegistry);
 
             var executor = new Executor(_node!.ChainId,
                 async (worker, input) => await context.CallWorkerAsync<(byte[]?, (string, object[])[], Dictionary<Guid, string[]>, Dictionary<Guid, string>)>(worker, new { input }, default));
-            _proposer = new Proposer(executor, _node!.ChainId, chainData.GenesisBlock, new HashSet<Block>(), new HashSet<ICommand>(), _node, proposerAccount);
+            _proposer = new Proposer(executor, _node!.ChainId, chainData.GenesisBlock, new HashSet<Hash>(), new HashSet<ICommand>(), _node, proposerAccount);
 
             await TaskHelper.WhenAllOrFail(
                 RunReports(context, cancellationToken),
@@ -58,9 +59,13 @@ namespace Apocryph.Runtime.FunctionApp
                 HandleQueries(queries, cancellationToken));
         }
 
-        private Task<Block> Propose(PerperStreamContext context)
+        private async Task<Hash> Propose(PerperStreamContext context)
         {
-            return _proposer!.Propose();
+            var proposal = await _proposer!.Propose();
+
+            await _output!.AddAsync(proposal);
+
+            return Hash.From(proposal);
         }
 
         private async Task HandleChain(IAsyncEnumerable<Message<(Guid, Node?[])>> chain, CancellationToken cancellationToken)
@@ -76,26 +81,28 @@ namespace Apocryph.Runtime.FunctionApp
             }
         }
 
-        private async Task HandleValidator(IAsyncEnumerable<Message<Block>> validator, CancellationToken cancellationToken)
+        private async Task HandleValidator(IAsyncEnumerable<Message<Hash>> validator, CancellationToken cancellationToken)
         {
             await foreach (var message in validator.WithCancellation(cancellationToken))
             {
                 if (message.Type == MessageType.Valid)
                 {
-                    _proposer!.AddConfirmedBlock(message.Value);
+                    var block = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, message.Value);
+                    _proposer!.AddConfirmedBlock(block!);
                 }
             }
         }
 
-        private async Task HandleFilter(IAsyncEnumerable<Block> filter, CancellationToken cancellationToken)
+        private async Task HandleFilter(IAsyncEnumerable<Hash> filter, CancellationToken cancellationToken)
         {
-            await foreach (var block in filter.WithCancellation(cancellationToken))
+            await foreach (var hash in filter.WithCancellation(cancellationToken))
             {
-                _proposer!.AddConfirmedBlock(block);
+                var block = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
+                _proposer!.AddConfirmedBlock(block!);
             }
         }
 
-        private async Task HandleQueries(IAsyncEnumerable<Query<Block>> queries, CancellationToken cancellationToken)
+        private async Task HandleQueries(IAsyncEnumerable<Query<Hash>> queries, CancellationToken cancellationToken)
         {
             await foreach (var query in queries.WithCancellation(cancellationToken))
             {
@@ -111,7 +118,7 @@ namespace Apocryph.Runtime.FunctionApp
                     {
                         if (_pastBlocks.ContainsKey(query.Round))
                         {
-                            var reply = new Query<Block>(_pastBlocks[query.Round], query.Receiver, query.Sender, query.Round, QueryVerb.Response);
+                            var reply = new Query<Hash>(_pastBlocks[query.Round], query.Receiver, query.Sender, query.Round, QueryVerb.Response);
                             await _output!.AddAsync(reply, cancellationToken);
                         }
                     }
@@ -128,25 +135,25 @@ namespace Apocryph.Runtime.FunctionApp
             await Task.Delay(4000);
             while (true)
             {
-                await Task.Delay(2000);
+                await Task.Delay(1500);
 
                 var proposerCount = _nodes!.Length / 10 + 1; // TODO: Move constant to parameter
-                var serializedBlock = JsonSerializer.SerializeToUtf8Bytes(_proposer!.GetLastBlock(), ApocryphSerializationOptions.JsonSerializerOptions);
-                _proposers = RandomWalk.Run(serializedBlock).Select(selected => _nodes[(int)(selected.Item1 % _nodes.Length)]).Take(proposerCount).ToArray();
+                _proposers = RandomWalk.Run(_proposer!.GetLastBlock()).Select(selected => _nodes[(int)(selected.Item1 % _nodes.Length)]).Take(proposerCount).ToArray();
 
                 await _output!.AddAsync(new ConsensusReport(_node!, _proposers, _round, _proposer!.GetLastBlock()), cancellationToken);
 
-                var opinion = default(Block?);
+                var opinion = default(Hash?);
                 if (Array.IndexOf(_proposers, _node) != -1)
                 {
                     opinion = await Propose(context);
                 }
 
-                var k = _nodes!.Length / 3 + 2; // TODO: Move constants to parameters
-                var beta = _nodes!.Length * 2; // TODO: Move constants to parameters
+                await Task.Delay(500);
 
-                // Console.WriteLine("{0} starts new round! {1} {2}", _node, _round, string.Join(",", (IEnumerable<Node?>)_proposers));
-                _snowball = new Snowball<Block>(_node!, k, 0.6, beta, _round,
+                var k = _nodes!.Length / 3 + 2; // TODO: Move constants to parameters
+                var beta = (int)(Math.Log(_nodes!.Length) * 5) + 1; // TODO: Move constants to parameters
+
+                _snowball = new Snowball<Hash>(_node!, k, 0.6, beta, _round,
                                                 SnowballSend, SnowballRespond, opinion);
 
                 var committedProposal = await _snowball!.Run(_nodes, cancellationToken);
@@ -154,7 +161,7 @@ namespace Apocryph.Runtime.FunctionApp
                 _pastBlocks[_round] = committedProposal;
                 _round++;
 
-                await _output!.AddAsync(new Message<Block>(committedProposal, MessageType.Proposed), cancellationToken);
+                await _output!.AddAsync(new Message<Hash>(committedProposal, MessageType.Proposed), cancellationToken);
             }
         }
 
@@ -171,25 +178,31 @@ namespace Apocryph.Runtime.FunctionApp
             }
         }
 
-        private async Task<Query<Block>> SnowballSend(Query<Block> query, CancellationToken cancellationToken)
+        private async Task<Query<Hash>> SnowballSend(Query<Hash> query, CancellationToken cancellationToken)
         {
-            var taskCompletionSource = new TaskCompletionSource<Query<Block>>();
+            var taskCompletionSource = new TaskCompletionSource<Query<Hash>>();
             cancellationToken.Register(() => taskCompletionSource.TrySetCanceled());
             _receiveCompletionSources[query.Receiver] = taskCompletionSource;
             await _output!.AddAsync(query, cancellationToken);
             return await taskCompletionSource.Task;
         }
 
-        private Query<Block> SnowballRespond(Query<Block> query, Block? value)
+        private Query<Hash> SnowballRespond(Query<Hash> query, Hash? value)
         {
-            var result = (value is null || IsNewBlockBetter(value, query.Value) ? query.Value : value);
-            return new Query<Block>(result, query.Receiver, query.Sender, query.Round, QueryVerb.Response);
+            var result = (value is null || IsNewBlockBetter(value.Value, query.Value) ? query.Value : value.Value);
+            return new Query<Hash>(result, query.Receiver, query.Sender, query.Round, QueryVerb.Response);
         }
 
-        private bool IsNewBlockBetter(Block current, Block suggested)
+        private bool IsNewBlockBetter(Hash current, Hash suggested)
         {
-            var currentProposerOrder = Array.IndexOf(_proposers!, current.Proposer);
-            var suggestedProposerOrder = Array.IndexOf(_proposers!, suggested.Proposer);
+            var currentBlock = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, current);
+            var suggestedBlock = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, suggested);
+
+            if (currentBlock == null) return true;
+            if (suggestedBlock == null) return false;
+
+            var currentProposerOrder = Array.IndexOf(_proposers!, currentBlock.Proposer);
+            var suggestedProposerOrder = Array.IndexOf(_proposers!, suggestedBlock.Proposer);
 
             return suggestedProposerOrder != -1 && suggestedProposerOrder < currentProposerOrder;
         }

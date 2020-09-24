@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Net.Http;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -34,7 +33,8 @@ namespace Apocryph.Runtime.Reporting
             {
                 tasks.Add(WrapTask(async () =>
                 {
-                    blocks[chainId] = await Request<Block>($"chain/{chainId}");
+                    var hash = await Request<Hash>($"chain/{chainId}");
+                    blocks[chainId] = await Request<Block>($"block/{hash}");
                 }));
                 tasks.Add(WrapTask(async () =>
                 {
@@ -60,13 +60,13 @@ namespace Apocryph.Runtime.Reporting
                 Console.WriteLine("Chain: {0}", chainId);
                 Console.WriteLine(columns, "Node ID", "Round", " ", "Last Block", " ", "Next Block ", "Confidence");
 
-                var lastChainBlockHash = GetBlockShorthash(lastChainBlock);
-                var beta = nodes[chainId].Length * 2; // TODO: Move constants to parameters
+                var lastChainBlockHash = Hash.From(lastChainBlock).ToString().Substring(0, 8);
+                var beta = (int)(Math.Log(nodes[chainId].Length) * 5) + 1; // TODO: Move constants to parameters
 
                 foreach (var node in nodes[chainId])
                 {
                     var values = new object[7] { "N/A", "N/A", " ", "N/A", " ", "N/A", "N/A" };
-                    if (reports.ContainsKey(node))
+                    if (node != null && reports.ContainsKey(node))
                     {
                         values[0] = node;
                         var nodeReports = reports[node];
@@ -74,7 +74,7 @@ namespace Apocryph.Runtime.Reporting
                         {
                             var consensusReport = (ConsensusReport)nodeReports[typeof(ConsensusReport)];
                             var proposers = consensusReport.Proposers;
-                            var blockHash = GetBlockShorthash(consensusReport.LastBlock);
+                            var blockHash = consensusReport.LastBlock.ToString().Substring(0, 8);
                             values[1] = consensusReport.Round;
                             values[2] = proposers[0] == node ? "*" : proposers.Contains(node) ? "+" : " ";
                             values[3] = blockHash;
@@ -87,7 +87,7 @@ namespace Apocryph.Runtime.Reporting
                             if (snowballReport.BlockCounts.Count > 0)
                             {
                                 var bestBlock = snowballReport.BlockCounts.Aggregate((p, n) => n.Value > p.Value ? n : p);
-                                values[5] = GetBlockShorthash(bestBlock.Key);
+                                values[5] = bestBlock.Key.ToString().Substring(0, 8);
                                 values[6] = $"{bestBlock.Value}/{beta}";
                             }
                         }
@@ -123,19 +123,14 @@ namespace Apocryph.Runtime.Reporting
         {
             var result = await HttpClient.GetStreamAsync(path);
             return await JsonSerializer.DeserializeAsync<T>(result, ApocryphSerializationOptions.JsonSerializerOptions, cancellationToken);
+            // var result = await HttpClient.GetByteArrayAsync(path);
+            // Console.WriteLine("{0} -- {1}", path, Encoding.UTF8.GetString(result));
+            // return JsonSerializer.Deserialize<T>(result, ApocryphSerializationOptions.JsonSerializerOptions);
         }
 
         private static Task WrapTask(Func<Task> f)
         {
             return f();
-        }
-
-        private static string GetBlockShorthash(Block lastBlock)
-        {
-            var serializedBlock = JsonSerializer.SerializeToUtf8Bytes(lastBlock, ApocryphSerializationOptions.JsonSerializerOptions);
-            using var sha256Hash = SHA256.Create();
-            var hash = sha256Hash.ComputeHash(serializedBlock);
-            return String.Concat(hash.Select(x => x.ToString("x2")).Take(5));
         }
     }
 }

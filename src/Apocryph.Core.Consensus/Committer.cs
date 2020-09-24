@@ -8,14 +8,14 @@ namespace Apocryph.Core.Consensus
 {
     public class Committer
     {
-        private readonly Dictionary<(Block, GossipVerb), HashSet<Node>> _gossips;
+        private readonly Dictionary<(Hash, GossipVerb), HashSet<Node>> _gossips;
 
         public Committer()
         {
-            _gossips = new Dictionary<(Block, GossipVerb), HashSet<Node>>();
+            _gossips = new Dictionary<(Hash, GossipVerb), HashSet<Node>>();
         }
 
-        public void AddGossip(Gossip<Block> gossip)
+        public void AddGossip(Gossip<Hash> gossip)
         {
             var fact = (gossip.Value, gossip.Verb);
             if (!_gossips.ContainsKey(fact))
@@ -25,7 +25,7 @@ namespace Apocryph.Core.Consensus
             _gossips[fact].Add(gossip.Sender);
         }
 
-        public IEnumerable<Node> GetConfirmations(Block block, GossipVerb verb, Node?[] nodes)
+        public IEnumerable<Node> GetConfirmations(Hash block, GossipVerb verb, Node?[] nodes)
         {
             var fact = (block, verb);
             if (!_gossips.ContainsKey(fact))
@@ -35,19 +35,14 @@ namespace Apocryph.Core.Consensus
             return _gossips[(block, verb)].Intersect(nodes)!;
         }
 
-        public bool IsGossipConfirmed(Block block, GossipVerb verb, Node?[] nodes)
+        public bool IsGossipConfirmed(Hash block, GossipVerb verb, Node?[] nodes)
         {
-            var fact = (block, verb);
-            if (!_gossips.ContainsKey(fact))
-            {
-                return false;
-            }
-            var confirmations = _gossips[(block, verb)].Intersect(nodes).Count();
+            var confirmations = GetConfirmations(block, verb, nodes).Count();
             var total = nodes.Length;
             return 3 * confirmations > 2 * total;
         }
 
-        public bool IsGossipConfirmed(Gossip<Block> gossip, Node?[] nodes)
+        public bool IsGossipConfirmed(Gossip<Hash> gossip, Node?[] nodes)
         {
             return IsGossipConfirmed(gossip.Value, gossip.Verb, nodes);
         }

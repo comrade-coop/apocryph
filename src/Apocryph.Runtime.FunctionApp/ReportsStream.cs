@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
 
@@ -23,17 +24,22 @@ namespace Apocryph.Runtime.FunctionApp
     {
         private Dictionary<Node, Dictionary<Type, Report>> _reports = new Dictionary<Node, Dictionary<Type, Report>>();
         private Dictionary<Guid, Node?[]>? _nodes;
-        private Dictionary<Guid, Block> _blocks = new Dictionary<Guid, Block>();
+        private Dictionary<Guid, Hash> _blocks = new Dictionary<Guid, Hash>();
+        private IQueryable<HashRegistryEntry>? _hashRegistry;
 
         [FunctionName(nameof(ReportsStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("nodes")] Dictionary<Guid, Node?[]> nodes,
             [Perper("chain")] IAsyncEnumerable<Message<(Guid, Node?[])>> chain,
-            [Perper("filter")] IAsyncEnumerable<Block> filter,
+            [Perper("filter")] IAsyncEnumerable<Hash> filter,
             [Perper("reports")] IAsyncEnumerable<Report> reports,
+            [Perper("hashRegistry")] IPerperStream hashRegistry,
             CancellationToken cancellationToken)
         {
+            await Task.Delay(2000);
+
             _nodes = nodes;
+            _hashRegistry = context.Query<HashRegistryEntry>(hashRegistry);
 
             await TaskHelper.WhenAllOrFail(
                 RunServer(cancellationToken),
@@ -42,11 +48,12 @@ namespace Apocryph.Runtime.FunctionApp
                 HandleReports(reports, cancellationToken));
         }
 
-        private async Task HandleFilter(IAsyncEnumerable<Block> filter, CancellationToken cancellationToken)
+        private async Task HandleFilter(IAsyncEnumerable<Hash> filter, CancellationToken cancellationToken)
         {
-            await foreach (var block in filter)
+            await foreach (var hash in filter)
             {
-                _blocks[block.ChainId] = block;
+                var block = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
+                _blocks[block!.ChainId] = hash;
             }
         }
 
@@ -101,23 +108,33 @@ namespace Apocryph.Runtime.FunctionApp
                             var node = new Node(id, index);
                             return _reports[node];
                         }));
+                        endpoints.MapGet("/block/{Hash}", WrapEndpoint((values) =>
+                        {
+                            var hash = Hash.Parse((string)values["Hash"]);
+                            var block = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
+                            return block;
+                        }));
                         endpoints.MapGet("/node", WrapEndpoint((values) =>
                         {
                             return _reports.Keys.ToList();
                         }));
                     });
                 });
+
+                webBuilder.ConfigureLogging(logging => {
+                    logging.SetMinimumLevel(LogLevel.Error);
+                });
             }).Build();
 
             return host.RunAsync(cancellationToken);
         }
 
-        private RequestDelegate WrapEndpoint(Func<RouteValueDictionary, object> wrapped)
+        private RequestDelegate WrapEndpoint(Func<RouteValueDictionary, object?> wrapped)
         {
             return (context) => context.Response.WriteJsonAsync(wrapped(context.Request.RouteValues));
         }
 
-        private RequestDelegate WrapEndpoint(Func<object> wrapped)
+        private RequestDelegate WrapEndpoint(Func<object?> wrapped)
         {
             return (context) => context.Response.WriteJsonAsync(wrapped());
         }
@@ -126,7 +143,7 @@ namespace Apocryph.Runtime.FunctionApp
     internal static class ReportsStreamExtensions
     {
 
-        public static Task WriteJsonAsync(this HttpResponse response, object value)
+        public static Task WriteJsonAsync(this HttpResponse response, object? value)
         {
             var json = JsonSerializer.Serialize(value, ApocryphSerializationOptions.JsonSerializerOptions);
             return response.WriteAsync(json);

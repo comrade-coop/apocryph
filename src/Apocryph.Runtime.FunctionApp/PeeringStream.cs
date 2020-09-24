@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -14,10 +13,11 @@ namespace Apocryph.Runtime.FunctionApp
         [FunctionName(nameof(PeeringStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("factory")] IAsyncEnumerable<IPerperStream> factory,
-            [Perper("filter")] Type filter,
+            [Perper("initial")] IEnumerable<IPerperStream> initial,
             CancellationToken cancellationToken)
         {
-            var output = new List<IPerperStream>();
+            var output = initial.ToList();
+            await context.RebindOutput(output);
             var peers = factory; //.Where(stream => stream.GetDelegate() == filter);
             await foreach (var peer in peers.WithCancellation(cancellationToken))
             {

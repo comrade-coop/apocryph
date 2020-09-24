@@ -14,12 +14,12 @@ namespace Apocryph.Core.Consensus
     {
         private Guid _chainId;
         private Block _lastBlock;
-        private HashSet<Block> _confirmedBlocks;
+        private HashSet<Hash> _confirmedBlocks;
         private HashSet<ICommand> _pendingCommands;
         private HashSet<byte[]>? _pendingSetChainBlockMessages = new HashSet<byte[]>();
         private Executor _executor;
 
-        public Validator(Executor executor, Guid chainId, Block lastBlock, HashSet<Block> confirmedBlocks, HashSet<ICommand> pendingCommands)
+        public Validator(Executor executor, Guid chainId, Block lastBlock, HashSet<Hash> confirmedBlocks, HashSet<ICommand> pendingCommands)
         {
             _executor = executor;
             _chainId = chainId;
@@ -66,13 +66,14 @@ namespace Apocryph.Core.Consensus
                 _lastBlock!.States, block.InputCommands, _lastBlock!.Capabilities);
 
             // Validate historical blocks as per protocol
-            return block.Equals(new Block(_chainId, block.Proposer, block.ProposerAccount, newState, block.InputCommands, newCommands, newCapabilities));
+            return block.Equals(new Block(Hash.From(_lastBlock), _chainId, block.Proposer, block.ProposerAccount, newState, block.InputCommands, newCommands, newCapabilities));
         }
 
 
         public void AddConfirmedBlock(Block block)
         {
-            if (!_confirmedBlocks.Add(block)) return;
+            var hash = Hash.From(block);
+            if (!_confirmedBlocks.Add(hash)) return;
 
             _pendingCommands!.UnionWith(block.Commands.Where(x => _executor.FilterCommand(x, _lastBlock!.Capabilities)));
 

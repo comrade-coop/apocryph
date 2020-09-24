@@ -15,19 +15,21 @@ namespace Apocryph.Core.Consensus
     public class Proposer
     {
         private Guid _chainId;
+        private Hash _lastBlockHash;
         private Block _lastBlock;
         private Node? _proposer;
         private Guid _proposerAccount;
-        private HashSet<Block> _confirmedBlocks;
+        private HashSet<Hash> _confirmedBlocks;
         private HashSet<ICommand> _pendingCommands;
         private TaskCompletionSource<bool>? _pendingCommandsTaskCompletionSource;
         private Executor _executor;
 
-        public Proposer(Executor executor, Guid chainId, Block lastBlock, HashSet<Block> confirmedBlocks, HashSet<ICommand> pendingCommands, Node? proposer, Guid proposerAccount)
+        public Proposer(Executor executor, Guid chainId, Block lastBlock, HashSet<Hash> confirmedBlocks, HashSet<ICommand> pendingCommands, Node? proposer, Guid proposerAccount)
         {
             _executor = executor;
             _chainId = chainId;
             _lastBlock = lastBlock;
+            _lastBlockHash = Hash.From(_lastBlock);
             _confirmedBlocks = confirmedBlocks;
             _pendingCommands = pendingCommands;
             _proposer = proposer;
@@ -35,9 +37,9 @@ namespace Apocryph.Core.Consensus
         }
 
 
-        public Block GetLastBlock()
+        public Hash GetLastBlock()
         {
-            return _lastBlock;
+            return _lastBlockHash;
         }
 
 
@@ -66,7 +68,7 @@ namespace Apocryph.Core.Consensus
                 _lastBlock!.States, inputCommands, _lastBlock.Capabilities);
 
             // Include historical blocks as per protocol
-            var result = new Block(_chainId, _proposer, _proposerAccount, newState, inputCommands, newCommands, newCapabilities);
+            var result = new Block(_lastBlockHash, _chainId, _proposer, _proposerAccount, newState, inputCommands, newCommands, newCapabilities);
 
             _proposerAccount = Guid.NewGuid();
 
@@ -76,7 +78,8 @@ namespace Apocryph.Core.Consensus
 
         public void AddConfirmedBlock(Block block)
         {
-            if (!_confirmedBlocks.Add(block)) return;
+            var hash = Hash.From(block);
+            if (!_confirmedBlocks.Add(hash)) return;
 
             _pendingCommands!.UnionWith(block.Commands.Where(x => _executor.FilterCommand(x, _lastBlock!.Capabilities)));
             if (_pendingCommands!.Count > 0)
@@ -104,6 +107,7 @@ namespace Apocryph.Core.Consensus
             if (_chainId == block.ChainId)
             {
                 _lastBlock = block;
+                _lastBlockHash = hash;
                 _pendingCommands.ExceptWith(block.InputCommands);
             }
         }

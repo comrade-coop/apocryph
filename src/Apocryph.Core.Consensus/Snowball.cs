@@ -9,7 +9,7 @@ using Apocryph.Core.Consensus.VirtualNodes;
 
 namespace Apocryph.Core.Consensus
 {
-    public class Snowball<T> where T : class, IEquatable<T>
+    public class Snowball<T> where T : struct, IEquatable<T>
     {
         private readonly Node _node;
         private readonly int _k;
@@ -42,7 +42,7 @@ namespace Apocryph.Core.Consensus
             _initialValueTask = new TaskCompletionSource<T>();
             if (initialValue != null)
             {
-                _initialValueTask.TrySetResult(initialValue);
+                _initialValueTask.TrySetResult(initialValue.Value);
             }
             _d = new Dictionary<T, int> { };
         }
@@ -80,7 +80,7 @@ namespace Apocryph.Core.Consensus
             while (!cancellationToken.IsCancellationRequested)
             {
                 var subset = receivers.OrderBy(_ => RandomNumberGenerator.GetInt32(receivers.Length)).Take(_k);
-                var messages = subset.Where(receiver => receiver != null).Select(receiver => new Query<T>(_value, _node, receiver!, _round, QueryVerb.Request)).ToArray();
+                var messages = subset.Where(receiver => receiver != null).Select(receiver => new Query<T>(_value.Value, _node, receiver!, _round, QueryVerb.Request)).ToArray();
 
                 var timeoutTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 timeoutTokenSource.CancelAfter(TimeSpan.FromMilliseconds(3000));
@@ -96,7 +96,7 @@ namespace Apocryph.Core.Consensus
                 foreach (var answerValue in answersValues)
                 {
                     _d[answerValue] = _d.TryGetValue(answerValue, out var answerCount) ? answerCount + 1 : 1;
-                    if (_d[answerValue] > _d[_value])
+                    if (_d[answerValue] > _d[_value.Value])
                     {
                         _value = answerValue;
                     }
@@ -108,7 +108,7 @@ namespace Apocryph.Core.Consensus
                     }
                     else if (++count > _beta)
                     {
-                        return _value;
+                        return _value.Value;
                     }
                 }
             }

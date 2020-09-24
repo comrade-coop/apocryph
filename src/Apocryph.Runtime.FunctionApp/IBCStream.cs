@@ -15,7 +15,7 @@ namespace Apocryph.Runtime.FunctionApp
 {
     public class IBCStream
     {
-        private readonly HashSet<Block> _finalizedBlocks = new HashSet<Block>();
+        private readonly HashSet<Hash> _finalizedBlocks = new HashSet<Hash>();
         private Node? _node;
         private Dictionary<Guid, Node?[]>? _nodes;
         private Committer? _committer;
@@ -26,8 +26,8 @@ namespace Apocryph.Runtime.FunctionApp
             [Perper("node")] Node? node,
             [Perper("nodes")] Dictionary<Guid, Node?[]> nodes,
             [Perper("chain")] IAsyncEnumerable<Message<(Guid, Node?[])>> chain,
-            [Perper("validator")] IAsyncEnumerable<Message<Block>> validator,
-            [Perper("gossips")] IAsyncEnumerable<Gossip<Block>> gossips,
+            [Perper("validator")] IAsyncEnumerable<Message<Hash>> validator,
+            [Perper("gossips")] IAsyncEnumerable<Gossip<Hash>> gossips,
             [Perper("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
         {
@@ -42,7 +42,7 @@ namespace Apocryph.Runtime.FunctionApp
                 HandleGossips(gossips, cancellationToken));
         }
 
-        private async Task HandleValidator(IAsyncEnumerable<Message<Block>> validator,
+        private async Task HandleValidator(IAsyncEnumerable<Message<Hash>> validator,
             CancellationToken cancellationToken)
         {
             await foreach (var message in validator)
@@ -52,7 +52,7 @@ namespace Apocryph.Runtime.FunctionApp
 
                 // Console.WriteLine("{0} sends gossip {1}", _node!, isValid);
 
-                await _output!.AddAsync(new Gossip<Block>(block, _node!,
+                await _output!.AddAsync(new Gossip<Hash>(block, _node!,
                 isValid ? GossipVerb.Confirm : GossipVerb.Reject), cancellationToken);
             }
         }
@@ -67,7 +67,7 @@ namespace Apocryph.Runtime.FunctionApp
             }
         }
 
-        private async Task HandleGossips(IAsyncEnumerable<Gossip<Block>> gossips,
+        private async Task HandleGossips(IAsyncEnumerable<Gossip<Hash>> gossips,
             CancellationToken cancellationToken)
         {
             await foreach (var gossip in gossips.WithCancellation(cancellationToken))
@@ -84,12 +84,12 @@ namespace Apocryph.Runtime.FunctionApp
                 if (_committer!.IsGossipConfirmed(gossip.Value, GossipVerb.Reject, nodes))
                 {
                     _finalizedBlocks.Add(gossip.Value);
-                    await _output!.AddAsync(new Message<Block>(gossip.Value, MessageType.Invalid), cancellationToken);
+                    await _output!.AddAsync(new Message<Hash>(gossip.Value, MessageType.Invalid), cancellationToken);
                 }
                 else if (_committer!.IsGossipConfirmed(gossip.Value, GossipVerb.Confirm, nodes))
                 {
                     _finalizedBlocks.Add(gossip.Value);
-                    await _output!.AddAsync(new Message<Block>(gossip.Value, MessageType.Accepted), cancellationToken);
+                    await _output!.AddAsync(new Message<Hash>(gossip.Value, MessageType.Accepted), cancellationToken);
                 }
 
                 // Forward gossip

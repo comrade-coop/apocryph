@@ -55,7 +55,15 @@ namespace Apocryph.Core.Consensus.VirtualNodes
 
         public BigInteger GetPosition()
         {
-            return new BigInteger(Point.X.Concat(new byte[] { 0 }).ToArray());
+            // NOTE: 2147483647 is a large prime number, used to avoid a problem originating
+            // in the generation of points on the curve:
+            // without the division, GetPosition() % 4 would always be 0, 1, 2, or 3.
+            // An alternative solution is to hash the value, similar to GetDifficulty. While
+            // this works as well, hashing is much more involved than an integer division.
+            // If this proves to be a security problem (e.g. if someone could pick a number X
+            // for which the set of possible values of GetPosition() % X has less elements than
+            // X), changing to some form of hashing should be considered.
+            return new BigInteger(Point.X.Concat(new byte[] { 0 }).ToArray()) / 2147483647;
         }
 
         public BigInteger GetDifficulty(Guid chainId, byte[] salt)
