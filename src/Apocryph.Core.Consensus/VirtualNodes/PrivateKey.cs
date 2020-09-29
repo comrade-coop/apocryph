@@ -19,8 +19,8 @@ namespace Apocryph.Core.Consensus.VirtualNodes
 
         public static PrivateKey Create()
         {
-            using var dsa = ECDsa.Create(Curve);
-            return new PrivateKey(dsa.ExportParameters(true));
+            using var ecdsa = ECDsa.Create(Curve);
+            return new PrivateKey(ecdsa.ExportParameters(true));
         }
 
         public byte[] Sign(byte[] dataBytes)

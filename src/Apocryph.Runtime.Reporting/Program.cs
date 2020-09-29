@@ -20,7 +20,7 @@ namespace Apocryph.Runtime.Reporting
 
         public static async Task Main(string[] args)
         {
-            HttpClient.BaseAddress = new Uri(args.Length > 0 ? args[0] : "http://localhost:5001/");
+            HttpClient.BaseAddress = new Uri(args.Length > 0 ? args[0] : "http://localhost:8901/");
             HttpClient.Timeout = TimeSpan.FromSeconds(4);
 
             var tasks = new List<Task>();

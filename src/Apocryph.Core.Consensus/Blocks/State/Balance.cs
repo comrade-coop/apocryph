@@ -15,7 +15,7 @@ namespace Apocryph.Core.Consensus.Blocks.State
             }
             if (Amount < amount)
             {
-                throw new Exception("Insufficient enough funds");
+                throw new Exception("Insufficient funds");
             }
 
             Amount -= amount;
