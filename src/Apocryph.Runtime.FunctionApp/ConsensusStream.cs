@@ -87,7 +87,7 @@ namespace Apocryph.Runtime.FunctionApp
             {
                 if (message.Type == MessageType.Valid)
                 {
-                    var block = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, message.Value);
+                    var block = await HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, message.Value);
                     _proposer!.AddConfirmedBlock(block!);
                 }
             }
@@ -97,7 +97,7 @@ namespace Apocryph.Runtime.FunctionApp
         {
             await foreach (var hash in filter.WithCancellation(cancellationToken))
             {
-                var block = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
+                var block = await  HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
                 _proposer!.AddConfirmedBlock(block!);
             }
         }
@@ -195,8 +195,9 @@ namespace Apocryph.Runtime.FunctionApp
 
         private bool IsNewBlockBetter(Hash current, Hash suggested)
         {
-            var currentBlock = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, current);
-            var suggestedBlock = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, suggested);
+            // TODO: change .Result to await
+            var currentBlock = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, current).Result;
+            var suggestedBlock = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, suggested).Result;
 
             if (currentBlock == null) return true;
             if (suggestedBlock == null) return false;

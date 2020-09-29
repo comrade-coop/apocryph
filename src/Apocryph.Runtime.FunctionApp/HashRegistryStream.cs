@@ -28,11 +28,11 @@ namespace Apocryph.Runtime.FunctionApp
             }
         }
 
-        public static T? GetObjectByHash<T>(IQueryable<HashRegistryEntry> queryable, Hash hash)
+        public static Task<T?> GetObjectByHash<T>(IQueryable<HashRegistryEntry> queryable, Hash hash)
             where T: class
         {
             var s = hash.ToString();
-            return (T?)queryable.Where(x => x.Hash == s).FirstOrDefault()?.Value;
+            return Task.FromResult((T?)queryable.Where(x => x.Hash == s).FirstOrDefault()?.Value);
         }
     }
 }

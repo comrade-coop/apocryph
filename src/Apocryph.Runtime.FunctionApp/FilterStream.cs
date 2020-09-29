@@ -74,7 +74,7 @@ namespace Apocryph.Runtime.FunctionApp
                 var hash = message.Value;
                 if (!_validatedBlocks.ContainsKey(hash))
                 {
-                    var block = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
+                    var block = await HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
                     _validatedBlocks[hash] = Validate(context, block!);
                 }
 
@@ -82,7 +82,7 @@ namespace Apocryph.Runtime.FunctionApp
 
                 if (valid)
                 {
-                    var block = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
+                    var block = await HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
                     foreach (var (chainId, validator) in _validators)
                     {
                         validator.AddConfirmedBlock(block!);
@@ -101,7 +101,7 @@ namespace Apocryph.Runtime.FunctionApp
                 var hash = gossip.Value;
                 if (!_validatedBlocks.ContainsKey(hash))
                 {
-                    var block = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
+                    var block = await HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
                     _validatedBlocks[hash] = Validate(context, block!);
                 }
             }

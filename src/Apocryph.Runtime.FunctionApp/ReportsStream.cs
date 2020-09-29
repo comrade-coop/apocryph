@@ -52,7 +52,7 @@ namespace Apocryph.Runtime.FunctionApp
         {
             await foreach (var hash in filter)
             {
-                var block = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
+                var block = await HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
                 _blocks[block!.ChainId] = hash;
             }
         }

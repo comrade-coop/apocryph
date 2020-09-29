@@ -57,11 +57,10 @@ namespace Apocryph.Runtime.FunctionApp
         {
             await foreach (var hash in filter.WithCancellation(cancellationToken))
             {
-                var block = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
+                var block = await HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
                 _validator!.AddConfirmedBlock(block!);
             }
         }
-
 
         private async Task HandleConsensus(PerperStreamContext context, IAsyncEnumerable<Message<Hash>> consensus, CancellationToken cancellationToken)
         {
@@ -70,7 +69,7 @@ namespace Apocryph.Runtime.FunctionApp
                 if (message.Type != MessageType.Proposed) continue;
 
                 var hash = message.Value;
-                var block = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
+                var block = await HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
                 if (!_validatedBlocks.ContainsKey(hash))
                 {
                     _validatedBlocks[hash] = Validate(context, _node!, block!);
@@ -97,7 +96,7 @@ namespace Apocryph.Runtime.FunctionApp
                 var hash = query.Value;
                 if (!_validatedBlocks.ContainsKey(hash))
                 {
-                    var block = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
+                    var block = await HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
                     _validatedBlocks[hash] = Validate(context, _node, block!);
                 }
             }

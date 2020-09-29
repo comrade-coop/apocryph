@@ -25,7 +25,7 @@ namespace Apocryph.Runtime.FunctionApp
             var hashRegistry = context.Query<HashRegistryEntry>(hashRegistryStream);
             await foreach (var hash in filter)
             {
-                var block = HashRegistryStream.GetObjectByHash<Block>(hashRegistry, hash);
+                var block = await HashRegistryStream.GetObjectByHash<Block>(hashRegistry, hash);
                 var chain = chains[block!.ChainId];
                 foreach (var (slot, salt) in RandomWalk.Run(hash).Take(1 + chain.SlotCount / 10))
                 {
