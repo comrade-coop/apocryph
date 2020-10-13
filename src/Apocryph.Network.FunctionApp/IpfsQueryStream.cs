@@ -9,6 +9,7 @@ using System.Text.Json;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
+using Apocryph.Core.Consensus;
 using Apocryph.Core.Consensus.Communication;
 using Apocryph.Core.Consensus.VirtualNodes;
 using Apocryph.Core.Consensus.Blocks;
@@ -23,7 +24,7 @@ namespace Apocryph.Runtime.FunctionApp
         static public readonly string ProtocolName = "/x/apocryph/query/0.0";
 
         private Dictionary<Node, TaskCompletionSource<Query<Hash>>> _receiveCompletionSources = new Dictionary<Node, TaskCompletionSource<Query<Hash>>>();
-        private IAsyncCollector<Query<Hash>>? _output ;
+        private IAsyncCollector<Query<Hash>>? _output;
 
         [FunctionName(nameof(IpfsQueryStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
@@ -44,7 +45,6 @@ namespace Apocryph.Runtime.FunctionApp
             var tasks = new List<Task>();
             await foreach (var query in queries.WithCancellation(cancellationToken))
             {
-
                 if (query.Verb == QueryVerb.Response && _receiveCompletionSources.ContainsKey(query.Sender))
                 {
                     _receiveCompletionSources[query.Sender].TrySetResult(query);
@@ -57,7 +57,7 @@ namespace Apocryph.Runtime.FunctionApp
 
                     var forwardEndpoint = new IPEndPoint(Dns.GetHostAddresses(ipfs.ApiUri.Host).First(), port);
 
-                    await ipfs.DoCommandAsync("p2p/forward", cancellationToken, ProtocolName, new []
+                    await ipfs.DoCommandAsync("p2p/forward", cancellationToken, ProtocolName, new[]
                     {
                         $"arg=/ip4/{forwardEndpoint.Address}/tcp/{forwardEndpoint.Port}",
                         $"arg=/p2p/{peerId.Id}"
@@ -89,7 +89,7 @@ namespace Apocryph.Runtime.FunctionApp
             listeningSocket.Bind(listenEndpoint);
             listeningSocket.Listen(120);
 
-            await ipfs.DoCommandAsync("p2p/listen", cancellationToken, ProtocolName, new []
+            await ipfs.DoCommandAsync("p2p/listen", cancellationToken, ProtocolName, new[]
             {
                 $"arg=/ip4/{listenEndpoint.Address}/tcp/{listenEndpoint.Port}"
             });

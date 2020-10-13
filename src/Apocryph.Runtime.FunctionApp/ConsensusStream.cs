@@ -23,7 +23,7 @@ namespace Apocryph.Runtime.FunctionApp
         private Dictionary<int, Hash> _pastBlocks = new Dictionary<int, Hash>();
         private int _round = 0;
         private Proposer? _proposer;
-        private IQueryable<HashRegistryEntry>? _hashRegistry;
+        private Func<Hash, Task<Block>>? _hashRegistryWorker;
         private IAsyncCollector<object>? _output;
         private Dictionary<Node, TaskCompletionSource<Query<Hash>>> _receiveCompletionSources = new Dictionary<Node, TaskCompletionSource<Query<Hash>>>();
 
@@ -37,14 +37,14 @@ namespace Apocryph.Runtime.FunctionApp
             [Perper("validator")] IAsyncEnumerable<Message<Hash>> validator,
             [Perper("chain")] IAsyncEnumerable<Message<(Guid, Node?[])>> chain,
             [Perper("queries")] IAsyncEnumerable<Query<Hash>> queries,
-            [Perper("hashRegistry")] IPerperStream hashRegistry,
+            [Perper("hashRegistryWorker")] string hashRegistryWorker,
             [Perper("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
         {
             _output = output;
             _node = node;
             _nodes = nodes.ToArray();
-            _hashRegistry = context.Query<HashRegistryEntry>(hashRegistry);
+            _hashRegistryWorker = hash => context.CallWorkerAsync<Block>(hashRegistryWorker, new { hash }, default);
 
             var executor = new Executor(_node!.ChainId,
                 async (worker, input) => await context.CallWorkerAsync<(byte[]?, (string, object[])[], Dictionary<Guid, string[]>, Dictionary<Guid, string>)>(worker, new { input }, default));
@@ -87,7 +87,7 @@ namespace Apocryph.Runtime.FunctionApp
             {
                 if (message.Type == MessageType.Valid)
                 {
-                    var block = await HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, message.Value);
+                    var block = await _hashRegistryWorker!(message.Value);
                     _proposer!.AddConfirmedBlock(block!);
                 }
             }
@@ -97,7 +97,7 @@ namespace Apocryph.Runtime.FunctionApp
         {
             await foreach (var hash in filter.WithCancellation(cancellationToken))
             {
-                var block = await  HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
+                var block = await _hashRegistryWorker!(hash);
                 _proposer!.AddConfirmedBlock(block!);
             }
         }
@@ -196,8 +196,8 @@ namespace Apocryph.Runtime.FunctionApp
         private bool IsNewBlockBetter(Hash current, Hash suggested)
         {
             // TODO: change .Result to await
-            var currentBlock = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, current).Result;
-            var suggestedBlock = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, suggested).Result;
+            var currentBlock = _hashRegistryWorker!(current).Result;
+            var suggestedBlock = _hashRegistryWorker!(suggested).Result;
 
             if (currentBlock == null) return true;
             if (suggestedBlock == null) return false;

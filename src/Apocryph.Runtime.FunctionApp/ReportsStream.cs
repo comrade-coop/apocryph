@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Apocryph.Core.Consensus;
 using Apocryph.Core.Consensus.Blocks;
 using Apocryph.Core.Consensus.Communication;
 using Apocryph.Core.Consensus.VirtualNodes;
@@ -23,7 +24,7 @@ namespace Apocryph.Runtime.FunctionApp
         private Dictionary<Node, Dictionary<Type, Report>> _reports = new Dictionary<Node, Dictionary<Type, Report>>();
         private Dictionary<Guid, Node?[]>? _nodes;
         private Dictionary<Guid, Hash> _blocks = new Dictionary<Guid, Hash>();
-        private IQueryable<HashRegistryEntry>? _hashRegistry;
+        private Func<Hash, Task<Block>>? _hashRegistryWorker;
 
         [FunctionName(nameof(ReportsStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
@@ -31,13 +32,11 @@ namespace Apocryph.Runtime.FunctionApp
             [Perper("chain")] IAsyncEnumerable<Message<(Guid, Node?[])>> chain,
             [Perper("filter")] IAsyncEnumerable<Hash> filter,
             [Perper("reports")] IAsyncEnumerable<Report> reports,
-            [Perper("hashRegistry")] IPerperStream hashRegistry,
+            [Perper("hashRegistryWorker")] string hashRegistryWorker,
             CancellationToken cancellationToken)
         {
-            await Task.Delay(2000);
-
             _nodes = nodes;
-            _hashRegistry = context.Query<HashRegistryEntry>(hashRegistry);
+            _hashRegistryWorker = hash => context.CallWorkerAsync<Block>(hashRegistryWorker, new { hash }, default);
 
             await TaskHelper.WhenAllOrFail(
                 RunServer(cancellationToken),
@@ -50,7 +49,7 @@ namespace Apocryph.Runtime.FunctionApp
         {
             await foreach (var hash in filter)
             {
-                var block = await HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
+                var block = await _hashRegistryWorker!(hash);
                 _blocks[block!.ChainId] = hash;
             }
         }
@@ -109,7 +108,7 @@ namespace Apocryph.Runtime.FunctionApp
                         endpoints.MapGet("/block/{Hash}", WrapEndpoint(async (values) =>
                         {
                             var hash = Hash.Parse((string)values["Hash"]);
-                            var block = await HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
+                            var block = await _hashRegistryWorker!(hash);
                             return block;
                         }));
                         endpoints.MapGet("/node", WrapEndpoint((values) =>
@@ -119,7 +118,8 @@ namespace Apocryph.Runtime.FunctionApp
                     });
                 });
 
-                webBuilder.ConfigureLogging(logging => {
+                webBuilder.ConfigureLogging(logging =>
+                {
                     logging.SetMinimumLevel(LogLevel.Error);
                 });
             }).Build();

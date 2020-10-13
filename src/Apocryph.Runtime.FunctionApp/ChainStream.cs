@@ -19,7 +19,7 @@ namespace Apocryph.Runtime.FunctionApp
         private Dictionary<Guid, Chain>? _chains;
         private IPerperStream? _gossips;
         private IPerperStream? _queries;
-        private IPerperStream? _hashRegistry;
+        private string? _hashRegistryWorker;
         private Assigner assigner;
         private IAsyncCollector<object>? _output;
 
@@ -35,7 +35,7 @@ namespace Apocryph.Runtime.FunctionApp
             [Perper("chains")] Dictionary<Guid, Chain> chains,
             [Perper("gossips")] IPerperStream gossips,
             [Perper("queries")] IPerperStream queries,
-            [Perper("hashRegistry")] IPerperStream hashRegistry,
+            [Perper("hashRegistryWorker")] string hashRegistryWorker,
             [Perper("slotGossips")] IAsyncEnumerable<SlotClaim> slotGossips,
             [Perper("salts")] IAsyncEnumerable<(Guid, int, byte[])> salts,
             [Perper("output")] IAsyncCollector<object> output,
@@ -46,7 +46,7 @@ namespace Apocryph.Runtime.FunctionApp
             _chains = chains;
             _gossips = gossips;
             _queries = queries;
-            _hashRegistry = hashRegistry;
+            _hashRegistryWorker = hashRegistryWorker;
             _output = output;
 
             foreach (var (chainId, chain) in chains)
@@ -102,7 +102,7 @@ namespace Apocryph.Runtime.FunctionApp
                         var chainData = _chains![chainId];
                         var queries = _queries!.Filter("Receiver", node);
                         var gossips = _gossips!;
-                        var hashRegistry = _hashRegistry!;
+                        var hashRegistryWorker = _hashRegistryWorker!;
                         var chain = _context!.GetStream();
 
                         var filter = _context!.DeclareStream($"Filter-{node}", typeof(FilterStream));
@@ -114,7 +114,7 @@ namespace Apocryph.Runtime.FunctionApp
                             validator = validator.Subscribe(),
                             filter = filter.Subscribe(),
                             queries = queries.Subscribe(),
-                            hashRegistry,
+                            hashRegistryWorker,
                             chainData,
                             node,
                             proposerAccount = Guid.NewGuid(),
@@ -126,7 +126,7 @@ namespace Apocryph.Runtime.FunctionApp
                             consensus = consensus.Subscribe(),
                             filter = filter.Subscribe(),
                             queries = queries.Subscribe(),
-                            hashRegistry,
+                            hashRegistryWorker,
                             chainData,
                             node
                         });
@@ -144,7 +144,7 @@ namespace Apocryph.Runtime.FunctionApp
                         {
                             ibc = ibc.Subscribe(),
                             gossips = gossips.Subscribe(),
-                            hashRegistry,
+                            hashRegistryWorker,
                             chains,
                             node
                         });

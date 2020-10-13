@@ -6,8 +6,9 @@ using System.Text.Json;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
-using Apocryph.Core.Consensus.Communication;
+using Apocryph.Core.Consensus;
 using Apocryph.Core.Consensus.Blocks;
+using Apocryph.Core.Consensus.Communication;
 using Apocryph.Core.Consensus.Serialization;
 using Ipfs.Http;
 
@@ -15,10 +16,9 @@ namespace Apocryph.Runtime.FunctionApp
 {
     public class IpfsGossipStream
     {
-        // TODO: Rework to a custom gossipsub implementation on top of IPFS p2p.
         static public readonly string PubsubChannel = "x-apocryph-gossip-0.0";
 
-        private IAsyncCollector<Gossip<Hash>>? _output ;
+        private IAsyncCollector<Gossip<Hash>>? _output;
 
         [FunctionName(nameof(IpfsGossipStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
@@ -27,13 +27,15 @@ namespace Apocryph.Runtime.FunctionApp
             CancellationToken cancellationToken)
         {
             _output = output;
+
             var ipfs = new IpfsClient();
+
             await TaskHelper.WhenAllOrFail(
                 HandleGossips(ipfs, gossips, cancellationToken),
                 RunSubscriber(ipfs, cancellationToken));
         }
 
-        private async Task HandleGossips(IpfsClient ipfs, IAsyncEnumerable<Gossip<Hash>> gossips, CancellationToken cancellationToken)
+        private async Task HandleGossips(IpfsClient ipfs, IAsyncEnumerable<object> gossips, CancellationToken cancellationToken)
         {
             await foreach (var gossip in gossips.WithCancellation(cancellationToken))
             {

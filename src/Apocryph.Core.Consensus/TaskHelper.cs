@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace Apocryph.Runtime.FunctionApp
+namespace Apocryph.Core.Consensus
 {
     public static class TaskHelper
     {

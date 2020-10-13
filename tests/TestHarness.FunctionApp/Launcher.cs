@@ -8,6 +8,7 @@ using Apocryph.Core.Consensus.Blocks.Command;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Config;
 using Perper.WebJobs.Extensions.Model;
+using TestHarness.FunctionApp.Mock;
 
 namespace TestHarness.FunctionApp
 {
@@ -18,7 +19,7 @@ namespace TestHarness.FunctionApp
             PerperModuleContext context,
             CancellationToken cancellationToken)
         {
-            var slotCount = 20; // 30
+            var slotCount = 10; // 30
 
             var pingChainId = Guid.NewGuid();
             var pongChainId = Guid.NewGuid();
@@ -31,6 +32,9 @@ namespace TestHarness.FunctionApp
 
             await context.StreamActionAsync("Apocryph.Runtime.FunctionApp.ChainListStream.Run", new
             {
+                hashRegistryStream = typeof(HashRegistryStream).FullName! + ".Run",
+                hashRegistryWorker = typeof(HashRegistryWorker).FullName! + ".Run",
+                outsideGossipsStream = "DummyStream",
                 slotGossips,
                 chains = new Dictionary<Guid, Chain>
                 {
