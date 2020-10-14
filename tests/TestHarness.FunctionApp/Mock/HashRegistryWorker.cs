@@ -19,7 +19,7 @@ namespace TestHarness.FunctionApp.Mock
             [Perper("type")] Type type,
             CancellationToken cancellationToken)
         {
-            Console.WriteLine("Read: {0}", hash);
+            // Console.WriteLine("Read: {0}", hash);
             byte[]? serialized;
 
             // Simulate IPFS's behavior where trying to get a nonexistent object blocks until the object is available.

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Text.Json;
@@ -15,20 +14,16 @@ namespace Apocryph.Runtime.FunctionApp
     {
         [FunctionName(nameof(HashRegistryStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [Perper("filter")] Type filter,
             [Perper("input")] IAsyncEnumerable<Block> input)
         {
             var ipfs = new IpfsClient();
 
             await foreach (var value in input)
             {
-                if (filter.IsAssignableFrom(value.GetType()))
-                {
-                    var serialized = JsonSerializer.SerializeToUtf8Bytes(value, ApocryphSerializationOptions.JsonSerializerOptions);
+                var serialized = JsonSerializer.SerializeToUtf8Bytes(value, ApocryphSerializationOptions.JsonSerializerOptions);
 
-                    // FIXME: Using "raw" here instead of "json", since Ipfs.Http.Client doesn't seem to consider "json" a valid MultiCodec
-                    await ipfs.Block.PutAsync(serialized, "raw", "sha2-256");
-                }
+                // FIXME: Using "raw" here instead of "json", since Ipfs.Http.Client doesn't seem to consider "json" a valid MultiCodec
+                await ipfs.Block.PutAsync(serialized, "raw", "sha2-256");
             }
         }
     }

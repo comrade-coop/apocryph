@@ -27,7 +27,7 @@ namespace TestHarness.FunctionApp.Mock
 
                 _storedValues.TryAdd(hash, serialized);
 
-                System.Console.WriteLine("Store: {0}", hash);
+                // Console.WriteLine("Store: {0}", hash);
             }
         }
     }

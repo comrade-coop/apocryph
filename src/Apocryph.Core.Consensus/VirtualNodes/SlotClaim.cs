@@ -4,7 +4,15 @@ namespace Apocryph.Core.Consensus.VirtualNodes
 {
     public struct SlotClaim
     {
-        public PublicKey Key { get; set; } // Should also be signed with this key
         public Guid ChainId { get; set; }
+        public Peer Peer { get; set; }
+        public byte[] Proof { get; set; }
+
+        public SlotClaim(Guid chainId, Peer peer, byte[] proof)
+        {
+            ChainId = chainId;
+            Peer = peer;
+            Proof = proof;
+        }
     }
 }

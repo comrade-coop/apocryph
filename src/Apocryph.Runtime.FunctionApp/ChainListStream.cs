@@ -14,11 +14,12 @@ namespace Apocryph.Runtime.FunctionApp
     {
         [FunctionName(nameof(ChainListStream))]
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
-            [Perper("slotGossips")] IPerperStream slotGossips,
+            [Perper("self")] Peer self,
             [Perper("outsideGossipsStream")] string outsideGossipsStream,
             [Perper("outsideQueriesStream")] string outsideQueriesStream,
             [Perper("hashRegistryStream")] string hashRegistryStream,
             [Perper("hashRegistryWorker")] string hashRegistryWorker,
+            [Perper("slotGossipsStream")] string slotGossipsStream,
             [Perper("chains")] IDictionary<Guid, Chain> chains,
             [Perper("output")] IAsyncCollector<int> output,
             CancellationToken cancellationToken)
@@ -30,14 +31,23 @@ namespace Apocryph.Runtime.FunctionApp
             var hashes = peering;
             await using var salts = context.DeclareStream("Salts", typeof(SaltsStream));
 
+            await using var slotGossips = context.DeclareStream("Salts", slotGossipsStream);
+
             await using var chain = await context.StreamFunctionAsync("Chain", typeof(ChainStream), new
             {
+                self,
                 chains,
                 gossips,
                 queries,
                 hashRegistryWorker,
                 salts = salts.Subscribe(),
                 slotGossips = slotGossips.Subscribe()
+            });
+
+            await context.StreamFunctionAsync(slotGossips, new
+            {
+                self,
+                claims = chain.Subscribe()
             });
 
             // HACK: Create an empty stream for the global IBC
@@ -77,11 +87,15 @@ namespace Apocryph.Runtime.FunctionApp
 
             await context.StreamFunctionAsync(outsideGossips, new
             {
+                self,
+                chain = chain.Subscribe(),
                 gossips = peering.Subscribe()
             });
 
             await context.StreamFunctionAsync(outsideQueries, new
             {
+                self,
+                chain = chain.Subscribe(),
                 queries = peering.Subscribe()
             });
 
