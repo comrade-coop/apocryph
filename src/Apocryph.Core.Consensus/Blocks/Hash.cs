@@ -40,7 +40,7 @@ namespace Apocryph.Core.Consensus.Blocks
         // Via https://stackoverflow.com/a/311179
         public override string ToString()
         {
-            return BitConverter.ToString(Value).Replace("-","");
+            return BitConverter.ToString(Value).Replace("-", "");
         }
 
         // Via https://stackoverflow.com/a/311179

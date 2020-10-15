@@ -17,7 +17,7 @@ namespace Apocryph.Runtime.FunctionApp
     {
         private Dictionary<Guid, Validator> _validators = new Dictionary<Guid, Validator>();
         private Dictionary<Hash, Task<bool>> _validatedBlocks = new Dictionary<Hash, Task<bool>>();
-        private IQueryable<HashRegistryEntry>? _hashRegistry;
+        private Func<Hash, Task<Block>>? _hashRegistryWorker;
         private IAsyncCollector<object>? _output;
 
         [FunctionName(nameof(FilterStream))]
@@ -25,11 +25,11 @@ namespace Apocryph.Runtime.FunctionApp
             [Perper("chains")] Dictionary<Guid, Chain> chains,
             [Perper("ibc")] IAsyncEnumerable<Message<Hash>> ibc,
             [Perper("gossips")] IAsyncEnumerable<Gossip<Hash>> gossips,
-            [Perper("hashRegistry")] IPerperStream hashRegistry,
+            [Perper("hashRegistryWorker")] string hashRegistryWorker,
             [Perper("output")] IAsyncCollector<object> output,
             CancellationToken cancellationToken)
         {
-            _hashRegistry = context.Query<HashRegistryEntry>(hashRegistry);
+            _hashRegistryWorker = hash => context.CallWorkerAsync<Block>(hashRegistryWorker, new { hash }, default);
             _output = output;
 
             foreach (var (chainId, chain) in chains)
@@ -74,7 +74,7 @@ namespace Apocryph.Runtime.FunctionApp
                 var hash = message.Value;
                 if (!_validatedBlocks.ContainsKey(hash))
                 {
-                    var block = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
+                    var block = await _hashRegistryWorker!(hash);
                     _validatedBlocks[hash] = Validate(context, block!);
                 }
 
@@ -82,7 +82,7 @@ namespace Apocryph.Runtime.FunctionApp
 
                 if (valid)
                 {
-                    var block = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
+                    var block = await _hashRegistryWorker!(hash);
                     foreach (var (chainId, validator) in _validators)
                     {
                         validator.AddConfirmedBlock(block!);
@@ -101,7 +101,7 @@ namespace Apocryph.Runtime.FunctionApp
                 var hash = gossip.Value;
                 if (!_validatedBlocks.ContainsKey(hash))
                 {
-                    var block = HashRegistryStream.GetObjectByHash<Block>(_hashRegistry!, hash);
+                    var block = await _hashRegistryWorker!(hash);
                     _validatedBlocks[hash] = Validate(context, block!);
                 }
             }

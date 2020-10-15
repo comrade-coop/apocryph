@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Linq;
@@ -20,8 +20,8 @@ namespace Apocryph.Runtime.Reporting
 
         public static async Task Main(string[] args)
         {
-            HttpClient.BaseAddress = new Uri(args.Length > 0 ? args[0] : "http://localhost:5001/");
-            HttpClient.Timeout = TimeSpan.FromSeconds(4);
+            HttpClient.BaseAddress = new Uri(args.Length > 0 ? args[0] : "http://localhost:8901/");
+            HttpClient.Timeout = TimeSpan.FromSeconds(40);
 
             var tasks = new List<Task>();
             var blocks = new ConcurrentDictionary<Guid, Block>();

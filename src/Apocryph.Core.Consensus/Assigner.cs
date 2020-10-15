@@ -1,28 +1,47 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Numerics;
+using System.Security.Cryptography;
 using Apocryph.Core.Consensus.VirtualNodes;
 
 namespace Apocryph.Core.Consensus
 {
     public class Assigner
     {
+        private struct SlotOccupant
+        {
+            public BigInteger Difficulty { get; }
+            public BigInteger Position { get => Difficulty; }
+            public Peer Peer { get; }
+            public byte[] Proof { get; }
+
+            public SlotOccupant(BigInteger difficulty, Peer peer, byte[] proof)
+            {
+                Difficulty = difficulty;
+                Peer = peer;
+                Proof = proof;
+            }
+
+            public SlotOccupant(Peer peer, byte[] proof)
+            {
+                using var sha256Hash = SHA256.Create();
+                var hash = sha256Hash.ComputeHash(peer.Value.Concat(new byte[] { 0 }).Concat(proof).ToArray());
+                Peer = peer;
+                Proof = proof;
+                Difficulty = new BigInteger(hash.Concat(new byte[] { 0 }).ToArray());
+            }
+        }
+
         private class Slot
         {
             public byte[] Salt { get; set; } = new byte[0];
-            public Node? Occupant { get; set; }
-            public PublicKey? PublicKey { get; set; }
-            public PrivateKey? PrivateKey { get; set; }
+            public SlotOccupant? Occupant { get; set; }
         }
 
         private Dictionary<Guid, Slot[]> _slots = new Dictionary<Guid, Slot[]>();
 
-        private Func<Guid, int, PublicKey, PrivateKey?, Node> _createNode;
-
-        public Assigner(Func<Guid, int, PublicKey, PrivateKey?, Node> createNode)
-        {
-            _createNode = createNode;
-        }
+        public event Action<Node, Peer, byte[]>? SlotOccupantChanged;
 
         public void SetSalt(Guid chainId, int slot, byte[] salt)
         {
@@ -34,41 +53,51 @@ namespace Apocryph.Core.Consensus
             _slots[chainId] = Enumerable.Range(0, slotCount).Select(x => new Slot()).ToArray();
         }
 
-        public void AddKey(PublicKey key, PrivateKey? privateKey)
+        public bool ProcessClaim(SlotClaim claim)
         {
+            return ProcessClaim(claim.ChainId, claim.Peer, claim.Proof);
+        }
+
+        public void ProcessClaim(Peer peer, byte[] proof)
+        {
+            var occupant = new SlotOccupant(peer, proof);
             foreach (var (chainId, _) in _slots)
             {
-                AddKey(chainId, key, privateKey);
+                ProcessClaim(chainId, occupant);
             }
         }
 
-        public bool AddKey(Guid chainId, PublicKey key, PrivateKey? privateKey)
+        public bool ProcessClaim(Guid chainId, Peer peer, byte[] proof)
         {
-            var slotIndex = (int)(key.GetPosition() % _slots[chainId].Length);
+            return ProcessClaim(chainId, new SlotOccupant(peer, proof));
+        }
+
+        // TODO: Ensure thread safety
+        private bool ProcessClaim(Guid chainId, SlotOccupant occupant)
+        {
+            var slotIndex = (int)(occupant.Position % _slots[chainId].Length);
             var slot = _slots[chainId][slotIndex];
 
-            if (slot.PublicKey is PublicKey slotKey
-                )// && slotKey.GetDifficulty(chainId, slot.Salt) > key.GetDifficulty(chainId, slot.Salt))
+            if (slot.Occupant is SlotOccupant existingOccupant
+                ) // && existingOccupant.Difficulty > occupant.Difficulty)
             {
                 return false;
             }
 
-            slot.PublicKey = key;
-            slot.PrivateKey = privateKey;
-
-            slot.Occupant = _createNode.Invoke(chainId, slotIndex, slot.PublicKey.Value, slot.PrivateKey);
+            slot.Occupant = occupant;
+            SlotOccupantChanged?.Invoke(new Node(chainId, slotIndex), occupant.Peer, occupant.Proof);
 
             return true;
         }
 
         public Node?[] GetNodes(Guid chainId)
         {
-            return _slots[chainId].Select(x => x.Occupant).ToArray();
+            return Enumerable.Range(0, _slots[chainId].Length).Select(x => new Node(chainId, x)).ToArray();
         }
 
         public Dictionary<Guid, Node?[]> GetNodes()
         {
-            return _slots.ToDictionary(kv => kv.Key, kv => kv.Value.Select(x => x.Occupant).ToArray());
+            return _slots.Keys.ToDictionary(chainId => chainId, chainId => GetNodes(chainId));
         }
     }
 }

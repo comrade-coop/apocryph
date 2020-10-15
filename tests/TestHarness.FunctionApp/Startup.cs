@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,10 +10,6 @@ namespace TestHarness.FunctionApp
         public override void Configure(IFunctionsHostBuilder builder)
         {
             builder.Services.AddLogging();
-            builder.Services.AddTransient<IDictionary<string, Guid>>(provider => new Dictionary<string, Guid>()
-            {
-
-            });
         }
     }
 }

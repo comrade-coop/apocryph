@@ -17,15 +17,13 @@ namespace Apocryph.Runtime.FunctionApp
         public async Task Run([PerperStreamTrigger] PerperStreamContext context,
             [Perper("chains")] Dictionary<Guid, Chain> chains,
             [Perper("filter")] IAsyncEnumerable<Hash> filter,
-            [Perper("hashRegistry")] IPerperStream hashRegistryStream,
+            [Perper("hashRegistryWorker")] string hashRegistryWorker,
             [Perper("output")] IAsyncCollector<(Guid, int, byte[])> output,
             CancellationToken cancellationToken)
         {
-            await Task.Delay(2000);
-            var hashRegistry = context.Query<HashRegistryEntry>(hashRegistryStream);
             await foreach (var hash in filter)
             {
-                var block = HashRegistryStream.GetObjectByHash<Block>(hashRegistry, hash);
+                var block = await context.CallWorkerAsync<Block>(hashRegistryWorker, new { hash }, cancellationToken);
                 var chain = chains[block!.ChainId];
                 foreach (var (slot, salt) in RandomWalk.Run(hash).Take(1 + chain.SlotCount / 10))
                 {
