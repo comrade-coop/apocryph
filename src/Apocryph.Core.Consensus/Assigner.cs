@@ -29,7 +29,7 @@ namespace Apocryph.Core.Consensus
                 var hash = sha256Hash.ComputeHash(peer.Value.Concat(new byte[] { 0 }).Concat(proof).ToArray());
                 Peer = peer;
                 Proof = proof;
-                Difficulty =  new BigInteger(hash.Concat(new byte[] { 0 }).ToArray());
+                Difficulty = new BigInteger(hash.Concat(new byte[] { 0 }).ToArray());
             }
         }
 

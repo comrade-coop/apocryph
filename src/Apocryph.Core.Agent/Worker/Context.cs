@@ -88,12 +88,14 @@ namespace Apocryph.Core.Agent.Worker
         public (byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>) Save()
         {
             var state = State is null ? null : JsonSerializer.SerializeToUtf8Bytes(State);
-            var attachedReferences = _attachedReferences.ToDictionary(pair => pair.Key, pair =>
-             {
-                 var payload = JsonSerializer.SerializeToUtf8Bytes(pair.Value);
-                 using var sha1 = new SHA1CryptoServiceProvider();
-                 return Convert.ToBase64String(sha1.ComputeHash(payload));
-             });
+            var attachedReferences = _attachedReferences.ToDictionary(
+                pair => pair.Key,
+                pair =>
+                {
+                    var payload = JsonSerializer.SerializeToUtf8Bytes(pair.Value);
+                    using var sha1 = new SHA1CryptoServiceProvider();
+                    return Convert.ToBase64String(sha1.ComputeHash(payload));
+                });
             return (state, _actions.ToArray(), _createdReferences, attachedReferences);
         }
     }
