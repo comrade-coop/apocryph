@@ -1,3 +1,9 @@
+using System;
+using System.Collections.Generic;
+using Perper.WebJobs.Extensions.Fake;
+using Perper.WebJobs.Extensions.Model;
+using Xunit;
+
 namespace Apocryph.ServiceRegistry.Test
 {
     using ServiceRegistry = Apocryph.ServiceRegistry.FunctionApp.ServiceRegistry;
@@ -82,8 +88,9 @@ namespace Apocryph.ServiceRegistry.Test
         {
             public IEqualityComparer<TV> ValueComparer { get; set; } = EqualityComparer<TV>.Default;
 
-            public bool Equals(IDictionary<TK, TV> a, IDictionary<TK, TV> b)
+            public bool Equals(IDictionary<TK, TV>? a, IDictionary<TK, TV>? b)
             {
+                if (a == null || b == null) return a == b;
                 if (a.Count != b.Count) return false;
 
                 foreach (var (key, valueA) in a)
