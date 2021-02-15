@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +16,7 @@ namespace Apocryph.HashRegistry
             HashRegistryAgent = hashRegistryAgent;
         }
 
-        public async Task<Hash<T>> Store<T>(T value, CancellationToken cancellationToken = default)
+        public async Task<Hash<T>> StoreAsync<T>(T value, CancellationToken cancellationToken = default)
         {
             var serialized = JsonSerializer.SerializeToUtf8Bytes(value, ApocryphSerializationOptions.JsonSerializerOptions);
             await HashRegistryAgent.CallActionAsync("Store", serialized); // cancellationToken
@@ -23,7 +24,7 @@ namespace Apocryph.HashRegistry
             return hash;
         }
 
-        public async Task<T> Retrieve<T>(Hash<T> hash, CancellationToken cancellationToken = default)
+        public async Task<T> RetrieveAsync<T>(Hash<T> hash, CancellationToken cancellationToken = default)
         {
             var serialized = await HashRegistryAgent.CallFunctionAsync<byte[]>("Retrieve", hash.Cast<object>()); // cancellationToken
             var value = JsonSerializer.Deserialize<T>(serialized, ApocryphSerializationOptions.JsonSerializerOptions);

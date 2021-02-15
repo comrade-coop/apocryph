@@ -26,7 +26,8 @@ namespace Apocryph.HashRegistry.Test
         public static object[][] SerializationExamples = new[] {
             new object[] { 42 },
             new object[] { "Example text" },
-            new object[] { new Example { Number = 42 } }
+            new object[] { new Example { Number = 42 } },
+            new object[] { (42, 103, "Tuple") }
         };
 
         public static object[][] SerializationExamplesInterface = SerializationExamples.Where(x => x[0] is IExample).ToArray();

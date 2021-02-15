@@ -31,9 +31,9 @@ namespace Apocryph.HashRegistry.Test
 
             var value = new Example { Number = data };
 
-            var hash = await proxy.Store(value, default);
+            var hash = await proxy.StoreAsync(value, default);
 
-            var result = await proxy.Retrieve<Example>(hash, default);
+            var result = await proxy.RetrieveAsync<Example>(hash, default);
 
             Assert.Equal(data, result.Number);
             Assert.NotEqual(value, result); // Reference equality

@@ -25,37 +25,16 @@ namespace Apocryph.HashRegistry.Serialization
             return (JsonConverter)Activator.CreateInstance(convertedType, new object[] { this })!;
         }
 
-        private Dictionary<string, Type>? _typeMap = null;
-
-        private void InitializeTypeMap()
+        // TODO: Use type full names if possible instead of assembly qualified names
+        // Maybe move type serialization to a seperate converter?
+        private Type? ResolveType(string name)
         {
-            _typeMap = new Dictionary<string, Type>();
-            var seenTypesNames = new HashSet<string>();
-
-            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                foreach (var type in assembly.GetTypes())
-                {
-                    var typeName = type.FullName!;
-
-                    if (seenTypesNames.Add(typeName))
-                    {
-                        _typeMap[typeName] = type;
-                    }
-                    else
-                    {
-                        _typeMap.Remove(typeName);
-                    }
-                }
-            }
+            return Type.GetType(name);
         }
 
-        private Type? GetType(string name)
+        private string GetTypeName(Type type)
         {
-            if (_typeMap == null) InitializeTypeMap();
-
-            _typeMap!.TryGetValue(name, out var result);
-            return result;
+            return type.AssemblyQualifiedName!;
         }
 
         private class ObjectParameterConstructorConverterInner<T> : JsonConverter<T>
@@ -93,7 +72,7 @@ namespace Apocryph.HashRegistry.Serialization
                     if (Factory.AllowSubtypes && propertyName == Factory.TypeProperty)
                     {
                         var typeName = JsonSerializer.Deserialize<string>(ref reader, options);
-                        var newType = Factory.GetType(typeName);
+                        var newType = Factory.ResolveType(typeName);
                         if (newType == null)
                         {
                             throw new JsonException($"Type {typeName} could not be found");
@@ -214,8 +193,7 @@ namespace Apocryph.HashRegistry.Serialization
                 if (value?.GetType() != typeof(T) && Factory.AllowSubtypes)
                 {
                     type = value?.GetType()!;
-                    // Note: Might need to use Assembly Qualified Name here
-                    writer.WriteString(Factory.TypeProperty, type.FullName);
+                    writer.WriteString(Factory.TypeProperty, Factory.GetTypeName(type));
                 }
 
                 foreach (var property in type.GetProperties())
