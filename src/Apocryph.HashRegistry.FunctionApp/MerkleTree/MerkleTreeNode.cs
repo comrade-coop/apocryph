@@ -1,9 +1,4 @@
-using System;
-using System.Linq;
 using System.Collections.Generic;
-using System.Text.Json;
-using System.Threading.Tasks;
-using Apocryph.HashRegistry.Serialization;
 
 namespace Apocryph.HashRegistry.MerkleTree
 {
@@ -16,7 +11,8 @@ namespace Apocryph.HashRegistry.MerkleTree
 
         public Hash<IMerkleTree<T>>[] Children { get; }
 
-        public async IAsyncEnumerable<T> EnumerateItems(HashRegistryProxy proxy) {
+        public async IAsyncEnumerable<T> EnumerateItems(HashRegistryProxy proxy)
+        {
             foreach (var child in Children)
             {
                 var subtree = await proxy.RetrieveAsync(child);

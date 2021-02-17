@@ -78,5 +78,8 @@ namespace Apocryph.HashRegistry
         {
             return BitConverter.ToString(Bytes).Replace("-", "");
         }
+
+        public static bool operator ==(Hash<T> left, Hash<T> right) => left.Bytes.SequenceEqual(right.Bytes);
+        public static bool operator !=(Hash<T> left, Hash<T> right) => !left.Bytes.SequenceEqual(right.Bytes);
     }
 }

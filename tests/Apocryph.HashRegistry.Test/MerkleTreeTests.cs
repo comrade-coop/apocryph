@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
-using Perper.WebJobs.Extensions.Fake;
 using Apocryph.HashRegistry.MerkleTree;
+using Perper.WebJobs.Extensions.Fake;
 using Xunit;
 
 namespace Apocryph.HashRegistry.Test
@@ -38,7 +38,7 @@ namespace Apocryph.HashRegistry.Test
 
             var rootHashes = new Hash<IMerkleTree<Example>>[groups];
             var expected = new List<Example>();
-            for (var i = 0; i < groups; i ++)
+            for (var i = 0; i < groups; i++)
             {
                 var groupHashes = new Hash<IMerkleTree<Example>>[elements];
                 for (var j = 0; j < elements; j++)

@@ -9,7 +9,7 @@ namespace Apocryph.HashRegistry.Test
     public class SerializationTests
     {
 
-#region Sample data
+        #region Sample data
         public interface IExample
         {
         }
@@ -31,7 +31,7 @@ namespace Apocryph.HashRegistry.Test
         };
 
         public static object[][] SerializationExamplesInterface = SerializationExamples.Where(x => x[0] is IExample).ToArray();
-#endregion Sample data
+        #endregion Sample data
 
         private readonly ITestOutputHelper _output;
         public SerializationTests(ITestOutputHelper output)

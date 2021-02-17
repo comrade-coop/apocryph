@@ -1,9 +1,5 @@
-using System;
-using System.Linq;
 using System.Collections.Generic;
-using System.Text.Json;
-using System.Threading.Tasks;
-using Apocryph.HashRegistry.Serialization;
+using System.Linq;
 
 namespace Apocryph.HashRegistry.MerkleTree
 {
@@ -16,7 +12,8 @@ namespace Apocryph.HashRegistry.MerkleTree
 
         public T Value { get; }
 
-        public IAsyncEnumerable<T> EnumerateItems(HashRegistryProxy proxy) {
+        public IAsyncEnumerable<T> EnumerateItems(HashRegistryProxy proxy)
+        {
             return new[] { Value }.ToAsyncEnumerable();
         }
     }
