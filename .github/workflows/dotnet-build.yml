@@ -1,0 +1,26 @@
+name: Run tests and check format
+
+on: [push, pull_request]
+
+jobs:
+  dotnet-test:
+    runs-on: ubuntu-latest
+    name: Build and run tests
+    steps:
+    - uses: actions/checkout@main
+    - uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '3.1.x'
+    - run: dotnet build
+    - run: dotnet test
+  dotnet-format:
+    runs-on: ubuntu-latest
+    name: Check formatting
+    steps:
+    - uses: actions/checkout@main
+    - uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '3.1.x'
+    - run: dotnet tool install --global dotnet-format --version 5.0
+    - run: dotnet restore
+    - run: ~/.dotnet/tools/dotnet-format --fix-style warn --fix-whitespace --check
