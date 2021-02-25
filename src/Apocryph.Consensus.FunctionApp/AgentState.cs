@@ -6,7 +6,7 @@ namespace Apocryph.Consensus
         public ReferenceData Data { get; }
         public string Handler { get; }
         // public Hash<AgentCode> Code { get; }
-        // public IMerkleTree<Reference> Subscriptions { get; }
+        // public IMerkleTree<Subscription> Subscriptions { get; }
 
         public AgentState(ReferenceData data, string handler)
         {

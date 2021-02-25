@@ -1,13 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Apocryph.Consensus;
 using Apocryph.HashRegistry;
-using Apocryph.ServiceRegistry;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Model;
 using Perper.WebJobs.Extensions.Triggers;
 
-namespace Apocryph.Consensus.FunctionApp
+namespace Apocryph.DummyConsensus.FunctionApp
 {
     public class DummyConsensus
     {
@@ -19,22 +19,9 @@ namespace Apocryph.Consensus.FunctionApp
         }
 
         [FunctionName("Apocryph-DummyConsensus")]
-        public async Task Start([PerperTrigger] (IAgent serviceRegistry, HashRegistryProxy hashRegsitry, Chain chain) input)
+        public async Task<IAsyncEnumerable<Message>> Start([PerperTrigger] (IAsyncEnumerable<Message> messages, string subscribtionsStream, HashRegistryProxy hashRegsitry, Chain chain) input)
         {
-            // var koth = input.serviceRegistry.CallFunctionAsync<Service>("Lookup", new ServiceLocator("Core", "KoTH"));
-
-            var chainId = Hash.From(input.chain);
-
-            var (inputStream, inputStreamName) = await _context.CreateBlankStreamAsync<Message>();
-            var outputStream = await _context.StreamFunctionAsync<Message>("ExecutionStream", (inputStream, input.hashRegsitry, input.chain));
-
-            var service = new Service(new Dictionary<string, string>() {
-                {"messages", inputStreamName}
-            }, new Dictionary<string, IStream>() {
-                {"messages", (IStream)outputStream}
-            });
-
-            await input.serviceRegistry.CallActionAsync("Register", (new ServiceLocator("Chain", chainId.ToString()), service));
+            return await _context.StreamFunctionAsync<Message>("ExecutionStream", (input.messages, input.hashRegsitry, input.chain));
         }
 
         [FunctionName("ExecutionStream")]

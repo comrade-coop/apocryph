@@ -1,17 +1,16 @@
-using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
-using Apocryph.Consensus.FunctionApp;
 using Apocryph.HashRegistry;
 using Apocryph.HashRegistry.MerkleTree;
-using Apocryph.HashRegistry.Serialization;
+using Apocryph.ServiceRegistry;
 using Perper.WebJobs.Extensions.Fake;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace Apocryph.Consensus.Test
 {
+    using DummyConsensus = Apocryph.DummyConsensus.FunctionApp.DummyConsensus;
     using HashRegistry = Apocryph.HashRegistry.FunctionApp.HashRegistry;
+    using ServiceRegistry = Apocryph.ServiceRegistry.FunctionApp.ServiceRegistry;
 
     public class DummyConsensusTests
     {
@@ -32,6 +31,18 @@ namespace Apocryph.Consensus.Test
             return new HashRegistryProxy(agent);
         }
 
+        private (FakeAgent, ServiceRegistry) GetServiceRegistryAgent()
+        {
+            var registry = new ServiceRegistry(new FakeState());
+
+            var agent = new FakeAgent();
+            agent.RegisterFunction("Register", ((ServiceLocator locator, Service service) input) => registry.Register(input, default));
+            agent.RegisterFunction("RegisterTypeHandler", ((string type, Handler handler) input) => registry.RegisterTypeHandler(input, default));
+            agent.RegisterFunction("Lookup", (ServiceLocator input) => registry.Lookup(input, default));
+
+            return (agent, registry);
+        }
+
         [Fact]
         public async void ExecutionStream_Returns_ExpectedMesages()
         {
@@ -42,7 +53,7 @@ namespace Apocryph.Consensus.Test
                 new AgentState(ReferenceData.From(null), "Agent2")
             };
             var agentStatesTree = (await MerkleTreeBuilder.CreateFromValues(hashRegistry, agentStates, 2)).First().GetRoot();
-            var chain = new Chain(agentStatesTree);
+            var chain = new Chain(agentStatesTree, "Apocryph-DummyConsensus");
 
             var chainId = Hash.From(chain);
             var agentIds = agentStates.Select(x => Hash.From(x)).ToArray();
@@ -80,29 +91,7 @@ namespace Apocryph.Consensus.Test
 
             var outputMessages = await dummyConsensus.ExecutionStream((inputMessages.ToAsyncEnumerable(), hashRegistry, chain)).ToArrayAsync();
 
-            Assert.Equal(outputMessages, expectedOutputMessages, SerializedComparer.Instance); // Comparing hash as it is simpler
-        }
-
-        public class SerializedComparer : IEqualityComparer<object>
-        {
-            private SerializedComparer()
-            {
-            }
-
-            public static IEqualityComparer<object> Instance = new SerializedComparer();
-
-            bool IEqualityComparer<object>.Equals(object? a, object? b)
-            {
-                var aString = JsonSerializer.Serialize(a, ApocryphSerializationOptions.JsonSerializerOptions);
-                var bString = JsonSerializer.Serialize(b, ApocryphSerializationOptions.JsonSerializerOptions);
-
-                return aString.Equals(bString);
-            }
-
-            public int GetHashCode(object? x)
-            {
-                return JsonSerializer.Serialize(x, ApocryphSerializationOptions.JsonSerializerOptions).GetHashCode();
-            }
+            Assert.Equal(outputMessages, expectedOutputMessages, SerializedComparer.Instance);
         }
     }
 }

@@ -6,10 +6,12 @@ namespace Apocryph.Consensus
     {
         // public Reference Creation { get; }
         public IMerkleTree<AgentState> GenesisStates { get; }
+        public string ConsensusType { get; }
 
-        public Chain(IMerkleTree<AgentState> genesis)
+        public Chain(IMerkleTree<AgentState> genesis, string consensusType)
         {
             GenesisStates = genesis;
+            ConsensusType = consensusType;
         }
     }
 }

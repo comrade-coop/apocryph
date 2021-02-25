@@ -28,7 +28,5 @@ namespace Apocryph.Consensus
         {
             return JsonSerializer.Deserialize<T>(Data, ApocryphSerializationOptions.JsonSerializerOptions);
         }
-
-
     }
 }
