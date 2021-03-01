@@ -53,7 +53,7 @@ namespace Apocryph.Consensus.Test
                 new AgentState(ReferenceData.From(null), "Agent2")
             };
             var agentStatesTree = (await MerkleTreeBuilder.CreateFromValues(hashRegistry, agentStates, 2)).First().GetRoot();
-            var chain = new Chain(agentStatesTree, "Apocryph-DummyConsensus");
+            var chain = new Chain(agentStatesTree, "Apocryph-DummyConsensus", 1);
 
             var chainId = Hash.From(chain);
             var agentIds = agentStates.Select(x => Hash.From(x)).ToArray();
