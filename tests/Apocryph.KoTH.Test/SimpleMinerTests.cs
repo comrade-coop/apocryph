@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
@@ -40,17 +42,17 @@ namespace Apocryph.KoTH.Test
             var chainId = await hashRegistry.StoreAsync(chain);
 
             var tokenSource = new CancellationTokenSource();
-            var minedKeysChannel = Channel.CreateUnbounded<(Hash<Chain>, Peer)>();
-            var outputStream = KoTH.Processor((minedKeysChannel.Reader.ReadAllAsync(), hashRegistry), new FakeState());
+            var minedKeysCollectorStream = new FakeAsyncCollector<(Hash<Chain>, Peer)>();
+            var kothStateStream = KoTH.Processor((minedKeysCollectorStream, hashRegistry), new FakeState());
 
-            outputStream = outputStream.Select(x => (x.Item1, x.Item2.ToArray())); // Duplicate the array, as it is not immutable otherwise..
+            kothStateStream = kothStateStream.Select(x => (x.Item1, x.Item2.ToArray())); // Duplicate the array, as KoTH modifies it by reference
 
-            await minedKeysChannel.Writer.WriteAsync((chainId, new Peer(0, new byte[] { 0 })));
+            await minedKeysCollectorStream.AddAsync((chainId, new Peer(0, new byte[] { 0 })));
 
-            var minerTask = SimpleMiner.Miner(("-", outputStream, 1), new ChannelAsyncCollector<(Hash<Chain>, Peer)>(minedKeysChannel.Writer), tokenSource.Token);
+            var minerTask = SimpleMiner.Miner(("-", kothStateStream, 1), minedKeysCollectorStream, tokenSource.Token);
 
             var i = 0;
-            await foreach (var (stateChainId, peers) in outputStream)
+            await foreach (var (stateChainId, peers) in kothStateStream)
             {
                 i++;
                 Assert.True(i < slotsCount * 10); // Prevent hangs
@@ -61,27 +63,32 @@ namespace Apocryph.KoTH.Test
                 }
             }
             tokenSource.Cancel();
-            minedKeysChannel.Writer.Complete();
+            minedKeysCollectorStream.Complete();
             await minerTask;
         }
 
-        public class ChannelAsyncCollector<T> : IAsyncCollector<T>
+        public class FakeAsyncCollector<T> : IAsyncCollector<T>, IAsyncEnumerable<T> // FIXME: move to Perper
         {
-            public ChannelWriter<T> ChannelWriter { get; set; }
-
-            public ChannelAsyncCollector(ChannelWriter<T> channelWriter)
-            {
-                ChannelWriter = channelWriter;
-            }
+            private Channel<T> _channel = Channel.CreateUnbounded<T>();
 
             public async Task AddAsync(T item, CancellationToken cancellationToken = default)
             {
-                await ChannelWriter.WriteAsync(item);
+                await _channel.Writer.WriteAsync(item, cancellationToken);
             }
 
             public Task FlushAsync(CancellationToken cancellationToken = default)
             {
                 return Task.CompletedTask;
+            }
+
+            public void Complete(Exception? exception = null)
+            {
+                _channel.Writer.Complete(exception);
+            }
+
+            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+            {
+                return _channel.Reader.ReadAllAsync().GetAsyncEnumerator(cancellationToken);
             }
         }
     }

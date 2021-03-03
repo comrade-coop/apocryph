@@ -1,86 +1,114 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 using Apocryph.ServiceRegistry;
 using Microsoft.Azure.WebJobs;
+using Perper.WebJobs.Extensions.Dataflow;
 using Perper.WebJobs.Extensions.Model;
 using Perper.WebJobs.Extensions.Triggers;
 
 namespace Apocryph.Consensus.FunctionApp
 {
-    public class RouterInput
+    public static class RouterInput
     {
-        private List<Task> _tasks = new List<Task>();
-        private Dictionary<Reference, CancellationTokenSource> _cancellationTokens = new Dictionary<Reference, CancellationTokenSource>();
-        private Channel<Message> _channel = Channel.CreateUnbounded<Message>();
-        private IAgent? _serviceRegistry = null;
-
         [FunctionName("RouterInput")]
-        public IAsyncEnumerable<Message> RunAsync([PerperTrigger] (IAsyncEnumerable<Message> calls, IAsyncEnumerable<List<Reference>> subscriptions, IAgent serviceRegistry) input, IStateEntry<List<Reference>?> lastSubscriptions)
+        public static IAsyncEnumerable<Message> RunAsync([PerperTrigger] (IAsyncEnumerable<Message> calls, IAsyncEnumerable<List<Reference>> subscriptions, IAgent serviceRegistry) input, IStateEntry<List<Reference>?> lastSubscriptions)
         {
-            _serviceRegistry = input.serviceRegistry;
+            var output = EmptyBlock<Message>();
 
-            _tasks.Add(UpdateSubscriptions(input.subscriptions, lastSubscriptions));
-            _tasks.Add(IterateStream(input.calls, default));
+            var subscriptions = KeepLastBlock(lastSubscriptions);
+            input.subscriptions.ToDataflow().LinkTo(subscriptions);
 
-            return _channel.Reader.ReadAllAsync();
+            var subscriber = SubsciberBlock<Reference, Message>(async reference =>
+            {
+                var locator = new ServiceLocator("Chain", reference.Chain.ToString());
+                var targetChain = await input.serviceRegistry.CallFunctionAsync<Service>("Lookup", locator);
+                var stream = (IStream<Message>)targetChain.Outputs["messages"];
+
+                return stream.Replay().ToDataflow(); // TODO: Make sure to replay only messages newer than the subscription
+            });
+
+            subscriptions.LinkTo(subscriber);
+            subscriber.LinkTo(output);
+
+            input.calls.ToDataflow().LinkTo(output);
+
+            return output.ToAsyncEnumerable();
         }
 
-        private async Task UpdateSubscriptions(IAsyncEnumerable<List<Reference>> subscriptions, IStateEntry<List<Reference>?> lastSubscriptions)
+        private static IPropagatorBlock<T, T> EmptyBlock<T>()
         {
-            if (lastSubscriptions.Value == null)
-            {
-                lastSubscriptions.Value = new List<Reference>();
-            }
-
-            UpdateSubscriptions(lastSubscriptions.Value!);
-            await foreach (var newSubscriptions in subscriptions)
-            {
-                lastSubscriptions.Value = newSubscriptions;
-                UpdateSubscriptions(lastSubscriptions.Value!);
-            }
+            return new BufferBlock<T>(new DataflowBlockOptions { BoundedCapacity = 1 });
         }
 
-        private void UpdateSubscriptions(List<Reference> subscriptions)
+        private static IPropagatorBlock<T, T> KeepLastBlock<T>(IStateEntry<T?> stateEntry) where T : class, new()
         {
-            var seenSubscriptions = new HashSet<Reference>();
-            foreach (var subscription in subscriptions)
+            var output = new TransformBlock<T, T>(value =>
             {
-                if (!_cancellationTokens.ContainsKey(subscription))
+                stateEntry.Value = value;
+                return value;
+            });
+
+            output.Post(stateEntry.Value ?? new T());
+
+            return output;
+        }
+
+        private static IPropagatorBlock<IEnumerable<TKey>, TValue> SubsciberBlock<TKey, TValue>(Func<TKey, Task<ISourceBlock<TValue>>> resolver)
+            where TKey : notnull
+        {
+            var links = new Dictionary<TKey, IDisposable>();
+            var output = EmptyBlock<TValue>();
+            var subscriber = new ActionBlock<IEnumerable<TKey>>(async (subscriptions) =>
+            {
+                var seenSubscriptions = new HashSet<TKey>();
+                foreach (var subscription in subscriptions)
                 {
-                    var tokenSource = new CancellationTokenSource();
-                    _tasks.Add(IterateStream(subscription, tokenSource.Token));
-                    _cancellationTokens[subscription] = tokenSource;
+                    if (!links.ContainsKey(subscription))
+                    {
+                        var source = await resolver(subscription);
+                        links[subscription] = source.LinkTo(output);
+                    }
+                    seenSubscriptions.Add(subscription);
                 }
-                seenSubscriptions.Add(subscription);
-            }
 
-            foreach (var (oldSubscription, tokenSource) in _cancellationTokens)
-            {
-                if (!seenSubscriptions.Contains(oldSubscription))
+                foreach (var (subscription, link) in links)
                 {
-                    tokenSource.Cancel();
+                    if (!seenSubscriptions.Contains(subscription))
+                    {
+                        link.Dispose();
+                    }
+                }
+            });
+
+            return DataflowBlock.Encapsulate(subscriber, output);
+        }
+    }
+
+    public static class PerperDataflowEnumerableConversionsFixup // FIXME: obsoleted by https://github.com/obecto/perper/commit/c21139721cce283a9544619830b67ca8bb5fbee6
+    {
+        public static ISourceBlock<T> ToDataflow<T>(this IAsyncEnumerable<T> enumerable, CancellationToken cancellationToken = default)
+        {
+            var block = new BufferBlock<T>(new DataflowBlockOptions { CancellationToken = cancellationToken, BoundedCapacity = 1 });
+
+            async Task helper()
+            {
+                await foreach (var item in enumerable.WithCancellation(cancellationToken))
+                {
+                    await block.SendAsync(item);
                 }
             }
-        }
 
-        private async Task IterateStream(Reference subscription, CancellationToken token)
-        {
-            var locator = new ServiceLocator("Chain", subscription.Chain.ToString());
-            var targetChain = await _serviceRegistry!.CallFunctionAsync<Service>("Lookup", locator);
-            var stream = (IStream<Message>)targetChain.Outputs["messages"];
-
-            await IterateStream(stream.Replay(), token); // TODO: Make sure to replay only newer messages somehow
-        }
-
-        private async Task IterateStream(IAsyncEnumerable<Message> stream, CancellationToken token)
-        {
-            await foreach (var message in stream.WithCancellation(token))
+            helper().ContinueWith(completedTask =>
             {
-                await _channel.Writer.WriteAsync(message);
-            }
+                if (completedTask.Status == TaskStatus.Faulted) ((IDataflowBlock)block).Fault(completedTask.Exception!);
+                else if (completedTask.Status == TaskStatus.RanToCompletion) block.Complete();
+            });
+
+            return block;
         }
     }
 }

@@ -64,8 +64,7 @@ namespace Apocryph.Consensus.Test
 
             var routerStateEntry = await ((IState)new FakeState()).Entry<List<Reference>?>("-", () => null);
 
-            var routerInput = new RouterInput();
-            var routedMessages = routerInput.RunAsync((callMessages.ToAsyncEnumerable(), subscriptionsChannel.Reader.ReadAllAsync(), serviceRegistryAgent), routerStateEntry);
+            var routedMessages = RouterInput.RunAsync((callMessages.ToAsyncEnumerable(), subscriptionsChannel.Reader.ReadAllAsync(), serviceRegistryAgent), routerStateEntry);
 
             var routedMessagesEnumerator = routedMessages.GetAsyncEnumerator();
 
@@ -116,8 +115,7 @@ namespace Apocryph.Consensus.Test
             var context = new FakeContext();
             context.Agent.RegisterFunction("PostMessage", ((string, Message) input) => outputtedMessages.Add(input));
 
-            var routerOutput = new RouterOutput();
-            var publishedMessages = routerOutput.RunAsync((messagesToPublish.Concat(messagesToSend).ToAsyncEnumerable(), selfChainId, serviceRegistryAgent), context);
+            var publishedMessages = RouterOutput.RunAsync((messagesToPublish.Concat(messagesToSend).ToAsyncEnumerable(), selfChainId, serviceRegistryAgent), context);
 
             Assert.Equal(await publishedMessages.ToArrayAsync(), messagesToPublish, SerializedComparer.Instance);
             Assert.Equal(outputtedMessages.ToArray(), messagesToSend.Select(x => (x.Target.Chain.ToString() + "-stream", x)), SerializedComparer.Instance);

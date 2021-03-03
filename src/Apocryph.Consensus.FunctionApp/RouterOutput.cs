@@ -9,10 +9,10 @@ using Perper.WebJobs.Extensions.Triggers;
 
 namespace Apocryph.Consensus.FunctionApp
 {
-    public class RouterOutput
+    public static class RouterOutput
     {
         [FunctionName("RouterOutput")]
-        public async IAsyncEnumerable<Message> RunAsync([PerperTrigger] (IAsyncEnumerable<Message> outbox, Hash<Chain> self, IAgent serviceRegistry) input, IContext context)
+        public static async IAsyncEnumerable<Message> RunAsync([PerperTrigger] (IAsyncEnumerable<Message> outbox, Hash<Chain> self, IAgent serviceRegistry) input, IContext context)
         {
             await foreach (var message in input.outbox)
             {
