@@ -1,6 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
 using System.Threading.Tasks;
 using Apocryph.Consensus;
 using Apocryph.HashRegistry;
@@ -13,43 +11,12 @@ namespace Apocryph.KoTH.FunctionApp
 {
     public static class KoTH
     {
-        public class KoTHChain
-        {
-            public Peer?[] Slots { get; }
-
-            public KoTHChain(Peer?[] slots)
-            {
-                Slots = slots;
-            }
-
-            public static BigInteger GetDifficulty(Peer peer)
-            {
-                var hash = Hash.From(peer);
-                return new BigInteger(hash.Bytes.Concat(new byte[] { 0 }).ToArray());
-            }
-
-            public bool TryInsert(Peer newPeer)
-            {
-                var newDifficulty = GetDifficulty(newPeer);
-                var slot = (int)(newDifficulty % Slots.Length);
-
-                var currentPeer = Slots[slot];
-                if (currentPeer == null || GetDifficulty(currentPeer) < newDifficulty)
-                {
-                    Slots[slot] = newPeer;
-                    return true;
-                }
-
-                return false;
-            }
-        }
-
         [FunctionName("Apocryph-KoTH")]
         public static async Task Start([PerperTrigger] (IAgent serviceRegistry, HashRegistryProxy hashRegistry) input, IContext context)
         {
-            var (minedKeys, minedKeysStream) = await context.CreateBlankStreamAsync<(Hash<Chain>, Peer)>();
+            var (minedKeys, minedKeysStream) = await context.CreateBlankStreamAsync<(Hash<Chain>, Slot)>();
 
-            var resultStream = await context.StreamFunctionAsync<(Hash<Chain>, Peer)>("Processor", (minedKeys, input.hashRegistry));
+            var resultStream = await context.StreamFunctionAsync<(Hash<Chain>, Slot?[])>("Processor", (minedKeys, input.hashRegistry));
 
             await input.serviceRegistry.CallActionAsync("Register", (new ServiceLocator("KoTH", "KoTH"), new Service(new Dictionary<string, string>() {
                 {"minedKeys", minedKeysStream}
@@ -59,18 +26,18 @@ namespace Apocryph.KoTH.FunctionApp
         }
 
         [FunctionName("Processor")]
-        public static async IAsyncEnumerable<(Hash<Chain>, Peer?[])> Processor([PerperTrigger] (IAsyncEnumerable<(Hash<Chain>, Peer)> minedKeys, HashRegistryProxy hashRegistry) input, IState state)
+        public static async IAsyncEnumerable<(Hash<Chain>, Slot?[])> Processor([PerperTrigger] (IAsyncEnumerable<(Hash<Chain>, Slot)> minedKeys, HashRegistryProxy hashRegistry) input, IState state)
         {
-            await foreach (var (chain, peer) in input.minedKeys)
+            await foreach (var (chain, slot) in input.minedKeys)
             {
-                var chainState = await state.GetValue<KoTHChain?>(chain.ToString(), () => default!);
+                var chainState = await state.GetValue<KoTHState?>(chain.ToString(), () => default!);
                 if (chainState == null)
                 {
                     var chainValue = await input.hashRegistry.RetrieveAsync(chain);
-                    chainState = new KoTHChain(new Peer?[chainValue.SlotsCount]);
+                    chainState = new KoTHState(new Slot?[chainValue.SlotsCount]);
                 }
 
-                if (chainState.TryInsert(peer))
+                if (chainState.TryInsert(slot))
                 {
                     await state.SetValue(chain.ToString(), chainState);
                     yield return (chain, chainState.Slots);

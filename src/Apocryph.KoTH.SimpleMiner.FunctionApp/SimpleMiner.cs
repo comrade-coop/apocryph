@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Consensus;
 using Apocryph.HashRegistry;
+using Apocryph.Peering;
 using Apocryph.ServiceRegistry;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Bindings;
@@ -14,22 +15,20 @@ using Perper.WebJobs.Extensions.Triggers;
 
 namespace Apocryph.KoTH.SimpleMiner.FunctionApp
 {
-    using KoTHChain = Apocryph.KoTH.FunctionApp.KoTH.KoTHChain;
-
     public static class SimpleMiner
     {
         [FunctionName("Apocryph-KoTH-SimpleMiner")]
-        public static async Task Start([PerperTrigger] IAgent serviceRegistry, IContext context)
+        public static async Task Start([PerperTrigger] (IAgent serviceRegistry, Peer self) input, IContext context)
         {
-            var kothService = await serviceRegistry.CallFunctionAsync<Service>("Lookup", new ServiceLocator("KoTH", "KoTH"));
+            var kothService = await input.serviceRegistry.CallFunctionAsync<Service>("Lookup", new ServiceLocator("KoTH", "KoTH"));
 
-            await context.CallActionAsync("Miner", (kothService.Inputs["minedKeys"], kothService.Outputs["states"], 0));
+            await context.CallActionAsync("Miner", (kothService.Inputs["minedKeys"], kothService.Outputs["states"], input.self));
         }
 
         [FunctionName("Miner")]
-        public static async Task Miner([PerperTrigger(ParameterExpression = "{'stream': 0}")] (string _, IAsyncEnumerable<(Hash<Chain>, Peer?[])> kothStates, int peerId) input, [Perper(Stream = "{stream}")] IAsyncCollector<(Hash<Chain>, Peer)> minedKeys, CancellationToken cancellationToken)
+        public static async Task Miner([PerperTrigger(ParameterExpression = "{'stream': 0}")] (string _, IAsyncEnumerable<(Hash<Chain>, Slot?[])> kothStates, Peer self) input, [Perper(Stream = "{stream}")] IAsyncCollector<(Hash<Chain>, Slot)> minedKeys, CancellationToken cancellationToken)
         {
-            var chains = new ConcurrentDictionary<Hash<Chain>, KoTHChain>();
+            var chains = new ConcurrentDictionary<Hash<Chain>, KoTHState>();
 
             var generator = Task.Run(async () =>
             {
@@ -38,7 +37,7 @@ namespace Apocryph.KoTH.SimpleMiner.FunctionApp
                 {
                     var attemptData = new byte[16];
                     random.NextBytes(attemptData);
-                    var newPeer = new Peer(input.peerId, attemptData);
+                    var newPeer = new Slot(input.self, attemptData);
 
                     foreach (var (chain, state) in chains)
                     {
@@ -54,7 +53,7 @@ namespace Apocryph.KoTH.SimpleMiner.FunctionApp
 
             await foreach (var (chain, peers) in input.kothStates.WithCancellation(cancellationToken))
             {
-                chains[chain] = new KoTHChain(peers);
+                chains[chain] = new KoTHState(peers);
             }
 
             await generator;

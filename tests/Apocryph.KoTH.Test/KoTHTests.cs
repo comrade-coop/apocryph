@@ -1,7 +1,9 @@
+using System;
 using System.Linq;
 using Apocryph.Consensus;
 using Apocryph.HashRegistry;
 using Apocryph.HashRegistry.MerkleTree;
+using Apocryph.Peering;
 using Perper.WebJobs.Extensions.Dataflow;
 using Perper.WebJobs.Extensions.Fake;
 using Xunit;
@@ -27,12 +29,13 @@ namespace Apocryph.KoTH.Test
         [Fact]
         public async void KoTH_KeepsTrack_OfMinedPeers()
         {
+            var selfPeer = new Peer(Hash.From(0).Cast<object>());
             var hashRegistry = GetHashRegistryProxy();
 
             var chain = new Chain(new MerkleTreeNode<AgentState>(new Hash<IMerkleTree<AgentState>>[] { }), "Apocryph-DummyConsensus", 100);
             var chainId = await hashRegistry.StoreAsync(chain);
 
-            var minedKeys = Enumerable.Range(0, 200).Select(i => (chainId, new Peer(i, new byte[] { 0 })));
+            var minedKeys = Enumerable.Range(0, 200).Select(i => (chainId, new Slot(selfPeer, BitConverter.GetBytes(i))));
             var outputStream = KoTH.Processor((minedKeys.ToAsyncEnumerable(), hashRegistry), new FakeState());
 
             var previousCount = 0;

@@ -20,8 +20,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Apocryph.ServiceRegistry.FunctionApp\Apocryph.ServiceRegistry.FunctionApp.csproj" />
     <ProjectReference Include="..\Apocryph.HashRegistry.FunctionApp\Apocryph.HashRegistry.FunctionApp.csproj" />
-    <ProjectReference Include="..\Apocryph.Consensus.FunctionApp\Apocryph.Consensus.FunctionApp.csproj" />
-    <ProjectReference Include="..\Apocryph.Peering.FunctionApp\Apocryph.Peering.FunctionApp.csproj" />
   </ItemGroup>
 
   <ItemGroup>
