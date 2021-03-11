@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Apocryph.PerperUtilities\Apocryph.PerperUtilities.csproj" />
   </ItemGroup>
 
   <ItemGroup>

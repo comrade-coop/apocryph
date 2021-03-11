@@ -1,10 +1,10 @@
 using System.Threading.Tasks;
 using Perper.WebJobs.Extensions.Model;
 
-namespace Apocryph.ServiceRegistry
+namespace Apocryph.PerperUtilities
 {
     [PerperData]
-    public class Handler
+    public class Handler : IHandler
     {
         public Handler(IAgent agent, string method)
         {
@@ -22,19 +22,14 @@ namespace Apocryph.ServiceRegistry
     }
 
     [PerperData]
-    public class HandlerWithContext : Handler
+    public class Handler<T> : Handler, IHandler<T>
     {
-        public HandlerWithContext(IAgent agent, string method, object? context)
-            : base(agent, method)
-        {
-            Context = context;
-        }
+        public Handler(IAgent agent, string method)
+            : base(agent, method) { }
 
-        public object? Context { get; private set; }
-
-        public override Task InvokeAsync(object? parameters)
+        public new virtual Task<T> InvokeAsync(object? parameters)
         {
-            return Agent.CallActionAsync(Method, (Context, parameters));
+            return Agent.CallFunctionAsync<T>(Method, parameters);
         }
     }
 }

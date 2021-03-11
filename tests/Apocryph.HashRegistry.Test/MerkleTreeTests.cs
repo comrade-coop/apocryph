@@ -1,26 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using Apocryph.HashRegistry.MerkleTree;
-using Perper.WebJobs.Extensions.Fake;
 using Xunit;
 
 namespace Apocryph.HashRegistry.Test
 {
-    using HashRegistry = Apocryph.HashRegistry.FunctionApp.HashRegistry;
-
     public class MerkleTreeTests
     {
-        private HashRegistryProxy GetHashRegistryProxy()
-        {
-            var registry = new HashRegistry(new FakeState());
-
-            var agent = new FakeAgent();
-            agent.RegisterFunction("Store", (byte[] data) => registry.Store(data, default));
-            agent.RegisterFunction("Retrieve", (Hash hash) => registry.Retrieve(hash, default));
-
-            return new HashRegistryProxy(agent);
-        }
-
         class Example
         {
             public int Number { get; set; }
@@ -34,7 +20,7 @@ namespace Apocryph.HashRegistry.Test
         [InlineData(3, 4)]
         public async void Enumerate_ReturnsItems_InOrder(int groups, int elements)
         {
-            var proxy = GetHashRegistryProxy();
+            var proxy = HashRegistryFakes.GetHashRegistryProxy();
 
             var rootHashes = new Hash<IMerkleTree<Example>>[groups];
             var expected = new List<Example>();
@@ -56,7 +42,7 @@ namespace Apocryph.HashRegistry.Test
 
             var result = await root.EnumerateItems(proxy).ToArrayAsync();
 
-            Assert.Equal(expected.ToArray(), result, new ArrayComparer<Example>());
+            Assert.Equal(expected.ToArray(), result);
         }
 
         [Theory]
@@ -66,7 +52,7 @@ namespace Apocryph.HashRegistry.Test
         [InlineData(7, 3)]
         public async void Builder_ReturnsItems_InOrder(int elements, int maxChildrenCount)
         {
-            var proxy = GetHashRegistryProxy();
+            var proxy = HashRegistryFakes.GetHashRegistryProxy();
 
             var expected = Enumerable.Range(0, elements).Select(x => new Example { Number = x }).ToArray();
             var proofs = await MerkleTreeBuilder.CreateFromValues(proxy, expected, maxChildrenCount);
@@ -74,7 +60,7 @@ namespace Apocryph.HashRegistry.Test
 
             var result = await root.EnumerateItems(proxy).ToArrayAsync();
 
-            Assert.Equal(expected, result, new ArrayComparer<Example>());
+            Assert.Equal(expected, result);
         }
     }
 }

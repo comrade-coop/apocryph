@@ -1,7 +1,7 @@
 using Perper.WebJobs.Extensions.Fake;
 using Xunit;
 
-namespace Apocryph.ServiceRegistry.Test
+namespace Apocryph.PerperUtilities.Test
 {
     public class HandlerTests
     {

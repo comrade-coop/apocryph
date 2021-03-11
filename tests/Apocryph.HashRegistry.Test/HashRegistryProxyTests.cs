@@ -1,23 +1,9 @@
-using Perper.WebJobs.Extensions.Fake;
 using Xunit;
 
 namespace Apocryph.HashRegistry.Test
 {
-    using HashRegistry = Apocryph.HashRegistry.FunctionApp.HashRegistry;
-
     public class HashRegistryProxyTests
     {
-        private HashRegistryProxy GetHashRegistryProxy()
-        {
-            var registry = new HashRegistry(new FakeState());
-
-            var agent = new FakeAgent();
-            agent.RegisterFunction("Store", (byte[] data) => registry.Store(data, default));
-            agent.RegisterFunction("Retrieve", (Hash hash) => registry.Retrieve(hash, default));
-
-            return new HashRegistryProxy(agent);
-        }
-
         class Example
         {
             public int Number { get; set; }
@@ -27,7 +13,7 @@ namespace Apocryph.HashRegistry.Test
         [InlineData(10)]
         public async void Retrieve_AfterStore_ReturnsExact(int data)
         {
-            var proxy = GetHashRegistryProxy();
+            var proxy = HashRegistryFakes.GetHashRegistryProxy();
 
             var value = new Example { Number = data };
 

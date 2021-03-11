@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Apocryph.HashRegistry;
+using Apocryph.PerperUtilities;
 using Perper.WebJobs.Extensions.Fake;
 using Xunit;
 
@@ -28,7 +29,7 @@ namespace Apocryph.Peering.Test
                 Assert.Equal(await input.messages.ToArrayAsync(), messagesIn);
                 return messagesOut.ToAsyncEnumerable();
             });
-            var handler = new PeerHandler(peerAgent, "ConnectionHandler");
+            var handler = new Handler<IAsyncEnumerable<object>>(peerAgent, "ConnectionHandler");
 
             await peering.Register((peer, handler));
 

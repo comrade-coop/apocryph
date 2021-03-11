@@ -23,7 +23,7 @@ namespace Apocryph.HashRegistry.Test
 
             var result = await registry.Retrieve(hash, default);
 
-            Assert.Equal(data, result, new ArrayComparer<byte>());
+            Assert.Equal(data, result);
         }
 
         [Theory]
@@ -44,7 +44,7 @@ namespace Apocryph.HashRegistry.Test
 
             var result = await resultTask;
 
-            Assert.Equal(data, result, new ArrayComparer<byte>());
+            Assert.Equal(data, result);
         }
     }
 }

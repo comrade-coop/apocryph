@@ -1,5 +1,5 @@
-using System;
 using System.Collections.Generic;
+using Apocryph.PerperUtilities;
 using Perper.WebJobs.Extensions.Fake;
 using Perper.WebJobs.Extensions.Model;
 using Xunit;
@@ -33,8 +33,8 @@ namespace Apocryph.ServiceRegistry.Test
             var result = await registry.Lookup(locator, default);
 
             Assert.NotNull(result);
-            Assert.Equal(service.Inputs, result!.Inputs, new DictionaryComparer<string, string>());
-            Assert.Equal(service.Outputs, result!.Outputs, new DictionaryComparer<string, IStream>());
+            Assert.Equal(service.Inputs, result!.Inputs);
+            Assert.Equal(service.Outputs, result!.Outputs);
         }
 
         [Fact]
@@ -80,34 +80,8 @@ namespace Apocryph.ServiceRegistry.Test
             var result = await registry.Lookup(locator, default);
             Assert.NotNull(result);
             Assert.NotNull(service);
-            Assert.Equal(service!.Inputs, result!.Inputs, new DictionaryComparer<string, string>());
-            Assert.Equal(service!.Outputs, result!.Outputs, new DictionaryComparer<string, IStream>());
-        }
-
-        class DictionaryComparer<TK, TV> : IEqualityComparer<IDictionary<TK, TV>> where TK : notnull
-        {
-            public IEqualityComparer<TV> ValueComparer { get; set; } = EqualityComparer<TV>.Default;
-
-            public bool Equals(IDictionary<TK, TV>? a, IDictionary<TK, TV>? b)
-            {
-                if (a == null || b == null) return a == b;
-                if (a.Count != b.Count) return false;
-
-                foreach (var (key, valueA) in a)
-                {
-                    if (!b.TryGetValue(key, out var valueB) || !ValueComparer.Equals(valueA, valueB))
-                    {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-
-            public int GetHashCode(IDictionary<TK, TV> x)
-            {
-                throw new NotImplementedException();
-            }
+            Assert.Equal(service!.Inputs, result!.Inputs);
+            Assert.Equal(service!.Outputs, result!.Outputs);
         }
     }
 }

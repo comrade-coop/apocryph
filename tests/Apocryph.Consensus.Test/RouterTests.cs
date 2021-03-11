@@ -3,7 +3,9 @@ using System.Linq;
 using System.Threading.Channels;
 using Apocryph.Consensus.FunctionApp;
 using Apocryph.HashRegistry;
+using Apocryph.HashRegistry.Test;
 using Apocryph.ServiceRegistry;
+using Apocryph.ServiceRegistry.Test;
 using Perper.WebJobs.Extensions.Fake;
 using Perper.WebJobs.Extensions.Model;
 using Xunit;
@@ -11,38 +13,12 @@ using Xunit.Abstractions;
 
 namespace Apocryph.Consensus.Test
 {
-    using HashRegistry = Apocryph.HashRegistry.FunctionApp.HashRegistry;
-    using ServiceRegistry = Apocryph.ServiceRegistry.FunctionApp.ServiceRegistry;
-
     public class RouterTests
     {
         private readonly ITestOutputHelper _output;
         public RouterTests(ITestOutputHelper output)
         {
             _output = output;
-        }
-
-        private HashRegistryProxy GetHashRegistryProxy()
-        {
-            var registry = new HashRegistry(new FakeState());
-
-            var agent = new FakeAgent();
-            agent.RegisterFunction("Store", (byte[] data) => registry.Store(data, default));
-            agent.RegisterFunction("Retrieve", (Hash hash) => registry.Retrieve(hash, default));
-
-            return new HashRegistryProxy(agent);
-        }
-
-        private (FakeAgent, ServiceRegistry) GetServiceRegistryAgent()
-        {
-            var registry = new ServiceRegistry(new FakeState());
-
-            var agent = new FakeAgent();
-            agent.RegisterFunction("Register", ((ServiceLocator locator, Service service) input) => registry.Register(input, default));
-            agent.RegisterFunction("RegisterTypeHandler", ((string type, Handler handler) input) => registry.RegisterTypeHandler(input, default));
-            agent.RegisterFunction("Lookup", (ServiceLocator input) => registry.Lookup(input, default));
-
-            return (agent, registry);
         }
 
         private Message GenerateMessage(int chain, int i)
@@ -54,8 +30,8 @@ namespace Apocryph.Consensus.Test
         [Fact]
         public async void RouterInput_SubscribesAndPasses_AllMessages()
         {
-            var hashRegistry = GetHashRegistryProxy();
-            var (serviceRegistryAgent, serviceRegistry) = GetServiceRegistryAgent();
+            var hashRegistry = HashRegistryFakes.GetHashRegistryProxy();
+            var (serviceRegistryAgent, serviceRegistry) = ServiceRegistryFakes.GetServiceRegistryAgent();
 
             var callMessages = new[] { GenerateMessage(0, 0), GenerateMessage(0, 1) };
 
@@ -96,8 +72,8 @@ namespace Apocryph.Consensus.Test
         [Fact]
         public async void RouterOutput_PostsAndPublishes_AllMessages()
         {
-            var hashRegistry = GetHashRegistryProxy();
-            var (serviceRegistryAgent, serviceRegistry) = GetServiceRegistryAgent();
+            var hashRegistry = HashRegistryFakes.GetHashRegistryProxy();
+            var (serviceRegistryAgent, serviceRegistry) = ServiceRegistryFakes.GetServiceRegistryAgent();
 
             var messagesToPublish = new[] { GenerateMessage(0, 0), GenerateMessage(0, 1) };
             var messagesToSend = new[] { GenerateMessage(1, 2), GenerateMessage(1, 3) };

@@ -31,6 +31,7 @@ namespace Apocryph.HashRegistry.Test
         };
 
         public static object[][] SerializationExamplesInterface = SerializationExamples.Where(x => x[0] is IExample).ToArray();
+        public static object[][] SerializationExamplesWithoutInterface = SerializationExamples.Where(x => !(x[0] is IExample)).ToArray();
         #endregion Sample data
 
         private readonly ITestOutputHelper _output;
@@ -71,6 +72,17 @@ namespace Apocryph.HashRegistry.Test
             var deserialized = Deserialize<IExample>(serialized);
 
             Assert.Equal(deserialized, data);
+        }
+
+        [Theory]
+        [MemberData(nameof(SerializationExamplesWithoutInterface))]
+        public void Deserialize_WithoutInterfaceType_ThrowsJsonException(object data)
+        {
+            var serialized = Serialize<object>(data);
+
+            _output.WriteLine("Serialized is: {0}", serialized);
+
+            Assert.Throws<JsonException>(() => Deserialize<IExample>(serialized));
         }
     }
 }

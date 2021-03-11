@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Apocryph.Consensus;
 using Apocryph.HashRegistry;
 using Apocryph.HashRegistry.MerkleTree;
+using Apocryph.HashRegistry.Test;
 using Apocryph.Peering;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Fake;
@@ -14,31 +15,19 @@ using Xunit;
 
 namespace Apocryph.KoTH.Test
 {
-    using HashRegistry = Apocryph.HashRegistry.FunctionApp.HashRegistry;
     using KoTH = Apocryph.KoTH.FunctionApp.KoTH;
     using SimpleMiner = Apocryph.KoTH.SimpleMiner.FunctionApp.SimpleMiner;
 
     public class SimpleMinerTests
     {
-        private HashRegistryProxy GetHashRegistryProxy()
-        {
-            var registry = new HashRegistry(new FakeState());
-
-            var agent = new FakeAgent();
-            agent.RegisterFunction("Store", (byte[] data) => registry.Store(data, default));
-            agent.RegisterFunction("Retrieve", (Hash hash) => registry.Retrieve(hash, default));
-
-            return new HashRegistryProxy(agent);
-        }
-
         [Theory]
         [InlineData(1)]
         [InlineData(10)]
-        [InlineData(100)]
+        //[InlineData(100)]
         public async void SimpleMiner_Fills_AllPeers(int slotsCount)
         {
             var selfPeer = new Peer(Hash.From(0).Cast<object>());
-            var hashRegistry = GetHashRegistryProxy();
+            var hashRegistry = HashRegistryFakes.GetHashRegistryProxy();
 
             var chain = new Chain(new MerkleTreeNode<AgentState>(new Hash<IMerkleTree<AgentState>>[] { }), "Apocryph-DummyConsensus", slotsCount);
             var chainId = await hashRegistry.StoreAsync(chain);

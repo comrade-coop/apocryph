@@ -1,11 +1,14 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Apocryph.PerperUtilities;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Model;
 using Perper.WebJobs.Extensions.Triggers;
 
 namespace Apocryph.Peering.FunctionApp
 {
+    using PeerHandler = Handler<IAsyncEnumerable<object>>;
+
     public class Peering
     {
         private IState _state;

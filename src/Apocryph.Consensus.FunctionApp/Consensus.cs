@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Apocryph.HashRegistry;
+using Apocryph.PerperUtilities;
 using Apocryph.ServiceRegistry;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Model;
