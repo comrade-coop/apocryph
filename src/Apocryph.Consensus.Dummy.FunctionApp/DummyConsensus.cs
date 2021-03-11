@@ -7,7 +7,7 @@ using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Model;
 using Perper.WebJobs.Extensions.Triggers;
 
-namespace Apocryph.DummyConsensus.FunctionApp
+namespace Apocryph.Consensus.Dummy.FunctionApp
 {
     public class DummyConsensus
     {

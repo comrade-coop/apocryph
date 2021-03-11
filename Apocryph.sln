@@ -19,7 +19,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apocryph.Consensus.Function
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apocryph.Consensus.Test", "tests\Apocryph.Consensus.Test\Apocryph.Consensus.Test.csproj", "{799EC9D3-9107-42C0-A96F-06358234999F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apocryph.DummyConsensus.FunctionApp", "src\Apocryph.DummyConsensus.FunctionApp\Apocryph.DummyConsensus.FunctionApp.csproj", "{F3D1B888-1B91-4F98-8120-881C0F5D4E3E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apocryph.Consensus.Dummy.FunctionApp", "src\Apocryph.Consensus.Dummy.FunctionApp\Apocryph.Consensus.Dummy.FunctionApp.csproj", "{F3D1B888-1B91-4F98-8120-881C0F5D4E3E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apocryph.KoTH.FunctionApp", "src\Apocryph.KoTH.FunctionApp\Apocryph.KoTH.FunctionApp.csproj", "{11E0C650-0244-4E08-A957-30D3EA40B25A}"
 EndProject

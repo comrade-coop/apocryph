@@ -17,7 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Apocryph.Consensus.FunctionApp\Apocryph.Consensus.FunctionApp.csproj" />
-    <ProjectReference Include="..\..\src\Apocryph.DummyConsensus.FunctionApp\Apocryph.DummyConsensus.FunctionApp.csproj" />
+    <ProjectReference Include="..\..\src\Apocryph.Consensus.Dummy.FunctionApp\Apocryph.Consensus.Dummy.FunctionApp.csproj" />
   </ItemGroup>
 
 </Project>

@@ -2,13 +2,13 @@ using System.Linq;
 using Apocryph.HashRegistry;
 using Apocryph.HashRegistry.MerkleTree;
 using Apocryph.ServiceRegistry;
+using Apocryph.Consensus.Dummy.FunctionApp;
 using Perper.WebJobs.Extensions.Fake;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace Apocryph.Consensus.Test
 {
-    using DummyConsensus = Apocryph.DummyConsensus.FunctionApp.DummyConsensus;
     using HashRegistry = Apocryph.HashRegistry.FunctionApp.HashRegistry;
     using ServiceRegistry = Apocryph.ServiceRegistry.FunctionApp.ServiceRegistry;
 
