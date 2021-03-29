@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <LangVersion>8</LangVersion>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
+    <PackageReference Include="xunit" Version="2.4.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.0" />
+    <PackageReference Include="coverlet.collector" Version="1.2.0" />
+    <PackageReference Include="Perper.WebJobs.Extensions" Version="0.6.0-alpha6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Apocryph.Consensus.FunctionApp\Apocryph.Consensus.FunctionApp.csproj" />
+    <ProjectReference Include="..\..\src\Apocryph.Consensus.Snowball.FunctionApp\Apocryph.Consensus.Snowball.FunctionApp.csproj" />
+    <ProjectReference Include="..\Apocryph.HashRegistry.Test\Apocryph.HashRegistry.Test.csproj" />
+    <ProjectReference Include="..\Apocryph.Peering.Test\Apocryph.Peering.Test.csproj" />
+    <ProjectReference Include="..\Apocryph.Consensus.Test\Apocryph.Consensus.Test.csproj" />
+  </ItemGroup>
+
+</Project>

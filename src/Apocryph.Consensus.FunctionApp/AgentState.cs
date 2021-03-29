@@ -2,14 +2,15 @@ namespace Apocryph.Consensus
 {
     public class AgentState
     {
-        // public Reference Creation { get; }
+        public int Nonce { get; }
         public ReferenceData Data { get; }
+        // public IMerkleTree<Subscription> Subscriptions { get; }
         public string Handler { get; }
         // public Hash<AgentCode> Code { get; }
-        // public IMerkleTree<Subscription> Subscriptions { get; }
 
-        public AgentState(ReferenceData data, string handler)
+        public AgentState(int nonce, ReferenceData data, string handler)
         {
+            Nonce = nonce;
             Data = data;
             Handler = handler;
         }

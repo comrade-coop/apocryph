@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Apocryph.HashRegistry.MerkleTree
@@ -52,6 +53,13 @@ namespace Apocryph.HashRegistry.MerkleTree
             }
 
             return result.ToArray();
+        }
+
+        public static async Task<IMerkleTree<T>> CreateRootFromValues<T>(HashRegistryProxy proxy, IEnumerable<T> values, int maxChildren)
+        {
+            var result = await CreateFromValues(proxy, values, maxChildren);
+            var root = result.FirstOrDefault()?.GetRoot() ?? new MerkleTreeNode<T>(new Hash<IMerkleTree<T>>[] { });
+            return root;
         }
     }
 }

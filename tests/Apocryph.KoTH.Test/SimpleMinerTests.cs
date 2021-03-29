@@ -23,13 +23,15 @@ namespace Apocryph.KoTH.Test
         [Theory]
         [InlineData(1)]
         [InlineData(10)]
-        //[InlineData(100)]
+#if SLOWTESTS
+        [InlineData(100)]
+#endif
         public async void SimpleMiner_Fills_AllPeers(int slotsCount)
         {
             var selfPeer = new Peer(Hash.From(0).Cast<object>());
             var hashRegistry = HashRegistryFakes.GetHashRegistryProxy();
 
-            var chain = new Chain(new MerkleTreeNode<AgentState>(new Hash<IMerkleTree<AgentState>>[] { }), "Apocryph-DummyConsensus", slotsCount);
+            var chain = new Chain(new ChainState(new MerkleTreeNode<AgentState>(new Hash<IMerkleTree<AgentState>>[] { }), 0), "", null, slotsCount);
             var chainId = await hashRegistry.StoreAsync(chain);
 
             var tokenSource = new CancellationTokenSource();

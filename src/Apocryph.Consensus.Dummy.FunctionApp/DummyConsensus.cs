@@ -26,8 +26,8 @@ namespace Apocryph.Consensus.Dummy.FunctionApp
         [FunctionName("ExecutionStream")]
         public async IAsyncEnumerable<Message> ExecutionStream([PerperTrigger] (IAsyncEnumerable<Message> messages, HashRegistryProxy hashRegsitry, Chain chain) input)
         {
-            var genesisAgentStates = await input.chain.GenesisStates.EnumerateItems(input.hashRegsitry).ToListAsync();
-            var statesById = genesisAgentStates.ToDictionary(x => Hash.From(x), x => x);
+            var genesisAgentStates = await input.chain.GenesisState.AgentStates.EnumerateItems(input.hashRegsitry).ToListAsync();
+            var statesById = genesisAgentStates.ToDictionary(x => x.Nonce, x => x);
             var self = Hash.From(input.chain);
 
             await foreach (var message in input.messages)
@@ -38,11 +38,11 @@ namespace Apocryph.Consensus.Dummy.FunctionApp
                 if (!message.Target.AllowedMessageTypes.Contains(message.Data.Type))
                     continue;
 
-                if (!statesById.ContainsKey(message.Target.Agent))
+                if (!statesById.ContainsKey(message.Target.AgentNonce))
                     continue;
 
                 Message[] resultMessages;
-                (statesById[message.Target.Agent], resultMessages) = await Execute(statesById[message.Target.Agent], message);
+                (statesById[message.Target.AgentNonce], resultMessages) = await Execute(statesById[message.Target.AgentNonce], message);
 
                 foreach (var resultMessage in resultMessages)
                 {

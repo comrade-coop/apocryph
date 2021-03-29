@@ -1,18 +1,18 @@
-using Apocryph.HashRegistry.MerkleTree;
-
 namespace Apocryph.Consensus
 {
     public class Chain
     {
         // public Reference Creation { get; }
-        public IMerkleTree<AgentState> GenesisStates { get; }
+        public ChainState GenesisState { get; }
         public string ConsensusType { get; }
+        public object? ConsensusParameters { get; }
         public int SlotsCount { get; }
 
-        public Chain(IMerkleTree<AgentState> genesisStates, string consensusType, int slotsCount)
+        public Chain(ChainState genesisState, string consensusType, object? consensusParameters, int slotsCount)
         {
-            GenesisStates = genesisStates;
+            GenesisState = genesisState;
             ConsensusType = consensusType;
+            ConsensusParameters = consensusParameters;
             SlotsCount = slotsCount;
         }
     }

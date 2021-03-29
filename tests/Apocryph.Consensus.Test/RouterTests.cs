@@ -24,7 +24,7 @@ namespace Apocryph.Consensus.Test
         private Message GenerateMessage(int chain, int i)
         {
             var hash = Hash.From(chain);
-            return new Message(new Reference(hash.Cast<Chain>(), hash.Cast<AgentState>(), new[] { typeof(int).FullName! }), ReferenceData.From(i));
+            return new Message(new Reference(hash.Cast<Chain>(), 0, new[] { typeof(int).FullName! }), ReferenceData.From(i));
         }
 
         [Fact]
@@ -51,7 +51,7 @@ namespace Apocryph.Consensus.Test
             }
 
             var subscriptionChain = Hash.From("-").Cast<Chain>();
-            var subscriptionReference = new Reference(subscriptionChain, subscriptionChain.Cast<AgentState>(), new string[] { });
+            var subscriptionReference = new Reference(subscriptionChain, 0, new string[] { });
 
             await serviceRegistry.Register((new ServiceLocator("Chain", subscriptionChain.ToString()), new Service(new Dictionary<string, string>(), new Dictionary<string, IStream>()
             {

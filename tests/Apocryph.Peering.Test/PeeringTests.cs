@@ -7,33 +7,34 @@ using Xunit;
 
 namespace Apocryph.Peering.Test
 {
-    using Peering = Apocryph.Peering.FunctionApp.Peering;
-
-    public class ServiceRegistryTests
+    public class PeeringTests
     {
         [Fact]
         public async void Connect_WithRegisteredPeer_EstablishesConnection()
         {
-            var peering = new Peering(new FakeState());
+            var peerA = new Peer(Hash.From(0).Cast<object>());
+            var peerB = new Peer(Hash.From(1).Cast<object>());
+
+            var peerings = await PeeringFakes.GetPeeringAgents(new[] { peerA, peerB });
+            var peeringA = peerings[0];
+            var peeringB = peerings[1];
 
             var messagesIn = new object[] { 0, "123" };
             var messagesOut = new object[] { 1, "234" };
             var connectionType = "testConnection";
 
-            var peer = new Peer(Hash.From(0).Cast<object>());
-
-            var peerAgent = new FakeAgent();
-            peerAgent.RegisterFunction("ConnectionHandler", async ((string connectionType, IAsyncEnumerable<object> messages) input) =>
+            var peerAgentA = new FakeAgent();
+            peerAgentA.RegisterFunction("ConnectionHandler", async ((Peer sender, IAsyncEnumerable<object> messages) input) =>
             {
-                Assert.Equal(input.connectionType, connectionType);
+                Assert.Equal(input.sender, peerB);
                 Assert.Equal(await input.messages.ToArrayAsync(), messagesIn);
                 return messagesOut.ToAsyncEnumerable();
             });
-            var handler = new Handler<IAsyncEnumerable<object>>(peerAgent, "ConnectionHandler");
+            var handlerA = new Handler<IAsyncEnumerable<object>>(peerAgentA, "ConnectionHandler");
 
-            await peering.Register((peer, handler));
+            await peeringA.CallActionAsync("Register", (connectionType, handlerA));
 
-            var output = await peering.Connect((peer, connectionType, messagesIn.ToAsyncEnumerable()));
+            var output = await peeringB.CallFunctionAsync<IAsyncEnumerable<object>>("Connect", (peerA, connectionType, messagesIn.ToAsyncEnumerable()));
 
             Assert.Equal(await output.ToArrayAsync(), messagesOut);
         }
