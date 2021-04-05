@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using Apocryph.HashRegistry.Serialization;
 
-namespace Apocryph.Consensus.Test
+namespace Apocryph.Executor.Test
 {
     public class SerializedComparer : IEqualityComparer<object>
     {

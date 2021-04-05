@@ -26,7 +26,7 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
         }
 
         [FunctionName("Apocryph-SnowballConsensus")]
-        public async Task<IAsyncEnumerable<Message>> Start([PerperTrigger] (IAsyncEnumerable<Message> messages, string subscribtionsStream, HashRegistryProxy hashRegistry, Chain chain, IAgent peering, IAsyncEnumerable<(Hash<Chain>, Slot?[])> kothStates) input)
+        public async Task<IAsyncEnumerable<Message>> Start([PerperTrigger] (IAsyncEnumerable<Message> messages, string subscribtionsStream, HashRegistryProxy hashRegistry, Chain chain, IAgent peering, IAsyncEnumerable<(Hash<Chain>, Slot?[])> kothStates, IHandler<(AgentState, Message[])> executor) input)
         {
             var parameters = (SnowballParameters)input.chain.ConsensusParameters!;
             var emptyMessagesTree = await MerkleTreeBuilder.CreateRootFromValues(input.hashRegistry, new Message[] { }, 3);
@@ -39,11 +39,11 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
             var messagePoolTask = _context.StreamActionAsync("MessagePool", (input.messages, self));
             var kothTask = _context.StreamActionAsync("KothProcessor", (self, input.kothStates));
 
-            return await _context.StreamFunctionAsync<Message>("SnowballStream", (input.peering, input.hashRegistry, parameters, self, genesis));
+            return await _context.StreamFunctionAsync<Message>("SnowballStream", (input.peering, input.hashRegistry, input.executor, parameters, self, genesis));
         }
 
         [FunctionName("SnowballStream")]
-        public async IAsyncEnumerable<Message> SnowballStream([PerperTrigger] (IAgent peering, HashRegistryProxy hashRegistry, SnowballParameters parameters, Hash<Chain> self, Hash<Block> genesis) input)
+        public async IAsyncEnumerable<Message> SnowballStream([PerperTrigger] (IAgent peering, HashRegistryProxy hashRegistry, IHandler<(AgentState, Message[])> executor, SnowballParameters parameters, Hash<Chain> self, Hash<Block> genesis) input)
         {
             async Task<Query> SendQuery(Peer target, Query query)
             {
@@ -51,13 +51,6 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
                 var result = await input.peering.CallFunctionAsync<IAsyncEnumerable<object>>("Connect", (target, PeeringProtocol, messages));
 
                 return (Query)await result.FirstAsync();
-            }
-
-            async Task<(AgentState, Message[])> Execute(AgentState agentState, Message message)
-            {
-                var (_, result) = await _context.StartAgentAsync<(AgentState, Message[])>(agentState.Handler, (agentState, message));
-
-                return result;
             }
 
             async Task<(ChainState, IMerkleTree<Message>)> ExecuteBlock(ChainState chainState, IMerkleTree<Message> inputMessages)
@@ -68,7 +61,7 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
                 await foreach (var message in inputMessages.EnumerateItems(input.hashRegistry))
                 {
                     Message[] resultMessages;
-                    (agentStates[message.Target.AgentNonce], resultMessages) = await Execute(agentStates[message.Target.AgentNonce], message);
+                    (agentStates[message.Target.AgentNonce], resultMessages) = await input.executor.InvokeAsync((agentStates[message.Target.AgentNonce], message));
 
                     outputMesages.AddRange(resultMessages);
                 }

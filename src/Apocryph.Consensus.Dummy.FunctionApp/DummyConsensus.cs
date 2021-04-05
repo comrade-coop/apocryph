@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Apocryph.HashRegistry;
+using Apocryph.PerperUtilities;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Model;
 using Perper.WebJobs.Extensions.Triggers;
@@ -10,21 +11,14 @@ namespace Apocryph.Consensus.Dummy.FunctionApp
 {
     public class DummyConsensus
     {
-        private IContext _context;
-
-        public DummyConsensus(IContext context)
-        {
-            _context = context;
-        }
-
         [FunctionName("Apocryph-DummyConsensus")]
-        public async Task<IAsyncEnumerable<Message>> Start([PerperTrigger] (IAsyncEnumerable<Message> messages, string subscribtionsStream, HashRegistryProxy hashRegsitry, Chain chain) input)
+        public async Task<IAsyncEnumerable<Message>> Start([PerperTrigger] (IAsyncEnumerable<Message> messages, string subscribtionsStream, HashRegistryProxy hashRegsitry, Chain chain, IHandler<(AgentState, Message[])> executor) input, IContext context)
         {
-            return await _context.StreamFunctionAsync<Message>("ExecutionStream", (input.messages, input.hashRegsitry, input.chain));
+            return await context.StreamFunctionAsync<Message>("ExecutionStream", (input.messages, input.hashRegsitry, input.chain, input.executor));
         }
 
         [FunctionName("ExecutionStream")]
-        public async IAsyncEnumerable<Message> ExecutionStream([PerperTrigger] (IAsyncEnumerable<Message> messages, HashRegistryProxy hashRegsitry, Chain chain) input)
+        public async IAsyncEnumerable<Message> ExecutionStream([PerperTrigger] (IAsyncEnumerable<Message> messages, HashRegistryProxy hashRegsitry, Chain chain, IHandler<(AgentState, Message[])> executor) input)
         {
             var genesisAgentStates = await input.chain.GenesisState.AgentStates.EnumerateItems(input.hashRegsitry).ToListAsync();
             var statesById = genesisAgentStates.ToDictionary(x => x.Nonce, x => x);
@@ -42,20 +36,13 @@ namespace Apocryph.Consensus.Dummy.FunctionApp
                     continue;
 
                 Message[] resultMessages;
-                (statesById[message.Target.AgentNonce], resultMessages) = await Execute(statesById[message.Target.AgentNonce], message);
+                (statesById[message.Target.AgentNonce], resultMessages) = await input.executor.InvokeAsync((statesById[message.Target.AgentNonce], message));
 
                 foreach (var resultMessage in resultMessages)
                 {
                     yield return resultMessage;
                 }
             }
-        }
-
-        private async Task<(AgentState, Message[])> Execute(AgentState agentState, Message message)
-        {
-            var (_, result) = await _context.StartAgentAsync<(AgentState, Message[])>(agentState.Handler, (agentState, message));
-
-            return result;
         }
     }
 }

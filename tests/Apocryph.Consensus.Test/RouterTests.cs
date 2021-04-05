@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Channels;
 using Apocryph.Consensus.FunctionApp;
+using Apocryph.Executor.Test;
 using Apocryph.HashRegistry;
 using Apocryph.HashRegistry.Test;
 using Apocryph.ServiceRegistry;

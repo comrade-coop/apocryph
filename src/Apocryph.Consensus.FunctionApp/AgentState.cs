@@ -1,3 +1,5 @@
+using Apocryph.HashRegistry;
+
 namespace Apocryph.Consensus
 {
     public class AgentState
@@ -5,14 +7,13 @@ namespace Apocryph.Consensus
         public int Nonce { get; }
         public ReferenceData Data { get; }
         // public IMerkleTree<Subscription> Subscriptions { get; }
-        public string Handler { get; }
-        // public Hash<AgentCode> Code { get; }
+        public Hash<string> CodeHash { get; }
 
-        public AgentState(int nonce, ReferenceData data, string handler)
+        public AgentState(int nonce, ReferenceData data, Hash<string> codeHash)
         {
             Nonce = nonce;
             Data = data;
-            Handler = handler;
+            CodeHash = codeHash;
         }
     }
 }

@@ -13,6 +13,8 @@ namespace Apocryph.HashRegistry
 
         string ToString();
 
+        Hash<S> Cast<S>();
+
         public static Hash<T> From<T>(T value)
         {
             using var sha256Hash = SHA256.Create();

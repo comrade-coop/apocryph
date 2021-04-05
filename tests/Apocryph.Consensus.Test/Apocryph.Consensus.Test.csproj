@@ -20,6 +20,7 @@
     <ProjectReference Include="..\..\src\Apocryph.Consensus.Dummy.FunctionApp\Apocryph.Consensus.Dummy.FunctionApp.csproj" />
     <ProjectReference Include="..\Apocryph.HashRegistry.Test\Apocryph.HashRegistry.Test.csproj" />
     <ProjectReference Include="..\Apocryph.ServiceRegistry.Test\Apocryph.ServiceRegistry.Test.csproj" />
+    <ProjectReference Include="..\Apocryph.Executor.Test\Apocryph.Executor.Test.csproj" />
   </ItemGroup>
 
 </Project>

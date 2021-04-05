@@ -16,12 +16,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Apocryph.Consensus.FunctionApp\Apocryph.Consensus.FunctionApp.csproj" />
-    <ProjectReference Include="..\..\src\Apocryph.Consensus.Snowball.FunctionApp\Apocryph.Consensus.Snowball.FunctionApp.csproj" />
+    <ProjectReference Include="..\..\src\Apocryph.Executor.FunctionApp\Apocryph.Executor.FunctionApp.csproj" />
     <ProjectReference Include="..\Apocryph.HashRegistry.Test\Apocryph.HashRegistry.Test.csproj" />
-    <ProjectReference Include="..\Apocryph.Peering.Test\Apocryph.Peering.Test.csproj" />
-    <ProjectReference Include="..\Apocryph.Consensus.Test\Apocryph.Consensus.Test.csproj" />
-    <ProjectReference Include="..\Apocryph.Executor.Test\Apocryph.Executor.Test.csproj" />
+    <ProjectReference Include="..\Apocryph.ServiceRegistry.Test\Apocryph.ServiceRegistry.Test.csproj" />
   </ItemGroup>
 
 </Project>
