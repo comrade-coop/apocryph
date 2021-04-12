@@ -5,10 +5,9 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Apocryph.Consensus;
-using Apocryph.HashRegistry;
-using Apocryph.HashRegistry.MerkleTree;
-using Apocryph.HashRegistry.Test;
-using Apocryph.Peering;
+using Apocryph.Ipfs;
+using Apocryph.Ipfs.Fake;
+using Apocryph.Ipfs.MerkleTree;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Fake;
 using Xunit;
@@ -28,15 +27,15 @@ namespace Apocryph.KoTH.Test
 #endif
         public async void SimpleMiner_Fills_AllPeers(int slotsCount)
         {
-            var selfPeer = new Peer(Hash.From(0).Cast<object>());
-            var hashRegistry = HashRegistryFakes.GetHashRegistryProxy();
+            var selfPeer = new Peer(Hash.From(0).Bytes);
+            var hashResolver = new FakeHashResolver();
 
             var chain = new Chain(new ChainState(new MerkleTreeNode<AgentState>(new Hash<IMerkleTree<AgentState>>[] { }), 0), "", null, slotsCount);
-            var chainId = await hashRegistry.StoreAsync(chain);
+            var chainId = await hashResolver.StoreAsync(chain);
 
             var tokenSource = new CancellationTokenSource();
             var minedKeysCollectorStream = new FakeAsyncCollector<(Hash<Chain>, Slot)>();
-            var kothStateStream = KoTH.Processor((minedKeysCollectorStream, hashRegistry), new FakeState());
+            var kothStateStream = KoTH.Processor(minedKeysCollectorStream, new FakeState(), hashResolver);
 
             kothStateStream = kothStateStream.Select(x => (x.Item1, x.Item2.ToArray())); // Duplicate the array, as KoTH modifies it by reference
 

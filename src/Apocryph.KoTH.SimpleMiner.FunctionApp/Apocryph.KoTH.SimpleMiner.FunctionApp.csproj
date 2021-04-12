@@ -19,7 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Apocryph.ServiceRegistry.FunctionApp\Apocryph.ServiceRegistry.FunctionApp.csproj" />
-    <ProjectReference Include="..\Apocryph.HashRegistry.FunctionApp\Apocryph.HashRegistry.FunctionApp.csproj" />
+    <ProjectReference Include="..\Apocryph.Ipfs\Apocryph.Ipfs.csproj" />
     <ProjectReference Include="..\Apocryph.Consensus.FunctionApp\Apocryph.Consensus.FunctionApp.csproj" />
     <ProjectReference Include="..\Apocryph.KoTH.FunctionApp\Apocryph.KoTH.FunctionApp.csproj" />
   </ItemGroup>

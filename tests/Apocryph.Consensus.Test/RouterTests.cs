@@ -2,9 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Channels;
 using Apocryph.Consensus.FunctionApp;
-using Apocryph.Executor.Test;
-using Apocryph.HashRegistry;
-using Apocryph.HashRegistry.Test;
+using Apocryph.Ipfs;
+using Apocryph.Ipfs.Test;
 using Apocryph.ServiceRegistry;
 using Apocryph.ServiceRegistry.Test;
 using Perper.WebJobs.Extensions.Fake;
@@ -31,7 +30,6 @@ namespace Apocryph.Consensus.Test
         [Fact]
         public async void RouterInput_SubscribesAndPasses_AllMessages()
         {
-            var hashRegistry = HashRegistryFakes.GetHashRegistryProxy();
             var (serviceRegistryAgent, serviceRegistry) = ServiceRegistryFakes.GetServiceRegistryAgent();
 
             var callMessages = new[] { GenerateMessage(0, 0), GenerateMessage(0, 1) };
@@ -73,7 +71,6 @@ namespace Apocryph.Consensus.Test
         [Fact]
         public async void RouterOutput_PostsAndPublishes_AllMessages()
         {
-            var hashRegistry = HashRegistryFakes.GetHashRegistryProxy();
             var (serviceRegistryAgent, serviceRegistry) = ServiceRegistryFakes.GetServiceRegistryAgent();
 
             var messagesToPublish = new[] { GenerateMessage(0, 0), GenerateMessage(0, 1) };

@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 using Apocryph.Consensus;
-using Apocryph.HashRegistry;
+using Apocryph.Ipfs;
 using Apocryph.PerperUtilities;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Model;

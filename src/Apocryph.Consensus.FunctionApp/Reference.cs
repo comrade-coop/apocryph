@@ -1,6 +1,6 @@
 using System;
 using System.Linq;
-using Apocryph.HashRegistry;
+using Apocryph.Ipfs;
 
 namespace Apocryph.Consensus
 {
@@ -30,7 +30,11 @@ namespace Apocryph.Consensus
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(Chain, AgentNonce, AllowedMessageTypes);
+            var hashCode = new HashCode();
+            hashCode.Add(Chain);
+            hashCode.Add(AgentNonce);
+            Array.ForEach(AllowedMessageTypes, hashCode.Add);
+            return hashCode.ToHashCode();
         }
     }
 }

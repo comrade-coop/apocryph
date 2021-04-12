@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
-using Apocryph.HashRegistry;
-using Apocryph.HashRegistry.MerkleTree;
+using Apocryph.Ipfs;
+using Apocryph.Ipfs.MerkleTree;
 using Apocryph.KoTH;
-using Apocryph.Peering;
 using Apocryph.PerperUtilities;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Model;
@@ -15,7 +16,6 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
 {
     public class SnowballConsensus
     {
-        static public string PeeringProtocol = "snowball";
         private IContext _context;
         private IState _state;
 
@@ -26,39 +26,44 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
         }
 
         [FunctionName("Apocryph-SnowballConsensus")]
-        public async Task<IAsyncEnumerable<Message>> Start([PerperTrigger] (IAsyncEnumerable<Message> messages, string subscribtionsStream, HashRegistryProxy hashRegistry, Chain chain, IAgent peering, IAsyncEnumerable<(Hash<Chain>, Slot?[])> kothStates, IHandler<(AgentState, Message[])> executor) input)
+        public async Task<IAsyncEnumerable<Message>> Start([PerperTrigger] (IAsyncEnumerable<Message> messages, string subscribtionsStream, Chain chain, IAsyncEnumerable<(Hash<Chain>, Slot?[])> kothStates, IHandler<(AgentState, Message[])> executor) input, IHashResolver hashResolver)
         {
             var parameters = (SnowballParameters)input.chain.ConsensusParameters!;
-            var emptyMessagesTree = await MerkleTreeBuilder.CreateRootFromValues(input.hashRegistry, new Message[] { }, 3);
+            var emptyMessagesTree = await MerkleTreeBuilder.CreateRootFromValues(hashResolver, new Message[] { }, 3);
             var genesisBlock = new Block(null, emptyMessagesTree, emptyMessagesTree, input.chain.GenesisState);
-            var genesis = await input.hashRegistry.StoreAsync(genesisBlock);
-            var self = await input.hashRegistry.StoreAsync(input.chain);
+            var genesis = await hashResolver.StoreAsync(genesisBlock);
+            var self = await hashResolver.StoreAsync(input.chain);
 
-            await input.peering.CallActionAsync("Register", (PeeringProtocol, _context.Agent.GetHandler<IAsyncEnumerable<object>>("PeeringResponder")));
+            // FIXME: await input.peering.CallActionAsync("Register", (PeeringProtocol, _context.Agent.GetHandler<IAsyncEnumerable<object>>("PeeringResponder")));
 
             var messagePoolTask = _context.StreamActionAsync("MessagePool", (input.messages, self));
             var kothTask = _context.StreamActionAsync("KothProcessor", (self, input.kothStates));
 
-            return await _context.StreamFunctionAsync<Message>("SnowballStream", (input.peering, input.hashRegistry, input.executor, parameters, self, genesis));
+            return await _context.StreamFunctionAsync<Message>("SnowballStream", (input.executor, parameters, self, genesis));
         }
 
         [FunctionName("SnowballStream")]
-        public async IAsyncEnumerable<Message> SnowballStream([PerperTrigger] (IAgent peering, HashRegistryProxy hashRegistry, IHandler<(AgentState, Message[])> executor, SnowballParameters parameters, Hash<Chain> self, Hash<Block> genesis) input)
+        public async IAsyncEnumerable<Message> SnowballStream([PerperTrigger] (IHandler<(AgentState, Message[])> executor, SnowballParameters parameters, Hash<Chain> self, Hash<Block> genesis) input, IHashResolver hashResolver, IPeerConnector peerConnector, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            async Task<Query> SendQuery(Peer target, Query query)
-            {
-                var messages = new ListAsyncEnumerable<object>(new object[] { query });
-                var result = await input.peering.CallFunctionAsync<IAsyncEnumerable<object>>("Connect", (target, PeeringProtocol, messages));
+            var queryPath = $"snowball/{input.self}";
 
-                return (Query)await result.FirstAsync();
-            }
+            await peerConnector.ListenQuery<Query, Query>(queryPath, async (peer, request) =>
+            {
+                // NOTE: Should be using some locking here
+                var snowballState = await _state.GetValue<SnowballState>($"snowballState-{request.Round}");
+                snowballState.ProcessQuery(request.Value);
+                var result = new Query(snowballState.CurrentValue!, request.Round);
+                await _state.SetValue($"snowballState-{request.Round}", snowballState);
+
+                return result;
+            }, cancellationToken);
 
             async Task<(ChainState, IMerkleTree<Message>)> ExecuteBlock(ChainState chainState, IMerkleTree<Message> inputMessages)
             {
-                var agentStates = await chainState.AgentStates.EnumerateItems(input.hashRegistry).ToDictionaryAsync(x => x.Nonce, x => x);
+                var agentStates = await chainState.AgentStates.EnumerateItems(hashResolver).ToDictionaryAsync(x => x.Nonce, x => x);
                 var outputMesages = new List<Message>();
 
-                await foreach (var message in inputMessages.EnumerateItems(input.hashRegistry))
+                await foreach (var message in inputMessages.EnumerateItems(hashResolver))
                 {
                     Message[] resultMessages;
                     (agentStates[message.Target.AgentNonce], resultMessages) = await input.executor.InvokeAsync((agentStates[message.Target.AgentNonce], message));
@@ -66,9 +71,9 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
                     outputMesages.AddRange(resultMessages);
                 }
 
-                var outputStatesTree = await MerkleTreeBuilder.CreateRootFromValues(input.hashRegistry, agentStates.Values, 3); // FIXME: what about ordering?
+                var outputStatesTree = await MerkleTreeBuilder.CreateRootFromValues(hashResolver, agentStates.Values, 3); // FIXME: what about ordering?
                 var outputState = new ChainState(outputStatesTree, chainState.NextAgentNonce);
-                var outputMessagesTree = await MerkleTreeBuilder.CreateRootFromValues(input.hashRegistry, outputMesages, 3);
+                var outputMessagesTree = await MerkleTreeBuilder.CreateRootFromValues(hashResolver, outputMesages, 3);
 
                 return (outputState, outputMessagesTree);
             }
@@ -80,19 +85,14 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
                     return false;
                 }
 
-                var previous = await input.hashRegistry.RetrieveAsync(expectedPrevious);
-
-                // FIXME: messages are treated as a multiset elsewhere
-                var inputMessagesSet = (await _state.GetValue<List<Message>>("messagePool")).ToHashSet();
-                await foreach (var inputMessage in previous.InputMessages.EnumerateItems(input.hashRegistry))
+                var inputMessagesSet = await _state.GetValue<List<Message>>("messagePool");
+                await foreach (var inputMessage in block.InputMessages.EnumerateItems(hashResolver))
                 {
-                    // if (inputMessage.Target.Chain != input.self || !inputMessage.Target.AllowedMessageTypes.Contains(inputMessage.Data.Type))
-                    //     return false;
-
                     if (!inputMessagesSet.Remove(inputMessage))
                         return false;
                 }
 
+                var previous = await hashResolver.RetrieveAsync(expectedPrevious);
                 var (outputState, outputMessages) = await ExecuteBlock(previous.State, block.InputMessages);
 
                 return Hash.From(block.State) == Hash.From(outputState) && Hash.From(block.OutputMessages) == Hash.From(outputMessages);
@@ -100,7 +100,7 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
 
             async Task<Block?> ProposeBlock(Hash<Block> previousHash)
             {
-                var previous = await input.hashRegistry.RetrieveAsync(previousHash);
+                var previous = await hashResolver.RetrieveAsync(previousHash);
                 var inputMessagesList = (await _state.GetValue<List<Message>>("messagePool")).ToArray();
 
                 if (inputMessagesList.Length == 0 && await _state.GetValue("finished", () => false))
@@ -108,7 +108,7 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
                     return null; // DEBUG: Used for testing purposes mainly
                 }
 
-                var inputMessages = await MerkleTreeBuilder.CreateRootFromValues(input.hashRegistry, inputMessagesList, 3);
+                var inputMessages = await MerkleTreeBuilder.CreateRootFromValues(hashResolver, inputMessagesList, 3);
 
                 var (outputStates, outputMessages) = await ExecuteBlock(previous.State, inputMessages);
 
@@ -117,12 +117,18 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
 
             var currentRound = await _state.GetValue<int>("currentRound", () => 0);
 
+            // TODO: Sync to current state first
+
             if (currentRound == 0)
             {
+                var newBlock = await ProposeBlock(input.genesis);
+                if (newBlock == null) yield break; // DEBUG: Used for testing purposes mainly
+                var newBlockHash = await hashResolver.StoreAsync(newBlock);
                 var snowball = await _state.GetValue<SnowballState>($"snowballState-{currentRound}");
-                snowball.ProcessQuery(input.genesis);
+                snowball.ProcessQuery(newBlockHash);
                 await _state.SetValue($"snowballState-{currentRound}", snowball);
             }
+
 
             // NOTE: Might benefit from locking
             while (true)
@@ -142,8 +148,8 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
                         continue;
                     }
                     var sampledPeers = snowball.SamplePeers(input.parameters, kothPeers);
-                    var queryToSend = new Query(snowball.CurrentValue!.Value, currentRound);
-                    replyTasks = sampledPeers.Select(peer => SendQuery(peer, queryToSend));
+                    var query = new Query(snowball.CurrentValue, currentRound);
+                    replyTasks = sampledPeers.Select(peer => peerConnector.Query<Query, Query>(peer, queryPath, query));
                 }
 
                 var responses = (await Task.WhenAll(replyTasks)).Select(reply => reply.Value);
@@ -163,21 +169,21 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
 
                 if (finishedHash != null)
                 {
-                    var finishedBlock = await input.hashRegistry.RetrieveAsync(finishedHash.Value);
+                    var finishedBlock = await hashResolver.RetrieveAsync(finishedHash);
 
                     var previousHash = await _state.GetValue<Hash<Block>>("lastBlock", () => input.genesis);
                     if (await ValidateBlock(finishedBlock, previousHash))
                     {
-                        previousHash = finishedHash.Value;
+                        previousHash = finishedHash;
                         await _state.SetValue("lastBlock", previousHash);
 
-                        await foreach (var outputMessage in finishedBlock.OutputMessages.EnumerateItems(input.hashRegistry))
+                        await foreach (var outputMessage in finishedBlock.OutputMessages.EnumerateItems(hashResolver))
                         {
                             yield return outputMessage;
                         }
 
                         var messagePool = await _state.GetValue<List<Message>>("messagePool");
-                        await foreach (var processedMessage in finishedBlock.InputMessages.EnumerateItems(input.hashRegistry))
+                        await foreach (var processedMessage in finishedBlock.InputMessages.EnumerateItems(hashResolver))
                         {
                             messagePool.Remove(processedMessage);
                         }
@@ -188,12 +194,9 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
                     // FIXME: Calculate proposers or proposal order from (previousHash, currentRound)
                     var newBlock = await ProposeBlock(previousHash);
 
-                    if (newBlock == null) // DEBUG: Used for testing purposes mainly
-                    {
-                        break;
-                    }
+                    if (newBlock == null) yield break; // DEBUG: Used for testing purposes mainly
 
-                    var newBlockHash = await input.hashRegistry.StoreAsync(newBlock);
+                    var newBlockHash = await hashResolver.StoreAsync(newBlock);
 
                     var snowball = await _state.GetValue<SnowballState>($"snowballState-{currentRound}");
                     snowball.ProcessQuery(newBlockHash);
@@ -215,7 +218,7 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
                 messagePool.Add(message);
                 await _state.SetValue("messagePool", messagePool);
             }
-            await _state.SetValue("finished", true);
+            await _state.SetValue("finished", true); // DEBUG: Used for testing purposes mainly
         }
 
         [FunctionName("KothProcessor")]
@@ -230,20 +233,6 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
 
                 await _state.SetValue("kothPeers", peers);
             }
-        }
-
-        [FunctionName("PeeringResponder")]
-        public async Task<IAsyncEnumerable<object>> PeeringResponder([PerperTrigger] (Peer other, IAsyncEnumerable<object> messages) input)
-        {
-            var request = (Query)await input.messages.FirstAsync();
-
-            // NOTE: Should be using some locking here
-            var snowballState = await _state.GetValue<SnowballState>($"snowballState-{request.Round}");
-            snowballState.ProcessQuery(request.Value);
-            var result = new Query(snowballState.CurrentValue!.Value, request.Round);
-            await _state.SetValue($"snowballState-{request.Round}", snowballState);
-
-            return new ListAsyncEnumerable<object>(new object[] { result });
         }
     }
 }

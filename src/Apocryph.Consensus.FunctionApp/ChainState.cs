@@ -1,4 +1,4 @@
-using Apocryph.HashRegistry.MerkleTree;
+using Apocryph.Ipfs.MerkleTree;
 
 namespace Apocryph.Consensus
 {

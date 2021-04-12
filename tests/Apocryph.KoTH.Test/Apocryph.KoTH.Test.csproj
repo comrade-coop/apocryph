@@ -18,7 +18,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Apocryph.KoTH.FunctionApp\Apocryph.KoTH.FunctionApp.csproj" />
     <ProjectReference Include="..\..\src\Apocryph.KoTH.SimpleMiner.FunctionApp\Apocryph.KoTH.SimpleMiner.FunctionApp.csproj" />
-    <ProjectReference Include="..\Apocryph.HashRegistry.Test\Apocryph.HashRegistry.Test.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,8 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
-using Apocryph.HashRegistry;
-using Apocryph.Peering;
+using Apocryph.Ipfs;
 
 namespace Apocryph.Consensus.Snowball.FunctionApp
 {
@@ -46,7 +45,7 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
                     CurrentValue = responseValue;
                 }
 
-                if (Memory[responseValue] > Memory[CurrentValue!.Value])
+                if (Memory[responseValue] > Memory[CurrentValue])
                 {
                     CurrentValue = responseValue;
                 }

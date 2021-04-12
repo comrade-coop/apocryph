@@ -4,10 +4,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Executor.Test;
-using Apocryph.HashRegistry;
-using Apocryph.HashRegistry.Test;
+using Apocryph.Ipfs;
+using Apocryph.Ipfs.Fake;
+using Apocryph.Ipfs.Test;
 using Apocryph.KoTH;
-using Apocryph.Peering.Test;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,24 +28,27 @@ namespace Apocryph.Consensus.Snowball.Test
 #endif
         public async void Snowball_ConfirmsAndExecutes_SingleMessage(int peersCount)
         {
-            var hashRegistry = HashRegistryFakes.GetHashRegistryProxy();
+            var hashResolver = new FakeHashResolver();
             var executor = await ExecutorFakes.GetExecutor(ExecutorFakes.TestAgents);
-            var peers = PeeringFakes.GetFakePeers(peersCount);
-            var peeringRouter = PeeringFakes.GetPeeringRouter();
+            var peeringProvider = new FakePeerConnectorProvider();
+            var peers = Enumerable.Range(0, peersCount).Select(x => FakePeerConnectorProvider.GetFakePeer()).ToArray();
 
             var snowballParameters = new SnowballParameters(3, 0.5, 25);
-            var (chain, inputMessages, expectedOutputMessages) = await ExecutorFakes.GetTestAgentScenario(hashRegistry, "Apocryph-SnowballConsensus", snowballParameters, peersCount);
+            var (chain, inputMessages, expectedOutputMessages) = await ExecutorFakes.GetTestAgentScenario(hashResolver, "Apocryph-SnowballConsensus", snowballParameters, peersCount);
 
             var chainId = Hash.From(chain);
 
-            var kothStates = new (Hash<Chain>, Slot?[])[]
+            var started = new TaskCompletionSource<bool>();
+            async IAsyncEnumerable<(Hash<Chain>, Slot?[])> kothStates()
             {
-                (chainId, peers.Select(peer => (Slot?)new Slot(peer, new byte[0])).ToArray())
-            };
+                await started.Task;
+                yield return (chainId, peers.Select(peer => (Slot?)new Slot(peer, new byte[0])).ToArray());
+            }
 
-            var outputStreams = await SnowballFakes.StartSnowballNetwork(peers, hashRegistry, chain, peeringRouter, executor,
-                peer => (inputMessages.ToAsyncEnumerable(), "-", kothStates.ToAsyncEnumerable()));
+            var outputStreams = await SnowballFakes.StartSnowballNetwork(peers, hashResolver, peeringProvider, chain, executor,
+                peer => (inputMessages.ToAsyncEnumerable(), "-", kothStates()));
 
+            started.TrySetResult(true);
 
             // NOTE: Using WhenAll here, since (A) we need to iterate all streams fully and (B) PerperFakeStream does not propagate completion
 

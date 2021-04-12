@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using Apocryph.Consensus;
-using Apocryph.HashRegistry.Test;
+using Apocryph.Ipfs.Fake;
+using Apocryph.Ipfs.Test;
 using Xunit;
 
 namespace Apocryph.Executor.Test
@@ -11,11 +12,11 @@ namespace Apocryph.Executor.Test
         [Fact]
         public async void TestAgentScenario_ProducesExpectedMessages()
         {
-            var hashRegistry = HashRegistryFakes.GetHashRegistryProxy();
+            var hashResolver = new FakeHashResolver();
             var executor = await ExecutorFakes.GetExecutor(ExecutorFakes.TestAgents);
-            var (chain, inputMessages, expectedOutputMessages) = await ExecutorFakes.GetTestAgentScenario(hashRegistry, "-", null, 1);
+            var (chain, inputMessages, expectedOutputMessages) = await ExecutorFakes.GetTestAgentScenario(hashResolver, "-", null, 1);
 
-            var agentStates = await chain.GenesisState.AgentStates.EnumerateItems(hashRegistry).ToDictionaryAsync(x => x.Nonce, x => x);
+            var agentStates = await chain.GenesisState.AgentStates.EnumerateItems(hashResolver).ToDictionaryAsync(x => x.Nonce, x => x);
 
             var outputMessages = new List<Message>();
 

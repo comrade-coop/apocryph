@@ -1,4 +1,4 @@
-using Apocryph.HashRegistry;
+using Apocryph.Ipfs;
 
 namespace Apocryph.Consensus.Snowball.FunctionApp
 {

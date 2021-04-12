@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <LangVersion>8</LangVersion>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Azure.WebJobs" Version="3.0.22" />
+    <PackageReference Include="System.IO.Pipelines" Version="5.0.1" />
+    <PackageReference Include="System.Linq.Async" Version="4.1.1" />
+    <PackageReference Include="Ipfs.Http.Client" Version="0.33.0" />
+  </ItemGroup>
+
+</Project>

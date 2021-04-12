@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using System.Text.Json;
-using Apocryph.HashRegistry.Serialization;
+using Apocryph.Ipfs.Serialization;
 
 namespace Apocryph.Consensus
 {
@@ -43,7 +43,11 @@ namespace Apocryph.Consensus
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(Type, Data, References);
+            var hashCode = new HashCode();
+            hashCode.Add(Type);
+            Array.ForEach(Data, hashCode.Add);
+            Array.ForEach(References, hashCode.Add);
+            return hashCode.ToHashCode();
         }
     }
 }

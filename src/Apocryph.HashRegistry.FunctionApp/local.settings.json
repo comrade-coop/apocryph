@@ -1,9 +1,0 @@
-{
-    "IsEncrypted": false,
-    "Values": {
-        "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-        "FUNCTIONS_WORKER_RUNTIME": "dotnet",
-        "PERPER_AGENT_NAME": "Apocryph-HashRegistry",
-        "PERPER_ROOT_AGENT": "Apocryph-HashRegistry"
-    }
-}

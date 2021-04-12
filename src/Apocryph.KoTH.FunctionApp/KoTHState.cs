@@ -1,6 +1,6 @@
 using System.Linq;
 using System.Numerics;
-using Apocryph.HashRegistry;
+using Apocryph.Ipfs;
 
 namespace Apocryph.KoTH
 {

@@ -1,8 +1,8 @@
 using System;
 using System.Threading.Tasks;
 using Apocryph.Consensus;
-using Apocryph.HashRegistry;
-using Apocryph.HashRegistry.MerkleTree;
+using Apocryph.Ipfs;
+using Apocryph.Ipfs.MerkleTree;
 using Apocryph.PerperUtilities;
 using Perper.WebJobs.Extensions.Fake;
 
@@ -57,7 +57,7 @@ namespace Apocryph.Executor.Test
         };
 
 
-        public static async Task<(Chain chain, Message[] input, Message[] output)> GetTestAgentScenario(HashRegistryProxy hashRegistry, string consensusType, object? consensusParameters, int slotsCount)
+        public static async Task<(Chain chain, Message[] input, Message[] output)> GetTestAgentScenario(IHashResolver hashResolver, string consensusType, object? consensusParameters, int slotsCount)
         {
             var messageFilter = new string[] { typeof(int).FullName! };
             var fakeChainId = Hash.From("123").Cast<Chain>();
@@ -67,11 +67,11 @@ namespace Apocryph.Executor.Test
                 new AgentState(1, ReferenceData.From(new Reference(fakeChainId, 1, messageFilter)), Hash.From("AgentDec"))
             };
 
-            var agentStatesTree = await MerkleTreeBuilder.CreateRootFromValues(hashRegistry, agentStates, 2);
+            var agentStatesTree = await MerkleTreeBuilder.CreateRootFromValues(hashResolver, agentStates, 2);
 
             var chain = new Chain(new ChainState(agentStatesTree, agentStates.Length), consensusType, consensusParameters, slotsCount);
 
-            var chainId = await hashRegistry.StoreAsync(chain);
+            var chainId = await hashResolver.StoreAsync(chain);
 
             var inputMessages = new Message[]
             {

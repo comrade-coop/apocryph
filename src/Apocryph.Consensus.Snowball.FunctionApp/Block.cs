@@ -1,10 +1,11 @@
-using Apocryph.HashRegistry;
-using Apocryph.HashRegistry.MerkleTree;
+using Apocryph.Ipfs;
+using Apocryph.Ipfs.MerkleTree;
 
 namespace Apocryph.Consensus.Snowball.FunctionApp
 {
     public class Block
     {
+        // public int Height;
         public Hash<Block>? Previous { get; }
         public IMerkleTree<Message> InputMessages { get; }
         public IMerkleTree<Message> OutputMessages { get; }

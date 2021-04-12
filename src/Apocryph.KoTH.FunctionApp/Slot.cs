@@ -1,4 +1,4 @@
-using Apocryph.Peering;
+using Apocryph.Ipfs;
 
 namespace Apocryph.KoTH
 {
