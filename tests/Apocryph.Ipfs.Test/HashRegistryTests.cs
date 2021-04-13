@@ -44,15 +44,13 @@ namespace Apocryph.Ipfs.Test
         {
             var resolver = _fixture.GetHashResolver(resolverImplementation, 2);
 
-            const int waitTime = 100;
-
             var data = ("testwrap", _data);
 
             var hash = Hash.From(data);
 
             var resultTask = resolver.RetrieveAsync(hash);
 
-            await Task.Delay(waitTime);
+            await Task.Delay(TestData.WaitTime);
             Assert.False(resultTask.IsCompleted);
 
             await resolver.StoreAsync(data);

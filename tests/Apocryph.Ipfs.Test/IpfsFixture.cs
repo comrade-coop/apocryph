@@ -111,6 +111,7 @@ namespace Apocryph.Ipfs.Test
             RunIpfsCommand(ipfsDirectory, "config", "profile", "apply", "test").WaitForExit();
             RunIpfsCommand(ipfsDirectory, "config", "--json", "Experimental.Libp2pStreamMounting", "true").WaitForExit();
             RunIpfsCommand(ipfsDirectory, "config", "Addresses.API", $"/ip4/127.0.0.1/tcp/{ipfsApiPort}").WaitForExit();
+            // RunIpfsCommand(ipfsDirectory, "config", "Pubsub.Router", "floodsub").WaitForExit(); // DEBUG: More reliable in testing
             RunIpfsCommand(ipfsDirectory, "config", "--json", "Addresses.Swarm", $"[\"/ip4/127.0.0.1/tcp/{ipfsSwarmPort}\"]").WaitForExit();
             if (_lastPeerAddr != null)
             {

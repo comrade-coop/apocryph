@@ -1,10 +1,11 @@
 using System;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Apocryph.Consensus;
 using Apocryph.Ipfs;
 using Apocryph.Ipfs.Fake;
 using Apocryph.Ipfs.MerkleTree;
-using Perper.WebJobs.Extensions.Dataflow;
 using Perper.WebJobs.Extensions.Fake;
 using Xunit;
 
@@ -19,21 +20,35 @@ namespace Apocryph.KoTH.Test
 #if SLOWTESTS
         [InlineData(100, 200)]
 #endif
-        public async void KoTH_KeepsTrack_OfMinedPeers(int slots, int mineCount)
+        public async void KoTH_KeepsTrack_OfMinedPeers(int slotsCount, int mineCount)
         {
-            var selfPeer = new Peer(Hash.From(0).Bytes);
             var hashResolver = new FakeHashResolver();
+            var peerConnector = (new FakePeerConnectorProvider()).GetConnector();
 
-            var chain = new Chain(new ChainState(new MerkleTreeNode<AgentState>(new Hash<IMerkleTree<AgentState>>[] { }), 0), "", null, slots);
+            var chain = new Chain(new ChainState(new MerkleTreeNode<AgentState>(new Hash<IMerkleTree<AgentState>>[] { }), 0), "", null, slotsCount);
             var chainId = await hashResolver.StoreAsync(chain);
 
-            var minedKeys = Enumerable.Range(0, mineCount).Select(i => (chainId, new Slot(selfPeer, BitConverter.GetBytes(i))));
-            var outputStream = KoTH.Processor(minedKeys.ToAsyncEnumerable(), new FakeState(), hashResolver);
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            var outputStream = await KoTH.Processor(null, new FakeState(), hashResolver, peerConnector, cancellationTokenSource.Token);
+
+            var _ = Task.Run(async () =>
+            {
+                for (var i = 0; i < mineCount; i++)
+                {
+                    var slot = new Slot(peerConnector.Self, BitConverter.GetBytes(i));
+                    await peerConnector.SendPubSub(KoTH.PubSubPath, (chainId, slot));
+                }
+
+                await Task.WhenAll(peerConnector.PendingHandlerTasks);
+
+                cancellationTokenSource.Cancel();
+            });
 
             var previousCount = 0;
-            await foreach (var (stateChainId, peers) in outputStream)
+            await foreach (var (stateChainId, slots) in outputStream)
             {
-                var count = peers.Count(x => x != null);
+                var count = slots.Count(x => x != null);
                 Assert.Equal(stateChainId, chainId);
                 Assert.True(count == previousCount || count == previousCount + 1);
                 previousCount = count;

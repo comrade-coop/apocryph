@@ -1,14 +1,11 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 using Apocryph.Consensus;
 using Apocryph.Ipfs;
 using Apocryph.Ipfs.Fake;
 using Apocryph.Ipfs.MerkleTree;
-using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Fake;
 using Xunit;
 
@@ -27,63 +24,44 @@ namespace Apocryph.KoTH.Test
 #endif
         public async void SimpleMiner_Fills_AllPeers(int slotsCount)
         {
-            var peerConnectorProvider = new FakePeerConnectorProvider();
-            var peer = FakePeerConnectorProvider.GetFakePeer();
-            var peerConnector = peerConnectorProvider.GetConnector(peer);
             var hashResolver = new FakeHashResolver();
+            var peerConnector = (new FakePeerConnectorProvider()).GetConnector();
 
             var chain = new Chain(new ChainState(new MerkleTreeNode<AgentState>(new Hash<IMerkleTree<AgentState>>[] { }), 0), "", null, slotsCount);
             var chainId = await hashResolver.StoreAsync(chain);
 
-            var tokenSource = new CancellationTokenSource();
-            var minedKeysCollectorStream = new FakeAsyncCollector<(Hash<Chain>, Slot)>();
-            var kothStateStream = KoTH.Processor(minedKeysCollectorStream, new FakeState(), hashResolver);
+            var cancellationTokenSource = new CancellationTokenSource();
 
-            kothStateStream = kothStateStream.Select(x => (x.Item1, x.Item2.ToArray())); // Duplicate the array, as KoTH modifies it by reference
+            var kothStateStream = await KoTH.Processor(null, new FakeState(), hashResolver, peerConnector, cancellationTokenSource.Token);
 
-            await minedKeysCollectorStream.AddAsync((chainId, new Slot(peer, new byte[] { 0 })));
+            var ready = new TaskCompletionSource<bool>(); // NOTE: Used since we want to start things only after the miner is listening
+            async IAsyncEnumerable<(Hash<Chain>, Slot?[])> kothStates()
+            {
+                ready.SetResult(true);
+                await foreach (var state in kothStateStream)
+                    yield return state;
+            }
 
-            var minerTask = SimpleMiner.Miner(("-", kothStateStream), minedKeysCollectorStream, peerConnector, tokenSource.Token);
+            var minerTask = SimpleMiner.Miner(kothStates(), peerConnector, cancellationTokenSource.Token);
+
+            await ready.Task;
+            await peerConnector.SendPubSub(KoTH.PubSubPath, (chainId, new Slot(peerConnector.Self, new byte[] { 0 })));
 
             var i = 0;
             await foreach (var (stateChainId, peers) in kothStateStream)
             {
                 i++;
-                Assert.True(i < slotsCount * 10); // Prevent hangs
+                Assert.True(i < slotsCount * 10); // Hang prevention
                 var count = peers.Count(x => x != null);
                 if (count == slotsCount)
                 {
                     break;
                 }
             }
-            tokenSource.Cancel();
-            minedKeysCollectorStream.Complete();
+            cancellationTokenSource.Cancel();
+
+            await Task.WhenAll(peerConnector.PendingHandlerTasks);
             await minerTask;
-        }
-
-        public class FakeAsyncCollector<T> : IAsyncCollector<T>, IAsyncEnumerable<T> // FIXME: move to Perper
-        {
-            private Channel<T> _channel = Channel.CreateUnbounded<T>();
-
-            public async Task AddAsync(T item, CancellationToken cancellationToken = default)
-            {
-                await _channel.Writer.WriteAsync(item, cancellationToken);
-            }
-
-            public Task FlushAsync(CancellationToken cancellationToken = default)
-            {
-                return Task.CompletedTask;
-            }
-
-            public void Complete(Exception? exception = null)
-            {
-                _channel.Writer.Complete(exception);
-            }
-
-            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default)
-            {
-                return _channel.Reader.ReadAllAsync().GetAsyncEnumerator(cancellationToken);
-            }
         }
     }
 }

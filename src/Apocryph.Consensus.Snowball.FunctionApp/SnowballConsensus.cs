@@ -161,7 +161,7 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
                     }
                     var sampledPeers = snowball.SamplePeers(input.parameters, kothPeers);
                     var query = new Query(snowball.CurrentValue, currentRound);
-                    replyTasks = sampledPeers.Select(peer => peerConnector.Query<Query, Query>(peer, queryPath, query));
+                    replyTasks = sampledPeers.Select(peer => peerConnector.SendQuery<Query, Query>(peer, queryPath, query));
                 }
 
                 var responses = (await Task.WhenAll(replyTasks)).Select(reply => reply.Value);

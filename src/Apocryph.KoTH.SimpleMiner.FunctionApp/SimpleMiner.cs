@@ -1,23 +1,22 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Consensus;
 using Apocryph.Ipfs;
 using Microsoft.Azure.WebJobs;
-using Perper.WebJobs.Extensions.Bindings;
 using Perper.WebJobs.Extensions.Triggers;
 
 namespace Apocryph.KoTH.SimpleMiner.FunctionApp
 {
     public static class SimpleMiner
     {
+        public static string PubSubPath = Apocryph.KoTH.FunctionApp.KoTH.PubSubPath;
+
         [FunctionName("Apocryph-KoTH-SimpleMiner")]
         public static async Task Miner(
-            [PerperTrigger(ParameterExpression = "{'stream': 0}")] (string _, IAsyncEnumerable<(Hash<Chain>, Slot?[])> kothStates) input,
-            [Perper(Stream = "{stream}")] IAsyncCollector<(Hash<Chain>, Slot)> minedKeys,
+            [PerperTrigger] IAsyncEnumerable<(Hash<Chain>, Slot?[])> kothStates,
             IPeerConnector peerConnector,
             CancellationToken cancellationToken)
         {
@@ -31,21 +30,21 @@ namespace Apocryph.KoTH.SimpleMiner.FunctionApp
                 {
                     var attemptData = new byte[16];
                     random.NextBytes(attemptData);
-                    var newPeer = new Slot(self, attemptData);
+                    var newSlot = new Slot(self, attemptData);
 
                     foreach (var (chain, state) in chains)
                     {
-                        if (state.TryInsert(newPeer))
+                        if (state.TryInsert(newSlot))
                         {
-                            await minedKeys.AddAsync((chain, newPeer));
+                            await peerConnector.SendPubSub(PubSubPath, (chain, newSlot), cancellationToken);
                         }
                     }
 
-                    // await Task.Delay(10); // DEBUG: Try not to hog a full CPU core while testing
+                    await Task.Delay(5); // DEBUG: Try not to hog a full CPU core while testing
                 }
             });
 
-            await foreach (var (chain, peers) in input.kothStates.WithCancellation(cancellationToken))
+            await foreach (var (chain, peers) in kothStates)
             {
                 chains[chain] = new KoTHState(peers);
             }

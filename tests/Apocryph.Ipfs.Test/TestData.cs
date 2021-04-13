@@ -40,5 +40,7 @@ namespace Apocryph.Ipfs.Test
         public static object?[][] DataInterface = Data.Where(x => x[0] is IExample).ToArray();
         public static object?[][] DataNoNull = Data.Where(x => x[0] != null).ToArray();
         public static object?[][] DataNoInterface = DataNoNull.Where(x => !(x[0] is IExample)).ToArray();
+
+        public static TimeSpan WaitTime = TimeSpan.FromSeconds(0.1); // Used in tests where we need to wait a bit for everything to "settle down"
     }
 }

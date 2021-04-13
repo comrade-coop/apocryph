@@ -2,12 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Apocryph.Ipfs.Test
 {
     [Collection("Ipfs Collection")]
-    public class PeerConnectorTests
+    public class PeerConnectorTests // FIXME filename
     {
         private IpfsFixture _fixture;
 
@@ -16,12 +17,16 @@ namespace Apocryph.Ipfs.Test
             _fixture = fixture;
         }
 
-        public static IEnumerable<object?[]> SampleData() =>
+        public static IEnumerable<object?[]> SampleQueryData() =>
             IpfsFixture.PeerConnectorImplementations.SelectMany((i) =>
                 TestData.DataInterface.Select((d) => new object?[] { i, d[0], d[0] }));
 
+        public static IEnumerable<object?[]> SamplePubSubData() =>
+            IpfsFixture.PeerConnectorImplementations.SelectMany((i) =>
+                TestData.DataInterface.Select((d) => new object?[] { i, d[0] }));
+
         [Theory]
-        [MemberData(nameof(SampleData))]
+        [MemberData(nameof(SampleQueryData))]
         public async void Query_AfterListenQuery_SendsQueryAndResult(string connectorImplementation, IExample dataRequest, IExample dataReply)
         {
             var connectorTo = _fixture.GetPeerConnector(connectorImplementation, 1);
@@ -34,14 +39,55 @@ namespace Apocryph.Ipfs.Test
             {
                 Assert.Equal(otherPeer, await connectorFrom.Self);
                 Assert.Equal(request, dataRequest, SerializedComparer.Instance);
-                // Assert.NotEqual(request, dataRequest, ReferenceEqualityComparer.Instance); // NOTE .NET 5
 
                 return dataRequest;
             }, cancellationTokenSource.Token);
 
-            var reply = await connectorFrom.Query<IExample, IExample>(await connectorTo.Self, path, dataRequest, cancellationTokenSource.Token);
+            var reply = await connectorFrom.SendQuery<IExample, IExample>(await connectorTo.Self, path, dataRequest, cancellationTokenSource.Token);
             Assert.Equal(reply, dataReply, SerializedComparer.Instance);
-            // Assert.NotEqual(reply, dataReply, ReferenceEqualityComparer.Instance); // NOTE .NET 5
+            cancellationTokenSource.Cancel();
+        }
+
+
+#if SLOWTESTS
+        [Theory(Skip="Flaky on IPFS")]
+#else
+        [Theory]
+#endif
+        [MemberData(nameof(SamplePubSubData))]
+        public async void PubSub_AfterListenPubSub_SendsPubSub(string connectorImplementation, IExample dataMessage)
+        {
+            var connectorTo = _fixture.GetPeerConnector(connectorImplementation, 1);
+            var connectorFrom = _fixture.GetPeerConnector(connectorImplementation, 2);
+
+            var cancellationTokenSource = new CancellationTokenSource(TestData.WaitTime * 3); // Prevent hangs
+
+            var path = $"test-{Guid.NewGuid()}";
+
+            var receiveTasks = new List<Task>();
+            foreach (var connector in new[] { connectorTo, connectorFrom })
+            {
+                var received = new TaskCompletionSource<bool>();
+                receiveTasks.Add(received.Task);
+                cancellationTokenSource.Token.Register(() => received.TrySetCanceled());
+
+                await connector.ListenPubSub<IExample>(path, async (otherPeer, message) =>
+                {
+                    if (message == null) return false;
+                    Assert.Equal(otherPeer, await connectorFrom.Self);
+                    Assert.Equal(message, dataMessage, SerializedComparer.Instance);
+                    received.SetResult(true);
+                    return true;
+                }, cancellationTokenSource.Token);
+                await connectorFrom.SendPubSub<IExample?>(path, null);
+            };
+
+            await Task.Delay(TestData.WaitTime);
+
+            await connectorFrom.SendPubSub<IExample>(path, dataMessage, cancellationTokenSource.Token);
+
+            await Task.WhenAll(receiveTasks);
+
             cancellationTokenSource.Cancel();
         }
     }

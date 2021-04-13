@@ -22,7 +22,8 @@ namespace Apocryph.Ipfs.Impl
         private readonly IpfsClient _ipfs;
         private readonly Random _random = new Random();
 
-        public string ProtocolPrefix { get; set; } = "/x/apocryph/v0/";
+        public string QueryProtocolPrefix { get; set; } = "/x/apocryph/v0/";
+        public string PubSubTopicPrefix { get; set; } = "apocryph/v0/";
         public Task<Peer> Self { get; }
 
         public IpfsPeerConnector(IpfsClient ipfs)
@@ -31,9 +32,30 @@ namespace Apocryph.Ipfs.Impl
             Self = _ipfs.IdAsync().ContinueWith(x => new Peer(x.Result.Id.ToArray()));
         }
 
-        public async Task<TResult> Query<TRequest, TResult>(Peer peer, string path, TRequest request, CancellationToken cancellationToken = default)
+        public Task SendPubSub<T>(string path, T message, CancellationToken token = default)
         {
-            var protocol = ProtocolPrefix + path;
+            var topic = PubSubTopicPrefix + path;
+            var messageBytes = JsonSerializer.SerializeToUtf8Bytes(message, ApocryphSerializationOptions.JsonSerializerOptions);
+
+            return _ipfs.PubSub.PublishAsync(topic, messageBytes, token);
+        }
+
+        public Task ListenPubSub<T>(string path, Func<Peer, T, Task<bool>> handler, CancellationToken cancellationToken = default)
+        {
+            var topic = PubSubTopicPrefix + path;
+
+            return _ipfs.PubSub.SubscribeAsync(topic, ipfsMessage =>
+            {
+                var peer = new Peer(ipfsMessage.Sender.Id.ToArray());
+                var message = JsonSerializer.Deserialize<T>(ipfsMessage.DataBytes, ApocryphSerializationOptions.JsonSerializerOptions);
+                var task = handler(peer, message);
+                task.ContinueWith((t) => Console.WriteLine("PubSub handler '{0}' exited with exception: {1}", path, t.Exception), TaskContinuationOptions.OnlyOnFaulted);
+            }, cancellationToken);
+        }
+
+        public async Task<TResult> SendQuery<TRequest, TResult>(Peer peer, string path, TRequest request, CancellationToken cancellationToken = default)
+        {
+            var protocol = QueryProtocolPrefix + path;
             var peerId = new MultiHash(peer.Bytes);
             var port = _random.Next(49152, 65535);
 
@@ -80,7 +102,7 @@ namespace Apocryph.Ipfs.Impl
 
         public async Task ListenQuery<TRequest, TResult>(string path, Func<Peer, TRequest, Task<TResult>> handler, CancellationToken cancellationToken = default)
         {
-            var protocol = ProtocolPrefix + path;
+            var protocol = QueryProtocolPrefix + path;
             var port = _random.Next(49152, 65535);
             var listenEndpoint = new IPEndPoint(IPAddress.Loopback, port);
 
