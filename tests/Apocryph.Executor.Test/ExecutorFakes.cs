@@ -3,8 +3,8 @@ using System.Threading.Tasks;
 using Apocryph.Consensus;
 using Apocryph.Ipfs;
 using Apocryph.Ipfs.MerkleTree;
-using Apocryph.PerperUtilities;
 using Perper.WebJobs.Extensions.Fake;
+using Perper.WebJobs.Extensions.Model;
 
 namespace Apocryph.Executor.Test
 {
@@ -12,31 +12,22 @@ namespace Apocryph.Executor.Test
 
     public static class ExecutorFakes
     {
-        public class FakeHandler<TIn, TOut> : IHandler<TOut>
+        public static async Task<FakeAgent> GetExecutor(params (Hash<string>, Func<(AgentState, Message), Task<(AgentState, Message[])>>)[] handlers)
         {
-            public Func<TIn, Task<TOut>> Delegate { get; }
-
-            public FakeHandler(Func<TIn, Task<TOut>> @delegate)
-            {
-                Delegate = @delegate;
-            }
-
-            public Task<TOut> InvokeAsync(object? parameters)
-            {
-                return Delegate((TIn)parameters!);
-            }
-        }
-
-        public static async Task<IHandler<(AgentState, Message[])>> GetExecutor(params (Hash<string>, Func<(AgentState, Message), Task<(AgentState, Message[])>>)[] handlers)
-        {
+            var executorAgent = new FakeAgent();
             var executor = new Executor(new FakeState());
+
+            executorAgent.RegisterFunction("_Register", ((Hash<string>, IAgent) input) => executor._Register(input));
+            executorAgent.RegisterFunction("Execute", ((AgentState, Message) input) => executor.Execute(input));
 
             foreach (var (hash, handler) in handlers)
             {
-                await executor._Register((hash, new FakeHandler<(AgentState, Message), (AgentState, Message[])>(handler)));
+                var handlerAgent = new FakeAgent();
+                handlerAgent.RegisterFunction("Execute", handler);
+                await executorAgent.CallFunctionAsync<object?>("_Register", (hash, handlerAgent));
             }
 
-            return new FakeHandler<(AgentState, Message), (AgentState, Message[])>(executor.Execute);
+            return executorAgent;
         }
 
         public static (Hash<string>, Func<(AgentState, Message), Task<(AgentState, Message[])>>)[] TestAgents = new (Hash<string>, Func<(AgentState, Message), Task<(AgentState, Message[])>>)[]

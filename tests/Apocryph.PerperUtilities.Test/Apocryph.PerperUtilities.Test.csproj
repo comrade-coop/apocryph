@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Apocryph.ServiceRegistry.FunctionApp\Apocryph.ServiceRegistry.FunctionApp.csproj" />
+    <ProjectReference Include="..\..\src\Apocryph.PerperUtilities\Apocryph.PerperUtilities.csproj" />
   </ItemGroup>
 
 </Project>

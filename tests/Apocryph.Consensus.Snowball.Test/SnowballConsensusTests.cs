@@ -30,7 +30,7 @@ namespace Apocryph.Consensus.Snowball.Test
         {
             var hashResolver = new FakeHashResolver();
             var executor = await ExecutorFakes.GetExecutor(ExecutorFakes.TestAgents);
-            var peeringProvider = new FakePeerConnectorProvider();
+            var peerConnectorProvider = new FakePeerConnectorProvider();
             var peers = Enumerable.Range(0, peersCount).Select(x => FakePeerConnectorProvider.GetFakePeer()).ToArray();
 
             var snowballParameters = new SnowballParameters(3, 0.5, 25);
@@ -45,7 +45,7 @@ namespace Apocryph.Consensus.Snowball.Test
                 yield return (chainId, peers.Select(peer => (Slot?)new Slot(peer, new byte[0])).ToArray());
             }
 
-            var outputStreams = await SnowballFakes.StartSnowballNetwork(peers, hashResolver, peeringProvider, chain, executor,
+            var outputStreams = await SnowballFakes.StartSnowballNetwork(peers, hashResolver, peerConnectorProvider, chain, executor,
                 peer => (inputMessages.ToAsyncEnumerable(), "-", kothStates()));
 
             started.TrySetResult(true);

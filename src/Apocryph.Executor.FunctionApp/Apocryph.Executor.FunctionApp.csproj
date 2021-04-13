@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Apocryph.Consensus.FunctionApp\Apocryph.Consensus.FunctionApp.csproj" />
+    <ProjectReference Include="..\Apocryph.Consensus\Apocryph.Consensus.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -3,7 +3,7 @@
     "Values": {
         "AzureWebJobsStorage": "UseDevelopmentStorage=true",
         "FUNCTIONS_WORKER_RUNTIME": "dotnet",
-        "PERPER_AGENT_NAME": "Apocryph-ServiceRegistry",
-        "PERPER_ROOT_AGENT": "Apocryph-ServiceRegistry"
+        "PERPER_AGENT_NAME": "Apocryph-Consensus",
+        "PERPER_ROOT_AGENT": "Apocryph-Consensus"
     }
 }

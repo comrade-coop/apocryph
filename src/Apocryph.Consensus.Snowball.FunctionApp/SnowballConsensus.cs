@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Apocryph.Ipfs;
 using Apocryph.Ipfs.MerkleTree;
 using Apocryph.KoTH;
-using Apocryph.PerperUtilities;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Model;
 using Perper.WebJobs.Extensions.Triggers;
@@ -26,7 +25,13 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
         }
 
         [FunctionName("Apocryph-SnowballConsensus")]
-        public async Task<IAsyncEnumerable<Message>> Start([PerperTrigger] (IAsyncEnumerable<Message> messages, string subscribtionsStream, Chain chain, IAsyncEnumerable<(Hash<Chain>, Slot?[])> kothStates, IHandler<(AgentState, Message[])> executor) input, IHashResolver hashResolver)
+        public async Task<IAsyncEnumerable<Message>> Start([PerperTrigger] (
+                IAsyncEnumerable<Message> messages,
+                string subscriptionsStream,
+                Chain chain,
+                IAsyncEnumerable<(Hash<Chain>, Slot?[])> kothStates,
+                IAgent executor) input,
+            IHashResolver hashResolver)
         {
             var parameters = (SnowballParameters)input.chain.ConsensusParameters!;
             var emptyMessagesTree = await MerkleTreeBuilder.CreateRootFromValues(hashResolver, new Message[] { }, 3);
@@ -34,16 +39,21 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
             var genesis = await hashResolver.StoreAsync(genesisBlock);
             var self = await hashResolver.StoreAsync(input.chain);
 
-            // FIXME: await input.peering.CallActionAsync("Register", (PeeringProtocol, _context.Agent.GetHandler<IAsyncEnumerable<object>>("PeeringResponder")));
-
             var messagePoolTask = _context.StreamActionAsync("MessagePool", (input.messages, self));
             var kothTask = _context.StreamActionAsync("KothProcessor", (self, input.kothStates));
 
-            return await _context.StreamFunctionAsync<Message>("SnowballStream", (input.executor, parameters, self, genesis));
+            return await _context.StreamFunctionAsync<Message>("SnowballStream", (self, genesis, parameters, input.executor));
         }
 
         [FunctionName("SnowballStream")]
-        public async IAsyncEnumerable<Message> SnowballStream([PerperTrigger] (IHandler<(AgentState, Message[])> executor, SnowballParameters parameters, Hash<Chain> self, Hash<Block> genesis) input, IHashResolver hashResolver, IPeerConnector peerConnector, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        public async IAsyncEnumerable<Message> SnowballStream([PerperTrigger] (
+                Hash<Chain> self,
+                Hash<Block> genesis,
+                SnowballParameters parameters,
+                IAgent executor) input,
+            IHashResolver hashResolver,
+            IPeerConnector peerConnector,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             var queryPath = $"snowball/{input.self}";
 
@@ -65,9 +75,11 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
 
                 await foreach (var message in inputMessages.EnumerateItems(hashResolver))
                 {
-                    Message[] resultMessages;
-                    (agentStates[message.Target.AgentNonce], resultMessages) = await input.executor.InvokeAsync((agentStates[message.Target.AgentNonce], message));
+                    var state = agentStates[message.Target.AgentNonce];
 
+                    var (newState, resultMessages) = await input.executor.CallFunctionAsync<(AgentState, Message[])>("Execute", (state, message));
+
+                    agentStates[message.Target.AgentNonce] = state;
                     outputMesages.AddRange(resultMessages);
                 }
 

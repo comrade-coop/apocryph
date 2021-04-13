@@ -23,7 +23,7 @@ namespace Apocryph.Executor.Test
             foreach (var inputMessage in inputMessages)
             {
                 var inputState = agentStates[inputMessage.Target.AgentNonce];
-                var (resultState, resultMessages) = await executor.InvokeAsync((inputState, inputMessage));
+                var (resultState, resultMessages) = await executor.CallFunctionAsync<(AgentState, Message[])>("Execute", (inputState, inputMessage));
 
                 Assert.Equal(inputState, resultState, SerializedComparer.Instance);
 

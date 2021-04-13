@@ -6,10 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Apocryph.Consensus;
 using Apocryph.Ipfs;
-using Apocryph.ServiceRegistry;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Bindings;
-using Perper.WebJobs.Extensions.Model;
 using Perper.WebJobs.Extensions.Triggers;
 
 namespace Apocryph.KoTH.SimpleMiner.FunctionApp
@@ -17,16 +15,13 @@ namespace Apocryph.KoTH.SimpleMiner.FunctionApp
     public static class SimpleMiner
     {
         [FunctionName("Apocryph-KoTH-SimpleMiner")]
-        public static async Task Start([PerperTrigger] (IAgent serviceRegistry, Peer self) input, IContext context)
+        public static async Task Miner(
+            [PerperTrigger(ParameterExpression = "{'stream': 0}")] (string _, IAsyncEnumerable<(Hash<Chain>, Slot?[])> kothStates) input,
+            [Perper(Stream = "{stream}")] IAsyncCollector<(Hash<Chain>, Slot)> minedKeys,
+            IPeerConnector peerConnector,
+            CancellationToken cancellationToken)
         {
-            var kothService = await input.serviceRegistry.CallFunctionAsync<Service>("Lookup", new ServiceLocator("KoTH", "KoTH"));
-
-            await context.CallActionAsync("Miner", (kothService.Inputs["minedKeys"], kothService.Outputs["states"], input.self));
-        }
-
-        [FunctionName("Miner")]
-        public static async Task Miner([PerperTrigger(ParameterExpression = "{'stream': 0}")] (string _, IAsyncEnumerable<(Hash<Chain>, Slot?[])> kothStates, Peer self) input, [Perper(Stream = "{stream}")] IAsyncCollector<(Hash<Chain>, Slot)> minedKeys, CancellationToken cancellationToken)
-        {
+            var self = await peerConnector.Self;
             var chains = new ConcurrentDictionary<Hash<Chain>, KoTHState>();
 
             var generator = Task.Run(async () =>
@@ -36,7 +31,7 @@ namespace Apocryph.KoTH.SimpleMiner.FunctionApp
                 {
                     var attemptData = new byte[16];
                     random.NextBytes(attemptData);
-                    var newPeer = new Slot(input.self, attemptData);
+                    var newPeer = new Slot(self, attemptData);
 
                     foreach (var (chain, state) in chains)
                     {
@@ -46,7 +41,7 @@ namespace Apocryph.KoTH.SimpleMiner.FunctionApp
                         }
                     }
 
-                    await Task.Delay(10);
+                    // await Task.Delay(10); // DEBUG: Try not to hog a full CPU core while testing
                 }
             });
 

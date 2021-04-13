@@ -27,7 +27,9 @@ namespace Apocryph.KoTH.Test
 #endif
         public async void SimpleMiner_Fills_AllPeers(int slotsCount)
         {
-            var selfPeer = new Peer(Hash.From(0).Bytes);
+            var peerConnectorProvider = new FakePeerConnectorProvider();
+            var peer = FakePeerConnectorProvider.GetFakePeer();
+            var peerConnector = peerConnectorProvider.GetConnector(peer);
             var hashResolver = new FakeHashResolver();
 
             var chain = new Chain(new ChainState(new MerkleTreeNode<AgentState>(new Hash<IMerkleTree<AgentState>>[] { }), 0), "", null, slotsCount);
@@ -39,9 +41,9 @@ namespace Apocryph.KoTH.Test
 
             kothStateStream = kothStateStream.Select(x => (x.Item1, x.Item2.ToArray())); // Duplicate the array, as KoTH modifies it by reference
 
-            await minedKeysCollectorStream.AddAsync((chainId, new Slot(selfPeer, new byte[] { 0 })));
+            await minedKeysCollectorStream.AddAsync((chainId, new Slot(peer, new byte[] { 0 })));
 
-            var minerTask = SimpleMiner.Miner(("-", kothStateStream, selfPeer), minedKeysCollectorStream, tokenSource.Token);
+            var minerTask = SimpleMiner.Miner(("-", kothStateStream), minedKeysCollectorStream, peerConnector, tokenSource.Token);
 
             var i = 0;
             await foreach (var (stateChainId, peers) in kothStateStream)

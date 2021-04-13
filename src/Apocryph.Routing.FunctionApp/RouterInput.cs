@@ -1,19 +1,19 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks.Dataflow;
-using Apocryph.ServiceRegistry;
+using Apocryph.Consensus;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Dataflow;
 using Perper.WebJobs.Extensions.Model;
 using Perper.WebJobs.Extensions.Triggers;
 
-namespace Apocryph.Consensus.FunctionApp
+namespace Apocryph.Routing.FunctionApp
 {
     using Apocryph.PerperUtilities;
     public static class RouterInput
     {
         [FunctionName("RouterInput")]
-        public static IAsyncEnumerable<Message> RunAsync([PerperTrigger] (IAsyncEnumerable<Message> calls, IAsyncEnumerable<List<Reference>> subscriptions, IAgent serviceRegistry) input, IStateEntry<List<Reference>?> lastSubscriptions)
+        public static IAsyncEnumerable<Message> RunAsync([PerperTrigger] (IAsyncEnumerable<Message> calls, IAsyncEnumerable<List<Reference>> subscriptions) input, IContext context, IStateEntry<List<Reference>?> lastSubscriptions)
         {
             var output = ApocryphDataflow.EmptyBlock<Message>();
 
@@ -22,11 +22,9 @@ namespace Apocryph.Consensus.FunctionApp
 
             var subscriber = ApocryphDataflow.SubsciberBlock<Reference, Message>(async reference =>
             {
-                var locator = new ServiceLocator("Chain", reference.Chain.ToString());
-                var targetChain = await input.serviceRegistry.CallFunctionAsync<Service>("Lookup", locator);
-                var stream = (IStream<Message>)targetChain.Outputs["messages"];
+                var (targetInput, targetOutput) = await context.CallFunctionAsync<(string, IStream<Message>)>("GetChainInstance", reference.Chain);
 
-                return stream.Replay().ToDataflow(); // TODO: Make sure to replay only messages newer than the subscription
+                return targetOutput.Replay().ToDataflow(); // TODO: Make sure to replay only messages newer than the subscription
             });
 
             subscriptions.LinkTo(subscriber);

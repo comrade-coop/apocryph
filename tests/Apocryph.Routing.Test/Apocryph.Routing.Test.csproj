@@ -16,7 +16,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Apocryph.ServiceRegistry.FunctionApp\Apocryph.ServiceRegistry.FunctionApp.csproj" />
+    <ProjectReference Include="..\..\src\Apocryph.Routing.FunctionApp\Apocryph.Routing.FunctionApp.csproj" />
+    <ProjectReference Include="..\\Apocryph.Ipfs.Test\Apocryph.Ipfs.Test.csproj" />
   </ItemGroup>
 
 </Project>

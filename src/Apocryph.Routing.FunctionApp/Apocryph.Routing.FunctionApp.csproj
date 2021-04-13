@@ -18,6 +18,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Apocryph.Ipfs\Apocryph.Ipfs.csproj" />
+    <ProjectReference Include="..\Apocryph.Consensus\Apocryph.Consensus.csproj" />
+    <ProjectReference Include="..\Apocryph.KoTH.FunctionApp\Apocryph.KoTH.FunctionApp.csproj" />
     <ProjectReference Include="..\Apocryph.PerperUtilities\Apocryph.PerperUtilities.csproj" />
   </ItemGroup>
 

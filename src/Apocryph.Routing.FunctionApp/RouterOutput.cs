@@ -1,18 +1,18 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Apocryph.Consensus;
 using Apocryph.Ipfs;
-using Apocryph.ServiceRegistry;
 using Microsoft.Azure.WebJobs;
 using Perper.WebJobs.Extensions.Bindings;
 using Perper.WebJobs.Extensions.Model;
 using Perper.WebJobs.Extensions.Triggers;
 
-namespace Apocryph.Consensus.FunctionApp
+namespace Apocryph.Routing.FunctionApp
 {
     public static class RouterOutput
     {
         [FunctionName("RouterOutput")]
-        public static async IAsyncEnumerable<Message> RunAsync([PerperTrigger] (IAsyncEnumerable<Message> outbox, Hash<Chain> self, IAgent serviceRegistry) input, IContext context)
+        public static async IAsyncEnumerable<Message> RunAsync([PerperTrigger] (IAsyncEnumerable<Message> outbox, Hash<Chain> self) input, IContext context, IState state)
         {
             await foreach (var message in input.outbox)
             {
@@ -22,11 +22,9 @@ namespace Apocryph.Consensus.FunctionApp
                 }
                 else
                 {
-                    var locator = new ServiceLocator("Chain", message.Target.Chain.ToString());
-                    var targetChain = await input.serviceRegistry.CallFunctionAsync<Service>("Lookup", locator);
-                    var stream = targetChain.Inputs["messages"];
+                    var (targetInput, targetOutput) = await context.CallFunctionAsync<(string, IStream<Message>)>("GetChainInstance", message.Target.Chain);
 
-                    await context.CallActionAsync("PostMessage", (stream, message));
+                    await context.CallActionAsync("PostMessage", (targetInput, message));
                 }
             }
         }
