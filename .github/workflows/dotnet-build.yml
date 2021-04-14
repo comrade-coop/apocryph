@@ -10,6 +10,9 @@ jobs:
     - uses: actions/checkout@main
     - uses: actions/setup-dotnet@v1
       with:
+        dotnet-version: '5.0.x'
+    - uses: actions/setup-dotnet@v1
+      with:
         dotnet-version: '3.1.x'
     - run: dotnet build
     - run: dotnet test --blame-hang --blame-hang-timeout 20s
