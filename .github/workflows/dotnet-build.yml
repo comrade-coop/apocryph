@@ -12,7 +12,8 @@ jobs:
       with:
         dotnet-version: '3.1.x'
     - run: dotnet build
-    - run: dotnet test
+    - run: dotnet test --blame-hang --blame-hang-timeout 20s
+      timeout-minutes: 10
   dotnet-format:
     runs-on: ubuntu-latest
     name: Check formatting
