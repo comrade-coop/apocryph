@@ -2,11 +2,11 @@ namespace Apocryph.Consensus
 {
     public class Chain
     {
-        // public Reference Creation { get; }
-        public ChainState GenesisState { get; }
-        public string ConsensusType { get; }
-        public object? ConsensusParameters { get; }
-        public int SlotsCount { get; }
+        // public Reference Creation { get; private set; }
+        public ChainState GenesisState { get; private set; }
+        public string ConsensusType { get; private set; }
+        public object? ConsensusParameters { get; private set; }
+        public int SlotsCount { get; private set; }
 
         public Chain(ChainState genesisState, string consensusType, object? consensusParameters, int slotsCount)
         {

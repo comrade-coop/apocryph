@@ -4,8 +4,8 @@ namespace Apocryph.Consensus
 {
     public class ChainState
     {
-        public IMerkleTree<AgentState> AgentStates { get; }
-        public int NextAgentNonce { get; }
+        public IMerkleTree<AgentState> AgentStates { get; private set; }
+        public int NextAgentNonce { get; private set; }
 
         public ChainState(IMerkleTree<AgentState> agentStates, int nextAgentNonce)
         {

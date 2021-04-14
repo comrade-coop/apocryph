@@ -10,7 +10,7 @@ namespace Apocryph.Ipfs.MerkleTree
             Value = value;
         }
 
-        public T Value { get; }
+        public T Value { get; private set; }
 
         public IAsyncEnumerable<T> EnumerateItems(IHashResolver resolver)
         {

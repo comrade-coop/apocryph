@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using Apocryph.Consensus;
@@ -83,28 +82,6 @@ namespace Apocryph.Routing.FunctionApp
             });
 
             return DataflowBlock.Encapsulate(subscriber, output);
-        }
-
-        // FIXME: obsoleted by https://github.com/obecto/perper/commit/c21139721cce283a9544619830b67ca8bb5fbee6
-        private static ISourceBlock<T> ToDataflow<T>(this IAsyncEnumerable<T> enumerable, CancellationToken cancellationToken = default)
-        {
-            var block = new BufferBlock<T>(new DataflowBlockOptions { CancellationToken = cancellationToken, BoundedCapacity = 1 });
-
-            async Task helper()
-            {
-                await foreach (var item in enumerable.WithCancellation(cancellationToken))
-                {
-                    await block.SendAsync(item);
-                }
-            }
-
-            helper().ContinueWith(completedTask =>
-            {
-                if (completedTask.Status == TaskStatus.Faulted) ((IDataflowBlock)block).Fault(completedTask.Exception!);
-                else if (completedTask.Status == TaskStatus.RanToCompletion) block.Complete();
-            });
-
-            return block;
         }
     }
 }

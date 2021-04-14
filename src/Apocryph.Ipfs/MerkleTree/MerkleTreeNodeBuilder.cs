@@ -4,9 +4,9 @@ namespace Apocryph.Ipfs.MerkleTree
 {
     public class MerkleTreeNodeBuilder<T> : IMerkleTreeBuilder<T>
     {
-        public MerkleTreeNode<T> Value { get; }
+        public MerkleTreeNode<T> Value { get; private set; }
         IMerkleTree<T> IMerkleTreeBuilder<T>.Value { get => Value; }
-        public Hash<IMerkleTree<T>> Hash { get; }
+        public Hash<IMerkleTree<T>> Hash { get; private set; }
         public MerkleTreeNodeBuilder<T>? Parent { get; set; }
         public int IndexInParent { get; set; }
 

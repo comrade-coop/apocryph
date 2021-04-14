@@ -21,19 +21,19 @@ namespace Apocryph.Executor.FunctionApp
         {
         }
 
-        [FunctionName("_Register")]
-        public Task _Register([PerperTrigger] (Hash<string> agentCodeHash, IAgent handler) input)
+        [FunctionName("Register")]
+        public Task Register([PerperTrigger] (Hash<string> agentCodeHash, IAgent handlerAgent, string handlerFunction) input)
         {
             var key = $"{input.agentCodeHash}";
-            return _state.SetValue(key, input.handler);
+            return _state.SetValue(key, (input.handlerAgent, input.handlerFunction));
         }
 
         [FunctionName("Execute")]
-        public async Task<(AgentState, Message[])> Execute([PerperTrigger] (AgentState agent, Message message) input)
+        public async Task<(AgentState, Message[])> Execute([PerperTrigger] (Hash<Chain> chain, AgentState agent, Message message) input)
         {
             var key = $"{input.agent.CodeHash}";
-            var handler = await _state.GetValue<IAgent>(key, () => default!);
-            return await handler.CallFunctionAsync<(AgentState, Message[])>("Execute", (input.agent, input.message));
+            var (handlerAgent, handlerFunction) = await _state.GetValue<(IAgent, string)>(key, () => default!);
+            return await handlerAgent.CallFunctionAsync<(AgentState, Message[])>(handlerFunction, (input.chain, input.agent, input.message));
         }
     }
 }

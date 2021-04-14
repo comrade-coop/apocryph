@@ -31,24 +31,24 @@ namespace Apocryph.Routing.FunctionApp
             var chain = await hashResolver.RetrieveAsync(chainId);
 
             var (callsStream, callsStreamName) = await context.CreateBlankStreamAsync<Message>();
+            var (publicationsStream, publicationsStreamName) = await context.CreateBlankStreamAsync<Message>();
             var (subscriptionsStream, subscriptionsStreamName) = await context.CreateBlankStreamAsync<List<Reference>>();
 
             var (kothStates, executor) = await state.GetValue<(IAsyncEnumerable<(Hash<Chain>, Slot?[])>, IAgent)>("input", () => default!);
 
             var routedInput = await context.StreamFunctionAsync<Message>("RouterInput", (callsStream, subscriptionsStream));
 
-            var consensusParameters = (
+            var (_, consensusOutput) = await context.StartAgentAsync<IAsyncEnumerable<Message>>(chain.ConsensusType, (
                 (IAsyncEnumerable<Message>)routedInput,
                 subscriptionsStreamName,
                 chain,
                 kothStates,
                 executor
-            );
+            ));
 
-            var (_, consensusOutput) = await context.StartAgentAsync<IAsyncEnumerable<Message>>(chain.ConsensusType, consensusParameters);
-            var routedOutput = await context.StreamFunctionAsync<Message>("RouterOutput", (consensusOutput, chainId));
+            var _ = context.StreamActionAsync("RouterOutput", (publicationsStreamName, consensusOutput, chainId));
 
-            var value = (callsStreamName, routedOutput);
+            var value = (callsStreamName, publicationsStream);
             await state.SetValue(key, value);
             return value;
         }

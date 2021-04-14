@@ -1,54 +1,41 @@
 using System;
 using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using Apocryph.Core.Agent;
-using Apocryph.Core.Agent.Worker;
+using Apocryph.Consensus;
+using Apocryph.Ipfs;
 using Microsoft.Azure.WebJobs;
-using Perper.WebJobs.Extensions.Config;
-using Perper.WebJobs.Extensions.Model;
+using Perper.WebJobs.Extensions.Triggers;
 
 namespace SampleAgents.FunctionApp.Agents
 {
-    public class AgentOne : IAgent<object>
+    public static class AgentOne
     {
-        public void Setup(IContext<object> context)
+        public class AgentOneState
         {
-            context.RegisterInstance<IPingPongMessage, PingPongMessage>();
+            public int Accumulator { get; set; } = 0;
         }
 
-        public Task Run(IContext<object> context, object message, Guid? reference)
+        [FunctionName("AgentOne")]
+        public static (AgentState, Message[]) Run([PerperTrigger] (Hash<Chain> chain, AgentState state, Message message) input)
         {
-            switch (message)
+            var state = input.state.Data.Deserialize<AgentOneState>();
+            var outputMessages = new List<Message>();
+            if (input.message.Data.Type == typeof(PingPongMessage).FullName)
             {
-                case string _:
-                    context.Create(typeof(AgentTwo).FullName!,
-                        context.CreateInstance<IPingPongMessage>(i =>
-                        {
-                            i.AgentOne = context.CreateReference(new[] { typeof(PingPongMessage) });
-                        }));
-                    break;
-                case IPingPongMessage pingPongMessage:
-                    context.Invoke(pingPongMessage.AgentTwo!.Value, context.CreateInstance<IPingPongMessage>(i =>
-                    {
-                        i.AgentOne = pingPongMessage.AgentOne;
-                        i.AgentTwo = pingPongMessage.AgentTwo;
-                        i.Content = "Ping";
-                    }));
-                    break;
+                var message = input.message.Data.Deserialize<PingPongMessage>();
+                Console.WriteLine("AgentOne {0}", message.Content);
+                Console.WriteLine("AgentOneState {0}", state.Accumulator);
+
+                state.Accumulator += message.Content.Length;
+                outputMessages.Add(new Message(
+                    message.Callback,
+                    ReferenceData.From(new PingPongMessage(
+                        callback: new Reference(input.chain, input.state.Nonce, new[] { typeof(PingPongMessage).FullName! }),
+                        content: "PONG! " + message.Content,
+                        accumulatedValue: state.Accumulator
+                    ))
+                ));
             }
-
-            return Task.FromResult(context);
-        }
-    }
-
-    public class AgentOneWrapper
-    {
-        [FunctionName(nameof(AgentOneWrapper))]
-        public async Task<(byte[]?, (string, object[])[], IDictionary<Guid, string[]>, IDictionary<Guid, string>)> Run([PerperWorkerTrigger] PerperWorkerContext context,
-            [Perper("input")] (byte[]?, (string, byte[]), Guid?) input, CancellationToken cancellationToken)
-        {
-            return await new Worker<object>(new AgentOne()).Run(input);
+            return (new AgentState(input.state.Nonce, ReferenceData.From(state), input.state.CodeHash), outputMessages.ToArray());
         }
     }
 }

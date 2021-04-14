@@ -1,11 +1,18 @@
-using System;
+using Apocryph.Consensus;
 
 namespace SampleAgents.FunctionApp.Agents
 {
-    public class PingPongMessage : IPingPongMessage
+    public class PingPongMessage
     {
-        public Guid? AgentOne { get; set; }
-        public Guid? AgentTwo { get; set; }
-        public string? Content { get; set; }
+        public Reference Callback { get; set; }
+        public string Content { get; set; }
+        public int AccumulatedValue { get; set; }
+
+        public PingPongMessage(Reference callback, string content, int accumulatedValue)
+        {
+            Callback = callback;
+            Content = content;
+            AccumulatedValue = accumulatedValue;
+        }
     }
 }

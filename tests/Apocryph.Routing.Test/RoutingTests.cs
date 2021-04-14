@@ -95,7 +95,7 @@ namespace Apocryph.Routing.Test
             await RegisterConsensus(routingAgent, hashResolver, chainIdTo, async input =>
             {
                 Assert.False(fromInvoked);
-                await routingAgent.WriteToBlankStream(input.subscribtionsStream, new List<Reference> { subscribeReference });
+                await FakeAgent.WriteToBlankStream(input.subscribtionsStream, new List<Reference> { subscribeReference });
                 receivedMessages.SetResult(input.messages);
                 return AsyncEnumerable.Empty<Message>();
             });

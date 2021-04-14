@@ -4,9 +4,9 @@ namespace Apocryph.Consensus
 {
     public class Message : IEquatable<Message>
     {
-        // public Reference Source { get; }
-        public Reference Target { get; }
-        public ReferenceData Data { get; }
+        // public Reference Source { get; private set; }
+        public Reference Target { get; private set; }
+        public ReferenceData Data { get; private set; }
 
         public Message(Reference target, ReferenceData data)
         {

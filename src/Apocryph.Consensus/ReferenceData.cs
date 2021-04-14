@@ -7,9 +7,9 @@ namespace Apocryph.Consensus
 {
     public class ReferenceData : IEquatable<ReferenceData>
     {
-        public string Type { get; }
-        public byte[] Data { get; }
-        public Reference[] References { get; }
+        public string Type { get; private set; }
+        public byte[] Data { get; private set; }
+        public Reference[] References { get; private set; }
 
         public ReferenceData(string type, byte[] data, Reference[] references)
         {

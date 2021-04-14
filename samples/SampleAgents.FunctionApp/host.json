@@ -1,8 +1,10 @@
 {
     "version": "2.0",
+    "functionTimeout": -1,
     "logging": {
         "logLevel": {
-            "Apocryph.Testbed": "Trace"
+            "Function": "Trace",
+            "Perper.WebJobs.Extensions": "Information",
         }
     }
 }

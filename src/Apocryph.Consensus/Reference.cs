@@ -6,10 +6,10 @@ namespace Apocryph.Consensus
 {
     public class Reference : IEquatable<Reference>
     {
-        public Hash<Chain> Chain { get; }
-        public int AgentNonce { get; }
-        public string[] AllowedMessageTypes { get; }
-        // public MerkleTreeProof<Message> Source { get; }
+        public Hash<Chain> Chain { get; private set; }
+        public int AgentNonce { get; private set; }
+        public string[] AllowedMessageTypes { get; private set; }
+        // public MerkleTreeProof<Message> Source { get; private set; }
 
         public Reference(Hash<Chain> chain, int agentNonce, string[] allowedMessageTypes)
         {

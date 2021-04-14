@@ -12,34 +12,35 @@ namespace Apocryph.Executor.Test
 
     public static class ExecutorFakes
     {
-        public static async Task<FakeAgent> GetExecutor(params (Hash<string>, Func<(AgentState, Message), Task<(AgentState, Message[])>>)[] handlers)
+        public static async Task<FakeAgent> GetExecutor(params (Hash<string>, Func<(Hash<Chain>, AgentState, Message), Task<(AgentState, Message[])>>)[] handlers)
         {
             var executorAgent = new FakeAgent();
             var executor = new Executor(new FakeState());
+            var handlersAgent = new FakeAgent();
 
-            executorAgent.RegisterFunction("_Register", ((Hash<string>, IAgent) input) => executor._Register(input));
-            executorAgent.RegisterFunction("Execute", ((AgentState, Message) input) => executor.Execute(input));
+            executorAgent.RegisterFunction("Register", ((Hash<string>, IAgent, string) input) => executor.Register(input));
+            executorAgent.RegisterFunction("Execute", ((Hash<Chain>, AgentState, Message) input) => executor.Execute(input));
 
             foreach (var (hash, handler) in handlers)
             {
-                var handlerAgent = new FakeAgent();
-                handlerAgent.RegisterFunction("Execute", handler);
-                await executorAgent.CallFunctionAsync<object?>("_Register", (hash, handlerAgent));
+                var handlerName = hash.ToString();
+                handlersAgent.RegisterFunction(handlerName, handler);
+                await executorAgent.CallFunctionAsync<object?>("Register", (hash, handlersAgent, handlerName));
             }
 
             return executorAgent;
         }
 
-        public static (Hash<string>, Func<(AgentState, Message), Task<(AgentState, Message[])>>)[] TestAgents = new (Hash<string>, Func<(AgentState, Message), Task<(AgentState, Message[])>>)[]
+        public static (Hash<string>, Func<(Hash<Chain>, AgentState, Message), Task<(AgentState, Message[])>>)[] TestAgents = new (Hash<string>, Func<(Hash<Chain>, AgentState, Message), Task<(AgentState, Message[])>>)[]
         {
-            (Hash.From("AgentInc"), ((AgentState state, Message message) input) =>
+            (Hash.From("AgentInc"), ((Hash<Chain>, AgentState state, Message message) input) =>
             {
                 var target = input.state.Data.Deserialize<Reference>();
                 var result = input.message.Data.Deserialize<int>() + 1;
                 return Task.FromResult((input.state, new[] { new Message(target, ReferenceData.From(result)) }));
             }),
 
-            (Hash.From("AgentDec"), ((AgentState state, Message message) input) =>
+            (Hash.From("AgentDec"), ((Hash<Chain>, AgentState state, Message message) input) =>
             {
                 var target = input.state.Data.Deserialize<Reference>();
                 var result = input.message.Data.Deserialize<int>() - 1;

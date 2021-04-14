@@ -35,9 +35,9 @@ namespace Apocryph.Consensus.Dummy.FunctionApp
 
                 var state = agentStates[message.Target.AgentNonce];
 
-                var (newState, resultMessages) = await input.executor.CallFunctionAsync<(AgentState, Message[])>("Execute", (state, message));
+                var (newState, resultMessages) = await input.executor.CallFunctionAsync<(AgentState, Message[])>("Execute", (self, state, message));
 
-                agentStates[message.Target.AgentNonce] = state;
+                agentStates[message.Target.AgentNonce] = newState;
 
                 foreach (var resultMessage in resultMessages)
                 {

@@ -9,7 +9,7 @@ namespace Apocryph.Ipfs.MerkleTree
             Children = children;
         }
 
-        public Hash<IMerkleTree<T>>[] Children { get; }
+        public Hash<IMerkleTree<T>>[] Children { get; private set; }
 
         public async IAsyncEnumerable<T> EnumerateItems(IHashResolver resolver)
         {

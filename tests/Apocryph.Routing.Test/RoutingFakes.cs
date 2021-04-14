@@ -24,8 +24,9 @@ namespace Apocryph.Routing.Test
             agent.RegisterFunction("GetChainInstance", (Hash<Chain> input) => Routing.GetChainInstance(input, context, state, hashResolver));
             agent.RegisterFunction("RouterInput", async ((IAsyncEnumerable<Message>, IAsyncEnumerable<List<Reference>>) input) =>
                 RouterInput.RunAsync(input, context, await ((IState)state).Entry<List<Reference>?>(Guid.NewGuid().ToString(), () => null)).Select(x => x));
-            agent.RegisterFunction("RouterOutput", ((IAsyncEnumerable<Message>, Hash<Chain>) input) => RouterOutput.RunAsync(input, context, state).Select(x => x));
-            agent.RegisterFunction("PostMessage", ((string stream, Message message) input) => agent.WriteToBlankStream(input.stream, input.message));
+            agent.RegisterFunction("RouterOutput", ((string publicationsStream, IAsyncEnumerable<Message>, Hash<Chain>) input) =>
+                RouterOutput.RunAsync(input, FakeAgent.GetBlankStreamCollector<Message>(input.publicationsStream), context, state));
+            agent.RegisterFunction("PostMessage", ((string stream, Message message) input) => FakeAgent.WriteToBlankStream(input.stream, input.message));
 
             await Routing.Start((kothStates ?? AsyncEnumerable.Empty<(Hash<Chain>, Slot?[])>(), executor ?? new FakeAgent()), state);
 

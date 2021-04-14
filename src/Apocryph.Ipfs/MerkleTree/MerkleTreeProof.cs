@@ -25,9 +25,9 @@ namespace Apocryph.Ipfs.MerkleTree
             Levels = levels;
         }
 
-        public T Value { get; }
+        public T Value { get; private set; }
 
-        public (Hash<IMerkleTree<T>>[] left, Hash<IMerkleTree<T>>[] right)[] Levels { get; }
+        public (Hash<IMerkleTree<T>>[] left, Hash<IMerkleTree<T>>[] right)[] Levels { get; private set; }
 
         public Hash<IMerkleTree<T>> ComputeRootHash()
         {

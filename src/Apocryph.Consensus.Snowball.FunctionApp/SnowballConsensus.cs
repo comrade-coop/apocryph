@@ -77,9 +77,9 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
                 {
                     var state = agentStates[message.Target.AgentNonce];
 
-                    var (newState, resultMessages) = await input.executor.CallFunctionAsync<(AgentState, Message[])>("Execute", (state, message));
+                    var (newState, resultMessages) = await input.executor.CallFunctionAsync<(AgentState, Message[])>("Execute", (input.self, state, message));
 
-                    agentStates[message.Target.AgentNonce] = state;
+                    agentStates[message.Target.AgentNonce] = newState;
                     outputMesages.AddRange(resultMessages);
                 }
 

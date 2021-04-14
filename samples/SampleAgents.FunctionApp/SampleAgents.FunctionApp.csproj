@@ -5,26 +5,29 @@
     <AzureFunctionsVersion>v3</AzureFunctionsVersion>
     <LangVersion>8</LangVersion>
     <Nullable>enable</Nullable>
+    <_FunctionsSkipCleanOutput>true</_FunctionsSkipCleanOutput>
   </PropertyGroup>
 
   <ItemGroup>
     <None Update="host.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="local.settings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <CopyToPublishDirectory>Never</CopyToPublishDirectory>
     </None>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Apocryph.Core.Agent\Apocryph.Core.Agent.csproj" />
+    <ProjectReference Include="..\..\src\Apocryph.Consensus\Apocryph.Consensus.csproj" />
+    <ProjectReference Include="..\..\src\Apocryph.KoTH.FunctionApp\Apocryph.KoTH.FunctionApp.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Azure.Functions.Extensions" Version="1.0.0" />
+    <PackageReference Include="System.IO.Pipelines" Version="5.0.1" />
     <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="3.0.5" />
-    <PackageReference Include="Perper.WebJobs.Extensions" Version="0.3.16" />
+    <PackageReference Include="Perper.WebJobs.Extensions" Version="0.6.0-alpha7" />
   </ItemGroup>
 
 </Project>

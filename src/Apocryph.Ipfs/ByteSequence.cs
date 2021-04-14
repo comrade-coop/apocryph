@@ -6,7 +6,7 @@ namespace Apocryph.Ipfs
     public abstract class ByteSequence<TSelf> : IEquatable<TSelf>
         where TSelf : ByteSequence<TSelf>
     {
-        public byte[] Bytes { get; }
+        public byte[] Bytes { get; protected set; }
 
         public ByteSequence(byte[] bytes)
         {

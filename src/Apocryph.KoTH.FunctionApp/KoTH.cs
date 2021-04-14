@@ -18,7 +18,7 @@ namespace Apocryph.KoTH.FunctionApp
         [FunctionName("Apocryph-KoTH")]
         public static async Task<IAsyncEnumerable<(Hash<Chain>, Slot?[])>> Start([PerperTrigger] object? input, IContext context)
         {
-            return await context.StreamFunctionAsync<(Hash<Chain>, Slot?[])>("Processor", input);
+            return await context.StreamFunctionAsync<(Hash<Chain>, Slot?[])>("Processor", null);
         }
 
         [FunctionName("Processor")]

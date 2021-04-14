@@ -12,13 +12,17 @@ namespace Apocryph.Routing.FunctionApp
     public static class RouterOutput
     {
         [FunctionName("RouterOutput")]
-        public static async IAsyncEnumerable<Message> RunAsync([PerperTrigger] (IAsyncEnumerable<Message> outbox, Hash<Chain> self) input, IContext context, IState state)
+        public static async Task RunAsync(
+            [PerperTrigger(ParameterExpression = "{'stream': 0}")] (string _, IAsyncEnumerable<Message> outbox, Hash<Chain> self) input,
+            [Perper(Stream = "{stream}")] IAsyncCollector<Message> collector,
+            IContext context,
+            IState state)
         {
             await foreach (var message in input.outbox)
             {
-                if (message.Target.Chain == input.self) // FIXME: Needs a better way to handle publications, as this currently disallows self-messages
+                if (message.Target.Chain == input.self && message.Target.AgentNonce < 0) // FIXME: Needs a better way to handle publications
                 {
-                    yield return message;
+                    await collector.AddAsync(message);
                 }
                 else
                 {
@@ -31,7 +35,9 @@ namespace Apocryph.Routing.FunctionApp
 
         // HACK: IContext does not provide a way to post a message to a blank stream directly
         [FunctionName("PostMessage")]
-        public static Task PostMessage([PerperTrigger(ParameterExpression = "{'stream': 0}")] (string _, Message message) input, [Perper(Stream = "{stream}")] IAsyncCollector<Message> collector)
+        public static Task PostMessage(
+                [PerperTrigger(ParameterExpression = "{'stream': 0}")] (string _, Message message) input,
+                [Perper(Stream = "{stream}")] IAsyncCollector<Message> collector)
         {
             return collector.AddAsync(input.message);
         }
