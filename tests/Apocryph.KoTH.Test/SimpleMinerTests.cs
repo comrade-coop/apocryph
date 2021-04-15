@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,27 +24,16 @@ namespace Apocryph.KoTH.Test
         public async void SimpleMiner_Fills_AllPeers(int slotsCount)
         {
             var hashResolver = new FakeHashResolver();
-            var peerConnector = (new FakePeerConnectorProvider()).GetConnector();
+            var peerConnector = (new FakePeerConnectorProvider()).GetPeerConnector();
 
             var chain = new Chain(new ChainState(new MerkleTreeNode<AgentState>(new Hash<IMerkleTree<AgentState>>[] { }), 0), "", null, slotsCount);
             var chainId = await hashResolver.StoreAsync(chain);
 
             var cancellationTokenSource = new CancellationTokenSource();
 
-            var kothStateStream = await KoTH.Processor(null, new FakeState(), hashResolver, peerConnector, cancellationTokenSource.Token);
+            var kothStateStream = new FakeStream<(Hash<Chain>, Slot?[])>(KoTH.KoTHProcessor(null, new FakeState(), hashResolver, peerConnector, null, cancellationTokenSource.Token));
 
-            var ready = new TaskCompletionSource<bool>(); // NOTE: Used since we want to start things only after the miner is listening
-            async IAsyncEnumerable<(Hash<Chain>, Slot?[])> kothStates()
-            {
-                ready.SetResult(true);
-                await foreach (var state in kothStateStream)
-                    yield return state;
-            }
-
-            var minerTask = SimpleMiner.Miner(kothStates(), peerConnector, cancellationTokenSource.Token);
-
-            await ready.Task;
-            await peerConnector.SendPubSub(KoTH.PubSubPath, (chainId, new Slot(peerConnector.Self, new byte[] { 0 })));
+            var minerTask = SimpleMiner.Miner((kothStateStream, new Hash<Chain>[] { chainId }), hashResolver, peerConnector, cancellationTokenSource.Token);
 
             var i = 0;
             await foreach (var (stateChainId, peers) in kothStateStream)

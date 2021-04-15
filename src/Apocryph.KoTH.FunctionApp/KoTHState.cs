@@ -6,7 +6,7 @@ namespace Apocryph.KoTH
 {
     public class KoTHState
     {
-        public Slot?[] Slots { get; }
+        public Slot?[] Slots { get; private set; }
 
         public KoTHState(Slot?[] slots)
         {

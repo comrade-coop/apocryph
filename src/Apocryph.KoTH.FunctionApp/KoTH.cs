@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Apocryph.Consensus;
 using Apocryph.Ipfs;
 using Microsoft.Azure.WebJobs;
+using Microsoft.Extensions.Logging;
 using Perper.WebJobs.Extensions.Model;
 using Perper.WebJobs.Extensions.Triggers;
 
@@ -18,15 +19,16 @@ namespace Apocryph.KoTH.FunctionApp
         [FunctionName("Apocryph-KoTH")]
         public static async Task<IAsyncEnumerable<(Hash<Chain>, Slot?[])>> Start([PerperTrigger] object? input, IContext context)
         {
-            return await context.StreamFunctionAsync<(Hash<Chain>, Slot?[])>("Processor", null);
+            return await context.StreamFunctionAsync<(Hash<Chain>, Slot?[])>("KoTHProcessor", null);
         }
 
-        [FunctionName("Processor")]
-        public static async Task<IAsyncEnumerable<(Hash<Chain>, Slot?[])>> Processor(
+        [FunctionName("KoTHProcessor")]
+        public static async Task<IAsyncEnumerable<(Hash<Chain>, Slot?[])>> KoTHProcessor(
             [PerperTrigger] object? input,
             IState state,
             IHashResolver hashResolver,
             IPeerConnector peerConnector,
+            ILogger? logger,
             CancellationToken cancellationToken)
         {
             var output = Channel.CreateUnbounded<(Hash<Chain>, Slot?[])>();
@@ -44,6 +46,8 @@ namespace Apocryph.KoTH.FunctionApp
 
                 if (chainState.TryInsert(message.slot))
                 {
+                    var self = await peerConnector.Self;
+                    logger?.LogDebug("{ChainId} {SlotMap}", message.chain.ToString().Substring(0, 16), string.Join("", chainState.Slots.Select(x => x == null ? '_' : x.Peer == self ? 'X' : '.')));
                     await state.SetValue(message.chain.ToString(), chainState);
                     await output.Writer.WriteAsync((message.chain, chainState.Slots.ToArray())); // DEBUG: ToArray used due to in-place modifications
                 }

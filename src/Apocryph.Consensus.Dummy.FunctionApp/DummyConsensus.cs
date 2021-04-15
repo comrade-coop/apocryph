@@ -30,7 +30,7 @@ namespace Apocryph.Consensus.Dummy.FunctionApp
 
             await foreach (var message in input.messages)
             {
-                if (message.Target.Chain != self || !message.Target.AllowedMessageTypes.Contains(message.Data.Type))
+                if (!message.Target.AllowedMessageTypes.Contains(message.Data.Type)) // NOTE: Should probably get handed by routing/execution instead
                     continue;
 
                 var state = agentStates[message.Target.AgentNonce];

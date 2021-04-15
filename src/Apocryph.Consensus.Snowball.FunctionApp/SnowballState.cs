@@ -12,12 +12,16 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
         public Dictionary<Hash<Block>, int> Memory { get; protected set; } = new Dictionary<Hash<Block>, int>();
         public int Confidence { get; protected set; } = 0;
 
-        public void ProcessQuery(Hash<Block> requestSuggestion)
+        public void ProcessQuery(Hash<Block>? requestSuggestion)
         {
             if (CurrentValue == null)
             {
                 CurrentValue = requestSuggestion;
-                Confidence = 0;
+                if (CurrentValue != null)
+                {
+                    Memory[CurrentValue] = 0;
+                    Confidence = 0;
+                }
             }
         }
 
@@ -26,7 +30,7 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
             return peers.OrderBy(_ => RandomNumberGenerator.GetInt32(peers.Length)).Take(parameters.K);
         }
 
-        public bool ProcessResponses(SnowballParameters parameters, IEnumerable<Hash<Block>> responses)
+        public bool ProcessResponses(SnowballParameters parameters, IEnumerable<Hash<Block>?> responses)
         {
             if (Confidence > parameters.Beta) return true;
 
@@ -38,6 +42,8 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
 
             foreach (var responseValue in responseValues)
             {
+                if (responseValue == null) continue; // NOTE: Should probably be retrying erroring results as per original Snowball paper
+
                 Memory[responseValue] = Memory.TryGetValue(responseValue, out var answerCount) ? answerCount + 1 : 1;
 
                 if (CurrentValue == null)

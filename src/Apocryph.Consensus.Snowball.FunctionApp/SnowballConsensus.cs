@@ -8,6 +8,7 @@ using Apocryph.Ipfs;
 using Apocryph.Ipfs.MerkleTree;
 using Apocryph.KoTH;
 using Microsoft.Azure.WebJobs;
+using Microsoft.Extensions.Logging;
 using Perper.WebJobs.Extensions.Model;
 using Perper.WebJobs.Extensions.Triggers;
 
@@ -33,36 +34,38 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
                 IAgent executor) input,
             IHashResolver hashResolver)
         {
-            var parameters = (SnowballParameters)input.chain.ConsensusParameters!;
-            var emptyMessagesTree = await MerkleTreeBuilder.CreateRootFromValues(hashResolver, new Message[] { }, 3);
-            var genesisBlock = new Block(null, emptyMessagesTree, emptyMessagesTree, input.chain.GenesisState);
-            var genesis = await hashResolver.StoreAsync(genesisBlock);
             var self = await hashResolver.StoreAsync(input.chain);
 
             var messagePoolTask = _context.StreamActionAsync("MessagePool", (input.messages, self));
             var kothTask = _context.StreamActionAsync("KothProcessor", (self, input.kothStates));
 
-            return await _context.StreamFunctionAsync<Message>("SnowballStream", (self, genesis, parameters, input.executor));
+            return await _context.StreamFunctionAsync<Message>("SnowballStream", (self, input.executor));
         }
 
         [FunctionName("SnowballStream")]
         public async IAsyncEnumerable<Message> SnowballStream([PerperTrigger] (
                 Hash<Chain> self,
-                Hash<Block> genesis,
-                SnowballParameters parameters,
                 IAgent executor) input,
             IHashResolver hashResolver,
             IPeerConnector peerConnector,
+            ILogger? logger,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
+            var chain = await hashResolver.RetrieveAsync(input.self);
+            var parameters = await hashResolver.RetrieveAsync(chain.ConsensusParameters!.Cast<SnowballParameters>());
+            var emptyMessagesTree = await MerkleTreeBuilder.CreateRootFromValues(hashResolver, new Message[] { }, 3);
+            var genesisBlock = new Block(null, emptyMessagesTree, emptyMessagesTree, chain.GenesisState);
+            var genesis = await hashResolver.StoreAsync(genesisBlock);
+
             var queryPath = $"snowball/{input.self}";
 
             await peerConnector.ListenQuery<Query, Query>(queryPath, async (peer, request) =>
             {
+                var currentRound = await _state.GetValue<int>("currentRound", () => 0);
                 // NOTE: Should be using some locking here
                 var snowballState = await _state.GetValue<SnowballState>($"snowballState-{request.Round}");
                 snowballState.ProcessQuery(request.Value);
-                var result = new Query(snowballState.CurrentValue!, request.Round);
+                var result = new Query(currentRound < request.Round ? null : snowballState.CurrentValue!, request.Round);
                 await _state.SetValue($"snowballState-{request.Round}", snowballState);
 
                 return result;
@@ -83,7 +86,7 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
                     outputMesages.AddRange(resultMessages);
                 }
 
-                var outputStatesTree = await MerkleTreeBuilder.CreateRootFromValues(hashResolver, agentStates.Values, 3); // FIXME: what about ordering?
+                var outputStatesTree = await MerkleTreeBuilder.CreateRootFromValues(hashResolver, agentStates.Values.OrderBy(x => x.Nonce), 3);
                 var outputState = new ChainState(outputStatesTree, chainState.NextAgentNonce);
                 var outputMessagesTree = await MerkleTreeBuilder.CreateRootFromValues(hashResolver, outputMesages, 3);
 
@@ -133,7 +136,7 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
 
             if (currentRound == 0)
             {
-                var newBlock = await ProposeBlock(input.genesis);
+                var newBlock = await ProposeBlock(genesis);
                 if (newBlock == null) yield break; // DEBUG: Used for testing purposes mainly
                 var newBlockHash = await hashResolver.StoreAsync(newBlock);
                 var snowball = await _state.GetValue<SnowballState>($"snowballState-{currentRound}");
@@ -159,7 +162,7 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
                         await Task.Delay(100);
                         continue;
                     }
-                    var sampledPeers = snowball.SamplePeers(input.parameters, kothPeers);
+                    var sampledPeers = snowball.SamplePeers(parameters, kothPeers);
                     var query = new Query(snowball.CurrentValue, currentRound);
                     replyTasks = sampledPeers.Select(peer => peerConnector.SendQuery<Query, Query>(peer, queryPath, query));
                 }
@@ -169,7 +172,7 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
                 Hash<Block>? finishedHash = null;
                 {
                     var snowball = await _state.GetValue<SnowballState>($"snowballState-{currentRound}");
-                    var finished = snowball.ProcessResponses(input.parameters, responses);
+                    var finished = snowball.ProcessResponses(parameters, responses);
 
                     if (finished)
                     {
@@ -183,7 +186,7 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
                 {
                     var finishedBlock = await hashResolver.RetrieveAsync(finishedHash);
 
-                    var previousHash = await _state.GetValue<Hash<Block>>("lastBlock", () => input.genesis);
+                    var previousHash = await _state.GetValue<Hash<Block>>("lastBlock", () => genesis);
                     if (await ValidateBlock(finishedBlock, previousHash))
                     {
                         previousHash = finishedHash;
@@ -201,6 +204,9 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
                         }
                         await _state.SetValue("messagePool", messagePool);
                     }
+
+                    var selfPeer = await peerConnector.Self;
+                    logger?.LogDebug("Finished round {currentRound}; block: {previousHash}, koth: {kothState}", currentRound, previousHash.ToString().Substring(0, 16), string.Join("", (await _state.GetValue<Peer[]>("kothPeers", () => new Peer[] { })).Select(x => x == selfPeer ? 'X' : '.')));
 
                     await _state.SetValue("currentRound", ++currentRound);
                     // FIXME: Calculate proposers or proposal order from (previousHash, currentRound)
@@ -222,8 +228,7 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
         {
             await foreach (var message in input.inputMessages)
             {
-                // FIXME: Handled by routing?
-                if (message.Target.Chain != input.self || !message.Target.AllowedMessageTypes.Contains(message.Data.Type))
+                if (!message.Target.AllowedMessageTypes.Contains(message.Data.Type)) // NOTE: Should probably get handed by routing/execution instead
                     continue;
 
                 var messagePool = await _state.GetValue<List<Message>>("messagePool");

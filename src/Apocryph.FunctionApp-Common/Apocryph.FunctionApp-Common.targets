@@ -1,0 +1,47 @@
+<Project>
+
+  <ItemGroup>
+    <None Update="local.settings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <IpfsPort>5001</IpfsPort>
+    <FabricIgnitePort>10800</FabricIgnitePort>
+    <FabricGrpcPort>40400</FabricGrpcPort>
+  </PropertyGroup>
+
+  <Target Name="WriteHostJson" AfterTargets="CopyToOutputDirectory" BeforeTargets="_FunctionsAfterCopyFilesToOutputDirectory">
+    <PropertyGroup>
+      <HostJson>
+{
+  "version": "2.0",
+  "functionTimeout": -1,
+  "logging": {
+      "logLevel": {
+          "Function": "Trace",
+          "Perper.WebJobs.Extensions": "Information",
+      }
+  },
+  "extensions": {
+    "Perper": {
+      "FabricIgnitePort": $(FabricIgnitePort),
+      "FabricGrpcPort": $(FabricGrpcPort)
+    },
+    "Ipfs": {
+      "IpfsApiEndpoint": "http://localhost:$(IpfsPort)"
+    }
+  }
+}
+      </HostJson>
+    </PropertyGroup>
+
+    <WriteLinesToFile
+      File="$(OutputPath)\host.json"
+      Overwrite="true"
+      Lines="$(HostJson)" />
+  </Target>
+
+</Project>

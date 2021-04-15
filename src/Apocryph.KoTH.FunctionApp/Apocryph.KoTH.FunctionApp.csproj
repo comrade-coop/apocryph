@@ -8,15 +8,7 @@
     <_FunctionsSkipCleanOutput>true</_FunctionsSkipCleanOutput>
   </PropertyGroup>
 
-  <ItemGroup>
-    <None Update="host.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="local.settings.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
-    </None>
-  </ItemGroup>
+  <Import Project="..\Apocryph.FunctionApp-Common\Apocryph.FunctionApp-Common.targets" />
 
   <ItemGroup>
     <ProjectReference Include="..\Apocryph.Ipfs\Apocryph.Ipfs.csproj" />

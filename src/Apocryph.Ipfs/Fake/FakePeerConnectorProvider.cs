@@ -8,19 +8,19 @@ using Apocryph.Ipfs.Serialization;
 
 namespace Apocryph.Ipfs.Fake
 {
-    public class FakePeerConnectorProvider // FIXME filename
+    public class FakePeerConnectorProvider
     {
         private ConcurrentDictionary<(Peer, string), Func<Peer, byte[], Task<byte[]>>> _queryListeners = new ConcurrentDictionary<(Peer, string), Func<Peer, byte[], Task<byte[]>>>();
         private ConcurrentDictionary<string, Action<Peer, byte[]>?> _gossipListeners = new ConcurrentDictionary<string, Action<Peer, byte[]>?>();
 
-        public FakePeerConnector GetConnector(Peer peer) // FIXME: GetPeerConnector?
+        public FakePeerConnector GetPeerConnector(Peer peer)
         {
             return new FakePeerConnector(peer, this);
         }
 
-        public FakePeerConnector GetConnector()
+        public FakePeerConnector GetPeerConnector()
         {
-            return GetConnector(GetFakePeer());
+            return GetPeerConnector(GetFakePeer());
         }
 
         private static Random _random = new Random();

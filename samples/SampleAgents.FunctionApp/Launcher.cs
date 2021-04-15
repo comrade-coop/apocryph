@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Apocryph.Consensus;
+using Apocryph.Consensus.Snowball;
 using Apocryph.Ipfs;
 using Apocryph.Ipfs.MerkleTree;
 using Apocryph.KoTH;
@@ -14,7 +16,7 @@ namespace SampleAgents.FunctionApp
     public static class Launcher
     {
         [FunctionName("SampleAgents")]
-        public static async Task Start([PerperTrigger] object? input, IContext context, IHashResolver hashResolver)
+        public static async Task Start([PerperTrigger] object? input, IContext context, IHashResolver hashResolver, IPeerConnector peerConnector)
         {
             var (executorAgent, _) = await context.StartAgentAsync<object?>("Apocryph-Executor", null);
 
@@ -28,10 +30,22 @@ namespace SampleAgents.FunctionApp
 
             var agentStatesTree = await MerkleTreeBuilder.CreateRootFromValues(hashResolver, agentStates, 2);
 
-            var chain = new Chain(new ChainState(agentStatesTree, agentStates.Length), "Apocryph-DummyConsensus", null, 1);
+            Chain chain;
+
+            if (Environment.GetEnvironmentVariable("SAMPLE_AGENTS_CONSENSUS") == "Dummy")
+            {
+                chain = new Chain(new ChainState(agentStatesTree, agentStates.Length), "Apocryph-DummyConsensus", null, 1);
+            }
+            else
+            {
+                var snowballParameters = await hashResolver.StoreAsync<object>(new SnowballParameters(15, 0.8, 25));
+                chain = new Chain(new ChainState(agentStatesTree, agentStates.Length), "Apocryph-SnowballConsensus", snowballParameters, 60);
+            }
+
             var chainId = await hashResolver.StoreAsync(chain);
 
             var (_, kothStates) = await context.StartAgentAsync<IAsyncEnumerable<(Hash<Chain>, Slot?[])>>("Apocryph-KoTH", null);
+            var minerAgentTask = context.StartAgentAsync<object?>("Apocryph-KoTH-SimpleMiner", (kothStates, new Hash<Chain>[] { chainId }));
 
             var (routingAgent, _) = await context.StartAgentAsync<object?>("Apocryph-Routing", (kothStates, executorAgent));
 

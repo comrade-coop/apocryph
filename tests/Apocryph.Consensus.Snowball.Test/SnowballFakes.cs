@@ -19,7 +19,7 @@ namespace Apocryph.Consensus.Snowball.Test
             var snowball = new SnowballConsensus(new FakeContext(agent), new FakeState());
 
             agent.RegisterFunction("Apocryph-SnowballConsensus", ((IAsyncEnumerable<Message>, string, Chain, IAsyncEnumerable<(Hash<Chain>, Slot?[])>, IAgent) input) => snowball.Start(input, hashResolver));
-            agent.RegisterFunction("SnowballStream", ((Hash<Chain>, Hash<Block>, SnowballParameters, IAgent) input) => snowball.SnowballStream(input, hashResolver, peerConnector).Select(x => x));
+            agent.RegisterFunction("SnowballStream", ((Hash<Chain>, IAgent) input) => snowball.SnowballStream(input, hashResolver, peerConnector, null).Select(x => x));
             agent.RegisterFunction("MessagePool", ((IAsyncEnumerable<Message>, Hash<Chain>) input) => snowball.MessagePool(input));
             agent.RegisterFunction("KothProcessor", ((Hash<Chain>, IAsyncEnumerable<(Hash<Chain>, Slot?[])>) input) => snowball.KothProcessor(input));
 
@@ -37,7 +37,7 @@ namespace Apocryph.Consensus.Snowball.Test
         {
             var tasks = peers.Select(async peer =>
             {
-                var peerConnector = peerConnectorProvider.GetConnector(peer);
+                var peerConnector = peerConnectorProvider.GetPeerConnector(peer);
 
                 var (messages, subscribtionsStream, kothStates) = inputs(peer);
 

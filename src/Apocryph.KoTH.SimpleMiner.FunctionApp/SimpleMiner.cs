@@ -16,7 +16,8 @@ namespace Apocryph.KoTH.SimpleMiner.FunctionApp
 
         [FunctionName("Apocryph-KoTH-SimpleMiner")]
         public static async Task Miner(
-            [PerperTrigger] IAsyncEnumerable<(Hash<Chain>, Slot?[])> kothStates,
+            [PerperTrigger] (IAsyncEnumerable<(Hash<Chain>, Slot?[])> kothStates, Hash<Chain>[] initialChains) input,
+            IHashResolver hashResolver,
             IPeerConnector peerConnector,
             CancellationToken cancellationToken)
         {
@@ -40,11 +41,17 @@ namespace Apocryph.KoTH.SimpleMiner.FunctionApp
                         }
                     }
 
-                    await Task.Delay(5); // DEBUG: Try not to hog a full CPU core while testing
+                    await Task.Delay(50); // DEBUG: Try not to hog a full CPU core while testing
                 }
             });
 
-            await foreach (var (chain, peers) in kothStates)
+            foreach (var chain in input.initialChains)
+            {
+                var chainValue = await hashResolver.RetrieveAsync(chain);
+                chains[chain] = new KoTHState(new Slot?[chainValue.SlotsCount]);
+            }
+
+            await foreach (var (chain, peers) in input.kothStates)
             {
                 chains[chain] = new KoTHState(peers);
             }

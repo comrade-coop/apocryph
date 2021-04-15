@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipelines;
@@ -14,6 +15,7 @@ using System.Threading.Tasks;
 using Apocryph.Ipfs.Serialization;
 using Ipfs;
 using Ipfs.Http;
+using Newtonsoft.Json.Linq;
 
 namespace Apocryph.Ipfs.Impl
 {
@@ -21,6 +23,7 @@ namespace Apocryph.Ipfs.Impl
     {
         private readonly IpfsClient _ipfs;
         private readonly Random _random = new Random();
+        private readonly ConcurrentDictionary<(Peer, string), Func<byte[], Task<byte[]>>> _queryConnections = new ConcurrentDictionary<(Peer, string), Func<byte[], Task<byte[]>>>();
 
         public string QueryProtocolPrefix { get; set; } = "/x/apocryph/v0/";
         public string PubSubTopicPrefix { get; set; } = "apocryph/v0/";
@@ -55,50 +58,99 @@ namespace Apocryph.Ipfs.Impl
 
         public async Task<TResult> SendQuery<TRequest, TResult>(Peer peer, string path, TRequest request, CancellationToken cancellationToken = default)
         {
-            var protocol = QueryProtocolPrefix + path;
-            var peerId = new MultiHash(peer.Bytes);
-            var port = _random.Next(49152, 65535);
+            var connection = GetQueryConnection(peer, path, default); // cancellationToken
+            var requestBytes = JsonSerializer.SerializeToUtf8Bytes(request, ApocryphSerializationOptions.JsonSerializerOptions);
+            var resultBytes = await connection.Invoke(requestBytes);
+            var result = JsonSerializer.Deserialize<TResult>(resultBytes, ApocryphSerializationOptions.JsonSerializerOptions);
+            return result;
+        }
 
-            var forwardEndpoint = new IPEndPoint(IPAddress.Loopback, port);
-
-            try
+        public Func<byte[], Task<byte[]>> GetQueryConnection(Peer peer, string path, CancellationToken cancellationToken) => _queryConnections.GetOrAdd((peer, path), _ =>
+        {
+            var streamTask = Task.Run(async () =>
             {
-                await _ipfs.DoCommandAsync("p2p/forward", cancellationToken, protocol, new[]
+                var protocol = QueryProtocolPrefix + path;
+                var peerId = new MultiHash(peer.Bytes);
+
+                Stream stream;
+
+                if (peer == await Self) // HACK: Works around IPFS breaking all connections going to self
                 {
-                    $"arg=/ip4/{forwardEndpoint.Address}/tcp/{forwardEndpoint.Port}",
-                    $"arg=/p2p/{peerId}"
+                    var selfListenAddress = $"/p2p/{peerId}";
+
+                    var p2pLsResult = JObject.Parse(await _ipfs.DoCommandAsync("p2p/ls", cancellationToken, protocol));
+                    var listeners = (JArray)p2pLsResult["Listeners"];
+                    var targetAddress = listeners.Cast<JObject>()
+                        .Where(l => (string)l["Protocol"] == protocol && (string)l["ListenAddress"] == selfListenAddress)
+                        .Select(l => new MultiAddress((string)l["TargetAddress"]))
+                        .Single();
+
+                    if (targetAddress.Protocols.Count() != 2 || targetAddress.Protocols[0].Name != "ip4" || targetAddress.Protocols[1].Name != "tcp")
+                    {
+                        throw new Exception("Unexpected protocols for TargetAddress: " + string.Join(",", targetAddress.Protocols.Select(x => x.Name)));
+                    }
+
+                    var connectEndpoint = new IPEndPoint(IPAddress.Parse(targetAddress.Protocols[0].Value), int.Parse(targetAddress.Protocols[1].Value));
+
+                    var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                    await socket.ConnectAsync(connectEndpoint);
+                    stream = new NetworkStream(socket, true);
+
+                    await WriteNewlineStream(stream, Encoding.UTF8.GetBytes(Base58.Encode(peer.Bytes)), cancellationToken);
+                }
+                else
+                {
+                    var port = _random.Next(49152, 65535);
+                    var forwardEndpoint = new IPEndPoint(IPAddress.Loopback, port);
+                    await _ipfs.DoCommandAsync("p2p/forward", cancellationToken, protocol, new[]
+                    {
+                        $"arg=/ip4/{forwardEndpoint.Address}/tcp/{forwardEndpoint.Port}",
+                        $"arg=/p2p/{peerId}"
+                    });
+
+                    await Task.Delay(3000); // HACK: Needed to reliably establish the forwarding in IPFS
+
+                    var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                    await socket.ConnectAsync(forwardEndpoint);
+
+                    stream = new NetworkStream(socket, true);
+
+                    cancellationToken.Register(async () =>
+                    {
+                        await _ipfs.DoCommandAsync("p2p/close", cancellationToken, "", new[]
+                        {
+                            $"protocol={protocol}",
+                            $"listen-address=/ip4/{forwardEndpoint.Address}/tcp/{forwardEndpoint.Port}",
+                            $"target-address=/p2p/{peerId}"
+                        });
+                    });
+                }
+
+                cancellationToken.Register(async () =>
+                {
+                    stream.Close();
+                    await stream.DisposeAsync();
                 });
-
-                var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                await socket.ConnectAsync(forwardEndpoint);
-
-                await using var stream = new NetworkStream(socket, true);
                 var enumerator = ReadNewlineStream(PipeReader.Create(stream), cancellationToken).GetAsyncEnumerator();
+                return (stream, enumerator);
+            });
 
-                var requestBytes = JsonSerializer.SerializeToUtf8Bytes(request, ApocryphSerializationOptions.JsonSerializerOptions);
+            var semaphore = new SemaphoreSlim(1, 1);
+
+            return (async requestBytes =>
+            {
+                var (stream, enumerator) = await streamTask;
+                await semaphore.WaitAsync();
                 await WriteNewlineStream(stream, requestBytes, cancellationToken);
-
                 if (!await enumerator.MoveNextAsync())
                 {
                     throw new Exception("Stream ended prematurely");
                 }
-
-                var result = JsonSerializer.Deserialize<TResult>(enumerator.Current.ToArray(), ApocryphSerializationOptions.JsonSerializerOptions);
-
-                stream.Close();
-
+                var result = enumerator.Current.ToArray();
+                semaphore.Release();
                 return result;
-            }
-            finally
-            {
-                await _ipfs.DoCommandAsync("p2p/close", cancellationToken, "", new[]
-                {
-                    $"protocol={protocol}",
-                    $"listen-address=/ip4/{forwardEndpoint.Address}/tcp/{forwardEndpoint.Port}",
-                    $"target-address=/p2p/{peerId}"
-                });
-            }
-        }
+            });
+        });
 
         public async Task ListenQuery<TRequest, TResult>(string path, Func<Peer, TRequest, Task<TResult>> handler, CancellationToken cancellationToken = default)
         {
@@ -115,7 +167,6 @@ namespace Apocryph.Ipfs.Impl
                 $"arg=/ip4/{listenEndpoint.Address}/tcp/{listenEndpoint.Port}",
                 "report-peer-id=true"
             });
-
 
             cancellationToken.Register(async () =>
             {
@@ -145,7 +196,6 @@ namespace Apocryph.Ipfs.Impl
             {
                 await using var stream = new NetworkStream(socket, true);
                 var enumerator = ReadNewlineStream(PipeReader.Create(stream), cancellationToken).GetAsyncEnumerator();
-
                 if (!await enumerator.MoveNextAsync())
                 {
                     throw new Exception("Stream ended prematurely");
@@ -157,9 +207,7 @@ namespace Apocryph.Ipfs.Impl
                 while (await enumerator.MoveNextAsync())
                 {
                     var request = JsonSerializer.Deserialize<TRequest>(enumerator.Current.ToArray(), ApocryphSerializationOptions.JsonSerializerOptions);
-
                     var result = await handler(peer, request);
-
                     var resultBytes = JsonSerializer.SerializeToUtf8Bytes(result, ApocryphSerializationOptions.JsonSerializerOptions);
                     await WriteNewlineStream(stream, resultBytes, cancellationToken);
                 }
@@ -177,17 +225,27 @@ namespace Apocryph.Ipfs.Impl
             while (true)
             {
                 var readResult = await reader.ReadAsync();
-                var position = readResult.Buffer.PositionOf((byte)'\n');
-                if (position != null)
+                var buffer = readResult.Buffer;
+
+                while (true)
                 {
-                    var result = readResult.Buffer.Slice(0, position.Value);
+                    var position = buffer.PositionOf((byte)'\n');
+                    if (position == null)
+                    {
+                        break;
+                    }
+
+                    var result = buffer.Slice(0, position.Value);
                     yield return result;
-                    reader.AdvanceTo(readResult.Buffer.GetPosition(1, position.Value));
+
+                    buffer = buffer.Slice(buffer.GetPosition(1, position.Value));
                 }
-                else if (readResult.IsCompleted)
+
+                if (readResult.IsCompleted)
                 {
                     break;
                 }
+                reader.AdvanceTo(buffer.Start, buffer.End);
             }
         }
 

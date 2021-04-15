@@ -36,7 +36,7 @@ namespace Apocryph.Ipfs.Test
         public IPeerConnector GetPeerConnector(string implementation, int instanceId)
         {
             if (implementation == "FakePeerConnector")
-                return fakePeerConnectorProvider.GetConnector(new Peer(Hash.From(instanceId).Bytes));
+                return fakePeerConnectorProvider.GetPeerConnector(new Peer(Hash.From(instanceId).Bytes));
             else if (implementation == "IpfsPeerConnector")
                 return new IpfsPeerConnector(GetIpfsClient(instanceId));
             else
@@ -52,7 +52,7 @@ namespace Apocryph.Ipfs.Test
 
         private Dictionary<int, IpfsClient> _ipfsClients = new Dictionary<int, IpfsClient>();
 
-        private int _nextIpfsApiPort = 5001;
+        private int _nextIpfsApiPort = 5004;
         private int _nextIpfsSwarmPort = 10001;
         private string? _lastPeerAddr = null;
         private List<Process> processesToCleanup = new List<Process>();
@@ -100,7 +100,7 @@ namespace Apocryph.Ipfs.Test
             var ipfsApiPort = Interlocked.Increment(ref _nextIpfsApiPort);
             var ipfsSwarmPort = Interlocked.Increment(ref _nextIpfsSwarmPort);
 
-            var ipfsDirectory = Path.Combine(Path.GetTempPath(), $"test-ipfs-instance-{ipfsApiPort}");
+            var ipfsDirectory = Path.Combine(Path.GetTempPath(), $"test--ipfs-instance-{ipfsApiPort}");
             if (Directory.Exists(ipfsDirectory))
             {
                 // Console.WriteLine("Clearing old test instance path: {0}", ipfsDirectory);

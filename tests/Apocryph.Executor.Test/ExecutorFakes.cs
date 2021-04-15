@@ -49,7 +49,7 @@ namespace Apocryph.Executor.Test
         };
 
 
-        public static async Task<(Chain chain, Message[] input, Message[] output)> GetTestAgentScenario(IHashResolver hashResolver, string consensusType, object? consensusParameters, int slotsCount)
+        public static async Task<(Chain chain, Message[] input, Message[] output)> GetTestAgentScenario(IHashResolver hashResolver, string consensusType, Hash<object>? consensusParameters, int slotsCount)
         {
             var messageFilter = new string[] { typeof(int).FullName! };
             var fakeChainId = Hash.From("123").Cast<Chain>();

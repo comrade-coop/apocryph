@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -73,7 +72,7 @@ namespace Apocryph.Ipfs.Test
 
             Assert.Equal(hash, storedHash);
 
-            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+            var cts = new CancellationTokenSource();
             var result = await resolverTo.RetrieveAsync(hash, cts.Token);
 
             Assert.Equal(data, result);

@@ -45,6 +45,34 @@ namespace Apocryph.Ipfs.Test
 
             var reply = await connectorFrom.SendQuery<IExample, IExample>(await connectorTo.Self, path, dataRequest, cancellationTokenSource.Token);
             Assert.Equal(reply, dataReply, SerializedComparer.Instance);
+            await Task.WhenAll(Enumerable.Range(0, 10000).Select(async _ =>
+            {
+                var reply = await connectorFrom.SendQuery<IExample, IExample>(await connectorTo.Self, path, dataRequest, cancellationTokenSource.Token);
+                Assert.Equal(reply, dataReply, SerializedComparer.Instance);
+            }));
+
+            cancellationTokenSource.Cancel();
+        }
+
+        [Theory]
+        [MemberData(nameof(SampleQueryData))]
+        public async void Query_ToSelf_IsStillReceived(string connectorImplementation, IExample dataRequest, IExample dataReply)
+        {
+            var connector = _fixture.GetPeerConnector(connectorImplementation, 1);
+
+            var cancellationTokenSource = new CancellationTokenSource();
+            var path = $"test-{Guid.NewGuid()}";
+
+            await connector.ListenQuery<IExample, IExample>(path, async (otherPeer, request) =>
+            {
+                Assert.Equal(otherPeer, await connector.Self);
+                Assert.Equal(request, dataRequest, SerializedComparer.Instance);
+
+                return dataRequest;
+            }, cancellationTokenSource.Token);
+
+            var reply = await connector.SendQuery<IExample, IExample>(await connector.Self, path, dataRequest, cancellationTokenSource.Token);
+            Assert.Equal(reply, dataReply, SerializedComparer.Instance);
             cancellationTokenSource.Cancel();
         }
 

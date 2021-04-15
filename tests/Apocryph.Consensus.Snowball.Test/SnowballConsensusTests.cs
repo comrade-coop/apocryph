@@ -33,7 +33,7 @@ namespace Apocryph.Consensus.Snowball.Test
             var peerConnectorProvider = new FakePeerConnectorProvider();
             var peers = Enumerable.Range(0, peersCount).Select(x => FakePeerConnectorProvider.GetFakePeer()).ToArray();
 
-            var snowballParameters = new SnowballParameters(3, 0.5, 25);
+            var snowballParameters = await hashResolver.StoreAsync<object>(new SnowballParameters(3, 0.5, 25));
             var (chain, inputMessages, expectedOutputMessages) = await ExecutorFakes.GetTestAgentScenario(hashResolver, "Apocryph-SnowballConsensus", snowballParameters, peersCount);
 
             var chainId = Hash.From(chain);

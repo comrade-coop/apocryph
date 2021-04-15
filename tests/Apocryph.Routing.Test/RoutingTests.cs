@@ -16,9 +16,9 @@ namespace Apocryph.Routing.Test
 {
     public class RouterTests
     {
-        private Message GenerateMessage(Hash<Chain> targetChain, int i)
+        private Message GenerateMessage(Hash<Chain> targetChain, int i, int nonce = 0)
         {
-            return new Message(new Reference(targetChain, 0, new[] { typeof(int).FullName! }), ReferenceData.From(i));
+            return new Message(new Reference(targetChain, nonce, new[] { typeof(int).FullName! }), ReferenceData.From(i));
         }
 
         private async Task<Hash<Chain>> GetTestChain(IHashResolver hashResolver, string consensusType = "FakeConsensus")
@@ -80,7 +80,7 @@ namespace Apocryph.Routing.Test
             var chainIdFrom = await GetTestChain(hashResolver, "FromConsensus");
             var chainIdTo = await GetTestChain(hashResolver, "ToConsensus");
 
-            var testMessages = Enumerable.Range(0, 10).Select(x => GenerateMessage(chainIdFrom, x)).ToArray();
+            var testMessages = Enumerable.Range(0, 10).Select(x => GenerateMessage(chainIdFrom, x, -1)).ToArray();
             var receivedMessages = new TaskCompletionSource<IAsyncEnumerable<Message>>();
             var subscribeReference = testMessages[0].Target;
             var fromInvoked = false;

@@ -23,14 +23,14 @@ namespace Apocryph.KoTH.Test
         public async void KoTH_KeepsTrack_OfMinedPeers(int slotsCount, int mineCount)
         {
             var hashResolver = new FakeHashResolver();
-            var peerConnector = (new FakePeerConnectorProvider()).GetConnector();
+            var peerConnector = (new FakePeerConnectorProvider()).GetPeerConnector();
 
             var chain = new Chain(new ChainState(new MerkleTreeNode<AgentState>(new Hash<IMerkleTree<AgentState>>[] { }), 0), "", null, slotsCount);
             var chainId = await hashResolver.StoreAsync(chain);
 
             var cancellationTokenSource = new CancellationTokenSource();
 
-            var outputStream = await KoTH.Processor(null, new FakeState(), hashResolver, peerConnector, cancellationTokenSource.Token);
+            var outputStream = await KoTH.KoTHProcessor(null, new FakeState(), hashResolver, peerConnector, null, cancellationTokenSource.Token);
 
             var _ = Task.Run(async () =>
             {

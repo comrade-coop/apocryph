@@ -46,11 +46,12 @@ namespace Apocryph.Routing.FunctionApp
                 executor
             ));
 
-            var _ = context.StreamActionAsync("RouterOutput", (publicationsStreamName, consensusOutput, chainId));
+            var task = context.StreamActionAsync("RouterOutput", (publicationsStreamName, consensusOutput, chainId));
+            var _ = task.ContinueWith(x => System.Console.WriteLine(x.Exception), TaskContinuationOptions.OnlyOnFaulted); // DEBUG: FakeStream does not log errors
 
-            var value = (callsStreamName, publicationsStream);
-            await state.SetValue(key, value);
-            return value;
+            var resultValue = (callsStreamName, publicationsStream);
+            await state.SetValue(key, resultValue);
+            return resultValue;
         }
     }
 }
