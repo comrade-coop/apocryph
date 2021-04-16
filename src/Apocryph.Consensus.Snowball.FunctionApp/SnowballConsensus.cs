@@ -51,6 +51,7 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
             ILogger? logger,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
+            var selfPeer = await peerConnector.Self;
             var chain = await hashResolver.RetrieveAsync(input.self);
             var parameters = await hashResolver.RetrieveAsync(chain.ConsensusParameters!.Cast<SnowballParameters>());
             var emptyMessagesTree = await MerkleTreeBuilder.CreateRootFromValues(hashResolver, new Message[] { }, 3);
@@ -132,33 +133,35 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
 
             var currentRound = await _state.GetValue<int>("currentRound", () => 0);
 
-            // TODO: Sync to current state first
-
-            if (currentRound == 0)
-            {
-                var newBlock = await ProposeBlock(genesis);
-                if (newBlock == null) yield break; // DEBUG: Used for testing purposes mainly
-                var newBlockHash = await hashResolver.StoreAsync(newBlock);
-                var snowball = await _state.GetValue<SnowballState>($"snowballState-{currentRound}");
-                snowball.ProcessQuery(newBlockHash);
-                await _state.SetValue($"snowballState-{currentRound}", snowball);
-            }
-
-
             // NOTE: Might benefit from locking
             while (true)
             {
                 IEnumerable<Task<Query>> replyTasks;
                 {
-                    var snowball = await _state.GetValue<SnowballState>($"snowballState-{currentRound}");
-                    if (snowball.CurrentValue == null)
+                    var kothPeers = await _state.GetValue<Peer[]>("kothPeers", () => new Peer[] { });
+                    if (kothPeers.Length == 0)
                     {
                         await Task.Delay(100);
                         continue;
                     }
-                    var kothPeers = await _state.GetValue<Peer[]>("kothPeers", () => new Peer[] { });
-                    if (kothPeers.Length == 0)
+
+                    var snowball = await _state.GetValue<SnowballState>($"snowballState-{currentRound}");
+                    if (snowball.CurrentValue == null)
                     {
+                        // NOTE: Can have a mode to sync to current state first for extra speed
+                        // NOTE: Can lower CPU usage pressure by calculating proposer order from (previousHash, currentRound)
+                        if (kothPeers.Contains(selfPeer))
+                        {
+                            var previousHash = await _state.GetValue<Hash<Block>>("lastBlock", () => genesis);
+                            var newBlock = await ProposeBlock(previousHash);
+                            if (newBlock == null) yield break; // DEBUG: Used for testing purposes mainly
+
+                            var newBlockHash = await hashResolver.StoreAsync(newBlock);
+
+                            snowball = await _state.GetValue<SnowballState>($"snowballState-{currentRound}");
+                            snowball.ProcessQuery(newBlockHash);
+                            await _state.SetValue($"snowballState-{currentRound}", snowball);
+                        }
                         await Task.Delay(100);
                         continue;
                     }
@@ -205,20 +208,9 @@ namespace Apocryph.Consensus.Snowball.FunctionApp
                         await _state.SetValue("messagePool", messagePool);
                     }
 
-                    var selfPeer = await peerConnector.Self;
-                    logger?.LogDebug("Finished round {currentRound}; block: {previousHash}, koth: {kothState}", currentRound, previousHash.ToString().Substring(0, 16), string.Join("", (await _state.GetValue<Peer[]>("kothPeers", () => new Peer[] { })).Select(x => x == selfPeer ? 'X' : '.')));
+                    logger?.LogDebug("Finished round {currentRound}; block: {previousHash}", currentRound, previousHash.ToString().Substring(0, 16));
 
                     await _state.SetValue("currentRound", ++currentRound);
-                    // FIXME: Calculate proposers or proposal order from (previousHash, currentRound)
-                    var newBlock = await ProposeBlock(previousHash);
-
-                    if (newBlock == null) yield break; // DEBUG: Used for testing purposes mainly
-
-                    var newBlockHash = await hashResolver.StoreAsync(newBlock);
-
-                    var snowball = await _state.GetValue<SnowballState>($"snowballState-{currentRound}");
-                    snowball.ProcessQuery(newBlockHash);
-                    await _state.SetValue($"snowballState-{currentRound}", snowball);
                 }
             }
         }

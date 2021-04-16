@@ -35,9 +35,9 @@ namespace Apocryph.Ipfs.Fake
         {
             public FakePeerConnectorProvider Factory { get; }
             public Peer Self { get; }
-            public HashSet<Task> PendingHandlerTasks { get; } = new HashSet<Task>();
+            private ConcurrentDictionary<Task, bool> _pendingHandlerTasks = new ConcurrentDictionary<Task, bool>();
+            public IEnumerable<Task> PendingHandlerTasks => _pendingHandlerTasks.Keys;
             Task<Peer> IPeerConnector.Self => Task.FromResult(Self);
-
 
             public FakePeerConnector(Peer self, FakePeerConnectorProvider factory)
             {
@@ -92,9 +92,9 @@ namespace Apocryph.Ipfs.Fake
                 {
                     var message = Deserialize<T>(messageBytes);
                     var task = handler(peer, message);
-                    PendingHandlerTasks.Add(task);
+                    _pendingHandlerTasks[task] = true;
                     task.ContinueWith((t) => Console.WriteLine("PubSub handler '{0}' exited with exception: {1}", path, t.Exception), TaskContinuationOptions.OnlyOnFaulted);
-                    task.ContinueWith((t) => PendingHandlerTasks.Remove(task));
+                    task.ContinueWith((t) => _pendingHandlerTasks.TryRemove(task, out var _));
                 };
 
                 Factory._gossipListeners.AddOrUpdate(path, _ => wrappedHandler, (_, existingHandler) => existingHandler + wrappedHandler);

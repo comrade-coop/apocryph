@@ -41,7 +41,7 @@ namespace Apocryph.KoTH.SimpleMiner.FunctionApp
                         }
                     }
 
-                    await Task.Delay(50); // DEBUG: Try not to hog a full CPU core while testing
+                    await Task.Delay(5); // DEBUG: Try not to hog a full CPU core while testing
                 }
             });
 

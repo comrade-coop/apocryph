@@ -20,7 +20,7 @@ namespace Apocryph.Routing.FunctionApp
         {
             await foreach (var message in input.outbox)
             {
-                if (message.Target.Chain == input.self && message.Target.AgentNonce < 0) // FIXME: Needs a better way to handle publications
+                if (message.Target.Chain == input.self && message.Target.AgentNonce < 0)
                 {
                     await collector.AddAsync(message);
                 }

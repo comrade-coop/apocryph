@@ -32,7 +32,7 @@ namespace Apocryph.KoTH.Test
 
             var outputStream = await KoTH.KoTHProcessor(null, new FakeState(), hashResolver, peerConnector, null, cancellationTokenSource.Token);
 
-            var _ = Task.Run(async () =>
+            var generatorTask = Task.Run(async () =>
             {
                 for (var i = 0; i < mineCount; i++)
                 {
@@ -41,7 +41,6 @@ namespace Apocryph.KoTH.Test
                 }
 
                 await Task.WhenAll(peerConnector.PendingHandlerTasks);
-
                 cancellationTokenSource.Cancel();
             });
 
@@ -53,6 +52,8 @@ namespace Apocryph.KoTH.Test
                 Assert.True(count == previousCount || count == previousCount + 1);
                 previousCount = count;
             }
+
+            await generatorTask;
         }
     }
 }

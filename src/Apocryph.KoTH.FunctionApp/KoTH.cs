@@ -36,7 +36,6 @@ namespace Apocryph.KoTH.FunctionApp
             await peerConnector.ListenPubSub<(Hash<Chain> chain, Slot slot)>(PubSubPath, async (_, message) =>
             {
                 await semaphore.WaitAsync();
-
                 var chainState = await state.GetValue<KoTHState?>(message.chain.ToString(), () => default!);
                 if (chainState == null)
                 {
@@ -47,7 +46,7 @@ namespace Apocryph.KoTH.FunctionApp
                 if (chainState.TryInsert(message.slot))
                 {
                     var self = await peerConnector.Self;
-                    logger?.LogDebug("{ChainId} {SlotMap}", message.chain.ToString().Substring(0, 16), string.Join("", chainState.Slots.Select(x => x == null ? '_' : x.Peer == self ? 'X' : '.')));
+                    logger?.LogDebug("{chainId} {slotMap}", message.chain.ToString().Substring(0, 16), string.Join("", chainState.Slots.Select(x => x == null ? '_' : x.Peer == self ? 'X' : '.')));
                     await state.SetValue(message.chain.ToString(), chainState);
                     await output.Writer.WriteAsync((message.chain, chainState.Slots.ToArray())); // DEBUG: ToArray used due to in-place modifications
                 }

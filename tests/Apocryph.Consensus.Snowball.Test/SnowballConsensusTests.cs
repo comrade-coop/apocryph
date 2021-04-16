@@ -24,7 +24,8 @@ namespace Apocryph.Consensus.Snowball.Test
         [Theory]
         [InlineData(5)]
 #if SLOWTESTS
-        [InlineData(50)] // Test mocks have race conditions after ~60
+        [InlineData(100)]
+        // [InlineData(2000)] // ~1m
 #endif
         public async void Snowball_ConfirmsAndExecutes_SingleMessage(int peersCount)
         {
@@ -33,7 +34,7 @@ namespace Apocryph.Consensus.Snowball.Test
             var peerConnectorProvider = new FakePeerConnectorProvider();
             var peers = Enumerable.Range(0, peersCount).Select(x => FakePeerConnectorProvider.GetFakePeer()).ToArray();
 
-            var snowballParameters = await hashResolver.StoreAsync<object>(new SnowballParameters(3, 0.5, 25));
+            var snowballParameters = await hashResolver.StoreAsync<object>(new SnowballParameters(5, 0.8, 25));
             var (chain, inputMessages, expectedOutputMessages) = await ExecutorFakes.GetTestAgentScenario(hashResolver, "Apocryph-SnowballConsensus", snowballParameters, peersCount);
 
             var chainId = Hash.From(chain);

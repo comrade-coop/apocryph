@@ -8,7 +8,7 @@ using Xunit;
 namespace Apocryph.Ipfs.Test
 {
     [Collection("Ipfs Collection")]
-    public class PeerConnectorTests // FIXME filename
+    public class PeerConnectorTests
     {
         private IpfsFixture _fixture;
 
@@ -45,11 +45,6 @@ namespace Apocryph.Ipfs.Test
 
             var reply = await connectorFrom.SendQuery<IExample, IExample>(await connectorTo.Self, path, dataRequest, cancellationTokenSource.Token);
             Assert.Equal(reply, dataReply, SerializedComparer.Instance);
-            await Task.WhenAll(Enumerable.Range(0, 10000).Select(async _ =>
-            {
-                var reply = await connectorFrom.SendQuery<IExample, IExample>(await connectorTo.Self, path, dataRequest, cancellationTokenSource.Token);
-                Assert.Equal(reply, dataReply, SerializedComparer.Instance);
-            }));
 
             cancellationTokenSource.Cancel();
         }
@@ -78,7 +73,7 @@ namespace Apocryph.Ipfs.Test
 
 
 #if SLOWTESTS
-        [Theory(Skip="Flaky on IPFS")]
+        [Theory] // (Skip="Flaky on IPFS")
 #else
         [Theory]
 #endif

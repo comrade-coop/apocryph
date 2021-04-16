@@ -54,7 +54,7 @@ namespace Apocryph.Ipfs.Test
 
         private int _nextIpfsApiPort = 5004;
         private int _nextIpfsSwarmPort = 10001;
-        private string? _lastPeerAddr = null;
+        private List<string> _peerAddresses = new List<string>();
         private List<Process> processesToCleanup = new List<Process>();
 
         private static Process RunIpfsCommand(string ipfsDirectory, params string[] arguments)
@@ -111,16 +111,13 @@ namespace Apocryph.Ipfs.Test
             RunIpfsCommand(ipfsDirectory, "config", "profile", "apply", "test").WaitForExit();
             RunIpfsCommand(ipfsDirectory, "config", "--json", "Experimental.Libp2pStreamMounting", "true").WaitForExit();
             RunIpfsCommand(ipfsDirectory, "config", "Addresses.API", $"/ip4/127.0.0.1/tcp/{ipfsApiPort}").WaitForExit();
-            // RunIpfsCommand(ipfsDirectory, "config", "Pubsub.Router", "floodsub").WaitForExit(); // DEBUG: More reliable in testing
+            RunIpfsCommand(ipfsDirectory, "config", "Pubsub.Router", "floodsub").WaitForExit(); // DEBUG: More reliable in testing
             RunIpfsCommand(ipfsDirectory, "config", "--json", "Addresses.Swarm", $"[\"/ip4/127.0.0.1/tcp/{ipfsSwarmPort}\"]").WaitForExit();
-            if (_lastPeerAddr != null)
-            {
-                RunIpfsCommand(ipfsDirectory, "config", "--json", "Bootstrap", $"[\"{_lastPeerAddr}\"]").WaitForExit();
-            }
 
             var peerIdProcess = RunIpfsCommand(ipfsDirectory, "config", "Identity.PeerID");
             var peerId = peerIdProcess.StandardOutput.ReadToEnd().Trim();
-            _lastPeerAddr = $"/ip4/127.0.0.1/tcp/{ipfsSwarmPort}/p2p/{peerId}";
+            var peerAddress = $"/ip4/127.0.0.1/tcp/{ipfsSwarmPort}/p2p/{peerId}";
+            _peerAddresses.Add(peerAddress);
             peerIdProcess.WaitForExit();
 
             var ipfsProcess = RunIpfsCommand(ipfsDirectory, "daemon", "--enable-pubsub-experiment");
@@ -130,6 +127,12 @@ namespace Apocryph.Ipfs.Test
                 var line = ipfsProcess.StandardOutput.ReadLine();
                 // Console.WriteLine("{0} | {1}", ipfsDirectory, line);
                 if (line != null && line.Contains("Daemon is ready")) break;
+            }
+
+            foreach (var address in _peerAddresses)
+            {
+                if (address != peerAddress)
+                    RunIpfsCommand(ipfsDirectory, "swarm", "connect", address).WaitForExit();
             }
 
             return new IpfsClient($"http://localhost:{ipfsApiPort}");
