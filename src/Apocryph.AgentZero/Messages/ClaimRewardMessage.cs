@@ -1,4 +1,4 @@
-namespace Apocryph.Core.Consensus.Blocks.Messages
+namespace Apocryph.AgentZero.Messages
 {
     public class ClaimRewardMessage
     {

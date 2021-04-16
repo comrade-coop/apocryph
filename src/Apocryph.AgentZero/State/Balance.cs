@@ -1,11 +1,19 @@
 using System;
 using System.Numerics;
 
-namespace Apocryph.Core.Consensus.Blocks.State
+namespace Apocryph.AgentZero.State
 {
     public class Balance
     {
         public BigInteger Amount { get; private set; }
+
+        public Balance()
+            : this(0) { }
+
+        public Balance(BigInteger amount)
+        {
+            Amount = amount;
+        }
 
         public void Transfer(Balance? to, BigInteger amount)
         {

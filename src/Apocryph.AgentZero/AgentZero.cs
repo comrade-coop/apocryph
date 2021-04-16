@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Apocryph.Core.Consensus.Blocks.Messages;
-using Apocryph.Core.Consensus.Blocks.State;
+using Apocryph.AgentZero.Messages;
+using Apocryph.AgentZero.State;
 
-namespace Apocryph.Core.Consensus
+namespace Apocryph.AgentZero
 {
     public class AgentZeroState
     {
@@ -36,10 +36,7 @@ namespace Apocryph.Core.Consensus
                         var creator = state.Balances.GetOrCreate(reference!.Value);
                         var chain = state.Balances.GetOrCreate(createChainMessage.ChainId);
                         creator.Transfer(chain, createChainMessage.InitialBalance);
-                        state.Chains.Add(createChainMessage.ChainId, new Chain
-                        {
-                            LatestBlock = createChainMessage.InitialBlockId
-                        });
+                        state.Chains.Add(createChainMessage.ChainId, new Chain(createChainMessage.InitialBlockId));
                     }
                     break;
 
