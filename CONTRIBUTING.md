@@ -18,11 +18,11 @@ The issues have the following structure:
 - **story points** as part of the issue description
 
 The story points gives notation on the complexity of the issue and can be indicative for the estimated time duration. The guidance for assigning story points is the following:
-- **1** and **2** story points are reserved for minor tasks that take less than **4 hours**;
-- **3** points are reserved for tasks that will likely take **a day**;
-- **5** points are for tasks that will take at least a day, but no more than **two days**;
-- **8** points are for tasks that will likely take **a few of days**;
-- **13** points are for tasks that will likely take **a week**.
+- **1** point is for minor tasks that take less than **half a day**;
+- **2** points are for tasks that will likely take **a day**; 
+- **3** points are for tasks that will take at least a day, but no more than **two days**; 
+- **5** points are for tasks that will likely take **a few of days**;
+- **8** points are for tasks that will likely take **a week**.
 
 ### Ready to make a change? Fork the repo and prepare a pull request
 All contributions to the repo are managed using pull requests, reviewed and approved by the maintainers. The pull requests should have the following structure:
@@ -37,3 +37,5 @@ If you open a pull request without an issue or in relation to an issue that is n
 
 ## Rewarding contributions
 Apocryph project is using a decentralized governence model based on [DAO](https://en.wikipedia.org/wiki/Decentralized_autonomous_organization) concept. Apocryph DAO allocates part of Apocryph token for project contributors. On a regular basis, part of that token is be distributed to contributors according to story points of their contributions over period of time. 
+
+Until the **end of 2021**, the rewards for completed story points will be calculated using the following rate: **1 story point will be rewarded with 2000 Apocryph tokens**.
