@@ -38,4 +38,4 @@ If you open a pull request without an issue or in relation to an issue that is n
 ## Rewarding contributions
 Apocryph project is using a decentralized governence model based on [DAO](https://en.wikipedia.org/wiki/Decentralized_autonomous_organization) concept. Apocryph DAO allocates part of Apocryph token for project contributors. On a regular basis, part of that token is be distributed to contributors according to story points of their contributions over period of time. 
 
-Until the **end of 2021**, the rewards for completed story points will be calculated using the following rate: **1 story point will be rewarded with 2000 Apocryph tokens**.
+Until the **end of 2021**, the rewards for completed story points will be calculated using the following rate: **1 story point will be rewarded with 4000 Apocryph tokens**.
