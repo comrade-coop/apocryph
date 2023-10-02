@@ -15,3 +15,7 @@ Alternatively, you can run them directly with:
 ```bash
 go run ./cmd/trustedpods/ #...
 ```
+
+## Architecture
+
+See [`ARCHITECTURE.md`](spec/ARCHITECTURE.md).
