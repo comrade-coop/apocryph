@@ -1,0 +1,27 @@
+repositories:
+- name: kedacore
+  url: https://kedacore.github.io/charts
+- name: ingress-nginx
+  url: https://kubernetes.github.io/ingress-nginx
+
+releases:
+- name: keda
+  namespace: keda
+  chart: kedacore/keda
+- name: ingress-nginx
+  namespace: keda
+  chart: ingress-nginx/ingress-nginx
+- name: keda-http-addon
+  namespace: keda
+  chart: kedacore/keda-add-ons-http
+  set:
+  - name: interceptor.replicas.min
+    value: 1
+  needs:
+  - keda
+- name: manifests
+  chart: ./k8s
+  namespace: keda
+  needs:
+  - keda-http-addon
+  - ingress-nginx # NOTE: helmfile typically fails to wait long enough for nginx to start at this step

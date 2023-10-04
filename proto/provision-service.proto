@@ -1,0 +1,98 @@
+syntax = "proto3";
+package apocryph.proto.provisionService;
+
+option go_package = "github.com/comrade-coop/trusted-pods/proto";
+
+import "capacity.proto";
+
+message ProvisionPodRequest {
+  Pod podManifest = 1;
+  repeated Key keys = 2;
+}
+
+message ProvisionPodResponse {
+  string error = 1;
+  repeated ExposedHostPort addresses = 2;
+  message ExposedHostPort {
+    string multiaddr = 1;
+    string containerName = 2;
+    uint64 containerPort = 3;
+  }
+}
+
+message Pod {
+  repeated Container containers = 1;
+  repeated Volume volumes = 2;
+  Replicas replicas = 3;
+}
+
+message Container {
+  string name = 1;
+  Image image = 2;
+  repeated string entrypoint = 3;
+  repeated string command = 4;
+  string workingDir = 5;
+  repeated Port ports = 6;
+  map<string, string> env = 7;
+  repeated VolumeMount volumes = 8;
+  repeated apocryph.proto.capacity.Resource resourceRequests = 9;  // "cpu", "memory", custom
+
+  message Image {
+    string cid = 1;
+    int32 keyIdx = 2;
+  }
+
+  message Port {
+    uint64 containerPort = 1;
+    uint64 servicePort = 2;
+    oneof exposedPort {
+      string hostHttpHost = 3;
+      // string hostHttpsHost = 4;
+      uint64 hostTcpPort = 5;
+      // uint64 hostUdpPort = 6;
+      // uint64 servicePort = 7;
+    }
+  }
+
+  message VolumeMount {
+    uint32 volumeIdx = 1;
+    string mountPath = 2;
+    bool readOnly = 3;
+  }
+}
+
+message Volume {
+  enum Type {
+    VOLUME_EMPTY = 0;
+    VOLUME_FILESYSTEM = 1;
+    VOLUME_SECRET = 2;
+  }
+  enum AccessMode {
+    VOLUME_RW_ONE = 0;
+    // VOLUME_RO_MANY = 1;
+    VOLUME_RW_MANY = 2;
+  }
+  Type type = 1;
+  AccessMode accessMode = 2;
+  oneof configuration {
+    FilesystemConfig filesystem = 3;
+    SecretConfig secret = 4;
+  }
+  message FilesystemConfig {
+    repeated apocryph.proto.capacity.Resource resourceRequests = 1; // "storage"
+  }
+  message SecretConfig {
+    string cid = 1; // use 0x00 0x01 0x55 0x00 (unsigned-varint length) (raw contents) to encode the secret in the message
+    int32 keyIdx = 2;
+  }
+}
+
+message Replicas {
+  uint32 min = 1;
+  uint32 max = 2;
+  uint32 targetPendingRequests = 3;
+}
+
+message Key {
+  bytes keyPem = 1;
+}

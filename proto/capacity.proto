@@ -1,0 +1,32 @@
+syntax = "proto3";
+package apocryph.proto.capacity;
+
+option go_package = "github.com/comrade-coop/trusted-pods/proto";
+
+message CapacityRequest {
+  repeated Resource resources = 1;
+}
+
+message CapacityResponse {
+  repeated Resource availableResources = 1;
+  PricingTable pricing = 2;
+}
+
+message PricingTable {
+  repeated PricedResource resources = 1;
+  bytes currency = 2;
+}
+
+message PricedResource {
+  string resource = 1;
+  uint64 priceForReservation = 2;
+  uint64 priceForUsage = 3;
+  // uint64 priceForLimit = 4;
+
+  // message MetricSource { string metricName = 1; enum Source { METRIC_SCHEDULER = 1; }; Source source = 2; }
+}
+
+message Resource {
+  string resource = 1;
+  uint64 amount = 2;
+}

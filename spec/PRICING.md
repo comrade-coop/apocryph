@@ -16,5 +16,6 @@ A Pricing Table defines the terms under which a given provider is willing to ren
 
 References:
 * [Kube Scheduler Metrics](https://kubernetes.io/docs/concepts/cluster-administration/system-metrics/#kube-scheduler-metrics), [2](https://github.com/kubernetes/kubernetes/blob/a321897e77ae43011fee55cfd22092008121ccb6/test/instrumentation/testdata/stable-metrics-list.yaml#L404-L431) - resource requests/limits
+* [Kube State Metrics](https://github.com/kubernetes/kube-state-metrics/blob/main/docs/service-metrics.md) - resource definitions
 * [CAdvisor Metrics](https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md) - resource usage
 * [Ingress Nginx Metrics](https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/monitoring.md)

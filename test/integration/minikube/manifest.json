@@ -1,0 +1,34 @@
+{
+  "podManifest": {
+    "containers": [
+      {
+        "name": "test-container",
+        "image": {
+          "cid": "bafybeictl64l66w7npqlpw7jaxxbmsv5222xhqja6xicgfam4s7txa75tq",
+          "keyIdx": -1
+        },
+        "ports": [
+          {
+            "containerPort": 8080,
+            "hostHttpHost": "example.local"
+          }
+        ],
+        "volumes": [
+          {
+            "volumeIdx": 0,
+            "mountPath": "/cid/_/nginxdemos/nginx-hello"
+          }
+        ]
+
+      }
+    ],
+    "volumes": [{
+      "type": 0
+    }],
+    "replicas": {
+      "min": 0,
+      "max": 1
+    }
+  },
+  "keys": []
+}
