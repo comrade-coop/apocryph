@@ -1,7 +1,7 @@
 syntax = "proto3";
 package apocryph.proto.provisionService;
 
-option go_package = "github.com/comrade-coop/trusted-pods/proto";
+option go_package = "github.com/comrade-coop/trusted-pods/pkg/proto";
 
 import "capacity.proto";
 

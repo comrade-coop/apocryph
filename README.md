@@ -7,13 +7,13 @@ Trusted Pods is a decentralized compute marketplace where developers can run con
 To build the Go projects in `./cmd/`, use the following command:
 
 ```bash
-go generate && go build -o bin ./cmd/*/
+go generate ./pkg/proto && go build -o bin ./cmd/*/
 ```
 
 Alternatively, you can run the commands directly with `go run`:
 
 ```bash
-go generate
+go generate ./pkg/proto
 
 go run ./cmd/trustedpods/ # ..
 ```
@@ -23,8 +23,6 @@ go run ./cmd/trustedpods/ # ..
 To run the minikube integration test, run the following command:
 
 ```bash
-go generate
-
 test/integration/minikube/run-test.sh
 ```
 
