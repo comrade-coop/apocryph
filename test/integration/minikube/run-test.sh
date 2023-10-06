@@ -20,7 +20,7 @@ set -v
 
 [ "$(minikube status -f'{{.Host}}')" = "Running" ] || minikube start
 
-helmfile sync || wait 10; helmfile sync
+helmfile sync || sleep 10; helmfile sync
 
 go run ../../../cmd/tpodserver/ manifest apply manifest.json --config config.yaml --format json
 
