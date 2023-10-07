@@ -9,8 +9,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/comrade-coop/trusted-pods/crypto"
-	ipfs_utils "github.com/comrade-coop/trusted-pods/ipfs-utils"
+	"github.com/comrade-coop/trusted-pods/pkg/crypto"
+	ipfs_utils "github.com/comrade-coop/trusted-pods/pkg/ipfs-utils"
 	"github.com/ipfs/kubo/client/rpc"
 	"github.com/spf13/viper"
 )

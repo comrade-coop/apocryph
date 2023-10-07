@@ -1,9 +1,9 @@
 package main
 
 import (
-	crypto "github.com/comrade-coop/trusted-pods/crypto"
-	ipfs_utils "github.com/comrade-coop/trusted-pods/ipfs-utils"
-	podmanagement "github.com/comrade-coop/trusted-pods/pod-management"
+	"github.com/comrade-coop/trusted-pods/pkg/crypto"
+	ipfs_utils "github.com/comrade-coop/trusted-pods/pkg/ipfs-utils"
+	podmanagement "github.com/comrade-coop/trusted-pods/pkg/pod-management"
 )
 
 func main() {
