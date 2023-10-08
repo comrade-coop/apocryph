@@ -4,6 +4,7 @@ package ipfs_utils
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/ipfs/boxo/coreiface/path"
@@ -60,7 +61,6 @@ func handleError(err error, msg string, verbose []bool) {
 //   - node: A pointer to an established IPFS node connection used for interacting with IPFS.
 //   - cid: The Content Identifier (CID) of the IPFS content to retrieve.
 //   - savePath: (Optional) The local file system path where the retrieved content should be saved. If not provided, no local save operation is performed.
-//   - verbose: (Optional) A boolean flag that controls whether additional information, including error messages, should be printed to the console.
 //
 // # Returns:
 //   - files.Node: The retrieved IPFS content as a files.Node if successful. The type of files.Node may vary based on the content type (file, directory, ...etc).
@@ -72,6 +72,7 @@ func handleError(err error, msg string, verbose []bool) {
 //	content, err := RetrieveFile(ipfsNode, "QmXyz123", "/path/on/local/file/system", true)
 func RetreiveFile(node *rpc.HttpApi, cid string, savePath ...string) (files.Node, error) {
 	ctx := context.Background()
+
 	response, err := node.Unixfs().Get(ctx, path.New(cid))
 	if err != nil {
 		fmt.Printf("Error retreiving file from IPFS:%v\n", err)
@@ -124,4 +125,27 @@ func ConnectToLocalNode() (*rpc.HttpApi, error) {
 		return nil, err
 	}
 	return node, nil
+}
+
+func CreateIpfsService(node *rpc.HttpApi, pName string, endpoint string) error {
+	ctx := context.Background()
+	request := node.Request("p2p/listen", pName, endpoint)
+	_, err := request.Send(ctx)
+	if err != nil {
+		log.Fatalf("Could not send request: %v", err)
+		return err
+	}
+	return nil
+}
+
+func ForwardConnection(node *rpc.HttpApi, pName string, endpoint, target string) error {
+	target = fmt.Sprintf("/p2p/%v", target)
+	ctx := context.Background()
+	request := node.Request("p2p/forward", pName, endpoint, target)
+	_, err := request.Send(ctx)
+	if err != nil {
+		fmt.Printf("Could not send request: %v", err)
+		return err
+	}
+	return nil
 }
