@@ -34,6 +34,8 @@ type QueryResult struct {
 	Value  []interface{}     `json:"value"`
 }
 
+var sixty = big.NewFloat(60.0)
+
 func (api PrometheusAPI) FetchResourceMetrics(resourceMeasurements resource.ResourceMeasurementsMap) error {
 	queryUrl, err := url.JoinPath(api.baseUrl, "/api/v1/query")
 	if err != nil {
@@ -64,6 +66,7 @@ func (api PrometheusAPI) FetchResourceMetrics(resourceMeasurements resource.Reso
 		if err != nil {
 			return err
 		}
+		value = value.Mul(value, sixty)
 
 		resourceMeasurements.Add(namespace, resource.GetResource(resourceName, resource.ResourceKindReservation), value)
 	}
