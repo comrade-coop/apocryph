@@ -16,7 +16,7 @@
         "resourceRequests": [
           {
             "resource": "cpu",
-            "amount": 10
+            "amountMillis": 10
           },
           {
             "resource": "memory",
