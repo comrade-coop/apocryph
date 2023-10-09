@@ -118,6 +118,7 @@ func ApplyPodRequest(ctx context.Context, client client.Client, manifest *pb.Pro
 			})
 		}
 		containerSpec.Resources.Requests = convertResourceList(container.ResourceRequests)
+		// TODO: Enforce specifying resources?
 		podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, containerSpec)
 	}
 	for idx, volume := range manifest.PodManifest.Volumes {

@@ -47,4 +47,5 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file")
 	rootCmd.AddCommand(manifestCmd)
 	rootCmd.AddCommand(contractCmd)
+	rootCmd.AddCommand(metricsCmd)
 }

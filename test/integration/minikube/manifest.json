@@ -13,6 +13,16 @@
             "hostHttpHost": "example.local"
           }
         ],
+        "resourceRequests": [
+          {
+            "resource": "cpu",
+            "amount": 10
+          },
+          {
+            "resource": "memory",
+            "amount": 1000000000
+          }
+        ],
         "volumes": [
           {
             "volumeIdx": 0,
