@@ -18,11 +18,14 @@ import (
 func ApplyPodRequest(ctx context.Context, client client.Client, manifest *pb.ProvisionPodRequest, response *pb.ProvisionPodResponse) error {
 	labels := map[string]string{"tpod": "1"}
 
+	startupReplicas := int32(0)
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "tpod-dep-",
 		},
 		Spec: appsv1.DeploymentSpec{
+			Replicas: &startupReplicas,
 			Selector: metav1.SetAsLabelSelector(labels),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
