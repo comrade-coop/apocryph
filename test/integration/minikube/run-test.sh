@@ -36,6 +36,6 @@ sleep 10
 
 kubectl port-forward --namespace prometheus service/prometheus-server 19090:80 &
 
-go run ../../../cmd/tpodserver/ metrics get --prometheus http://127.0.0.1:19090/
+go run ../../../cmd/tpodserver/ metrics get --prometheus http://127.0.0.1:19090/ --pricing pricing.json
 
 kill %1

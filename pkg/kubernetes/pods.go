@@ -205,7 +205,14 @@ func ApplyPodRequest(ctx context.Context, client client.Client, manifest *pb.Pro
 func convertResourceList(resources []*pb.Resource) corev1.ResourceList {
 	result := make(corev1.ResourceList, len(resources))
 	for _, res := range resources {
-		result[corev1.ResourceName(res.Resource)] = *resource.NewMilliQuantity(int64(res.Amount), resource.BinarySI) // TODO: use NewQuantity for bytes?
+		var quantity resource.Quantity
+		switch q := res.Quantity.(type) {
+		case *pb.Resource_Amount:
+			quantity = *resource.NewQuantity(int64(q.Amount), resource.BinarySI)
+		case *pb.Resource_AmountMillis:
+			quantity = *resource.NewMilliQuantity(int64(q.AmountMillis), resource.BinarySI)
+		}
+		result[corev1.ResourceName(res.Resource)] = quantity
 	}
 	return result
 }

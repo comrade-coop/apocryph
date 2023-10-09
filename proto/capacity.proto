@@ -14,7 +14,7 @@ message CapacityResponse {
 
 message PricingTable {
   repeated PricedResource resources = 1;
-  bytes currency = 2;
+  string currency = 2;
 }
 
 message PricedResource {
@@ -28,5 +28,8 @@ message PricedResource {
 
 message Resource {
   string resource = 1;
-  uint64 amount = 2;
+  oneof quantity {
+    uint64 amount = 2;
+    uint64 amountMillis = 3;
+  }
 }

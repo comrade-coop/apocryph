@@ -21,7 +21,7 @@ set -v
 TMP="$(mktemp substrate-contracts-node.XXXX --tmpdir)"; echo $TMP; nohup substrate-contracts-node >"$TMP" &
 { while ! echo -n > /dev/tcp/localhost/9944; do sleep 0.1; done; } 2>/dev/null # https://stackoverflow.com/a/44484835
 
-CONTRACT="$(cd ../../../contracts/payment && cargo contract instantiate --suri //Alice -x --args 10000 --skip-confirm --output-json | jq .contract -r)"; echo $CONTRACT
+CONTRACT="$(cd ../../../contracts/payment && cargo contract instantiate --suri //Alice -x --args 10000000000000000 --skip-confirm --output-json | jq .contract -r)"; echo $CONTRACT
 
 set -x
 

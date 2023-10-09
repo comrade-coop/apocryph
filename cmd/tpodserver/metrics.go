@@ -1,62 +1,16 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"math/big"
-	"net/http"
-	"net/url"
+	"os"
 
+	"github.com/comrade-coop/trusted-pods/pkg/prometheus"
+	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	"github.com/comrade-coop/trusted-pods/pkg/resource"
 	"github.com/spf13/cobra"
 )
-
-type QueryStatus string
-
-const (
-	QueryStatusSuccess QueryStatus = "success"
-)
-
-type QueryResponse struct {
-	Status QueryStatus `json:"status"`
-	Data   QueryData   `json:"data"`
-}
-
-type QueryData struct {
-	ResultType string        `json:"resultType"`
-	Result     []QueryResult `json:"result"`
-}
-
-type QueryResult struct {
-	Metric map[string]string `json:"metric"`
-	Value  []interface{}     `json:"value"`
-}
-
-type ResourceUsage map[string]map[string]*big.Float
-
-func (r ResourceUsage) Add(namespace string, resource string, value *big.Float) {
-	if r[namespace] == nil {
-		r[namespace] = make(map[string]*big.Float, 1)
-	}
-
-	if r[namespace][resource] == nil {
-		r[namespace][resource] = value
-	} else {
-		r[namespace][resource].Add(r[namespace][resource], value)
-	}
-}
-
-func (r ResourceUsage) Display(writer io.Writer) {
-	fmt.Fprint(writer, "Resources Used:\n")
-
-	for namespace, resources := range r {
-		fmt.Fprintf(writer, " - Namespace: %s\n", namespace)
-		for resource, value := range resources {
-			fmt.Fprintf(writer, "   - %s : %s\n", resource, value.Text('f', 2))
-		}
-	}
-}
 
 var metricsCmd = &cobra.Command{
 	Use:   "metrics",
@@ -64,51 +18,49 @@ var metricsCmd = &cobra.Command{
 }
 
 var prometheusUrl string
-
-const resourceQuotaSecondsQuery = "sum by (namespace, resource)(sum_over_time(kube_pod_container_resource_requests[250000m]))"
+var pricingFile string
+var pricingFileFormat string
 
 var getMetricsCmd = &cobra.Command{
 	Use:   "get",
 	Short: "Get the metrics stored in prometheus",
 	Args:  cobra.RangeArgs(0, 1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		resourceMeasurements := resource.ResourceMeasurementsMap{}
 
-		queryUrl, err := url.JoinPath(prometheusUrl, "/api/v1/query")
+		err := prometheus.NewPrometheusAPI(prometheusUrl).FetchResourceMetrics(resourceMeasurements)
 		if err != nil {
 			return err
 		}
 
-		queryUrl = queryUrl + "?" + url.Values{
-			"query": []string{resourceQuotaSecondsQuery},
-		}.Encode()
-
-		resp, err := http.Get(queryUrl)
-		if err != nil {
-			return err
-		}
-
-		response := QueryResponse{}
-		json.NewDecoder(resp.Body).Decode(&response)
-
-		if response.Status != QueryStatusSuccess {
-			return errors.New(fmt.Sprintf("Bad response status: %s", response.Status))
-		}
-
-		resourcesUsed := ResourceUsage{}
-
-		for _, qr := range response.Data.Result {
-			namespace := qr.Metric["namespace"]
-			resource := qr.Metric["resource"] + "QS" // QS -- quota-second
-			valueString := qr.Value[1].(string)
-			value, _, err := big.ParseFloat(valueString, 10, 5, big.ToNearestEven)
+		if pricingFile != "" {
+			file, err := os.Open(pricingFile)
 			if err != nil {
 				return err
 			}
 
-			resourcesUsed.Add(namespace, resource, value)
-		}
+			pricingTableContents, err := io.ReadAll(file)
+			if err != nil {
+				return err
+			}
 
-		resourcesUsed.Display(cmd.OutOrStdout())
+			Unmarshal := formats[pricingFileFormat]
+			if Unmarshal == nil {
+				return errors.New("Unknown format: " + pricingFileFormat)
+			}
+
+			pricingTable := &pb.PricingTable{}
+
+			err = Unmarshal(pricingTableContents, pricingTable)
+			if err != nil {
+				return err
+			}
+
+			resourceMeasurements.Display(cmd.OutOrStdout(), pricingTable)
+			fmt.Fprintf(cmd.OutOrStdout(), "totals: %v\n", resourceMeasurements.Price(pricingTable))
+		} else {
+			resourceMeasurements.Display(cmd.OutOrStdout(), nil)
+		}
 
 		return err
 	},
@@ -118,4 +70,11 @@ func init() {
 	metricsCmd.AddCommand(getMetricsCmd)
 
 	getMetricsCmd.Flags().StringVar(&prometheusUrl, "prometheus", "", "address at which the prometheus API can be accessed")
+	getMetricsCmd.Flags().StringVar(&pricingFile, "pricing", "", "file containing pricing information")
+
+	formatNames := make([]string, 0, len(formats))
+	for name := range formats {
+		formatNames = append(formatNames, name)
+	}
+	getMetricsCmd.Flags().StringVar(&pricingFileFormat, "pricing-format", "json", fmt.Sprintf("pricing file format. one of %v", formatNames))
 }
