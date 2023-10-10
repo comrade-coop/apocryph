@@ -4,43 +4,60 @@ package podmanagement
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
 
 	"github.com/comrade-coop/trusted-pods/pkg/crypto"
-	ipfs_utils "github.com/comrade-coop/trusted-pods/pkg/ipfs-utils"
-	"github.com/ipfs/kubo/client/rpc"
 	"github.com/spf13/viper"
 )
 
 type pod struct {
-	Name          string
-	manifest      string // could not be changed after execution
-	biddingOpened bool   // open for bids or not
-	instances     uint   // number of instances currently executing across diffrent providers
-	cid           string // final package manifest cid
+	Name            string
+	manifest        string // could not be changed after execution
+	instances       uint   // number of instances currently executing across diffrent providers
+	cid             string // final package manifest cid
+	PackageSavePath string
+	key             crypto.KeyNoncePair
 }
 
-func CreatePod(name string) pod {
-	return pod{
-		Name:          name,
-		manifest:      "",
-		biddingOpened: false,
-		instances:     0,
-		cid:           "",
+func CreatePod(name string, psw string) (pod, error) {
+	// TODO read salt from config file
+	salt := []byte("salt")
+	noncesalt := []byte("nonce")
+	key, err := crypto.CreateKeyNoncePair([]byte(psw), salt, noncesalt)
+	if err != nil {
+		return pod{}, err
 	}
+	return pod{
+		Name:      name,
+		manifest:  "",
+		instances: 0,
+		cid:       "",
+		key:       *key,
+	}, nil
 }
 
 func (p *pod) AssignManifest(path string) error {
 	_, err := os.Stat(path)
 	if errors.Is(err, os.ErrNotExist) {
-		fmt.Println("manifest file does not exist")
+		log.Println("manifest file does not exist")
 		return err
 	}
 	p.manifest = path
 	return nil
+}
+
+func (p *pod) GetKeyNoncePair(psw string) crypto.KeyNoncePair {
+	// TODO read salt from config file
+	salt := []byte("salt")
+	noncesalt := []byte("nonce")
+	return crypto.KeyNoncePair{
+		Key:   crypto.DeriveKey([]byte(psw), salt, crypto.AES_KEY_SIZE),
+		Nonce: crypto.DeriveKey([]byte(psw), noncesalt, crypto.NONCE_SIZE),
+	}
 }
 
 // TODO
@@ -72,7 +89,7 @@ func (p *pod) ExtractImageNames() []string {
 			images = append(images, imageName)
 		}
 	} else {
-		fmt.Println("No image names found in the manifest file.")
+		log.Println("No image names found in the manifest file.")
 	}
 	return images
 }
@@ -112,73 +129,81 @@ func ensureFolder(path string) error {
 	return nil
 }
 
-func (p *pod) EncryptSavedImages(path string) {}
-
-func (p *pod) UploadPackage(provider PackageUploader, ks crypto.KeyService) string {
-	return provider.uploadPackage(p, ks)
-}
-
-type PackageUploader interface {
-	// uploadPackage uploads a package associated with a pod to IPFS and returns its CID
-	uploadPackage(p *pod, ks crypto.KeyService, path ...string) string
-	// uploadImages(p *pod, ks crypto.KeyService) []string
-	// uploadManifest(p *pod, ks crypto.KeyService) []string
-}
-
-type IpfsUploader struct {
-	Node *rpc.HttpApi
-}
-
-func CreateIpfsUploader() (*IpfsUploader, error) {
-	node, err := ipfs_utils.ConnectToLocalNode()
+func (p *pod) EncryptPodPackage(path string) error {
+	files, err := os.ReadDir(path)
 	if err != nil {
-		println("could not connect to local IPFS node")
-		return nil, err
+		log.Fatal(err)
 	}
-	return &IpfsUploader{Node: node}, nil
+	for _, file := range files {
+		// Check if the entry is a regular file (not a directory)
+		if file.Type().IsRegular() {
+			// Get the file name
+			name := file.Name()
+			log.Println("Encrypting file:", name)
+			filepath := fmt.Sprintf("%v/%v", path, name)
+			// Read the file contents as a byte slice
+			data, err := os.ReadFile(filepath)
+			if err != nil {
+				return err
+			}
+			cipheredtext, _, err := crypto.AESEncryptWith(data, p.key.Key, p.key.Nonce)
+			if err != nil {
+				return err
+			}
+			cipheredfilepath := fmt.Sprintf("%v.enc", filepath)
+			destination, err := os.Create(cipheredfilepath)
+			if err != nil {
+				return err
+			}
+			_, err = destination.Write(cipheredtext)
+			if err != nil {
+				return err
+			}
+			os.Remove(filepath)
+		}
+	}
+	return nil
 }
 
-// Uploads a package associated with a pod to IPFS
-// The package includes a manifest file and Docker images.
-// It performs the following steps:
-// 1. Copies the manifest file to the package directory.
-// 2. Saves Docker images locally in the package directory.
-// 3. TODO Uses the key service (ks) to encrypt the package files
-// 4. Uploads the package directory to IPFS using the specified IPFS node
-func (provider IpfsUploader) uploadPackage(p *pod, ks crypto.KeyService, path ...string) string {
-	var packagePath string
-	if len(path) > 0 && path[0] != "" {
-		packagePath = path[0]
-	} else {
-		packagePath = fmt.Sprintf("./%v/", p.Name)
-	}
-	ensureFolder(packagePath)
-	cmd := exec.Command("cp", p.manifest, packagePath)
-	output, err := cmd.CombinedOutput()
+func DecryptPodPackage(path string, key crypto.KeyNoncePair) error {
+
+	files, err := os.ReadDir(path)
 	if err != nil {
-		fmt.Println("could not copy manifest file to package path:", err)
-		fmt.Println("Command output:", string(output))
-		return ""
+		log.Fatal(err)
 	}
-	err = p.SaveImagesLocally(packagePath)
-	if err != nil {
-		return ""
+	for _, file := range files {
+		// Check if the entry is a regular file (not a directory)
+		// this could be concurrent
+		if file.Type().IsRegular() {
+			name := file.Name()
+			log.Println("Decrypting file:", name)
+			filepath := fmt.Sprintf("%v/%v", path, name)
+			data, err := os.ReadFile(filepath)
+			if err != nil {
+				return err
+			}
+
+			data, err = crypto.AESDecryptWith(data, key.Key, key.Nonce)
+
+			originalfilepath := strings.Replace(filepath, ".enc", "", 1)
+			destination, err := os.Create(originalfilepath)
+			if err != nil {
+				return err
+			}
+			_, err = destination.Write(data)
+			if err != nil {
+				return err
+			}
+			os.Remove(filepath)
+
+		}
 	}
-	cid, err := ipfs_utils.AddFile(provider.Node, packagePath)
-	if err != nil {
-		fmt.Printf("could not add package to IPFS%v", err)
-		return ""
-	}
-	p.cid = cid
-	return cid
+	return nil
 }
 
-// TODO uses imgcrypt + ipdr to upload the images
-type IpdrUploader struct{}
-
-func (provider *IpdrUploader) uploadPackage(p *pod, ks crypto.KeyService) []string {
-	// imgaes := p.extractImageNames()
-	// use the key service to encrypt the images using imgcrypt
-	// upload the encrypted images to ipdr
-	return []string{"QfGhXqshaysSU"}
+func (p *pod) UploadPackage(provider PackageUploader, packagePath ...string) (string, error) {
+	if len(packagePath) > 0 {
+		return provider.uploadPackage(p, packagePath[0])
+	}
+	return provider.uploadPackage(p)
 }
