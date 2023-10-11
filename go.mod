@@ -10,6 +10,7 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.16.0
 	github.com/vedhavyas/go-subkey v1.0.4
+	golang.org/x/crypto v0.14.0
 	google.golang.org/grpc v1.55.0
 	google.golang.org/protobuf v1.31.0
 	k8s.io/api v0.28.2
@@ -108,7 +109,6 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
-	golang.org/x/crypto v0.14.0 // indirect
 	golang.org/x/exp v0.0.0-20231005195138-3e424a577f31 // indirect
 	golang.org/x/net v0.13.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
