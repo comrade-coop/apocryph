@@ -1,0 +1,16 @@
+syntax = "proto3";
+package apocryph.proto.v0.provisioningCapacity;
+
+import "pod.proto";
+import "pricing.proto";
+
+option go_package = "github.com/comrade-coop/trusted-pods/pkg/proto";
+
+message CapacityRequest {
+  repeated pod.Resource resources = 1;
+}
+
+message CapacityResponse {
+  repeated pod.Resource availableResources = 1;
+  pricing.PricingTable pricing = 2;
+}

@@ -1,24 +1,7 @@
 syntax = "proto3";
-package apocryph.proto.provisionService;
+package apocryph.proto.pod;
 
 option go_package = "github.com/comrade-coop/trusted-pods/pkg/proto";
-
-import "capacity.proto";
-
-message ProvisionPodRequest {
-  Pod podManifest = 1;
-  repeated Key keys = 2;
-}
-
-message ProvisionPodResponse {
-  string error = 1;
-  repeated ExposedHostPort addresses = 2;
-  message ExposedHostPort {
-    string multiaddr = 1;
-    string containerName = 2;
-    uint64 containerPort = 3;
-  }
-}
 
 message Pod {
   repeated Container containers = 1;
@@ -35,7 +18,7 @@ message Container {
   repeated Port ports = 6;
   map<string, string> env = 7;
   repeated VolumeMount volumes = 8;
-  repeated apocryph.proto.capacity.Resource resourceRequests = 9;  // "cpu", "memory", custom
+  repeated Resource resourceRequests = 9; // "cpu", "memory", custom
 
   message Image {
     string cid = 1;
@@ -79,7 +62,7 @@ message Volume {
     SecretConfig secret = 4;
   }
   message FilesystemConfig {
-    repeated apocryph.proto.capacity.Resource resourceRequests = 1; // "storage"
+    repeated Resource resourceRequests = 1; // "storage"
   }
   message SecretConfig {
     string cid = 1; // use 0x00 0x01 0x55 0x00 (unsigned-varint length) (raw contents) to encode the secret in the message
@@ -93,6 +76,10 @@ message Replicas {
   uint32 targetPendingRequests = 3;
 }
 
-message Key {
-  bytes keyPem = 1;
+message Resource {
+  string resource = 1;
+  oneof quantity {
+    uint64 amount = 2;
+    uint64 amountMillis = 3;
+  }
 }

@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func ApplyPodRequest(ctx context.Context, client client.Client, manifest *pb.ProvisionPodRequest, response *pb.ProvisionPodResponse) error {
+func ApplyPodRequest(ctx context.Context, client client.Client, podManifest *pb.Pod, response *pb.ProvisionPodResponse) error {
 	labels := map[string]string{"tpod": "1"}
 
 	startupReplicas := int32(0)
@@ -44,7 +44,7 @@ func ApplyPodRequest(ctx context.Context, client client.Client, manifest *pb.Pro
 		Spec: kedahttpv1alpha1.HTTPScaledObjectSpec{},
 	}
 
-	for cIdx, container := range manifest.PodManifest.Containers {
+	for cIdx, container := range podManifest.Containers {
 		containerSpec := corev1.Container{
 			Name:       container.Name,
 			Image:      "nginxdemos/nginx-hello", // TODO
@@ -124,7 +124,7 @@ func ApplyPodRequest(ctx context.Context, client client.Client, manifest *pb.Pro
 		// TODO: Enforce specifying resources?
 		podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, containerSpec)
 	}
-	for idx, volume := range manifest.PodManifest.Volumes {
+	for idx, volume := range podManifest.Volumes {
 		volumeSpec := corev1.Volume{
 			Name: fmt.Sprintf("vol-%d", idx),
 		}
@@ -184,9 +184,9 @@ func ApplyPodRequest(ctx context.Context, client client.Client, manifest *pb.Pro
 
 	if httpSO.Spec.ScaleTargetRef.Service != "" {
 		httpSO.Spec.ScaleTargetRef.Deployment = deployment.ObjectMeta.Name
-		minReplicas := int32(manifest.PodManifest.Replicas.Min)
-		maxReplicas := int32(manifest.PodManifest.Replicas.Max)
-		targetPendingRequests := int32(manifest.PodManifest.Replicas.TargetPendingRequests)
+		minReplicas := int32(podManifest.Replicas.Min)
+		maxReplicas := int32(podManifest.Replicas.Max)
+		targetPendingRequests := int32(podManifest.Replicas.TargetPendingRequests)
 		httpSO.Spec.Replicas = &kedahttpv1alpha1.ReplicaStruct{
 			Min: &minReplicas,
 		}

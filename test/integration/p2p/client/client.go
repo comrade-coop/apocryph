@@ -10,7 +10,7 @@ import (
 	"time"
 
 	ipfs_utils "github.com/comrade-coop/trusted-pods/pkg/ipfs-utils"
-	pb "github.com/comrade-coop/trusted-pods/proto"
+	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

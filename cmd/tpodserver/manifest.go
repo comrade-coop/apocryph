@@ -56,8 +56,8 @@ var applyManifestCmd = &cobra.Command{
 			return errors.New("Unknown format: " + manifestFormat)
 		}
 
-		manifest := &pb.ProvisionPodRequest{}
-		err = Unmarshal(manifestContents, manifest)
+		podManifest := &pb.Pod{}
+		err = Unmarshal(manifestContents, podManifest)
 		if err != nil {
 			return err
 		}
@@ -68,7 +68,7 @@ var applyManifestCmd = &cobra.Command{
 		}
 
 		response := &pb.ProvisionPodResponse{}
-		err = tpk8s.ApplyPodRequest(cmd.Context(), cl, manifest, response)
+		err = tpk8s.ApplyPodRequest(cmd.Context(), cl, podManifest, response)
 		if err != nil {
 			return err
 		}

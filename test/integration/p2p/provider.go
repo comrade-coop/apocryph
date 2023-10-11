@@ -13,7 +13,7 @@ import (
 
 	ipfs_utils "github.com/comrade-coop/trusted-pods/pkg/ipfs-utils"
 	podmanagement "github.com/comrade-coop/trusted-pods/pkg/pod-management"
-	pb "github.com/comrade-coop/trusted-pods/proto"
+	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"google.golang.org/grpc"
 )
 

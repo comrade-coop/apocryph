@@ -1,0 +1,23 @@
+syntax = "proto3";
+package apocryph.proto.v0.provisionPod;
+
+option go_package = "github.com/comrade-coop/trusted-pods/pkg/proto";
+
+message ProvisionPodRequest {
+  bytes podManifestCid = 1;
+  repeated Key keys = 2;
+}
+
+message Key {
+  bytes keyPem = 1;
+}
+
+message ProvisionPodResponse {
+  string error = 1;
+  repeated ExposedHostPort addresses = 2;
+  message ExposedHostPort {
+    string multiaddr = 1;
+    string containerName = 2;
+    uint64 containerPort = 3;
+  }
+}
