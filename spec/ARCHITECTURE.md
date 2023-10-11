@@ -4,7 +4,7 @@
 
 Much of the architecture of Trusted Pods revolves around two key pieces, the "Publisher Client" and the "Provider Client". A publisher is a buyer in the Trusted Pods network seeking to provision their pod/container on the network. A provider is a seller seeking to offer their hardware for rent.
 
-The planned version of Trusted Pods takes care of matching the two and provisioning the pod on a specific target provider. While it offers a way to manually pick a provider, it defaults to automatically picking one for the user. However, it does not take care of operational issues that might subsequently arise; specifically, it does not take care of rescheduling pods when a provider becomes unavailable nor does it make any guarantees about uptime or availability of data—those will be handled in later versions.
+The planned version of Trusted Pods takes care of matching the two and provisioning the pod on a specific target provider. While it offers a way to manually pick a provider, it defaults to automatically picking one for the user. However, it does not take care of operational issues that might subsequently arise; specifically, it does not take care of rescheduling pods when a provider becomes unavailable nor does it make any guarantees about uptime or availability of data—those will be handled in later versions. Such concerns are kept track of in the [backlog](BACKLOG.md).
 
 ## Bird's-eye view
 
@@ -58,7 +58,6 @@ As a sequence of steps:
 9. The Application Pod is started using the configuration from earlier
 10. The Application Pod handles the incoming requests
 11. After a period of no requests the Scaler uses the Kubernetes API to scale the Application Pod down
-    Alternatively, upon request by the Application Pod, a Runtime Service contacts the Kubernetes API to scale the Application Pod down
 12. The Monitoring component keeps track of how many e.g. CPU-seconds the Application Pod has run for, and forwards these metrics to the Provider Client
 13. The Provider Client submits the metrics to the Payment Contract and is then able to claim the payment due
 14. Whenever the Payment Contract runs out of funds, the Provider Client removes the related configurations from Kubernetes
