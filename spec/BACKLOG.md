@@ -9,7 +9,6 @@ Rationale for not shoving all of this in GitHub Issues: while Issues are a great
 Required for an MVP:
 
 * Write a Payment contract which uses real tokens
-* Integrate the Provider and Publisher clients
 * Deploy the Provider inside Kubernetes
 
 Not required for an MVP:
