@@ -3,6 +3,10 @@ package apocryph.proto.v0.provisionPod;
 
 option go_package = "github.com/comrade-coop/trusted-pods/pkg/proto";
 
+service ProvisionPodService {
+  rpc ProvisionPod(ProvisionPodRequest) returns (ProvisionPodResponse);
+}
+
 message ProvisionPodRequest {
   bytes podManifestCid = 1;
   repeated Key keys = 2;

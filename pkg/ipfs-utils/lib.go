@@ -4,7 +4,6 @@ package ipfs_utils
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/ipfs/boxo/coreiface/path"
@@ -125,27 +124,4 @@ func ConnectToLocalNode() (*rpc.HttpApi, error) {
 		return nil, err
 	}
 	return node, nil
-}
-
-func CreateIpfsService(node *rpc.HttpApi, pName string, endpoint string) error {
-	ctx := context.Background()
-	request := node.Request("p2p/listen", pName, endpoint)
-	_, err := request.Send(ctx)
-	if err != nil {
-		log.Fatalf("Could not send request: %v", err)
-		return err
-	}
-	return nil
-}
-
-func ForwardConnection(node *rpc.HttpApi, pName string, endpoint, target string) error {
-	target = fmt.Sprintf("/p2p/%v", target)
-	ctx := context.Background()
-	request := node.Request("p2p/forward", pName, endpoint, target)
-	_, err := request.Send(ctx)
-	if err != nil {
-		fmt.Printf("Could not send request: %v", err)
-		return err
-	}
-	return nil
 }

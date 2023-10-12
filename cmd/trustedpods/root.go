@@ -5,12 +5,16 @@ import (
 	"github.com/spf13/viper"
 )
 
+var cfgFileFields = make(map[string]interface{})
 var cfgFile string
 
 var rootCmd = &cobra.Command{
 	Use:   "trustedpods",
 	Short: "Trusted Pods is a decentralized compute marketplace for confidential container pods.",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		if cmd.Use == "help" {
+			return nil
+		}
 		if cfgFile != "" {
 			viper.SetConfigFile(cfgFile)
 		} else {
@@ -27,10 +31,22 @@ var rootCmd = &cobra.Command{
 				return err
 			}
 		}
+
+		for k, v := range cfgFileFields {
+			viper.UnmarshalKey(k, v)
+		}
+
 		return nil
 	},
+	SilenceUsage: true,
+}
+
+func AddConfig(key string, value interface{}, defaultValue interface{}, usage string) {
+	viper.SetDefault(key, defaultValue)
+	cfgFileFields[key] = value
 }
 
 func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default: $XDG_CONFIG_HOME/.trustedpods/config.yaml)")
+	rootCmd.AddCommand(podCmd)
 }

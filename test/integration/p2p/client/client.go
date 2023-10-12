@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -11,12 +10,9 @@ import (
 
 	ipfs_utils "github.com/comrade-coop/trusted-pods/pkg/ipfs-utils"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-)
-
-var (
-	addr = flag.String("addr", "localhost:5000", "the address to connect to")
 )
 
 func main() {
@@ -31,6 +27,11 @@ func main() {
 		return
 	}
 	providerID := os.Getenv("PROVIDER_ID")
+	providerPeerId, err := peer.Decode(providerID)
+	if err != nil {
+		println("CLIENT: invalid PROVIDER_ID")
+		return
+	}
 
 	println("CLIENT: pod package cid:", cid)
 	cmd := exec.Command("ls", "-al", "client-pod")
@@ -40,19 +41,21 @@ func main() {
 		fmt.Println("CLIENT: Command output:", string(output))
 		return
 	}
-	// Redirect all gRPC client requests to 127.0.0.1:5000 to IPFS,
+	fmt.Println("CLIENT: Pod Package:", string(output))
+
+	// Redirect all gRPC client requests to IPFS,
 	// which will in turn route these requests to the provider ID.
 	// The provider ID will be listening on that protocol
 	// And will further route all requests of the same protocol to his own gRPC server. running on a DIFFRENT port"
-	err = ipfs_utils.ForwardConnection(node, pb.ProvisionPod, "/ip4/127.0.0.1/tcp/5000", providerID)
+	addr, err := ipfs_utils.NewP2pApi(node).ConnectTo(pb.ProvisionPod, providerPeerId)
 	if err != nil {
 		println("Could not forward connection")
 		return
 	}
-	fmt.Println("CLIENT: Pod Package:", string(output))
-	flag.Parse()
+	defer addr.Close()
+
 	// Set up a connection to the server.
-	conn, err := grpc.Dial(*addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("CLIENT: did not connect: %v", err)
 	}

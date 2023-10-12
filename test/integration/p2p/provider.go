@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -59,15 +58,10 @@ func main() {
 	}
 
 	// route all ipfs p2p connections of the provios-pod protocol to the grpc server
-	err = ipfs_utils.CreateIpfsService(node, pb.ProvisionPod, "/ip4/127.0.0.1/tcp/6000")
-	if err != nil {
-		println("Could not create IPFS service")
-		return
-	}
-	flag.Parse()
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
+	lis, err := ipfs_utils.NewP2pApi(node).Listen(pb.ProvisionPod)
 	if err != nil {
 		log.Fatalf("PROVIDER: failed to listen: %v", err)
+		return
 	}
 	s := grpc.NewServer()
 	pb.RegisterSampleServer(s, &server{})
