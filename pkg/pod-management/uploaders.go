@@ -21,7 +21,7 @@ type IpfsUploader struct {
 }
 
 func CreateIpfsUploader() (*IpfsUploader, error) {
-	node, err := ipfs_utils.ConnectToLocalNode()
+	node, err := rpc.NewLocalApi()
 	if err != nil {
 		log.Println("could not connect to local IPFS node")
 		return nil, err

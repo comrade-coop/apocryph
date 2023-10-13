@@ -13,6 +13,8 @@ import (
 	ipfs_utils "github.com/comrade-coop/trusted-pods/pkg/ipfs-utils"
 	podmanagement "github.com/comrade-coop/trusted-pods/pkg/pod-management"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	"github.com/ipfs/kubo/client/rpc"
+	"github.com/multiformats/go-multiaddr"
 	"google.golang.org/grpc"
 )
 
@@ -51,14 +53,14 @@ func main() {
 		os.Exit(0)
 	}()
 
-	node, err := ipfs_utils.ConnectToLocalNode()
+	node, err := rpc.NewLocalApi()
 	if err != nil {
 		println("PROVIDER: could not connect to local node")
 		return
 	}
 
 	// route all ipfs p2p connections of the provios-pod protocol to the grpc server
-	lis, err := ipfs_utils.NewP2pApi(node).Listen(pb.ProvisionPod)
+	lis, err := ipfs_utils.NewP2pApi(node, multiaddr.StringCast("/ip4/127.0.0.1/")).Listen(pb.ProvisionPod)
 	if err != nil {
 		log.Fatalf("PROVIDER: failed to listen: %v", err)
 		return

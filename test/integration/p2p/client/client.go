@@ -10,13 +10,15 @@ import (
 
 	ipfs_utils "github.com/comrade-coop/trusted-pods/pkg/ipfs-utils"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	"github.com/ipfs/kubo/client/rpc"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/multiformats/go-multiaddr"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
-	node, err := ipfs_utils.ConnectToLocalNode()
+	node, err := rpc.NewLocalApi()
 	if err != nil {
 		println("CLIENT: could not connect to local node")
 		return
@@ -47,7 +49,7 @@ func main() {
 	// which will in turn route these requests to the provider ID.
 	// The provider ID will be listening on that protocol
 	// And will further route all requests of the same protocol to his own gRPC server. running on a DIFFRENT port"
-	addr, err := ipfs_utils.NewP2pApi(node).ConnectTo(pb.ProvisionPod, providerPeerId)
+	addr, err := ipfs_utils.NewP2pApi(node, multiaddr.StringCast("/ip4/127.0.0.1/")).ConnectTo(pb.ProvisionPod, providerPeerId)
 	if err != nil {
 		println("Could not forward connection")
 		return

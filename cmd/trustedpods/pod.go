@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"os"
 
 	ipfs_utils "github.com/comrade-coop/trusted-pods/pkg/ipfs-utils"
@@ -33,19 +32,14 @@ var formats = map[string]func(b []byte, m protoreflect.ProtoMessage) error{
 
 var manifestFormat string
 var providerPeer string
-
-type halfOpen interface {
-	net.Conn
-	CloseRead() error
-	CloseWrite() error
-}
+var ipfsApi string
 
 var deployPodCmd = &cobra.Command{
 	Use:   "deploy",
 	Short: "Deploy a pod from a local manifest",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ipfs, err := ipfs_utils.ConnectToLocalNode()
+		ipfs, ipfsMultiaddr, err := ipfs_utils.GetIpfsClient(ipfsApi)
 		if err != nil {
 			return err
 		}
@@ -91,7 +85,7 @@ var deployPodCmd = &cobra.Command{
 			return err
 		}
 
-		addr, err := ipfs_utils.NewP2pApi(ipfs).ConnectTo(pb.ProvisionPod, providerPeerId)
+		addr, err := ipfs_utils.NewP2pApi(ipfs, ipfsMultiaddr).ConnectTo(pb.ProvisionPod, providerPeerId)
 		if err != nil {
 			return err
 		}
@@ -130,5 +124,7 @@ func init() {
 	}
 	deployPodCmd.Flags().StringVar(&manifestFormat, "format", "pb", fmt.Sprintf("Manifest format. One of %v", formatNames))
 	deployPodCmd.Flags().StringVar(&providerPeer, "provider", "", "P2p identity of the provider to deploy to")
+
+	deployPodCmd.Flags().StringVar(&ipfsApi, "ipfs", "-", "multiaddr where the ipfs/kubo api can be accessed (- to use the daemon running in IPFS_PATH)")
 
 }

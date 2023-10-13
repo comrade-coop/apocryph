@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 
 	"github.com/ipfs/kubo/client/rpc"
@@ -13,10 +14,29 @@ import (
 	manet "github.com/multiformats/go-multiaddr/net"
 )
 
-type P2pApi rpc.HttpApi
+type P2pApi struct {
+	http     *rpc.HttpApi
+	nodeAddr multiaddr.Multiaddr
+}
 
-func NewP2pApi(h *rpc.HttpApi) *P2pApi {
-	return (*P2pApi)(h)
+func NewP2pApi(http *rpc.HttpApi, nodeAddr multiaddr.Multiaddr) *P2pApi {
+	nodeBaseAddr := nodeAddr
+	for {
+		var lastComponent *multiaddr.Component
+		nodeBaseAddr, lastComponent = multiaddr.SplitLast(nodeBaseAddr)
+		if lastComponent.Protocol().Code == multiaddr.P_TCP {
+			break
+		}
+		if nodeBaseAddr == nil {
+			nodeBaseAddr = nodeAddr
+			break
+		}
+	}
+
+	return &P2pApi{
+		http:     http,
+		nodeAddr: nodeBaseAddr,
+	}
 }
 
 type IpfsListener struct {
@@ -25,22 +45,37 @@ type IpfsListener struct {
 }
 
 func (api *P2pApi) Listen(protocol string) (*IpfsListener, error) {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	fakeConn, err := manet.Dial(api.nodeAddr.Encapsulate(multiaddr.StringCast("/udp/12345")))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fake-dial ipfs node: %w", err)
+	}
+	localAddr := fakeConn.LocalAddr()
+	fakeConn.Close()
+
+	localHost, _, err := net.SplitHostPort(localAddr.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse local address: %w", err)
+	}
+
+	listener, err := net.Listen("tcp", localHost+":0")
+	if err != nil {
+		return nil, fmt.Errorf("failed to start tcp listener: %w", err)
 	}
 
 	multiaddr, err := manet.FromNetAddr(listener.Addr())
 	if err != nil {
 		listener.Close()
-		return nil, err
+		return nil, fmt.Errorf("failed to convert local tcp address to multiaddr: %w", err)
 	}
 
 	service, err := api.ExposeEndpoint(protocol, multiaddr)
 	if err != nil {
 		listener.Close()
-		return nil, err
+		return nil, fmt.Errorf("failed to expose local listener as a service: %w", err)
 	}
+
+	fmt.Printf("Listening for requests on: %s\n", multiaddr.String())
+	fmt.Printf("Listening for requests on: %s\n", service.ListenAddress)
 
 	return &IpfsListener{listener, service}, nil
 }
@@ -63,53 +98,62 @@ func (api *P2pApi) ConnectTo(protocol string, target peer.ID) (*IpfsAddr, error)
 }
 
 func (api *P2pApi) Connect(protocol string, target multiaddr.Multiaddr) (*IpfsAddr, error) {
-	connection, err := api.ForwardConnection(protocol, multiaddr.StringCast("/ip4/127.0.0.1/tcp/0"), target)
+	connection, err := api.ForwardConnection(protocol, api.nodeAddr.Encapsulate(multiaddr.StringCast("/tcp/0")), target)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed start forwarding connection: %w", err)
 	}
 
 	multiaddr, err := multiaddr.NewMultiaddr(connection.ListenAddress)
 	if err != nil {
 		connection.Close()
-		return nil, err
+		return nil, fmt.Errorf("failed to parse connection address: %w", err)
 	}
 
 	netAddr, err := manet.ToNetAddr(multiaddr)
 	if err != nil {
 		connection.Close()
-		return nil, err
+		return nil, fmt.Errorf("failed to convert connection address to network addresss: %w", err)
 	}
 
 	return &IpfsAddr{netAddr, connection}, nil
 }
 
 type ExposedEndpoint struct {
-	TargetAddress multiaddr.Multiaddr
-	api           *P2pApi
+	P2PListenerInfoOutput
+	api *P2pApi
 }
 
 func (api *P2pApi) ExposeEndpoint(protocol string, endpoint multiaddr.Multiaddr) (*ExposedEndpoint, error) {
 	ctx := context.Background()
-	request := (*rpc.HttpApi)(api).Request("p2p/listen", protocol, endpoint.String())
+	/*if replace {
+		_, _ = api.http.Request("p2p/close").Option("target-address", endpoint.String()).Send(ctx)
+	}*/
+
+	request := api.http.Request("p2p/listen", protocol, endpoint.String())
 	response, err := request.Send(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to expose endpoint: %w", err)
+	}
+	if response.Error != nil {
+		return nil, fmt.Errorf("failed to expose endpoint: %w", response.Error)
+	}
+
+	listener, err := api.findListenerForAddress(protocol, endpoint)
 	if err != nil {
 		return nil, err
 	}
-	if response.Error != nil {
-		return nil, response.Error.Unwrap()
-	}
-	return &ExposedEndpoint{TargetAddress: endpoint, api: api}, nil
+	return &ExposedEndpoint{listener, api}, nil
 }
 
 func (i *ExposedEndpoint) Close() error {
 	ctx := context.Background()
-	request := (*rpc.HttpApi)(i.api).Request("p2p/close").Option("target-address", i.TargetAddress.String())
+	request := i.api.http.Request("p2p/close").Option("target-address", i.TargetAddress)
 	response, err := request.Send(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to close endpoint: %w", err)
 	}
 	if response.Error != nil {
-		return response.Error.Unwrap()
+		return fmt.Errorf("failed to close endpoint: %w", response.Error)
 	}
 	return nil
 }
@@ -117,6 +161,39 @@ func (i *ExposedEndpoint) Close() error {
 type ForwardedConnection struct {
 	P2PListenerInfoOutput
 	api *P2pApi
+}
+
+func (api *P2pApi) ForwardConnection(protocol string, endpoint multiaddr.Multiaddr, target multiaddr.Multiaddr) (*ForwardedConnection, error) {
+
+	ctx := context.Background()
+
+	request := api.http.Request("p2p/forward", protocol, endpoint.String(), target.String())
+	response, err := request.Send(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to forward connection: %w", err)
+	}
+	if response.Error != nil {
+		return nil, fmt.Errorf("failed to forward connection: %w", response.Error)
+	}
+
+	listener, err := api.findListenerForAddress(protocol, target)
+	if err != nil {
+		return nil, err
+	}
+	return &ForwardedConnection{listener, api}, nil
+}
+
+func (f *ForwardedConnection) Close() error {
+	ctx := context.Background()
+	request := f.api.http.Request("p2p/close").Option("listen-address", f.ListenAddress)
+	response, err := request.Send(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to close connection: %w", err)
+	}
+	if response.Error != nil {
+		return fmt.Errorf("failed to close connection: %w", response.Error)
+	}
+	return nil
 }
 
 type P2PListenerInfoOutput struct {
@@ -129,51 +206,29 @@ type P2PLsOutput struct {
 	Listeners []P2PListenerInfoOutput
 }
 
-func (api *P2pApi) ForwardConnection(protocol string, endpoint multiaddr.Multiaddr, target multiaddr.Multiaddr) (*ForwardedConnection, error) {
+func (api *P2pApi) findListenerForAddress(protocol string, targetAddress multiaddr.Multiaddr) (P2PListenerInfoOutput, error) {
 	ctx := context.Background()
 
-	request := (*rpc.HttpApi)(api).Request("p2p/forward", protocol, endpoint.String(), target.String())
-	response, err := request.Send(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if response.Error != nil {
-		return nil, response.Error.Unwrap()
-	}
-
-	requestLs := (*rpc.HttpApi)(api).Request("p2p/ls")
+	requestLs := api.http.Request("p2p/ls")
 	responseLs, err := requestLs.Send(ctx)
 	if err != nil {
-		return nil, err
+		return P2PListenerInfoOutput{}, fmt.Errorf("failed to list listeners: %w", err)
 	}
 	if responseLs.Error != nil {
-		return nil, responseLs.Error.Unwrap()
+		return P2PListenerInfoOutput{}, fmt.Errorf("failed to list listeners: %w", responseLs.Error)
 	}
 
 	listeners := &P2PLsOutput{}
 	err = json.NewDecoder(responseLs.Output).Decode(listeners)
 	if err != nil {
-		return nil, err
+		return P2PListenerInfoOutput{}, fmt.Errorf("failed to decode listeners: %w", err)
 	}
 
 	for _, listener := range listeners.Listeners {
-		if listener.Protocol == protocol && listener.TargetAddress == target.String() {
-			return &ForwardedConnection{listener, api}, nil
+		if listener.Protocol == protocol && listener.TargetAddress == targetAddress.String() {
+			return listener, nil
 		}
 	}
 
-	return nil, errors.New("Could not find target address after creating it")
-}
-
-func (f *ForwardedConnection) Close() error {
-	ctx := context.Background()
-	request := (*rpc.HttpApi)(f.api).Request("p2p/close").Option("listen-address", f.ListenAddress)
-	response, err := request.Send(ctx)
-	if err != nil {
-		return err
-	}
-	if response.Error != nil {
-		return response.Error.Unwrap()
-	}
-	return nil
+	return P2PListenerInfoOutput{}, errors.New("could not find target address in the list of listeners")
 }

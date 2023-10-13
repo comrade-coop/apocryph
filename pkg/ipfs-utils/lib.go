@@ -9,6 +9,7 @@ import (
 	"github.com/ipfs/boxo/coreiface/path"
 	"github.com/ipfs/boxo/files"
 	"github.com/ipfs/kubo/client/rpc"
+	"github.com/multiformats/go-multiaddr"
 )
 
 // Adds a file (or a directory) to IPFS using the provided IPFS node connection and the local unix file path.
@@ -110,18 +111,26 @@ func SaveFile(file files.Node, path string, verbose ...bool) error {
 	return nil
 }
 
-// ConnectToLocalNode establishes a connection to the local IPFS node.
-//
-// This function creates and returns a pointer to an IPFS node connection (rpc.HttpApi) that can be used for interacting with the local IPFS node.
-//
-// Returns:
-//   - *rpc.HttpApi: A pointer to the established IPFS node connection if successful.
-//   - error: An error if the connection to the local node cannot be established. If successful, this value will be nil.
-func ConnectToLocalNode() (*rpc.HttpApi, error) {
-	node, err := rpc.NewLocalApi()
-	if err != nil {
-		fmt.Printf("Error creating local node connection: %v\n", err)
-		return nil, err
+func GetIpfsClient(ipfsApi string) (api *rpc.HttpApi, apiMultiaddr multiaddr.Multiaddr, err error) {
+	if ipfsApi == "-" {
+		// via rpc.NewLocalApi()
+		ipfspath := os.Getenv(rpc.EnvDir)
+		if ipfspath == "" {
+			ipfspath = rpc.DefaultPathRoot
+		}
+		apiMultiaddr, err = rpc.ApiAddr(ipfspath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				err = rpc.ErrApiNotFound
+			}
+			return
+		}
+	} else {
+		apiMultiaddr, err = multiaddr.NewMultiaddr(ipfsApi)
+		if err != nil {
+			return
+		}
 	}
-	return node, nil
+	api, err = rpc.NewApi(apiMultiaddr)
+	return
 }

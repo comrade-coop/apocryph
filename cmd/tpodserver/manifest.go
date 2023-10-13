@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 
@@ -40,6 +41,8 @@ var formats = map[string]func(b []byte, m protoreflect.ProtoMessage) error{
 
 var manifestFormat string
 var kubeConfig string
+var ipfsApi string
+var serveAddress string
 var dryRun bool
 
 var applyManifestCmd = &cobra.Command{
@@ -140,14 +143,23 @@ var serveManifestCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Serve a service listening for incomming manifests",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ipfs, err := ipfs_utils.ConnectToLocalNode()
+		ipfs, ipfsMultiaddr, err := ipfs_utils.GetIpfsClient(ipfsApi)
 		if err != nil {
 			return err
 		}
 
-		listener, err := ipfs_utils.NewP2pApi(ipfs).Listen(pb.ProvisionPod)
-		if err != nil {
-			return err
+		var listener net.Listener
+
+		if serveAddress == "-" {
+			listener, err = ipfs_utils.NewP2pApi(ipfs, ipfsMultiaddr).Listen(pb.ProvisionPod)
+			if err != nil {
+				return err
+			}
+		} else {
+			listener, err = net.Listen("tcp", serveAddress)
+			if err != nil {
+				return err
+			}
 		}
 
 		s := grpc.NewServer()
@@ -199,4 +211,7 @@ func init() {
 	}
 	applyManifestCmd.Flags().StringVar(&kubeConfig, "kubeconfig", defaultKubeConfig, "absolute path to the kubeconfig file (- to use in-cluster config)")
 	serveManifestCmd.Flags().StringVar(&kubeConfig, "kubeconfig", defaultKubeConfig, "absolute path to the kubeconfig file (- to use in-cluster config)")
+	serveManifestCmd.Flags().StringVar(&serveAddress, "address", "-", "port to serve on (- to automatically pick a port and register a listener for it in ipfs)")
+
+	serveManifestCmd.Flags().StringVar(&ipfsApi, "ipfs", "-", "multiaddr where the ipfs/kubo api can be accessed (- to use the daemon running in IPFS_PATH)")
 }

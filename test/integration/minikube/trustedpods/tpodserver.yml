@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tpodserver
+  namespace: trustedpods
+  labels:
+    app: tpodserver
+spec:
+  ports:
+  - port: 8080
+  type: ClusterIP
+  selector:
+    app: tpodserver
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trustedpods-configs
+  namespace: trustedpods
+data:
+  config.yaml: ""
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tpodserver
+  namespace: trustedpods
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tpodserver
+  template:
+    metadata:
+      labels:
+        app: tpodserver
+    spec:
+      initContainers:
+      - name: ipfs
+        image: docker.io/ipfs/kubo:v0.23.0
+        command: ["ash", "-c", "echo /dns4/ipfs-rpc.ipfs.svc.cluster.local/tcp/5001 > $IPFS_PATH/api; ipfs p2p listen /x/trusted-pods/provision-pod/0.0.1 /dns4/tpodserver.trustedpods.svc.cluster.local/tcp/8080 || echo already registered; echo listening on; ipfs p2p ls | grep /dns4/tpodserver.trustedpods.svc.cluster.local/tcp/8080"]
+      containers:
+      - name: tpodserver
+        image: host.minikube.internal:5000/comradecoop/trusted-pods/server
+        command: ["tpodserver", "manifest", "serve", "--address", "0.0.0.0:8080", "--config", "config.yaml", "--ipfs", "/dns4/ipfs-rpc.ipfs.svc.cluster.local/tcp/5001", "--kubeconfig", "-"]
+        imagePullPolicy: Always # HACK
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: configs
+          mountPath: /config.yaml
+          subPath: config.yaml
+          readOnly: true
+      volumes:
+      - name: configs
+        configMap:
+          name: trustedpods-configs
+          items:
+          - key: config.yaml
+            path: config.yaml
+      serviceAccountName: tpodserver-serviceaccount
