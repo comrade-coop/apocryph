@@ -7,6 +7,7 @@ import (
 	"os"
 
 	ipfs_utils "github.com/comrade-coop/trusted-pods/pkg/ipfs-utils"
+	tptypes "github.com/comrade-coop/trusted-pods/pkg/substrate/types"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/ipfs/boxo/files"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -33,6 +34,7 @@ var formats = map[string]func(b []byte, m protoreflect.ProtoMessage) error{
 var manifestFormat string
 var providerPeer string
 var ipfsApi string
+var paymentContract string
 
 var deployPodCmd = &cobra.Command{
 	Use:   "deploy",
@@ -75,9 +77,16 @@ var deployPodCmd = &cobra.Command{
 			return err
 		}
 
+		_, paymentContractAddress, err := tptypes.NewAccountIDFromSS58(paymentContract)
+		if err != nil {
+			return err
+		}
+
+
 		request := &pb.ProvisionPodRequest{
 			PodManifestCid: podManifestPath.Cid().Bytes(),
 			Keys:           []*pb.Key{},
+			PaymentContractAddress: paymentContractAddress.ToBytes(),
 		}
 
 		providerPeerId, err := peer.Decode(providerPeer)
@@ -124,6 +133,7 @@ func init() {
 	}
 	deployPodCmd.Flags().StringVar(&manifestFormat, "format", "pb", fmt.Sprintf("Manifest format. One of %v", formatNames))
 	deployPodCmd.Flags().StringVar(&providerPeer, "provider", "", "P2p identity of the provider to deploy to")
+	deployPodCmd.Flags().StringVar(&paymentContract, "payment", "", "Payment contract address.")
 
 	deployPodCmd.Flags().StringVar(&ipfsApi, "ipfs", "-", "multiaddr where the ipfs/kubo api can be accessed (- to use the daemon running in IPFS_PATH)")
 
