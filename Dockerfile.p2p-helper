@@ -14,11 +14,11 @@ COPY pkg/proto ./pkg/proto
 RUN go generate ./pkg/proto
 
 COPY pkg ./pkg
-COPY cmd/tpodserver ./cmd/tpodserver
-RUN --mount=type=cache,target=/root/.cache/go-build go build -v -o /usr/local/bin/tpodserver ./cmd/tpodserver
+COPY cmd/ipfs-p2p-helper ./cmd/ipfs-p2p-helper
+RUN --mount=type=cache,target=/root/.cache/go-build go build -v -o /usr/local/bin/ipfs-p2p-helper ./cmd/ipfs-p2p-helper
 
 FROM docker.io/debian:bookworm-slim as final
 
-COPY --from=build /usr/local/bin/tpodserver /usr/local/bin/tpodserver
+COPY --from=build /usr/local/bin/ipfs-p2p-helper /usr/local/bin/ipfs-p2p-helper
 
-ENTRYPOINT ["tpodserver"]
+ENTRYPOINT ["ipfs-p2p-helper"]

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	kedahttpscheme "github.com/kedacore/http-add-on/operator/generated/clientset/versioned/scheme"
@@ -19,6 +18,7 @@ import (
 )
 
 const LabelTrustedPodsPaymentChannel string = "coop.comrade/trusted-pods-payment-contract"
+const LabelIpfsP2P string = "coop.comrade/trusted-pods-p2p-helper"
 
 func NewTrustedPodsNamespace(paymentChannel string) *corev1.Namespace {
 	labels := map[string]string {}
@@ -48,10 +48,10 @@ func GetConfig(kubeConfig string) (*rest.Config, error) {
 	if kubeConfig == "-" {
 		config, err := rest.InClusterConfig()
 
-		if errors.Is(err, os.ErrNotExist) {
+		if err == rest.ErrNotInCluster {
 			defaultKubeConfigPath := filepath.Join(homedir.HomeDir(), ".kube", "config")
 			config, err2 := clientcmd.BuildConfigFromFlags("", defaultKubeConfigPath)
-			if err != nil {
+			if err2 != nil {
 				return nil, errors.Join(err, err2)
 			}
 			return config, nil

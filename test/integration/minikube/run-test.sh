@@ -23,22 +23,23 @@ set -v
 
 [ "$(minikube status -f'{{.Host}}')" = "Running" ] || minikube start --insecure-registry='host.minikube.internal:5000'
 
-helmfile sync || { sleep 16; helmfile sync; }
+helmfile sync || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile sync; }
 
 O_IPFS_PATH=$IPFS_PATH
 export IPFS_PATH=$(mktemp ipfs.XXXX --tmpdir -d)
-{ while true; do kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 || true; sleep 1; done; } &
+kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 &
 echo /ip4/127.0.0.1/tcp/5004 > $IPFS_PATH/api
 ADDRESSES=$(minikube service  -n ipfs ipfs-swarm --url | head -n 1 | sed -E 's|http://(.+):(.+)|["/ip4/\1/tcp/\2", "/ip4/\1/udp/\2/quic", "/ip4/\1/udp/\2/quic-v1", "/ip4/\1/udp/\2/quic-v1/webtransport"]|')
 PROVIDERID=$(ipfs id -f '<id>')
 
+CONFIG_BEFORE=$(ipfs config Addresses.AppendAnnounce)
 ipfs config Addresses.AppendAnnounce --json "$ADDRESSES"
+CONFIG_AFTER=$(ipfs config Addresses.AppendAnnounce)
 
-kubectl delete -n ipfs $(kubectl get po -o name -n ipfs) # HACK: Restart ipfs daemon after config change
+# Restart ipfs daemon after config change
+[ "$CONFIG_BEFORE" = "$CONFIG_BEFORE" ] || kubectl delete -n ipfs $(kubectl get po -o name -n ipfs)
 
 { while ! ipfs id -f '<id>' &>/dev/null; do sleep 0.5; done; } 2>/dev/null
-
-kubectl delete -n trustedpods $(kubectl get po -o name -n trustedpods) # HACK: Restart trustedpods after ipfs restart
 
 export IPFS_PATH=$O_IPFS_PATH
 
@@ -53,11 +54,9 @@ ipfs daemon &
 
 echo "$ADDRESSES" | jq -r '.[] + "/p2p/'"$PROVIDERID"'"' | xargs -n 1 ipfs swarm connect || true
 
-{ while ! kubectl get -n trustedpods endpoints -o json | jq '.items[].subsets[].ports' &>/dev/null; do sleep 0.5; done; }
+sleep 2
 
-sleep 1
-
-go run ../../../cmd/trustedpods/ pod deploy manifest.json --format json --provider $PROVIDERID
+go run ../../../cmd/trustedpods/ pod deploy manifest.json --format json --provider $PROVIDERID --payment 5Civ1XRAo5oHjhhpGudn4Hdng3X2mjXih4yytvdTiT3kVo8a
 
 INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true | head -n 1); echo $INGRESS_URL
 
@@ -67,7 +66,7 @@ set -x
 
 curl --connect-timeout 40 -H "Host: $MANIFEST_HOST" $INGRESS_URL
 
-sleep 16
+sleep 32
 
 kubectl port-forward --namespace prometheus service/prometheus-server 19090:80 &
 

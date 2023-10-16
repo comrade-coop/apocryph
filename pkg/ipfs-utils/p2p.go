@@ -68,7 +68,7 @@ func (api *P2pApi) Listen(protocol string) (*IpfsListener, error) {
 		return nil, fmt.Errorf("failed to convert local tcp address to multiaddr: %w", err)
 	}
 
-	service, err := api.ExposeEndpoint(protocol, multiaddr)
+	service, err := api.ExposeEndpoint(protocol, multiaddr, ConflictExistingEndpoint)
 	if err != nil {
 		listener.Close()
 		return nil, fmt.Errorf("failed to expose local listener as a service: %w", err)
@@ -123,11 +123,21 @@ type ExposedEndpoint struct {
 	api *P2pApi
 }
 
-func (api *P2pApi) ExposeEndpoint(protocol string, endpoint multiaddr.Multiaddr) (*ExposedEndpoint, error) {
+type ExistingOption int
+const (
+	ConflictExistingEndpoint ExistingOption = 0
+	ReturnExistingEndpoint ExistingOption = 1
+)
+
+func (api *P2pApi) ExposeEndpoint(protocol string, endpoint multiaddr.Multiaddr, existing ExistingOption) (*ExposedEndpoint, error) {
 	ctx := context.Background()
-	/*if replace {
-		_, _ = api.http.Request("p2p/close").Option("target-address", endpoint.String()).Send(ctx)
-	}*/
+	if existing == ReturnExistingEndpoint {
+		listener, err := api.findListenerForAddress(protocol, endpoint)
+		if err == nil {
+			return &ExposedEndpoint{listener, api}, nil
+		}
+	}
+	// Ipfs automatically handles ConflictExistingEndpoint for us
 
 	request := api.http.Request("p2p/listen", protocol, endpoint.String())
 	response, err := request.Send(ctx)
