@@ -7,8 +7,8 @@ import (
 	"os"
 
 	ipfs_utils "github.com/comrade-coop/trusted-pods/pkg/ipfs-utils"
-	tptypes "github.com/comrade-coop/trusted-pods/pkg/substrate/types"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	tptypes "github.com/comrade-coop/trusted-pods/pkg/substrate/types"
 	"github.com/ipfs/boxo/files"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/spf13/cobra"
@@ -82,10 +82,9 @@ var deployPodCmd = &cobra.Command{
 			return err
 		}
 
-
 		request := &pb.ProvisionPodRequest{
-			PodManifestCid: podManifestPath.Cid().Bytes(),
-			Keys:           []*pb.Key{},
+			PodManifestCid:         podManifestPath.Cid().Bytes(),
+			Keys:                   []*pb.Key{},
 			PaymentContractAddress: paymentContractAddress.ToBytes(),
 		}
 

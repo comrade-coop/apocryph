@@ -124,9 +124,10 @@ type ExposedEndpoint struct {
 }
 
 type ExistingOption int
+
 const (
 	ConflictExistingEndpoint ExistingOption = 0
-	ReturnExistingEndpoint ExistingOption = 1
+	ReturnExistingEndpoint   ExistingOption = 1
 )
 
 func (api *P2pApi) ExposeEndpoint(protocol string, endpoint multiaddr.Multiaddr, existing ExistingOption) (*ExposedEndpoint, error) {

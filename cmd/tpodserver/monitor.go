@@ -49,7 +49,7 @@ var monitorCmd = &cobra.Command{
 
 		scheme, err := tpk8s.GetScheme()
 		if err != nil {
-			return  err
+			return err
 		}
 
 		client, err := k8client.New(config, k8client.Options{
@@ -83,7 +83,6 @@ var monitorCmd = &cobra.Command{
 				client.List(cmd.Context(), namespaces, &k8client.ListOptions{ // TODO: Watch?
 					LabelSelector: labels.NewSelector().Add(*req),
 				})
-
 
 				for _, n := range namespaces.Items {
 					if amountOwed, ok := amountsOwed[n.Name]; ok {
@@ -126,7 +125,7 @@ func setAmountOwed(contractAddressString string, amount types.U128) error {
 		return err
 	}
 
-	if (!dryRun) {
+	if !dryRun {
 		hash, err := api.RPC.Contracts.CallContractNoWait(*contractAddress, from, inputData, types.NewU128(*big.NewInt(0)))
 		if err != nil {
 			return err

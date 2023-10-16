@@ -21,14 +21,14 @@ const LabelTrustedPodsPaymentChannel string = "coop.comrade/trusted-pods-payment
 const LabelIpfsP2P string = "coop.comrade/trusted-pods-p2p-helper"
 
 func NewTrustedPodsNamespace(paymentChannel string) *corev1.Namespace {
-	labels := map[string]string {}
+	labels := map[string]string{}
 	if paymentChannel != "" {
 		labels[LabelTrustedPodsPaymentChannel] = paymentChannel
 	}
 	return &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "tpods",
-			Labels: labels,
+			Labels:       labels,
 		},
 	}
 }

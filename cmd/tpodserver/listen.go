@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"net"
-	"path/filepath"
 
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	ipfs_utils "github.com/comrade-coop/trusted-pods/pkg/ipfs-utils"
@@ -20,7 +19,6 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
-	"k8s.io/client-go/util/homedir"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -128,14 +126,7 @@ func GetListener(ipfs *rpc.HttpApi, ipfsMultiaddr multiaddr.Multiaddr, serveAddr
 
 func init() {
 	listenCmd.Flags().BoolVarP(&dryRun, "dry-run", "z", false, "Dry run mode; modify nothing.")
-
-	defaultKubeConfig := "-"
-	if home := homedir.HomeDir(); home != "" {
-		defaultKubeConfig = filepath.Join(home, ".kube", "config")
-	}
-	listenCmd.Flags().StringVar(&kubeConfig, "kubeconfig", defaultKubeConfig, "absolute path to the kubeconfig file (- to use in-cluster config)")
-
+	listenCmd.Flags().StringVar(&kubeConfig, "kubeconfig", "-", "absolute path to the kubeconfig file (- to the first of in-cluster config and ~/.kube/config)")
 	listenCmd.Flags().StringVar(&ipfsApi, "ipfs", "-", "multiaddr where the ipfs/kubo api can be accessed (- to use the daemon running in IPFS_PATH)")
-
 	listenCmd.Flags().StringVar(&serveAddress, "address", "-", "port to serve on (- to automatically pick a port and register a listener for it in ipfs)")
 }

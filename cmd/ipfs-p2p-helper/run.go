@@ -36,7 +36,6 @@ var runCmd = &cobra.Command{
 		}
 		ipfsp2p := ipfs_utils.NewP2pApi(ipfs, ipfsMultiaddr)
 
-
 		scheme, err := tpk8s.GetScheme()
 		if err != nil {
 			return err
@@ -66,7 +65,7 @@ var runCmd = &cobra.Command{
 	Loop:
 		for {
 			select {
-			case e:=<-sub.ResultChan():
+			case e := <-sub.ResultChan():
 				if service, ok := e.Object.(*corev1.Service); ok {
 					err := handleEvent(ipfsp2p, e.Type, service)
 					if err != nil {
@@ -116,7 +115,6 @@ func handleEvent(ipfsp2p *ipfs_utils.P2pApi, eType watch.EventType, service *cor
 		return err
 	}
 }
-
 
 func init() {
 	runCmd.Flags().StringVar(&kubeConfig, "kubeconfig", "-", "absolute path to the kubeconfig file (- to use in-cluster config)")
