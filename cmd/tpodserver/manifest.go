@@ -1,30 +1,14 @@
 package main
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"io"
-	"net"
 	"os"
-	"path/filepath"
 
-	ipfs_utils "github.com/comrade-coop/trusted-pods/pkg/ipfs-utils"
 	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
-	"github.com/ipfs/boxo/coreiface/path"
-	"github.com/ipfs/boxo/files"
-	"github.com/ipfs/go-cid"
-	"github.com/ipfs/kubo/client/rpc"
 	"github.com/spf13/cobra"
-	"google.golang.org/grpc"
 	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/encoding/prototext"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/util/homedir"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -33,16 +17,9 @@ var manifestCmd = &cobra.Command{
 	Short: "Operations related to with raw pod manifests",
 }
 
-var formats = map[string]func(b []byte, m protoreflect.ProtoMessage) error{
-	"json": protojson.Unmarshal,
-	"pb":   proto.Unmarshal,
-	"text": prototext.Unmarshal,
-}
-
 var manifestFormat string
+var paymentContract string
 var kubeConfig string
-var ipfsApi string
-var serveAddress string
 var dryRun bool
 
 var applyManifestCmd = &cobra.Command{
@@ -60,24 +37,21 @@ var applyManifestCmd = &cobra.Command{
 			return err
 		}
 
-		Unmarshal := formats[manifestFormat]
-		if Unmarshal == nil {
-			return errors.New("Unknown format: " + manifestFormat)
-		}
-
-		podManifest := &pb.Pod{}
-		err = Unmarshal(manifestContents, podManifest)
+		pod := &pb.Pod{}
+		err = pb.Unmarshal(manifestFormat, manifestContents, pod)
 		if err != nil {
 			return err
 		}
 
-		cl, err := getNamespacedClient(cmd.Context())
+		cl, err := tpk8s.GetClient(kubeConfig, dryRun)
 		if err != nil {
 			return err
 		}
 
 		response := &pb.ProvisionPodResponse{}
-		err = tpk8s.ApplyPodRequest(cmd.Context(), cl, podManifest, response)
+		err = tpk8s.RunInNamespaceOrRevert(cmd.Context(), cl, tpk8s.NewTrustedPodsNamespace(paymentContract), func(cl client.Client) error {
+			return tpk8s.ApplyPodRequest(cmd.Context(), cl, pod, response)
+		})
 		if err != nil {
 			return err
 		}
@@ -91,127 +65,11 @@ var applyManifestCmd = &cobra.Command{
 	},
 }
 
-type provisionPodServer struct {
-	pb.UnimplementedProvisionPodServiceServer
-	ipfs *rpc.HttpApi
-}
-
-func transformError(err error) (*pb.ProvisionPodResponse, error) {
-	return &pb.ProvisionPodResponse{
-		Error: err.Error(),
-	}, nil
-}
-
-func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.ProvisionPodRequest) (*pb.ProvisionPodResponse, error) {
-	cid, err := cid.Cast(request.PodManifestCid)
-	if err != nil {
-		return transformError(err)
-	}
-
-	node, err := s.ipfs.Unixfs().Get(ctx, path.IpfsPath(cid))
-	if err != nil {
-		return transformError(err)
-	}
-	file, ok := node.(files.File)
-	if !ok {
-		return transformError(errors.New("Supplied CID not a file"))
-	}
-	manifestBytes, err := io.ReadAll(file)
-	if err != nil {
-		return transformError(err)
-	}
-	pod := &pb.Pod{}
-	err = proto.Unmarshal(manifestBytes, pod)
-	if err != nil {
-		return transformError(err)
-	}
-
-	cl, err := getNamespacedClient(ctx)
-	if err != nil {
-		return nil, err
-	}
-	response := &pb.ProvisionPodResponse{}
-	err = tpk8s.ApplyPodRequest(ctx, cl, pod, response)
-	if err != nil {
-		return transformError(err)
-	}
-
-	return response, nil
-}
-
-var serveManifestCmd = &cobra.Command{
-	Use:   "serve",
-	Short: "Serve a service listening for incomming manifests",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		ipfs, ipfsMultiaddr, err := ipfs_utils.GetIpfsClient(ipfsApi)
-		if err != nil {
-			return err
-		}
-
-		var listener net.Listener
-
-		if serveAddress == "-" {
-			listener, err = ipfs_utils.NewP2pApi(ipfs, ipfsMultiaddr).Listen(pb.ProvisionPod)
-			if err != nil {
-				return err
-			}
-		} else {
-			listener, err = net.Listen("tcp", serveAddress)
-			if err != nil {
-				return err
-			}
-		}
-
-		s := grpc.NewServer()
-		pb.RegisterProvisionPodServiceServer(s, &provisionPodServer{
-			ipfs: ipfs,
-		})
-
-		go s.Serve(listener)
-		defer s.Stop()
-
-		<-cmd.Context().Done()
-
-		s.GracefulStop()
-
-		return nil
-	},
-}
-
-func getNamespacedClient(ctx context.Context) (client.Client, error) {
-	var config *rest.Config
-	var err error
-	if kubeConfig == "-" {
-		config, err = rest.InClusterConfig()
-	} else {
-		config, err = clientcmd.BuildConfigFromFlags("", kubeConfig)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	return tpk8s.GetNamespacedClient(ctx, config, dryRun)
-}
-
 func init() {
 	manifestCmd.AddCommand(applyManifestCmd)
-	manifestCmd.AddCommand(serveManifestCmd)
 
-	formatNames := make([]string, 0, len(formats))
-	for name := range formats {
-		formatNames = append(formatNames, name)
-	}
-	applyManifestCmd.Flags().StringVar(&manifestFormat, "format", "pb", fmt.Sprintf("Manifest format. One of %v", formatNames))
+	applyManifestCmd.Flags().StringVar(&manifestFormat, "format", "pb", fmt.Sprintf("Manifest format. One of %v", pb.UnmarshalFormatNames))
 	applyManifestCmd.Flags().BoolVarP(&dryRun, "dry-run", "z", false, "Dry run mode; modify nothing.")
-	serveManifestCmd.Flags().BoolVarP(&dryRun, "dry-run", "z", false, "Dry run mode; modify nothing.")
-
-	defaultKubeConfig := "-"
-	if home := homedir.HomeDir(); home != "" {
-		defaultKubeConfig = filepath.Join(home, ".kube", "config")
-	}
-	applyManifestCmd.Flags().StringVar(&kubeConfig, "kubeconfig", defaultKubeConfig, "absolute path to the kubeconfig file (- to use in-cluster config)")
-	serveManifestCmd.Flags().StringVar(&kubeConfig, "kubeconfig", defaultKubeConfig, "absolute path to the kubeconfig file (- to use in-cluster config)")
-	serveManifestCmd.Flags().StringVar(&serveAddress, "address", "-", "port to serve on (- to automatically pick a port and register a listener for it in ipfs)")
-
-	serveManifestCmd.Flags().StringVar(&ipfsApi, "ipfs", "-", "multiaddr where the ipfs/kubo api can be accessed (- to use the daemon running in IPFS_PATH)")
+	applyManifestCmd.Flags().StringVar(&paymentContract, "payment", "", "Payment contract address.")
+	applyManifestCmd.Flags().StringVar(&kubeConfig, "kubeconfig", "-", "absolute path to the kubeconfig file (- to the first of in-cluster config and ~/.kube/config)")
 }

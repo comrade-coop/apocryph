@@ -16,6 +16,6 @@ func NewAccountIDFromSS58(accountString string) (uint16, *types.AccountID, error
 	return network, accountId, err
 }
 
-func AccountIDToSS58(network uint16, accountId *types.AccountID) (string, error) {
-	return subkey.SS58Encode(accountId.ToBytes(), network), nil
+func AccountIDToSS58(network uint16, accountId *types.AccountID) string {
+	return subkey.SS58Encode(accountId.ToBytes(), network)
 }

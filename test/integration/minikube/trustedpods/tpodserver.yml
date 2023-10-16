@@ -42,7 +42,7 @@ spec:
       containers:
       - name: tpodserver
         image: host.minikube.internal:5000/comradecoop/trusted-pods/server
-        command: ["tpodserver", "manifest", "serve", "--address", "0.0.0.0:8080", "--config", "config.yaml", "--ipfs", "/dns4/ipfs-rpc.ipfs.svc.cluster.local/tcp/5001", "--kubeconfig", "-"]
+        command: ["tpodserver", "listen", "--address", "0.0.0.0:8080", "--config", "config.yaml", "--ipfs", "/dns4/ipfs-rpc.ipfs.svc.cluster.local/tcp/5001"]
         imagePullPolicy: Always # HACK
         ports:
         - containerPort: 8080

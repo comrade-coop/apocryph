@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -33,37 +32,41 @@ var getMetricsCmd = &cobra.Command{
 			return err
 		}
 
-		if pricingFile != "" {
-			file, err := os.Open(pricingFile)
-			if err != nil {
-				return err
-			}
-
-			pricingTableContents, err := io.ReadAll(file)
-			if err != nil {
-				return err
-			}
-
-			Unmarshal := formats[pricingFileFormat]
-			if Unmarshal == nil {
-				return errors.New("Unknown format: " + pricingFileFormat)
-			}
-
-			pricingTable := &pb.PricingTable{}
-
-			err = Unmarshal(pricingTableContents, pricingTable)
-			if err != nil {
-				return err
-			}
-
-			resourceMeasurements.Display(cmd.OutOrStdout(), pricingTable)
+		pricingTable, err := openPricingTable()
+		if err != nil {
+			return err
+		}
+		resourceMeasurements.Display(cmd.OutOrStdout(), pricingTable)
+		if pricingTable != nil {
 			fmt.Fprintf(cmd.OutOrStdout(), "totals: %v\n", resourceMeasurements.Price(pricingTable))
-		} else {
-			resourceMeasurements.Display(cmd.OutOrStdout(), nil)
 		}
 
 		return err
 	},
+}
+
+func openPricingTable() (*pb.PricingTable, error) {
+	if pricingFile == "" {
+		return nil, nil
+	}
+
+	file, err := os.Open(pricingFile)
+	if err != nil {
+		return nil, err
+	}
+
+	pricingTableContents, err := io.ReadAll(file)
+	if err != nil {
+		return nil, err
+	}
+
+	pricingTable := &pb.PricingTable{}
+	err = pb.Unmarshal(pricingFileFormat, pricingTableContents, pricingTable)
+	if err != nil {
+		return nil, err
+	}
+
+	return pricingTable, nil
 }
 
 func init() {
@@ -71,10 +74,5 @@ func init() {
 
 	getMetricsCmd.Flags().StringVar(&prometheusUrl, "prometheus", "", "address at which the prometheus API can be accessed")
 	getMetricsCmd.Flags().StringVar(&pricingFile, "pricing", "", "file containing pricing information")
-
-	formatNames := make([]string, 0, len(formats))
-	for name := range formats {
-		formatNames = append(formatNames, name)
-	}
-	getMetricsCmd.Flags().StringVar(&pricingFileFormat, "pricing-format", "json", fmt.Sprintf("pricing file format. one of %v", formatNames))
+	getMetricsCmd.Flags().StringVar(&pricingFileFormat, "pricing-format", "json", fmt.Sprintf("pricing file format. one of %v", pb.UnmarshalFormatNames))
 }
