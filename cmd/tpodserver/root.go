@@ -49,4 +49,5 @@ func init() {
 	rootCmd.AddCommand(contractCmd)
 	rootCmd.AddCommand(metricsCmd)
 	rootCmd.AddCommand(listenCmd)
+	rootCmd.AddCommand(monitorCmd)
 }

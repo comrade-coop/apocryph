@@ -51,6 +51,17 @@ spec:
           mountPath: /config.yaml
           subPath: config.yaml
           readOnly: true
+      - name: tpodmonitor
+        image: host.minikube.internal:5000/comradecoop/trusted-pods/server
+        command: ["tpodserver", "monitor", "--config", "config.yaml", "--rpc", "wss://rococo-contracts-rpc.polkadot.io", "-z"]
+        imagePullPolicy: Always # HACK
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: configs
+          mountPath: /config.yaml
+          subPath: config.yaml
+          readOnly: true
       volumes:
       - name: configs
         configMap:

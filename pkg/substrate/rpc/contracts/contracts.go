@@ -17,6 +17,7 @@ type Contracts interface {
 	CreateContractCallExtrinsic(address types.AccountID, fromAddress types.AccountID, inputData tptypes.ContractCallInputData, value types.U128, block *types.Hash) (*types.Extrinsic, *tptypes.ContractExecResult, error)
 
 	CallContract(address types.AccountID, from signature.KeyringPair, inputData tptypes.ContractCallInputData, value types.U128) (*author.ExtrinsicStatusSubscription, error)
+	CallContractNoWait(address types.AccountID, from signature.KeyringPair, inputData tptypes.ContractCallInputData, value types.U128) (*types.Hash, error)
 }
 
 type contracts struct {
@@ -162,5 +163,65 @@ func (c *contracts) CallContract(address types.AccountID, from signature.Keyring
 		}
 
 		return subscription, nil
+	}
+}
+
+// FIXME: Duplicated from CallContract
+
+func (c *contracts) CallContractNoWait(address types.AccountID, from signature.KeyringPair, inputData tptypes.ContractCallInputData, value types.U128) (*types.Hash, error) {
+	extrinsic, _, err := c.CreateContractCallExtrinsic(address, types.AccountID(from.PublicKey), inputData, value, nil)
+
+	rv, err := c.api.RPC.State.GetRuntimeVersionLatest()
+	if err != nil {
+		return nil, err
+	}
+
+	genesisHash, err := c.api.RPC.Chain.GetBlockHash(0)
+	if err != nil {
+		return nil, err
+	}
+
+	key, err := types.CreateStorageKey(c.meta, "System", "Account", from.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	retries := 5
+	var hash types.Hash
+	for {
+		// Via: https://github.com/centrifuge/go-substrate-rpc-client/blob/master/teste2e/author_submit_and_watch_extrinsic_test.go
+		var accountInfo types.AccountInfo
+		ok, err := c.api.RPC.State.GetStorageLatest(key, &accountInfo)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, errors.New("Caller account not found")
+		}
+
+		err = extrinsic.Sign(from, types.SignatureOptions{
+			// BlockHash:          blockHash,
+			BlockHash:          genesisHash, // BlockHash needs to == GenesisHash if era is immortal.
+			Era:                types.ExtrinsicEra{IsMortalEra: false},
+			GenesisHash:        genesisHash,
+			Nonce:              types.NewUCompactFromUInt(uint64(accountInfo.Nonce)),
+			SpecVersion:        rv.SpecVersion,
+			Tip:                types.NewUCompactFromUInt(0),
+			TransactionVersion: rv.TransactionVersion,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		hash, err = c.api.RPC.Author.SubmitExtrinsic(*extrinsic)
+		if err != nil {
+			retries--
+			if retries <= 0 {
+				return nil, err
+			}
+			continue
+		}
+
+		return &hash, nil
 	}
 }

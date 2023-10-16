@@ -52,8 +52,8 @@ func (r ResourceMeasurementsMap) Display(writer io.Writer, priceTable *pb.Pricin
 	}
 }
 
-func (r ResourceMeasurementsMap) Price(priceTable *pb.PricingTable) map[string]uint64 {
-	costs := make(map[string]uint64, len(r))
+func (r ResourceMeasurementsMap) Price(priceTable *pb.PricingTable) map[string]*big.Int {
+	costs := make(map[string]*big.Int, len(r))
 	priceTableMap := NewPricingTableMap(priceTable)
 	for namespace, resources := range r {
 		totalCost := &big.Float{}
@@ -63,8 +63,9 @@ func (r ResourceMeasurementsMap) Price(priceTable *pb.PricingTable) map[string]u
 				totalCost = totalCost.Add(totalCost, cost)
 			}
 		}
-		totalCostInt, _ := totalCost.Int64()
-		costs[namespace] = uint64(totalCostInt)
+		totalCostInt := &big.Int{}
+		_, _ = totalCost.Int(totalCostInt)
+		costs[namespace] = totalCostInt
 	}
 	return costs
 }
