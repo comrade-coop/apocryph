@@ -10,7 +10,6 @@ import (
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
 	"github.com/comrade-coop/trusted-pods/pkg/prometheus"
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/comrade-coop/trusted-pods/pkg/resource"
 	tpgsrpc "github.com/comrade-coop/trusted-pods/pkg/substrate"
 	tptypes "github.com/comrade-coop/trusted-pods/pkg/substrate/types"
@@ -143,7 +142,5 @@ func init() {
 	monitorCmd.Flags().BoolVarP(&dryRun, "dry-run", "z", false, "Dry run mode; modify nothing.")
 	monitorCmd.Flags().StringVar(&kubeConfig, "kubeconfig", "-", "absolute path to the kubeconfig file (- to the first of in-cluster config and ~/.kube/config)")
 	monitorCmd.Flags().StringVar(&prometheusUrl, "prometheus", "", "address at which the prometheus API can be accessed")
-	monitorCmd.Flags().StringVar(&pricingFile, "pricing", "", "file containing pricing information")
-	monitorCmd.Flags().StringVar(&pricingFileFormat, "pricing-format", "json", fmt.Sprintf("pricing file format. one of %v", pb.UnmarshalFormatNames))
 	monitorCmd.Flags().StringVar(&chainRpc, "rpc", "", "Link to the Substrate RPC.")
 }

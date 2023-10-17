@@ -1,0 +1,13 @@
+pricing:
+  table:
+    format: json
+    # filename: pricing.json
+    contents: |
+      {
+        "resources": [
+          { "resource": "cpu", "priceForReservation": 200000000000 },
+          { "resource": "memory", "priceForReservation": 500 }
+        ],
+        "currency": "Tokens"
+      }
+

@@ -22,7 +22,21 @@ metadata:
   name: trustedpods-configs
   namespace: trustedpods
 data:
-  config.yaml: ""
+  config.yaml: |
+    pricing:
+      table:
+        format: json
+        # filename: pricing.json
+        contents: |
+          {
+            "resources": [
+              { "resource": "cpu", "priceForReservation": 200000000000 },
+              { "resource": "memory", "priceForReservation": 500 }
+            ],
+            "currency": "Tokens"
+          }
+
+
 ---
 apiVersion: apps/v1
 kind: Deployment
