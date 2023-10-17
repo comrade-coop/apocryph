@@ -9,6 +9,7 @@ import (
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/comrade-coop/trusted-pods/pkg/resource"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var metricsCmd = &cobra.Command{
@@ -19,6 +20,7 @@ var metricsCmd = &cobra.Command{
 var prometheusUrl string
 var pricingFile string
 var pricingFileFormat string
+var pricingFileContents string
 
 var getMetricsCmd = &cobra.Command{
 	Use:   "get",
@@ -46,6 +48,16 @@ var getMetricsCmd = &cobra.Command{
 }
 
 func openPricingTable() (*pb.PricingTable, error) {
+	if pricingFileContents != "" {
+		pricingTable := &pb.PricingTable{}
+		err := protojson.Unmarshal([]byte(pricingFileContents), pricingTable)
+		if err != nil {
+			return nil, err
+		}
+
+		return pricingTable, nil
+	}
+
 	if pricingFile == "" {
 		return nil, nil
 	}
@@ -73,6 +85,8 @@ func init() {
 	metricsCmd.AddCommand(getMetricsCmd)
 
 	getMetricsCmd.Flags().StringVar(&prometheusUrl, "prometheus", "", "address at which the prometheus API can be accessed")
-	getMetricsCmd.Flags().StringVar(&pricingFile, "pricing", "", "file containing pricing information")
-	getMetricsCmd.Flags().StringVar(&pricingFileFormat, "pricing-format", "json", fmt.Sprintf("pricing file format. one of %v", pb.UnmarshalFormatNames))
+
+	AddConfig("pricing.table.filename", &pricingFile, "", "absolute path to file containing pricing information")
+	AddConfig("pricing.table.contents", &pricingFileContents, "", "absolute path to file containing pricing information")
+	AddConfig("pricing.table.format", &pricingFileFormat, "", fmt.Sprintf("pricing file format. one of %v", pb.UnmarshalFormatNames))
 }

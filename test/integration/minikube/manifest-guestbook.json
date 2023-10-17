@@ -1,0 +1,71 @@
+{
+  "containers": [
+    {
+      "name": "php-redis",
+      "image": {
+        "url": "gcr.io/google-samples/gb-frontend:v4"
+      },
+      "ports": [
+        {
+          "containerPort": 80,
+          "hostHttpHost": "guestbook.localhost"
+        }
+      ],
+      "env": {
+        "GET_HOSTS_FROM": "env",
+        "REDIS_MASTER_SERVICE_HOST": "redis",
+        "REDIS_SLAVE_SERVICE_HOST": "redis"
+      },
+      "resourceRequests": [
+        {
+          "resource": "cpu",
+          "amountMillis": 100
+        },
+        {
+          "resource": "memory",
+          "amount": 100000000
+        }
+      ]
+    },
+    {
+      "name": "redis",
+      "image": {
+        "url": "docker.io/library/redis:alpine"
+      },
+      "resourceRequests": [
+        {
+          "resource": "cpu",
+          "amountMillis": 10
+        },
+        {
+          "resource": "memory",
+          "amount": 100000000
+        }
+      ],
+      "volumes": [
+        {
+          "name": "db-data",
+          "mountPath": "/data"
+        }
+      ]
+    }
+  ],
+  "volumes": [
+    {
+      "name": "db-data",
+      "type": 1,
+      "filesystem": {
+        "resourceRequests": [
+          {
+            "resource": "storage",
+            "amount": 1000000000
+          }
+        ]
+      }
+    }
+  ],
+  "replicas": {
+    "min": 0,
+    "max": 1
+  }
+}

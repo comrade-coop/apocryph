@@ -64,7 +64,7 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.Provi
 	if err != nil {
 		return transformError(err)
 	}
-	paymentContract := tptypes.AccountIDToSS58(0, paymentContractAccountId)
+	paymentContract := tptypes.AccountIDToSS58(42, paymentContractAccountId)
 
 	//TODO: check paymentContract
 
@@ -125,8 +125,9 @@ func GetListener(ipfs *rpc.HttpApi, ipfsMultiaddr multiaddr.Multiaddr, serveAddr
 }
 
 func init() {
+	listenCmd.Flags().StringVar(&serveAddress, "address", "-", "port to serve on (- to automatically pick a port and register a listener for it in ipfs)")
+
 	listenCmd.Flags().BoolVarP(&dryRun, "dry-run", "z", false, "Dry run mode; modify nothing.")
 	listenCmd.Flags().StringVar(&kubeConfig, "kubeconfig", "-", "absolute path to the kubeconfig file (- to the first of in-cluster config and ~/.kube/config)")
 	listenCmd.Flags().StringVar(&ipfsApi, "ipfs", "-", "multiaddr where the ipfs/kubo api can be accessed (- to use the daemon running in IPFS_PATH)")
-	listenCmd.Flags().StringVar(&serveAddress, "address", "-", "port to serve on (- to automatically pick a port and register a listener for it in ipfs)")
 }

@@ -23,6 +23,7 @@ message Container {
   message Image {
     string cid = 1;
     int32 keyIdx = 2;
+    string url = 3;
   }
 
   message Port {
@@ -38,7 +39,7 @@ message Container {
   }
 
   message VolumeMount {
-    uint32 volumeIdx = 1;
+    string name = 1;
     string mountPath = 2;
     bool readOnly = 3;
   }
@@ -55,11 +56,12 @@ message Volume {
     // VOLUME_RO_MANY = 1;
     VOLUME_RW_MANY = 2;
   }
-  Type type = 1;
-  AccessMode accessMode = 2;
+  string name = 1;
+  Type type = 2;
+  AccessMode accessMode = 3;
   oneof configuration {
-    FilesystemConfig filesystem = 3;
-    SecretConfig secret = 4;
+    FilesystemConfig filesystem = 4;
+    SecretConfig secret = 5;
   }
   message FilesystemConfig {
     repeated Resource resourceRequests = 1; // "storage"

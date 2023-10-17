@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,20 +14,12 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 var podCmd = &cobra.Command{
 	Use:   "pod",
 	Short: "Operations related to with raw pod manifests",
-}
-
-var formats = map[string]func(b []byte, m protoreflect.ProtoMessage) error{
-	"json": protojson.Unmarshal,
-	"pb":   proto.Unmarshal,
-	"text": prototext.Unmarshal,
 }
 
 var manifestFormat string
@@ -56,13 +47,8 @@ var deployPodCmd = &cobra.Command{
 			return err
 		}
 
-		Unmarshal := formats[manifestFormat]
-		if Unmarshal == nil {
-			return errors.New("Unknown format: " + manifestFormat)
-		}
-
 		pod := &pb.Pod{}
-		err = Unmarshal(podManifestCotents, pod)
+		err = pb.Unmarshal(manifestFormat, podManifestCotents, pod)
 		if err != nil {
 			return err
 		}
@@ -126,14 +112,10 @@ var deployPodCmd = &cobra.Command{
 func init() {
 	podCmd.AddCommand(deployPodCmd)
 
-	formatNames := make([]string, 0, len(formats))
-	for name := range formats {
-		formatNames = append(formatNames, name)
-	}
-	deployPodCmd.Flags().StringVar(&manifestFormat, "format", "pb", fmt.Sprintf("Manifest format. One of %v", formatNames))
-	deployPodCmd.Flags().StringVar(&providerPeer, "provider", "", "P2p identity of the provider to deploy to")
+	deployPodCmd.Flags().StringVar(&manifestFormat, "format", "pb", fmt.Sprintf("Manifest format. One of %v", pb.UnmarshalFormatNames))
 	deployPodCmd.Flags().StringVar(&paymentContract, "payment", "", "Payment contract address.")
 
+	deployPodCmd.Flags().StringVar(&providerPeer, "provider", "", "P2p identity of the provider to deploy to")
 	deployPodCmd.Flags().StringVar(&ipfsApi, "ipfs", "-", "multiaddr where the ipfs/kubo api can be accessed (- to use the daemon running in IPFS_PATH)")
 
 }
