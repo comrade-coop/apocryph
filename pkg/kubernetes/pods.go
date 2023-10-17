@@ -44,6 +44,8 @@ func ApplyPodRequest(ctx context.Context, client client.Client, podManifest *pb.
 		Spec: kedahttpv1alpha1.HTTPScaledObjectSpec{},
 	}
 
+	localhostAliases := corev1.HostAlias{IP: "127.0.0.1"}
+
 	for cIdx, container := range podManifest.Containers {
 		containerSpec := corev1.Container{
 			Name:       container.Name,
@@ -123,7 +125,9 @@ func ApplyPodRequest(ctx context.Context, client client.Client, podManifest *pb.
 		containerSpec.Resources.Requests = convertResourceList(container.ResourceRequests)
 		// TODO: Enforce specifying resources?
 		podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, containerSpec)
+		localhostAliases.Hostnames = append(localhostAliases.Hostnames, container.Name)
 	}
+	podTemplate.Spec.HostAliases = append(podTemplate.Spec.HostAliases, localhostAliases)
 	for _, volume := range podManifest.Volumes {
 		volumeSpec := corev1.Volume{
 			Name: volume.Name,

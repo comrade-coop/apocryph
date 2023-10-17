@@ -57,7 +57,7 @@ echo "$ADDRESSES" | jq -r '.[] + "/p2p/'"$PROVIDERID"'"' | xargs -n 1 ipfs swarm
 
 sleep 2
 
-go run ../../../cmd/trustedpods/ pod deploy manifest.json --format json --provider $PROVIDERID --payment 5Civ1XRAo5oHjhhpGudn4Hdng3X2mjXih4yytvdTiT3kVo8a
+go run ../../../cmd/trustedpods/ pod deploy manifest-guestbook.json --format json --provider $PROVIDERID --payment 5Civ1XRAo5oHjhhpGudn4Hdng3X2mjXih4yytvdTiT3kVo8a
 
 INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true | head -n 1); echo $INGRESS_URL
 
@@ -72,3 +72,7 @@ sleep 32
 kubectl port-forward --namespace prometheus service/prometheus-server 19090:80 &
 
 go run ../../../cmd/tpodserver/ metrics get --config config.yaml --prometheus http://127.0.0.1:19090/
+
+# NOTE: you can run the following to interact with the guestbook
+# kubectl port-forward --namespace keda ingress-nginx-controller 1234:80 &
+# xdg-open http://guestbook.localhost:1234/

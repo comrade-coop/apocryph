@@ -66,6 +66,10 @@ var runCmd = &cobra.Command{
 		for {
 			select {
 			case e := <-sub.ResultChan():
+				if e.Type == watch.Error {
+					fmt.Printf("Error: %v", e)
+					return errors.New("Watch resulted in error!")
+				}
 				if service, ok := e.Object.(*corev1.Service); ok {
 					err := handleEvent(ipfsp2p, e.Type, service)
 					if err != nil {
