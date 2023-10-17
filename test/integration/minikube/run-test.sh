@@ -27,6 +27,7 @@ helmfile sync || { while ! kubectl get -n keda endpoints ingress-nginx-controlle
 
 O_IPFS_PATH=$IPFS_PATH
 export IPFS_PATH=$(mktemp ipfs.XXXX --tmpdir -d)
+{ while ! kubectl get -n ipfs endpoints ipfs-rpc -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; }
 kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 &
 echo /ip4/127.0.0.1/tcp/5004 > $IPFS_PATH/api
 ADDRESSES=$(minikube service  -n ipfs ipfs-swarm --url | head -n 1 | sed -E 's|http://(.+):(.+)|["/ip4/\1/tcp/\2", "/ip4/\1/udp/\2/quic", "/ip4/\1/udp/\2/quic-v1", "/ip4/\1/udp/\2/quic-v1/webtransport"]|')
@@ -37,9 +38,9 @@ ipfs config Addresses.AppendAnnounce --json "$ADDRESSES"
 CONFIG_AFTER=$(ipfs config Addresses.AppendAnnounce)
 
 # Restart ipfs daemon after config change
-[ "$CONFIG_BEFORE" = "$CONFIG_BEFORE" ] || kubectl delete -n ipfs $(kubectl get po -o name -n ipfs)
+[ "$CONFIG_BEFORE" = "$CONFIG_AFTER"  ] || kubectl delete -n ipfs $(kubectl get po -o name -n ipfs)
 
-{ while ! ipfs id -f '<id>' &>/dev/null; do sleep 0.5; done; } 2>/dev/null
+{ while ! kubectl get -n ipfs endpoints ipfs-rpc -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; }
 
 export IPFS_PATH=$O_IPFS_PATH
 
