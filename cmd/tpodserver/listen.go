@@ -64,7 +64,7 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.Provi
 	if err != nil {
 		return transformError(err)
 	}
-	paymentContract := tptypes.AccountIDToSS58(0, paymentContractAccountId)
+	paymentContract := tptypes.AccountIDToSS58(42, paymentContractAccountId)
 
 	//TODO: check paymentContract
 

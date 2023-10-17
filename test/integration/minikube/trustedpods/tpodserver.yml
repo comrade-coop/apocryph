@@ -57,7 +57,6 @@ spec:
       - name: tpodserver
         image: host.minikube.internal:5000/comradecoop/trusted-pods/server
         command: ["tpodserver", "listen", "--address", "0.0.0.0:8080", "--config", "config.yaml", "--ipfs", "/dns4/ipfs-rpc.ipfs.svc.cluster.local/tcp/5001"]
-        imagePullPolicy: Always # HACK
         ports:
         - containerPort: 8080
         volumeMounts:
@@ -65,17 +64,16 @@ spec:
           mountPath: /config.yaml
           subPath: config.yaml
           readOnly: true
-      # - name: tpodmonitor
-      #   image: host.minikube.internal:5000/comradecoop/trusted-pods/server
-      #   command: ["tpodserver", "monitor", "--config", "config.yaml", "--rpc", "wss://rococo-contracts-rpc.polkadot.io", "-z"]
-      #   imagePullPolicy: Always # HACK
-      #   ports:
-      #   - containerPort: 8080
-      #   volumeMounts:
-      #   - name: configs
-      #     mountPath: /config.yaml
-      #     subPath: config.yaml
-      #     readOnly: true
+      - name: tpodmonitor
+        image: host.minikube.internal:5000/comradecoop/trusted-pods/server
+        command: ["tpodserver", "monitor", "--config", "config.yaml", "--prometheus", "http://prometheus-server.prometheus.svc.cluster.local:80/", "-z"]
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: configs
+          mountPath: /config.yaml
+          subPath: config.yaml
+          readOnly: true
       volumes:
       - name: configs
         configMap:
