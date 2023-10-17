@@ -116,7 +116,7 @@ func ApplyPodRequest(ctx context.Context, client client.Client, podManifest *pb.
 		}
 		for _, volume := range container.Volumes {
 			containerSpec.VolumeMounts = append(containerSpec.VolumeMounts, corev1.VolumeMount{
-				Name:      fmt.Sprintf("vol-%d", volume.VolumeIdx),
+				Name:      volume.Name,
 				MountPath: volume.MountPath,
 			})
 		}
@@ -124,9 +124,9 @@ func ApplyPodRequest(ctx context.Context, client client.Client, podManifest *pb.
 		// TODO: Enforce specifying resources?
 		podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, containerSpec)
 	}
-	for idx, volume := range podManifest.Volumes {
+	for _, volume := range podManifest.Volumes {
 		volumeSpec := corev1.Volume{
-			Name: fmt.Sprintf("vol-%d", idx),
+			Name: volume.Name,
 		}
 		switch volume.Type {
 		case pb.Volume_VOLUME_EMPTY:

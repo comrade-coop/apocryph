@@ -24,7 +24,7 @@
       ],
       "volumes": [
         {
-          "volumeIdx": 0,
+          "name": "test",
           "mountPath": "/cid/_/nginxdemos/nginx-hello"
         }
       ]
@@ -33,6 +33,7 @@
   ],
   "volumes": [
     {
+      "name": "test",
       "type": 0
     }
   ],
