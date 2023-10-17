@@ -23,6 +23,7 @@ message Container {
   message Image {
     string cid = 1;
     int32 keyIdx = 2;
+    string url = 3;
   }
 
   message Port {

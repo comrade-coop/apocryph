@@ -47,7 +47,7 @@ func ApplyPodRequest(ctx context.Context, client client.Client, podManifest *pb.
 	for cIdx, container := range podManifest.Containers {
 		containerSpec := corev1.Container{
 			Name:       container.Name,
-			Image:      "nginxdemos/nginx-hello", // TODO
+			Image:      container.Image.Url,
 			Command:    container.Entrypoint,
 			Args:       container.Command,
 			WorkingDir: container.WorkingDir,
