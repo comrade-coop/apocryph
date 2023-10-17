@@ -49,4 +49,5 @@ func AddConfig(key string, value interface{}, defaultValue interface{}, usage st
 func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default: $XDG_CONFIG_HOME/.trustedpods/config.yaml)")
 	rootCmd.AddCommand(podCmd)
+	rootCmd.AddCommand(paymentCmd)
 }

@@ -12,3 +12,9 @@ forge install foundry-rs/forge-std --no-git
 forge install openzeppelin/openzeppelin-contracts --no-git
 forge test
 ```
+
+## Build 
+
+```
+forge build
+```

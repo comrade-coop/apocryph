@@ -7,3 +7,4 @@ target/
 contracts/payment/lib/
 contracts/payment/out/
 contracts/payment/cache/
+contracts/payment/build/
