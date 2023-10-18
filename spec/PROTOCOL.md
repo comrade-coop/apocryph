@@ -20,7 +20,7 @@ The basic structure of this protocol is the following:
 When the pod manifest is transferred between the Publisher Client and Provider Client, it uses a modified version of the [usual manifest format](MANIFEST.md), based on protocol buffers, in order to reduce the ambiguity of using YAML.
 
 Main changes:
-* There are no longer multiple ways to define volumes; all volumes must be in an array at the end, and are referred by index instead of by name.
+* There are no longer multiple ways to define volumes; all volumes must be in an array at the end.
 * There are no longer multiple ways to define ports; all ports use the `(port, targetPort, protocol, hostIP)` fields.
 * Likewise for the `command` and `args` fields.
 * The wire format includes fields for pricing copied from the [registry data](REGISTRY.md).

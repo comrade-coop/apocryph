@@ -6,16 +6,9 @@ Rationale for not shoving all of this in GitHub Issues: while Issues are a great
 
 ## Features yet to be implemented
 
-Required for an MVP:
-
-* Write a Payment contract which uses real tokens
-* Integrate deploying pods to metrics and payments
-
-Not required for an MVP:
-
 * Write and integrate a Registry contract
 * Run the Provider in Constellation instead of Minikube, to allow for attestation
-* Implement a way for the Publisher to monitor and edit the deployed pod
+* Implement a way for the Publisher to monitor, manage, and edit the deployed pod
 
 ## Technical debt accumulated
 
