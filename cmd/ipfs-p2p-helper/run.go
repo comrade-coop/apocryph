@@ -58,7 +58,7 @@ var runCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer sub.Stop()
+		defer func(){sub.Stop()}()
 
 		fmt.Print("Now watching the list of services.\n")
 
@@ -66,9 +66,13 @@ var runCmd = &cobra.Command{
 		for {
 			select {
 			case e := <-sub.ResultChan():
-				if e.Type == watch.Error {
-					fmt.Printf("Error: %v", e)
-					return errors.New("Watch resulted in error!")
+				if e == (watch.Event{}) || e.Type == watch.Error {
+					fmt.Printf("Watch error: %v", e)
+					sub.Stop()
+					sub, err = cl.Watch(cmd.Context(), services, client.HasLabels{tpk8s.LabelIpfsP2P})
+					if err != nil {
+						return err
+					}
 				}
 				if service, ok := e.Object.(*corev1.Service); ok {
 					err := handleEvent(ipfsp2p, e.Type, service)
