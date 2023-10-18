@@ -49,8 +49,8 @@ var applyManifestCmd = &cobra.Command{
 		}
 
 		response := &pb.ProvisionPodResponse{}
-		err = tpk8s.RunInNamespaceOrRevert(cmd.Context(), cl, tpk8s.NewTrustedPodsNamespace(paymentContract), func(cl client.Client) error {
-			return tpk8s.ApplyPodRequest(cmd.Context(), cl, pod, response)
+		err = tpk8s.RunInNamespaceOrRevert(cmd.Context(), cl, tpk8s.NewTrustedPodsNamespace(paymentContract), dryRun, func(cl client.Client) error {
+			return tpk8s.ApplyPodRequest(cmd.Context(), cl, nil, []*pb.Key{}, pod, response)
 		})
 		if err != nil {
 			return err

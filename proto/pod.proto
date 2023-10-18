@@ -67,8 +67,9 @@ message Volume {
     repeated Resource resourceRequests = 1; // "storage"
   }
   message SecretConfig {
-    string cid = 1; // use 0x00 0x01 0x55 0x00 (unsigned-varint length) (raw contents) to encode the secret in the message
+    bytes cid = 1; // use 0x00 0x01 0x55 0x00 (unsigned-varint length) (raw contents) to encode the secret in the message
     int32 keyIdx = 2;
+    string file = 101;
   }
 }
 

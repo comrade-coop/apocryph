@@ -4,8 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"os"
 
+	keyservice "github.com/comrade-coop/trusted-pods/pkg/crypto"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	iface "github.com/ipfs/boxo/coreiface"
+	"github.com/ipfs/boxo/coreiface/path"
+	"github.com/ipfs/boxo/files"
+	"github.com/ipfs/go-cid"
 	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -15,7 +22,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func ApplyPodRequest(ctx context.Context, client client.Client, podManifest *pb.Pod, response *pb.ProvisionPodResponse) error {
+type FetchSecret func(cid []byte, ) (map[string][]byte, error)
+
+func ApplyPodRequest(ctx context.Context, client client.Client, ipfs iface.CoreAPI, keys []*pb.Key, podManifest *pb.Pod, response *pb.ProvisionPodResponse) error {
 	labels := map[string]string{"tpod": "1"}
 
 	startupReplicas := int32(0)
@@ -117,10 +126,18 @@ func ApplyPodRequest(ctx context.Context, client client.Client, podManifest *pb.
 			})
 		}
 		for _, volume := range container.Volumes {
-			containerSpec.VolumeMounts = append(containerSpec.VolumeMounts, corev1.VolumeMount{
+			volumeMount := corev1.VolumeMount{
 				Name:      volume.Name,
 				MountPath: volume.MountPath,
-			})
+			}
+			for _, targetVolume := range podManifest.Volumes {
+				if targetVolume.Name == volume.Name {
+					if targetVolume.Type == pb.Volume_VOLUME_SECRET {
+						volumeMount.SubPath = "data" // NOTE: Change when secrets start supporting filesystems
+					}
+				}
+			}
+			containerSpec.VolumeMounts = append(containerSpec.VolumeMounts, volumeMount)
 		}
 		containerSpec.Resources.Requests = convertResourceList(container.ResourceRequests)
 		// TODO: Enforce specifying resources?
@@ -162,12 +179,17 @@ func ApplyPodRequest(ctx context.Context, client client.Client, podManifest *pb.
 				ClaimName: persistentVolumeClaim.ObjectMeta.Name,
 			}
 		case pb.Volume_VOLUME_SECRET:
+			secretBytes, err := fetchSecret(ctx, ipfs, volume.GetSecret(), keys)
+			if err != nil {
+				return err
+			}
+
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: "tpod-secret-",
 				},
 				Data: map[string][]byte{
-					"cid": []byte(volume.GetSecret().Cid), // TODO
+					"data": secretBytes,
 				},
 			}
 
@@ -222,4 +244,51 @@ func convertResourceList(resources []*pb.Resource) corev1.ResourceList {
 		result[corev1.ResourceName(res.Resource)] = quantity
 	}
 	return result
+}
+
+func fetchSecret(ctx context.Context, ipfs iface.CoreAPI, secret *pb.Volume_SecretConfig, keys []*pb.Key) ([]byte, error) {
+	var secretBytes []byte
+	if ipfs != nil {
+		secretCid, err := cid.Cast(secret.Cid)
+		if err != nil {
+			return nil, err
+		}
+		secretNode, err := ipfs.Unixfs().Get(ctx, path.IpfsPath(cid.MustParse(secretCid)))
+		if err != nil {
+			return nil, err
+		}
+		secretFile, ok := secretNode.(files.File) // TODO: Support encrypted folders
+		if !ok {
+			return nil, errors.New("Supplied secret CID not a file")
+		}
+		encryptedSecretBytes, err := io.ReadAll(secretFile)
+		if err != nil {
+			return nil, err
+		}
+		keyIdx := secret.KeyIdx
+		if keyIdx < 0 {
+			secretBytes = encryptedSecretBytes
+		} else {
+			if !ok {
+				return nil, errors.New("Invalid keyIdx")
+			}
+			key := keys[keyIdx]
+			secretBytes, err = keyservice.AESDecryptWith(encryptedSecretBytes[keyservice.NONCE_SIZE:], key.Data, encryptedSecretBytes[0:keyservice.NONCE_SIZE])
+			if err != nil {
+				return nil, err
+			}
+		}
+
+	} else {
+		/// FIXME: This code is a potential vulnerability, currently existing only becase of the `:/cmd/tpodserver manifest apply` command
+		secretFile, err := os.Open(secret.File)
+		if err != nil {
+			return nil, err
+		}
+		secretBytes, err = io.ReadAll(secretFile)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return secretBytes, nil
 }

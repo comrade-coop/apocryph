@@ -14,7 +14,7 @@ message ProvisionPodRequest {
 }
 
 message Key {
-  bytes keyPem = 1;
+  bytes data = 1;
 }
 
 message ProvisionPodResponse {

@@ -1,13 +1,18 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"path"
 
+	keyservice "github.com/comrade-coop/trusted-pods/pkg/crypto"
 	ipfs_utils "github.com/comrade-coop/trusted-pods/pkg/ipfs-utils"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	tptypes "github.com/comrade-coop/trusted-pods/pkg/substrate/types"
+	iface "github.com/ipfs/boxo/coreiface"
 	"github.com/ipfs/boxo/files"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/spf13/cobra"
@@ -27,6 +32,51 @@ var providerPeer string
 var ipfsApi string
 var paymentContract string
 
+func TransformSecrets(ctx context.Context, ipfs iface.CoreAPI, basepath string, pod *pb.Pod, keys *[]*pb.Key) error {
+	for _, volume := range pod.Volumes {
+		if volume.Type == pb.Volume_VOLUME_SECRET {
+			secretConfig := volume.GetSecret()
+			if secretConfig.File != "" {
+				secretPath := secretConfig.File
+				if !path.IsAbs(secretPath) {
+					secretPath = path.Join(basepath, secretPath)
+				}
+				secretFile, err := os.Open(secretPath)
+				if err != nil {
+					return err
+				}
+				secretBytes, err := io.ReadAll(secretFile)
+				if err != nil {
+					return err
+				}
+				keyData, err := keyservice.CreateRandomKey()
+				if err != nil {
+					return err
+				}
+
+				encryptedData, nonce, err := keyservice.AESEncryptWith(secretBytes, keyData)
+				if len(nonce) != keyservice.NONCE_SIZE {
+					return errors.New("Wrong nonce size")
+				}
+				encryptedSecretBytes := append(nonce, encryptedData...)
+
+				encryptedSecretPath, err := ipfs.Unixfs().Add(ctx, files.NewBytesFile(encryptedSecretBytes))
+				if err != nil {
+					return err
+				}
+
+				secretConfig.Cid = encryptedSecretPath.Cid().Bytes()
+				secretConfig.KeyIdx = int32(len(*keys))
+				secretConfig.File = ""
+				*keys = append(*keys, &pb.Key{
+					Data: keyData,
+				})
+			}
+		}
+	}
+	return nil
+}
+
 var deployPodCmd = &cobra.Command{
 	Use:   "deploy",
 	Short: "Deploy a pod from a local manifest",
@@ -37,7 +87,9 @@ var deployPodCmd = &cobra.Command{
 			return err
 		}
 
-		file, err := os.Open(args[0])
+		podPath := args[0]
+
+		file, err := os.Open(podPath)
 		if err != nil {
 			return err
 		}
@@ -49,6 +101,13 @@ var deployPodCmd = &cobra.Command{
 
 		pod := &pb.Pod{}
 		err = pb.Unmarshal(manifestFormat, podManifestCotents, pod)
+		if err != nil {
+			return err
+		}
+
+		keys := []*pb.Key{}
+
+		err = TransformSecrets(cmd.Context(), ipfs, path.Dir(podPath), pod, &keys)
 		if err != nil {
 			return err
 		}
@@ -70,7 +129,7 @@ var deployPodCmd = &cobra.Command{
 
 		request := &pb.ProvisionPodRequest{
 			PodManifestCid:         podManifestPath.Cid().Bytes(),
-			Keys:                   []*pb.Key{},
+			Keys:                   keys,
 			PaymentContractAddress: paymentContractAddress.ToBytes(),
 		}
 

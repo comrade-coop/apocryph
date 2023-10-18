@@ -85,11 +85,14 @@ func GetClient(kubeConfig string, dryRun bool) (client.Client, error) {
 	return cl, nil
 }
 
-func RunInNamespaceOrRevert(ctx context.Context, cl client.Client, namespace *corev1.Namespace, block func(client.Client) error) error {
+func RunInNamespaceOrRevert(ctx context.Context, cl client.Client, namespace *corev1.Namespace, dryRun bool, block func(client.Client) error) error {
 	if err := cl.Create(ctx, namespace); err != nil {
 		return err
 	}
 
+	if dryRun {
+		return block(client.NewDryRunClient(client.NewNamespacedClient(cl, "default")))
+	}
 	clns := client.NewNamespacedClient(cl, namespace.ObjectMeta.Name)
 
 	if err := block(clns); err != nil {

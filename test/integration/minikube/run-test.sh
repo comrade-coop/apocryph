@@ -44,8 +44,6 @@ CONFIG_AFTER=$(ipfs config Addresses.AppendAnnounce)
 
 export IPFS_PATH=$O_IPFS_PATH
 
-ipfs id -f '<id>'
-
 ipfs id &>/dev/null || ipfs init
 
 ipfs config --json Experimental.Libp2pStreamMounting true
@@ -61,11 +59,12 @@ go run ../../../cmd/trustedpods/ pod deploy manifest-guestbook.json --format jso
 
 INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true | head -n 1); echo $INGRESS_URL
 
-MANIFEST_HOST=$(jq -r '.containers[].ports[].hostHttpHost' manifest.json); echo $MANIFEST_HOST
+MANIFEST_HOST=$(jq -r '.containers[]?.ports[]?.hostHttpHost' manifest-guestbook.json); echo $MANIFEST_HOST
 
 set -x
 
 curl --connect-timeout 40 -H "Host: $MANIFEST_HOST" $INGRESS_URL
+curl -H "Host: $MANIFEST_HOST" $INGRESS_URL/test.html
 
 sleep 32
 

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 
@@ -38,6 +39,7 @@ func transformError(err error) (*pb.ProvisionPodResponse, error) {
 }
 
 func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.ProvisionPodRequest) (*pb.ProvisionPodResponse, error) {
+	fmt.Printf("Received request for pod deployment, %v", request)
 	cid, err := cid.Cast(request.PodManifestCid)
 	if err != nil {
 		return transformError(err)
@@ -69,12 +71,15 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.Provi
 	//TODO: check paymentContract
 
 	response := &pb.ProvisionPodResponse{}
-	err = tpk8s.RunInNamespaceOrRevert(ctx, s.k8cl, tpk8s.NewTrustedPodsNamespace(paymentContract), func(cl client.Client) error {
-		return tpk8s.ApplyPodRequest(ctx, cl, pod, response)
+	namespace := tpk8s.NewTrustedPodsNamespace(paymentContract)
+	err = tpk8s.RunInNamespaceOrRevert(ctx, s.k8cl, namespace, dryRun, func(cl client.Client) error {
+		return tpk8s.ApplyPodRequest(ctx, cl, s.ipfs, request.Keys, pod, response)
 	})
 	if err != nil {
 		return transformError(err)
 	}
+
+	fmt.Printf("Request processed successfully, %v %v", response, namespace)
 
 	return response, nil
 }

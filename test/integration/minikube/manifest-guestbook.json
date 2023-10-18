@@ -25,7 +25,14 @@
           "resource": "memory",
           "amount": 100000000
         }
+      ],
+      "volumes": [
+        {
+          "name": "test-html",
+          "mountPath": "/var/www/html/test.html"
+        }
       ]
+
     },
     {
       "name": "redis",
@@ -61,6 +68,13 @@
             "amount": 1000000000
           }
         ]
+      }
+    },
+    {
+      "name": "test-html",
+      "type": 2,
+      "secret": {
+        "file": "test.html"
       }
     }
   ],
