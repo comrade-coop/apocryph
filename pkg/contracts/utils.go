@@ -67,7 +67,7 @@ func DeriveAccountConfigs(privatekey string, psw string, exportpsw string, clien
 	// get a transactor
 	providerAuth, err := CreateTransactor(string(keyjson), psw, client)
 	if err != nil {
-		log.Println("Failed to create authorized transactor: %v", err)
+		log.Printf("Failed to create authorized transactor: %v\n", err)
 		return nil, nil, err
 	}
 	return &acc, providerAuth, nil

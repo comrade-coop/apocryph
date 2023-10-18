@@ -10,9 +10,9 @@ set -v
 
 cd ../../..
 
-docker build -t comradecoop/trusted-pods/server .
+docker build -t comradecoop/trusted-pods/server . --target server
 
-docker build -t comradecoop/trusted-pods/p2p-helper . -f ./Dockerfile.p2p-helper
+docker build -t comradecoop/trusted-pods/p2p-helper . --target p2p-helper
 
 docker run -d -p 5000:5000 --restart=always --name registry registry:2 || echo "Docker registry already running"
 

@@ -8,8 +8,8 @@ payment channel smart contract setup that supports all ERC20 tokens
 ## Test
 An ERC20 token called MockToken is setup for testing
 ```
-forge install foundry-rs/forge-std --no-git
-forge install openzeppelin/openzeppelin-contracts --no-git
+forge install foundry-rs/forge-std --no-commit
+forge install openzeppelin/openzeppelin-contracts --no-commit
 forge test
 ```
 

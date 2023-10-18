@@ -4,17 +4,18 @@ Trusted Pods is a decentralized compute marketplace where developers can run con
 
 ## Building
 
-To build the Go projects in `./cmd/`, use the following command:
+To build the Go projects in `./cmd/`, use the following commands:
 
 ```bash
-go generate ./pkg/proto && go build -o bin ./cmd/*/
+forge build --root contracts/payment
+go generate
+
+go build -o bin ./cmd/*/
 ```
 
-Alternatively, you can run the commands directly with `go run`:
+Alternatively, you can run the commands directly with `go run` after running the various generate commands:
 
 ```bash
-go generate ./pkg/proto
-
 go run ./cmd/trustedpods/ # ..
 ```
 

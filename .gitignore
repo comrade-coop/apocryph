@@ -1,10 +1,5 @@
 bin/
-*.pb.go
-target/
-**/*.rs.bk
+*.bk
 
-
-contracts/payment/lib/
-contracts/payment/out/
-contracts/payment/cache/
-contracts/payment/build/
+contracts/*/out/
+contracts/*/cache/
