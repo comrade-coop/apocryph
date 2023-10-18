@@ -1,5 +1,5 @@
 bin/
 *.bk
 
-contracts/*/out/
-contracts/*/cache/
+contracts/out/
+contracts/cache/

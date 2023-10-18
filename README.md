@@ -4,12 +4,9 @@ Trusted Pods is a decentralized compute marketplace where developers can run con
 
 ## Building
 
-To build the Go projects in `./cmd/`, use the following commands:
+To build the Go projects in `./cmd/`, use the following command:
 
 ```bash
-forge build --root contracts/payment
-go generate
-
 go build -o bin ./cmd/*/
 ```
 
@@ -33,6 +30,15 @@ When you are done playing around with the test, simply run the following command
 
 ```bash
 test/integration/minikube/run-test.sh teardown
+```
+
+## Development
+
+After editing files in `proto/` or `contracts/`, make sure to run both of the following commands to sync the generated files:
+
+```bash
+forge build --root contracts
+go generate
 ```
 
 ## Architecture
