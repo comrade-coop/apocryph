@@ -2,6 +2,8 @@ package contracts
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
 	"strings"
 
@@ -11,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"golang.org/x/exp/slices"
 )
 
 func ConnectToLocalNode() (*ethclient.Client, error) {
@@ -72,6 +75,13 @@ func DeriveAccountConfigs(privatekey string, psw string, exportpsw string, clien
 	}
 	return &acc, providerAuth, nil
 
+}
+
+func VerifyContractAddress(address string, allowed []string) error {
+	if !slices.Contains(allowed, address) {
+		return errors.New(fmt.Sprintf("Contract address (%s) not in the list of allowed contract addresses %v", address, allowed))
+	}
+	return nil
 }
 
 //	type wallet struct {

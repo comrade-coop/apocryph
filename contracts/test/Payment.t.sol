@@ -39,11 +39,6 @@ contract PaymentTest is Test {
         assertEq(500, supply, "failed to lock funds");
         assertEq(500, supplySC, "smart contract did not receive the funds");
 
-        mktn.approve(address(channel), 500);
-        vm.expectRevert("Channel already created");
-        channel.createChannel(provider, address(mktn), 500, 3, 5, 5);
-
-        mktn.approve(address(channel), 0);
         vm.expectRevert("allowance does not match specified amount");
         channel.createChannel(provider, address(mktn), 500, 3, 5, 5);
     }
@@ -53,28 +48,29 @@ contract PaymentTest is Test {
 
         // aprove the contract to withdraw 500 of client mktn token
         mktn.approve(address(channel), 500);
-
+        uint256 id = 1;
         channel.createChannel(provider, address(mktn), 500, 2, 5, 5);
         // unlock the funds before deadline expires
         vm.expectRevert("Deadline not reached yet");
-        channel.unclockFunds(address(mktn), provider);
+        channel.unclockFunds(address(mktn), provider, id);
         // advance the block timestamp
         vm.warp(2);
         // withdraw the funds
-        channel.unclockFunds(address(mktn), provider);
+        channel.unclockFunds(address(mktn), provider, id);
         uint256 supply = mktn.balanceOf(client);
         assertEq(1000, supply, "failed to withdraw the funds");
         // withdraw empty funds
         vm.expectRevert("Empty Channel");
-        channel.unclockFunds(address(mktn), provider);
+        channel.unclockFunds(address(mktn), provider, id);
     }
 
     function test_LockFunds() public {
-		vm.startPrank(client);
+        vm.startPrank(client);
+        uint256 id = 1;
         mktn.approve(address(channel), 500);
         channel.createChannel(provider, address(mktn), 500, 2, 5, 5);
         mktn.approve(address(channel), 500);
-        channel.lockFunds(provider, address(mktn), 500);
+        channel.lockFunds(provider, id, address(mktn), 500);
         uint256 balance = mktn.balanceOf(address(channel));
         assertEq(balance, 1000);
     }
@@ -82,33 +78,44 @@ contract PaymentTest is Test {
     function test_withdraw() public {
         vm.startPrank(client);
 
+        uint256 id = 1;
         mktn.approve(address(channel), 500);
         channel.createChannel(provider, address(mktn), 500, 2, 5, 5);
         vm.stopPrank();
 
         vm.startPrank(provider);
-        channel.uploadMetrics(client, address(mktn),5);
-        channel.withdraw(address(mktn), client);
+        channel.uploadMetrics(client, id, address(mktn), 5);
+        channel.withdraw(client, id, address(mktn));
         uint256 balance = mktn.balanceOf(provider);
         assertEq(balance, 25);
+        vm.expectRevert("Zero Ownership");
+        channel.withdraw(client, id, address(mktn));
     }
 
     function test_UpdatePrice() public {
         vm.startPrank(client);
+
+        uint256 id = 1;
         mktn.approve(address(channel), 500);
         channel.createChannel(provider, address(mktn), 500, 2, 5, 5);
 
         vm.startPrank(provider);
-        channel.updatePrice(client, address(mktn), 10);
-
-        vm.startPrank(client);
-        channel.acceptNewPrice(provider, address(mktn));
-
-        vm.startPrank(provider);
-        channel.uploadMetrics(client, address(mktn), 5);
-        channel.withdraw(address(mktn), client);
+        channel.uploadMetrics(client, id, address(mktn), 5);
+        channel.withdraw(client, id, address(mktn));
 
         uint256 balance = mktn.balanceOf(provider);
-        assertEq(balance, 50);
+        assertEq(balance, 25);
+
+        channel.updatePrice(client, id, address(mktn), 10);
+
+        vm.startPrank(client);
+        channel.acceptNewPrice(provider, id, address(mktn));
+
+        vm.startPrank(provider);
+        channel.uploadMetrics(client, id, address(mktn), 5);
+        channel.withdraw(client, id, address(mktn));
+
+        balance = mktn.balanceOf(provider);
+        assertEq(balance, 75);
     }
 }

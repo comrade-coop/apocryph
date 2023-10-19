@@ -22,13 +22,13 @@ var uploadCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+
 		err = pod.AssignManifest(manifest)
 		if err != nil {
 			return err
 		}
 
 		provider, err := podmanagement.CreateIpfsUploader()
-
 		if err != nil {
 			return err
 		}
@@ -37,6 +37,7 @@ var uploadCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+
 		log.Println("pod package cid:", cid)
 		return nil
 	},

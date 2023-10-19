@@ -9,7 +9,7 @@ contract MockToken is ERC20 {
     }
 
     function ClaimTokens(uint256 amount) public {
-		require(balanceOf(address(this)) > amount, "Contract does not have Enough tokens");
-        _transfer(address(this),msg.sender, amount);
+        require(balanceOf(address(this)) > amount, "Contract does not have Enough tokens");
+        _transfer(address(this), msg.sender, amount);
     }
 }

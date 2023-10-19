@@ -10,7 +10,9 @@ service ProvisionPodService {
 message ProvisionPodRequest {
   bytes podManifestCid = 1;
   repeated Key keys = 2;
-  bytes paymentContractAddress = 3;
+  string ClientAddress = 3;
+  string TokenAddress = 4;
+  bytes podID = 5;
 }
 
 message Key {

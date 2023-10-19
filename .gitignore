@@ -3,3 +3,4 @@ bin/
 
 contracts/out/
 contracts/cache/
+contracts/build/
