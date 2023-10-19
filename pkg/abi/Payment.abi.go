@@ -31,8 +31,8 @@ var (
 
 // PaymentMetaData contains all meta data concerning the Payment contract.
 var PaymentMetaData = &bind.MetaData{
-	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"client\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"provider\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"price\",\"type\":\"uint256\"}],\"name\":\"NewPrice\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"client\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"provider\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"price\",\"type\":\"uint256\"}],\"name\":\"NewPriceUpdate\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"provider\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"acceptNewPrice\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"channels\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"total\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"owedAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"price\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"suggestedPrice\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"minAdvanceDuration\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"provider\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"minAdvanceDuration\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"price\",\"type\":\"uint256\"}],\"name\":\"createChannel\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"provider\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"lockFunds\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"provider\",\"type\":\"address\"}],\"name\":\"unclockFunds\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"provider\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"newDeadline\",\"type\":\"uint256\"}],\"name\":\"updateDeadline\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"client\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"price\",\"type\":\"uint256\"}],\"name\":\"updatePrice\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"client\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"units\",\"type\":\"uint256\"}],\"name\":\"uploadMetrics\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"client\",\"type\":\"address\"}],\"name\":\"withdraw\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
-	Bin: "0x608060405234801561001057600080fd5b506110d5806100206000396000f3fe608060405234801561001057600080fd5b50600436106100935760003560e01c8063995cee2611610066578063995cee26146100e6578063a94d2415146100f9578063c7f149261461010c578063f428e28a1461011f578063f940e385146101a357600080fd5b8063165c326f1461009857806331f60646146100ad57806370e6c993146100c05780638fbb2a90146100d3575b600080fd5b6100ab6100a6366004610ed9565b6101b6565b005b6100ab6100bb366004610ed9565b610302565b6100ab6100ce366004610f15565b610484565b6100ab6100e1366004610ed9565b6107fe565b6100ab6100f4366004610f6a565b6108a2565b6100ab610107366004610ed9565b610ad1565b6100ab61011a366004610f6a565b610ccb565b61017261012d366004610f9d565b60006020818152938152604080822085529281528281209093528252902080546001820154600283015460038401546004850154600590950154939492939192909186565b604080519687526020870195909552938501929092526060840152608083015260a082015260c00160405180910390f35b6100ab6101b1366004610f6a565b610d95565b6001600160a01b0380841660009081526020818152604080832033845282528083209386168352928152828220835160c081018552815481526001820154928101929092526002810154938201939093526003830154606082018190526004840154608083015260059093015460a0820152916102339084610ff6565b82516020840151919250906102489083611013565b11156102b75760405162461bcd60e51b815260206004820152603360248201527f4f776564416d6f756e7420697320626967676572207468616e206368616e6e656044820152726c277320617661696c61626c652066756e647360681b60648201526084015b60405180910390fd5b60208201516102c69082611013565b6001600160a01b039586166000908152602081815260408083203384528252808320979098168252959095529490932060010193909355505050565b336000908152602081815260408083206001600160a01b0387811685529083528184209086168452825291829020825160c08101845281548152600182015492810192909252600281015492820192909252600382015460608201526004820154608082015260059091015460a0820181905282116103bc5760405162461bcd60e51b815260206004820152601660248201527513995dc8111958591b1a5b99481d1bdbc81cda1bdc9d60521b60448201526064016102ae565b806040015182116104225760405162461bcd60e51b815260206004820152602a60248201527f4e657720446561646c696e65206973206c657373207468616e2063757272656e6044820152697420646561646c696e6560b01b60648201526084016102ae565b6040808201928352336000908152602081815282822081528282206001600160a01b03969096168252948552208151815592810151600184015590516002830155606081015160038301556080810151600483015560a0015160059091015550565b83600081116104a55760405162461bcd60e51b81526004016102ae90611026565b604051636eb1769f60e11b81523360048201819052306024830152879187906000906001600160a01b0385169063dd62ed3e90604401602060405180830381865afa1580156104f8573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061051c919061105d565b905081811461057f5760405162461bcd60e51b815260206004820152602960248201527f616c6c6f77616e636520646f6573206e6f74206d617463682073706563696669604482015268195908185b5bdd5b9d60ba1b60648201526084016102ae565b4288116105c15760405162461bcd60e51b815260206004820152601060248201526f111958591b1a5b9948115e1c1a5c995960821b60448201526064016102ae565b336000908152602081815260408083206001600160a01b038f81168552908352818420908e168452825291829020825160c081018452815480825260018301549382019390935260028201549381019390935260038101546060840152600481015460808401526005015460a08301521561067e5760405162461bcd60e51b815260206004820152601760248201527f4368616e6e656c20616c7265616479206372656174656400000000000000000060448201526064016102ae565b6040518060c001604052808b8152602001600081526020018a81526020018881526020016000815260200189815250905080600080336001600160a01b03166001600160a01b0316815260200190815260200160002060008e6001600160a01b03166001600160a01b0316815260200190815260200160002060008d6001600160a01b03166001600160a01b03168152602001908152602001600020600082015181600001556020820151816001015560408201518160020155606082015181600301556080820151816004015560a082015181600501559050508a6001600160a01b03166323b872dd333084600001516040518463ffffffff1660e01b81526004016107ac939291906001600160a01b039384168152919092166020820152604081019190915260600190565b6020604051808303816000875af11580156107cb573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906107ef9190611076565b50505050505050505050505050565b806000811161081f5760405162461bcd60e51b81526004016102ae90611026565b6001600160a01b038481166000818152602081815260408083203380855290835281842095891680855295835292819020600401879055805193845290830191909152810191909152606081018390527f321c73989a5585f52e30bb8aabd608154125bf4413611a3b4d8b97105d9c6dc09060800160405180910390a150505050565b336000908152602081815260408083206001600160a01b0385811685529083528184209086168452825291829020825160c08101845281548152600182015492810192909252600281015492820183905260038101546060830152600481015460808301526005015460a0820152904210156109605760405162461bcd60e51b815260206004820152601860248201527f446561646c696e65206e6f74207265616368656420796574000000000000000060448201526064016102ae565b6020810151156109e657602081015160405163a9059cbb60e01b81526001600160a01b03848116600483015260248201929092529084169063a9059cbb906044016020604051808303816000875af11580156109c0573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906109e49190611076565b505b8051610a245760405162461bcd60e51b815260206004820152600d60248201526c115b5c1d1e4810da185b9b995b609a1b60448201526064016102ae565b805160405163a9059cbb60e01b815233600482015260248101919091526001600160a01b0384169063a9059cbb906044016020604051808303816000875af1158015610a74573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610a989190611076565b5050336000908152602081815260408083206001600160a01b039485168452825280832094909316825292909252812081815560010155565b8060008111610af25760405162461bcd60e51b81526004016102ae90611026565b336000818152602081815260408083206001600160a01b03808a1685529083528184209088168452825291829020825160c08101845281548152600182015492810192909252600281015492820183905260038101546060830152600481015460808301526005015460a082015286918691904210610ba55760405162461bcd60e51b815260206004820152600f60248201526e10da185b9b995b08115e1c1a5c9959608a1b60448201526064016102ae565b336000908152602081815260408083206001600160a01b038c81168552908352818420908b168452825291829020825160c081018452815480825260018301549382019390935260028201549381019390935260038101546060840152600481015460808401526005015460a0830152610c20908890611013565b336000818152602081815260408083206001600160a01b038f81168552908352818420908e1680855292529182902093909355516323b872dd60e01b81526004810191909152306024820152604481018990526323b872dd906064016020604051808303816000875af1158015610c9b573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610cbf9190611076565b50505050505050505050565b336000818152602081815260408083206001600160a01b038781168552908352818420908616808552818452828520835160c081018552815481526001820154818701526002820154818601526003820180546060808401918252600485018054608080870182905260059097015460a0870152909355858a5295885297905595518451888152958601979097529284015282019390935290917f8c86180e4992276e0f056bb49eed13ea7b192a0d9e795a7f219b5b281c22d78e910160405180910390a1505050565b6001600160a01b038082166000908152602081815260408083203384528252808320938616835292815290829020825160c08101845281548152600182015492810183905260028201549381019390935260038101546060840152600481015460808401526005015460a0830152610e405760405162461bcd60e51b815260206004820152600e60248201526d05a65726f204f776e6572736869760941b60448201526064016102ae565b602081015160405163a9059cbb60e01b815233600482015260248101919091526001600160a01b0384169063a9059cbb906044016020604051808303816000875af1158015610e93573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610eb79190611076565b50505050565b80356001600160a01b0381168114610ed457600080fd5b919050565b600080600060608486031215610eee57600080fd5b610ef784610ebd565b9250610f0560208501610ebd565b9150604084013590509250925092565b60008060008060008060c08789031215610f2e57600080fd5b610f3787610ebd565b9550610f4560208801610ebd565b95989597505050506040840135936060810135936080820135935060a0909101359150565b60008060408385031215610f7d57600080fd5b610f8683610ebd565b9150610f9460208401610ebd565b90509250929050565b600080600060608486031215610fb257600080fd5b610fbb84610ebd565b9250610fc960208501610ebd565b9150610fd760408501610ebd565b90509250925092565b634e487b7160e01b600052601160045260246000fd5b808202811582820484141761100d5761100d610fe0565b92915050565b8082018082111561100d5761100d610fe0565b6020808252601c908201527f63616e277420616363706574207a65726f20617320612076616c756500000000604082015260600190565b60006020828403121561106f57600080fd5b5051919050565b60006020828403121561108857600080fd5b8151801515811461109857600080fd5b939250505056fea26469706673582212207c87ef023f7379d05bbe413082f17c2232d455ff2761bf81e8773c591157cf3964736f6c63430008150033",
+	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"AddressEmptyCode\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"AddressInsufficientBalance\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"AlreadyExists\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"AmountRequired\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ChannelLocked\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"DoesNotExist\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedInnerCall\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InsufficientFunds\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"SafeERC20FailedOperation\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"publisher\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"provider\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"ChannelClosed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"publisher\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"provider\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"depositAmount\",\"type\":\"uint256\"}],\"name\":\"Deposited\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"publisher\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"provider\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"unlockedAt\",\"type\":\"uint256\"}],\"name\":\"UnlockTimerStarted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"publisher\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"provider\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"unlockedAmount\",\"type\":\"uint256\"}],\"name\":\"Unlocked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"publisher\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"provider\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"withdrawnAmount\",\"type\":\"uint256\"}],\"name\":\"Withdrawn\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"publisher\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"provider\",\"type\":\"address\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"available\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"contractIERC20\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"channels\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"investedByPublisher\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"withdrawnByProvider\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"unlockTime\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"unlockedAt\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"provider\",\"type\":\"address\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"closeChannel\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"provider\",\"type\":\"address\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"unlockTime\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"initialAmount\",\"type\":\"uint256\"}],\"name\":\"createChannel\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"provider\",\"type\":\"address\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"deposit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"provider\",\"type\":\"address\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"unlock\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"publisher\",\"type\":\"address\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"transferAddress\",\"type\":\"address\"}],\"name\":\"withdraw\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"provider\",\"type\":\"address\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"withdrawUnlocked\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"publisher\",\"type\":\"address\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"totalWithdrawlAmount\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"transferAddress\",\"type\":\"address\"}],\"name\":\"withdrawUpTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	Bin: "0x608060405234801561001057600080fd5b50610d00806100206000396000f3fe608060405234801561001057600080fd5b50600436106100935760003560e01c80638340f549116100665780638340f549146100f9578063bed630411461010c578063e0f33dd41461011f578063e674a0bd14610132578063f428e28a1461014557600080fd5b80630e917f76146100985780631086b75d146100ad57806343ea3f36146100c057806367d07056146100d3575b600080fd5b6100ab6100a6366004610ac9565b6101aa565b005b6100ab6100bb366004610b1c565b6101f8565b6100ab6100ce366004610b62565b6102e5565b6100e66100e1366004610b9b565b6103e2565b6040519081526020015b60405180910390f35b6100ab610107366004610be6565b61042d565b6100ab61011a366004610b62565b6104ec565b6100ab61012d366004610ac9565b610666565b6100ab610140366004610b62565b61078e565b61018a610153366004610b9b565b6000602081815293815260408082208552928152828120909352825290208054600182015460028301546003909301549192909184565b6040805194855260208501939093529183015260608201526080016100f0565b6001600160a01b038085166000908152602081815260408083203384528252808320938716835292905220600101546101f290859085906101ec908690610c3d565b84610666565b50505050565b806000036102195760405163d43e607560e01b815260040160405180910390fd5b336000818152602081815260408083206001600160a01b038981168552908352818420908816845290915290208054156102665760405163119b4fd360e11b815260040160405180910390fd5b60018101541561027857610278610c50565b828155600281018490556040518381526001600160a01b0386811691888216918516907f4174a9435a04d04d274c76779cad136a41fde6937c56241c09ab9d3c7064a1a99060200160405180910390a46102dd6001600160a01b038616333086610873565b505050505050565b336000818152602081815260408083206001600160a01b03878116855290835281842090861684529091529020600381015415806103265750806003015442105b1561034457604051635652d88760e01b815260040160405180910390fd5b6001810154815460009161035791610c66565b90508060000361037a5760405163d43e607560e01b815260040160405180910390fd5b600182015482556040518181526001600160a01b0385811691878216918616907f6c5b0a34e5e78b423db3d15d7f4f72f3beb727025c0e535bf2bac21d0227c4819060200160405180910390a46103db6001600160a01b03851684836108da565b5050505050565b6001600160a01b03808416600090815260208181526040808320868516845282528083209385168352929052908120600181015481546104229190610c66565b9150505b9392505050565b8060000361044e5760405163d43e607560e01b815260040160405180910390fd5b336000818152602081815260408083206001600160a01b038881168552908352818420908716845290915290208054610488908490610c3d565b8155600060038201556040518381526001600160a01b0385811691878216918516907f4174a9435a04d04d274c76779cad136a41fde6937c56241c09ab9d3c7064a1a99060200160405180910390a46103db6001600160a01b038516333086610873565b336000818152602081815260408083206001600160a01b038781168552908352818420908616845290915290206003810154158061052d5750806003015442105b1561054b57604051635652d88760e01b815260040160405180910390fd5b6001810154815460009161055e91610c66565b6001600160a01b038085166000908152602081815260408083208a85168452825280832093891683529290529081208181556001810182905560028101829055600301559050801561060257836001600160a01b0316856001600160a01b0316846001600160a01b03167f6c5b0a34e5e78b423db3d15d7f4f72f3beb727025c0e535bf2bac21d0227c481846040516105f991815260200190565b60405180910390a45b836001600160a01b0316856001600160a01b0316846001600160a01b03167f4509c78f8c652633a480f64f4f56b8187ec70d118e774af3139ec088e6f3ea9160405160405180910390a480156103db576103db6001600160a01b03851684836108da565b6001600160a01b0381166106775750335b6001600160a01b0380851660009081526020818152604080832033808552908352818420948816845293909152902080548411156106c85760405163356680b760e01b815260040160405180910390fd5b806001015484116106ec5760405163d43e607560e01b815260040160405180910390fd5b60008160010154856106fe9190610c66565b9050848260010181905550856001600160a01b0316836001600160a01b0316886001600160a01b03167fa4195c37c2947bbe89165f03e320b6903116f0b10d8cfdb522330f7ce6f9fa248460405161075891815260200190565b60405180910390a4600382015415610771574260038301555b6107856001600160a01b03871685836108da565b50505050505050565b336000818152602081815260408083206001600160a01b0387811685529083528184209086168452909152812080549091036107dd5760405163b0ce759160e01b815260040160405180910390fd5b60008160020154426107ef9190610c3d565b90508160030154600014806108075750808260030154105b156103db57808260030181905550836001600160a01b0316856001600160a01b0316846001600160a01b03167f9c21c91a443e1aeab0e24df34b134bf134e2c0c9fecd918faa11306a0adfa62e8460405161086491815260200190565b60405180910390a45050505050565b6040516001600160a01b0384811660248301528381166044830152606482018390526101f29186918216906323b872dd906084015b604051602081830303815290604052915060e01b6020820180516001600160e01b038381831617835250505050610910565b6040516001600160a01b0383811660248301526044820183905261090b91859182169063a9059cbb906064016108a8565b505050565b60006109256001600160a01b03841683610978565b9050805160001415801561094a5750808060200190518101906109489190610c79565b155b1561090b57604051635274afe760e01b81526001600160a01b03841660048201526024015b60405180910390fd5b60606109868383600061098f565b90505b92915050565b6060814710156109b45760405163cd78605960e01b815230600482015260240161096f565b600080856001600160a01b031684866040516109d09190610c9b565b60006040518083038185875af1925050503d8060008114610a0d576040519150601f19603f3d011682016040523d82523d6000602084013e610a12565b606091505b5091509150610a22868383610a2c565b9695505050505050565b606082610a4157610a3c82610a88565b610426565b8151158015610a5857506001600160a01b0384163b155b15610a8157604051639996b31560e01b81526001600160a01b038516600482015260240161096f565b5080610426565b805115610a985780518082602001fd5b604051630a12f52160e11b815260040160405180910390fd5b50565b6001600160a01b0381168114610ab157600080fd5b60008060008060808587031215610adf57600080fd5b8435610aea81610ab4565b93506020850135610afa81610ab4565b9250604085013591506060850135610b1181610ab4565b939692955090935050565b60008060008060808587031215610b3257600080fd5b8435610b3d81610ab4565b93506020850135610b4d81610ab4565b93969395505050506040820135916060013590565b60008060408385031215610b7557600080fd5b8235610b8081610ab4565b91506020830135610b9081610ab4565b809150509250929050565b600080600060608486031215610bb057600080fd5b8335610bbb81610ab4565b92506020840135610bcb81610ab4565b91506040840135610bdb81610ab4565b809150509250925092565b600080600060608486031215610bfb57600080fd5b8335610c0681610ab4565b92506020840135610c1681610ab4565b929592945050506040919091013590565b634e487b7160e01b600052601160045260246000fd5b8082018082111561098957610989610c27565b634e487b7160e01b600052600160045260246000fd5b8181038181111561098957610989610c27565b600060208284031215610c8b57600080fd5b8151801515811461042657600080fd5b6000825160005b81811015610cbc5760208186018101518583015201610ca2565b50600092019182525091905056fea26469706673582212202619efd1572139080fe32564a4167eb3fa89a58f251618394e1b109b2a2754b264736f6c63430008150033",
 }
 
 // PaymentABI is the input ABI used to generate the binding from.
@@ -202,38 +202,63 @@ func (_Payment *PaymentTransactorRaw) Transact(opts *bind.TransactOpts, method s
 	return _Payment.Contract.contract.Transact(opts, method, params...)
 }
 
+// Available is a free data retrieval call binding the contract method 0x67d07056.
+//
+// Solidity: function available(address publisher, address provider, address token) view returns(uint256)
+func (_Payment *PaymentCaller) Available(opts *bind.CallOpts, publisher common.Address, provider common.Address, token common.Address) (*big.Int, error) {
+	var out []interface{}
+	err := _Payment.contract.Call(opts, &out, "available", publisher, provider, token)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// Available is a free data retrieval call binding the contract method 0x67d07056.
+//
+// Solidity: function available(address publisher, address provider, address token) view returns(uint256)
+func (_Payment *PaymentSession) Available(publisher common.Address, provider common.Address, token common.Address) (*big.Int, error) {
+	return _Payment.Contract.Available(&_Payment.CallOpts, publisher, provider, token)
+}
+
+// Available is a free data retrieval call binding the contract method 0x67d07056.
+//
+// Solidity: function available(address publisher, address provider, address token) view returns(uint256)
+func (_Payment *PaymentCallerSession) Available(publisher common.Address, provider common.Address, token common.Address) (*big.Int, error) {
+	return _Payment.Contract.Available(&_Payment.CallOpts, publisher, provider, token)
+}
+
 // Channels is a free data retrieval call binding the contract method 0xf428e28a.
 //
-// Solidity: function channels(address , address , address ) view returns(uint256 total, uint256 owedAmount, uint256 deadline, uint256 price, uint256 suggestedPrice, uint256 minAdvanceDuration)
+// Solidity: function channels(address , address , address ) view returns(uint256 investedByPublisher, uint256 withdrawnByProvider, uint256 unlockTime, uint256 unlockedAt)
 func (_Payment *PaymentCaller) Channels(opts *bind.CallOpts, arg0 common.Address, arg1 common.Address, arg2 common.Address) (struct {
-	Total              *big.Int
-	OwedAmount         *big.Int
-	Deadline           *big.Int
-	Price              *big.Int
-	SuggestedPrice     *big.Int
-	MinAdvanceDuration *big.Int
+	InvestedByPublisher *big.Int
+	WithdrawnByProvider *big.Int
+	UnlockTime          *big.Int
+	UnlockedAt          *big.Int
 }, error) {
 	var out []interface{}
 	err := _Payment.contract.Call(opts, &out, "channels", arg0, arg1, arg2)
 
 	outstruct := new(struct {
-		Total              *big.Int
-		OwedAmount         *big.Int
-		Deadline           *big.Int
-		Price              *big.Int
-		SuggestedPrice     *big.Int
-		MinAdvanceDuration *big.Int
+		InvestedByPublisher *big.Int
+		WithdrawnByProvider *big.Int
+		UnlockTime          *big.Int
+		UnlockedAt          *big.Int
 	})
 	if err != nil {
 		return *outstruct, err
 	}
 
-	outstruct.Total = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-	outstruct.OwedAmount = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
-	outstruct.Deadline = *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
-	outstruct.Price = *abi.ConvertType(out[3], new(*big.Int)).(**big.Int)
-	outstruct.SuggestedPrice = *abi.ConvertType(out[4], new(*big.Int)).(**big.Int)
-	outstruct.MinAdvanceDuration = *abi.ConvertType(out[5], new(*big.Int)).(**big.Int)
+	outstruct.InvestedByPublisher = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	outstruct.WithdrawnByProvider = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	outstruct.UnlockTime = *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
+	outstruct.UnlockedAt = *abi.ConvertType(out[3], new(*big.Int)).(**big.Int)
 
 	return *outstruct, err
 
@@ -241,203 +266,178 @@ func (_Payment *PaymentCaller) Channels(opts *bind.CallOpts, arg0 common.Address
 
 // Channels is a free data retrieval call binding the contract method 0xf428e28a.
 //
-// Solidity: function channels(address , address , address ) view returns(uint256 total, uint256 owedAmount, uint256 deadline, uint256 price, uint256 suggestedPrice, uint256 minAdvanceDuration)
+// Solidity: function channels(address , address , address ) view returns(uint256 investedByPublisher, uint256 withdrawnByProvider, uint256 unlockTime, uint256 unlockedAt)
 func (_Payment *PaymentSession) Channels(arg0 common.Address, arg1 common.Address, arg2 common.Address) (struct {
-	Total              *big.Int
-	OwedAmount         *big.Int
-	Deadline           *big.Int
-	Price              *big.Int
-	SuggestedPrice     *big.Int
-	MinAdvanceDuration *big.Int
+	InvestedByPublisher *big.Int
+	WithdrawnByProvider *big.Int
+	UnlockTime          *big.Int
+	UnlockedAt          *big.Int
 }, error) {
 	return _Payment.Contract.Channels(&_Payment.CallOpts, arg0, arg1, arg2)
 }
 
 // Channels is a free data retrieval call binding the contract method 0xf428e28a.
 //
-// Solidity: function channels(address , address , address ) view returns(uint256 total, uint256 owedAmount, uint256 deadline, uint256 price, uint256 suggestedPrice, uint256 minAdvanceDuration)
+// Solidity: function channels(address , address , address ) view returns(uint256 investedByPublisher, uint256 withdrawnByProvider, uint256 unlockTime, uint256 unlockedAt)
 func (_Payment *PaymentCallerSession) Channels(arg0 common.Address, arg1 common.Address, arg2 common.Address) (struct {
-	Total              *big.Int
-	OwedAmount         *big.Int
-	Deadline           *big.Int
-	Price              *big.Int
-	SuggestedPrice     *big.Int
-	MinAdvanceDuration *big.Int
+	InvestedByPublisher *big.Int
+	WithdrawnByProvider *big.Int
+	UnlockTime          *big.Int
+	UnlockedAt          *big.Int
 }, error) {
 	return _Payment.Contract.Channels(&_Payment.CallOpts, arg0, arg1, arg2)
 }
 
-// AcceptNewPrice is a paid mutator transaction binding the contract method 0xc7f14926.
+// CloseChannel is a paid mutator transaction binding the contract method 0xbed63041.
 //
-// Solidity: function acceptNewPrice(address provider, address token) returns()
-func (_Payment *PaymentTransactor) AcceptNewPrice(opts *bind.TransactOpts, provider common.Address, token common.Address) (*types.Transaction, error) {
-	return _Payment.contract.Transact(opts, "acceptNewPrice", provider, token)
+// Solidity: function closeChannel(address provider, address token) returns()
+func (_Payment *PaymentTransactor) CloseChannel(opts *bind.TransactOpts, provider common.Address, token common.Address) (*types.Transaction, error) {
+	return _Payment.contract.Transact(opts, "closeChannel", provider, token)
 }
 
-// AcceptNewPrice is a paid mutator transaction binding the contract method 0xc7f14926.
+// CloseChannel is a paid mutator transaction binding the contract method 0xbed63041.
 //
-// Solidity: function acceptNewPrice(address provider, address token) returns()
-func (_Payment *PaymentSession) AcceptNewPrice(provider common.Address, token common.Address) (*types.Transaction, error) {
-	return _Payment.Contract.AcceptNewPrice(&_Payment.TransactOpts, provider, token)
+// Solidity: function closeChannel(address provider, address token) returns()
+func (_Payment *PaymentSession) CloseChannel(provider common.Address, token common.Address) (*types.Transaction, error) {
+	return _Payment.Contract.CloseChannel(&_Payment.TransactOpts, provider, token)
 }
 
-// AcceptNewPrice is a paid mutator transaction binding the contract method 0xc7f14926.
+// CloseChannel is a paid mutator transaction binding the contract method 0xbed63041.
 //
-// Solidity: function acceptNewPrice(address provider, address token) returns()
-func (_Payment *PaymentTransactorSession) AcceptNewPrice(provider common.Address, token common.Address) (*types.Transaction, error) {
-	return _Payment.Contract.AcceptNewPrice(&_Payment.TransactOpts, provider, token)
+// Solidity: function closeChannel(address provider, address token) returns()
+func (_Payment *PaymentTransactorSession) CloseChannel(provider common.Address, token common.Address) (*types.Transaction, error) {
+	return _Payment.Contract.CloseChannel(&_Payment.TransactOpts, provider, token)
 }
 
-// CreateChannel is a paid mutator transaction binding the contract method 0x70e6c993.
+// CreateChannel is a paid mutator transaction binding the contract method 0x1086b75d.
 //
-// Solidity: function createChannel(address provider, address token, uint256 amount, uint256 deadline, uint256 minAdvanceDuration, uint256 price) returns()
-func (_Payment *PaymentTransactor) CreateChannel(opts *bind.TransactOpts, provider common.Address, token common.Address, amount *big.Int, deadline *big.Int, minAdvanceDuration *big.Int, price *big.Int) (*types.Transaction, error) {
-	return _Payment.contract.Transact(opts, "createChannel", provider, token, amount, deadline, minAdvanceDuration, price)
+// Solidity: function createChannel(address provider, address token, uint256 unlockTime, uint256 initialAmount) returns()
+func (_Payment *PaymentTransactor) CreateChannel(opts *bind.TransactOpts, provider common.Address, token common.Address, unlockTime *big.Int, initialAmount *big.Int) (*types.Transaction, error) {
+	return _Payment.contract.Transact(opts, "createChannel", provider, token, unlockTime, initialAmount)
 }
 
-// CreateChannel is a paid mutator transaction binding the contract method 0x70e6c993.
+// CreateChannel is a paid mutator transaction binding the contract method 0x1086b75d.
 //
-// Solidity: function createChannel(address provider, address token, uint256 amount, uint256 deadline, uint256 minAdvanceDuration, uint256 price) returns()
-func (_Payment *PaymentSession) CreateChannel(provider common.Address, token common.Address, amount *big.Int, deadline *big.Int, minAdvanceDuration *big.Int, price *big.Int) (*types.Transaction, error) {
-	return _Payment.Contract.CreateChannel(&_Payment.TransactOpts, provider, token, amount, deadline, minAdvanceDuration, price)
+// Solidity: function createChannel(address provider, address token, uint256 unlockTime, uint256 initialAmount) returns()
+func (_Payment *PaymentSession) CreateChannel(provider common.Address, token common.Address, unlockTime *big.Int, initialAmount *big.Int) (*types.Transaction, error) {
+	return _Payment.Contract.CreateChannel(&_Payment.TransactOpts, provider, token, unlockTime, initialAmount)
 }
 
-// CreateChannel is a paid mutator transaction binding the contract method 0x70e6c993.
+// CreateChannel is a paid mutator transaction binding the contract method 0x1086b75d.
 //
-// Solidity: function createChannel(address provider, address token, uint256 amount, uint256 deadline, uint256 minAdvanceDuration, uint256 price) returns()
-func (_Payment *PaymentTransactorSession) CreateChannel(provider common.Address, token common.Address, amount *big.Int, deadline *big.Int, minAdvanceDuration *big.Int, price *big.Int) (*types.Transaction, error) {
-	return _Payment.Contract.CreateChannel(&_Payment.TransactOpts, provider, token, amount, deadline, minAdvanceDuration, price)
+// Solidity: function createChannel(address provider, address token, uint256 unlockTime, uint256 initialAmount) returns()
+func (_Payment *PaymentTransactorSession) CreateChannel(provider common.Address, token common.Address, unlockTime *big.Int, initialAmount *big.Int) (*types.Transaction, error) {
+	return _Payment.Contract.CreateChannel(&_Payment.TransactOpts, provider, token, unlockTime, initialAmount)
 }
 
-// LockFunds is a paid mutator transaction binding the contract method 0xa94d2415.
+// Deposit is a paid mutator transaction binding the contract method 0x8340f549.
 //
-// Solidity: function lockFunds(address provider, address token, uint256 amount) returns()
-func (_Payment *PaymentTransactor) LockFunds(opts *bind.TransactOpts, provider common.Address, token common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _Payment.contract.Transact(opts, "lockFunds", provider, token, amount)
+// Solidity: function deposit(address provider, address token, uint256 amount) returns()
+func (_Payment *PaymentTransactor) Deposit(opts *bind.TransactOpts, provider common.Address, token common.Address, amount *big.Int) (*types.Transaction, error) {
+	return _Payment.contract.Transact(opts, "deposit", provider, token, amount)
 }
 
-// LockFunds is a paid mutator transaction binding the contract method 0xa94d2415.
+// Deposit is a paid mutator transaction binding the contract method 0x8340f549.
 //
-// Solidity: function lockFunds(address provider, address token, uint256 amount) returns()
-func (_Payment *PaymentSession) LockFunds(provider common.Address, token common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _Payment.Contract.LockFunds(&_Payment.TransactOpts, provider, token, amount)
+// Solidity: function deposit(address provider, address token, uint256 amount) returns()
+func (_Payment *PaymentSession) Deposit(provider common.Address, token common.Address, amount *big.Int) (*types.Transaction, error) {
+	return _Payment.Contract.Deposit(&_Payment.TransactOpts, provider, token, amount)
 }
 
-// LockFunds is a paid mutator transaction binding the contract method 0xa94d2415.
+// Deposit is a paid mutator transaction binding the contract method 0x8340f549.
 //
-// Solidity: function lockFunds(address provider, address token, uint256 amount) returns()
-func (_Payment *PaymentTransactorSession) LockFunds(provider common.Address, token common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _Payment.Contract.LockFunds(&_Payment.TransactOpts, provider, token, amount)
+// Solidity: function deposit(address provider, address token, uint256 amount) returns()
+func (_Payment *PaymentTransactorSession) Deposit(provider common.Address, token common.Address, amount *big.Int) (*types.Transaction, error) {
+	return _Payment.Contract.Deposit(&_Payment.TransactOpts, provider, token, amount)
 }
 
-// UnclockFunds is a paid mutator transaction binding the contract method 0x995cee26.
+// Unlock is a paid mutator transaction binding the contract method 0xe674a0bd.
 //
-// Solidity: function unclockFunds(address token, address provider) returns()
-func (_Payment *PaymentTransactor) UnclockFunds(opts *bind.TransactOpts, token common.Address, provider common.Address) (*types.Transaction, error) {
-	return _Payment.contract.Transact(opts, "unclockFunds", token, provider)
+// Solidity: function unlock(address provider, address token) returns()
+func (_Payment *PaymentTransactor) Unlock(opts *bind.TransactOpts, provider common.Address, token common.Address) (*types.Transaction, error) {
+	return _Payment.contract.Transact(opts, "unlock", provider, token)
 }
 
-// UnclockFunds is a paid mutator transaction binding the contract method 0x995cee26.
+// Unlock is a paid mutator transaction binding the contract method 0xe674a0bd.
 //
-// Solidity: function unclockFunds(address token, address provider) returns()
-func (_Payment *PaymentSession) UnclockFunds(token common.Address, provider common.Address) (*types.Transaction, error) {
-	return _Payment.Contract.UnclockFunds(&_Payment.TransactOpts, token, provider)
+// Solidity: function unlock(address provider, address token) returns()
+func (_Payment *PaymentSession) Unlock(provider common.Address, token common.Address) (*types.Transaction, error) {
+	return _Payment.Contract.Unlock(&_Payment.TransactOpts, provider, token)
 }
 
-// UnclockFunds is a paid mutator transaction binding the contract method 0x995cee26.
+// Unlock is a paid mutator transaction binding the contract method 0xe674a0bd.
 //
-// Solidity: function unclockFunds(address token, address provider) returns()
-func (_Payment *PaymentTransactorSession) UnclockFunds(token common.Address, provider common.Address) (*types.Transaction, error) {
-	return _Payment.Contract.UnclockFunds(&_Payment.TransactOpts, token, provider)
+// Solidity: function unlock(address provider, address token) returns()
+func (_Payment *PaymentTransactorSession) Unlock(provider common.Address, token common.Address) (*types.Transaction, error) {
+	return _Payment.Contract.Unlock(&_Payment.TransactOpts, provider, token)
 }
 
-// UpdateDeadline is a paid mutator transaction binding the contract method 0x31f60646.
+// Withdraw is a paid mutator transaction binding the contract method 0x0e917f76.
 //
-// Solidity: function updateDeadline(address provider, address token, uint256 newDeadline) returns()
-func (_Payment *PaymentTransactor) UpdateDeadline(opts *bind.TransactOpts, provider common.Address, token common.Address, newDeadline *big.Int) (*types.Transaction, error) {
-	return _Payment.contract.Transact(opts, "updateDeadline", provider, token, newDeadline)
+// Solidity: function withdraw(address publisher, address token, uint256 amount, address transferAddress) returns()
+func (_Payment *PaymentTransactor) Withdraw(opts *bind.TransactOpts, publisher common.Address, token common.Address, amount *big.Int, transferAddress common.Address) (*types.Transaction, error) {
+	return _Payment.contract.Transact(opts, "withdraw", publisher, token, amount, transferAddress)
 }
 
-// UpdateDeadline is a paid mutator transaction binding the contract method 0x31f60646.
+// Withdraw is a paid mutator transaction binding the contract method 0x0e917f76.
 //
-// Solidity: function updateDeadline(address provider, address token, uint256 newDeadline) returns()
-func (_Payment *PaymentSession) UpdateDeadline(provider common.Address, token common.Address, newDeadline *big.Int) (*types.Transaction, error) {
-	return _Payment.Contract.UpdateDeadline(&_Payment.TransactOpts, provider, token, newDeadline)
+// Solidity: function withdraw(address publisher, address token, uint256 amount, address transferAddress) returns()
+func (_Payment *PaymentSession) Withdraw(publisher common.Address, token common.Address, amount *big.Int, transferAddress common.Address) (*types.Transaction, error) {
+	return _Payment.Contract.Withdraw(&_Payment.TransactOpts, publisher, token, amount, transferAddress)
 }
 
-// UpdateDeadline is a paid mutator transaction binding the contract method 0x31f60646.
+// Withdraw is a paid mutator transaction binding the contract method 0x0e917f76.
 //
-// Solidity: function updateDeadline(address provider, address token, uint256 newDeadline) returns()
-func (_Payment *PaymentTransactorSession) UpdateDeadline(provider common.Address, token common.Address, newDeadline *big.Int) (*types.Transaction, error) {
-	return _Payment.Contract.UpdateDeadline(&_Payment.TransactOpts, provider, token, newDeadline)
+// Solidity: function withdraw(address publisher, address token, uint256 amount, address transferAddress) returns()
+func (_Payment *PaymentTransactorSession) Withdraw(publisher common.Address, token common.Address, amount *big.Int, transferAddress common.Address) (*types.Transaction, error) {
+	return _Payment.Contract.Withdraw(&_Payment.TransactOpts, publisher, token, amount, transferAddress)
 }
 
-// UpdatePrice is a paid mutator transaction binding the contract method 0x8fbb2a90.
+// WithdrawUnlocked is a paid mutator transaction binding the contract method 0x43ea3f36.
 //
-// Solidity: function updatePrice(address client, address token, uint256 price) returns()
-func (_Payment *PaymentTransactor) UpdatePrice(opts *bind.TransactOpts, client common.Address, token common.Address, price *big.Int) (*types.Transaction, error) {
-	return _Payment.contract.Transact(opts, "updatePrice", client, token, price)
+// Solidity: function withdrawUnlocked(address provider, address token) returns()
+func (_Payment *PaymentTransactor) WithdrawUnlocked(opts *bind.TransactOpts, provider common.Address, token common.Address) (*types.Transaction, error) {
+	return _Payment.contract.Transact(opts, "withdrawUnlocked", provider, token)
 }
 
-// UpdatePrice is a paid mutator transaction binding the contract method 0x8fbb2a90.
+// WithdrawUnlocked is a paid mutator transaction binding the contract method 0x43ea3f36.
 //
-// Solidity: function updatePrice(address client, address token, uint256 price) returns()
-func (_Payment *PaymentSession) UpdatePrice(client common.Address, token common.Address, price *big.Int) (*types.Transaction, error) {
-	return _Payment.Contract.UpdatePrice(&_Payment.TransactOpts, client, token, price)
+// Solidity: function withdrawUnlocked(address provider, address token) returns()
+func (_Payment *PaymentSession) WithdrawUnlocked(provider common.Address, token common.Address) (*types.Transaction, error) {
+	return _Payment.Contract.WithdrawUnlocked(&_Payment.TransactOpts, provider, token)
 }
 
-// UpdatePrice is a paid mutator transaction binding the contract method 0x8fbb2a90.
+// WithdrawUnlocked is a paid mutator transaction binding the contract method 0x43ea3f36.
 //
-// Solidity: function updatePrice(address client, address token, uint256 price) returns()
-func (_Payment *PaymentTransactorSession) UpdatePrice(client common.Address, token common.Address, price *big.Int) (*types.Transaction, error) {
-	return _Payment.Contract.UpdatePrice(&_Payment.TransactOpts, client, token, price)
+// Solidity: function withdrawUnlocked(address provider, address token) returns()
+func (_Payment *PaymentTransactorSession) WithdrawUnlocked(provider common.Address, token common.Address) (*types.Transaction, error) {
+	return _Payment.Contract.WithdrawUnlocked(&_Payment.TransactOpts, provider, token)
 }
 
-// UploadMetrics is a paid mutator transaction binding the contract method 0x165c326f.
+// WithdrawUpTo is a paid mutator transaction binding the contract method 0xe0f33dd4.
 //
-// Solidity: function uploadMetrics(address client, address token, uint256 units) returns()
-func (_Payment *PaymentTransactor) UploadMetrics(opts *bind.TransactOpts, client common.Address, token common.Address, units *big.Int) (*types.Transaction, error) {
-	return _Payment.contract.Transact(opts, "uploadMetrics", client, token, units)
+// Solidity: function withdrawUpTo(address publisher, address token, uint256 totalWithdrawlAmount, address transferAddress) returns()
+func (_Payment *PaymentTransactor) WithdrawUpTo(opts *bind.TransactOpts, publisher common.Address, token common.Address, totalWithdrawlAmount *big.Int, transferAddress common.Address) (*types.Transaction, error) {
+	return _Payment.contract.Transact(opts, "withdrawUpTo", publisher, token, totalWithdrawlAmount, transferAddress)
 }
 
-// UploadMetrics is a paid mutator transaction binding the contract method 0x165c326f.
+// WithdrawUpTo is a paid mutator transaction binding the contract method 0xe0f33dd4.
 //
-// Solidity: function uploadMetrics(address client, address token, uint256 units) returns()
-func (_Payment *PaymentSession) UploadMetrics(client common.Address, token common.Address, units *big.Int) (*types.Transaction, error) {
-	return _Payment.Contract.UploadMetrics(&_Payment.TransactOpts, client, token, units)
+// Solidity: function withdrawUpTo(address publisher, address token, uint256 totalWithdrawlAmount, address transferAddress) returns()
+func (_Payment *PaymentSession) WithdrawUpTo(publisher common.Address, token common.Address, totalWithdrawlAmount *big.Int, transferAddress common.Address) (*types.Transaction, error) {
+	return _Payment.Contract.WithdrawUpTo(&_Payment.TransactOpts, publisher, token, totalWithdrawlAmount, transferAddress)
 }
 
-// UploadMetrics is a paid mutator transaction binding the contract method 0x165c326f.
+// WithdrawUpTo is a paid mutator transaction binding the contract method 0xe0f33dd4.
 //
-// Solidity: function uploadMetrics(address client, address token, uint256 units) returns()
-func (_Payment *PaymentTransactorSession) UploadMetrics(client common.Address, token common.Address, units *big.Int) (*types.Transaction, error) {
-	return _Payment.Contract.UploadMetrics(&_Payment.TransactOpts, client, token, units)
+// Solidity: function withdrawUpTo(address publisher, address token, uint256 totalWithdrawlAmount, address transferAddress) returns()
+func (_Payment *PaymentTransactorSession) WithdrawUpTo(publisher common.Address, token common.Address, totalWithdrawlAmount *big.Int, transferAddress common.Address) (*types.Transaction, error) {
+	return _Payment.Contract.WithdrawUpTo(&_Payment.TransactOpts, publisher, token, totalWithdrawlAmount, transferAddress)
 }
 
-// Withdraw is a paid mutator transaction binding the contract method 0xf940e385.
-//
-// Solidity: function withdraw(address token, address client) returns()
-func (_Payment *PaymentTransactor) Withdraw(opts *bind.TransactOpts, token common.Address, client common.Address) (*types.Transaction, error) {
-	return _Payment.contract.Transact(opts, "withdraw", token, client)
-}
-
-// Withdraw is a paid mutator transaction binding the contract method 0xf940e385.
-//
-// Solidity: function withdraw(address token, address client) returns()
-func (_Payment *PaymentSession) Withdraw(token common.Address, client common.Address) (*types.Transaction, error) {
-	return _Payment.Contract.Withdraw(&_Payment.TransactOpts, token, client)
-}
-
-// Withdraw is a paid mutator transaction binding the contract method 0xf940e385.
-//
-// Solidity: function withdraw(address token, address client) returns()
-func (_Payment *PaymentTransactorSession) Withdraw(token common.Address, client common.Address) (*types.Transaction, error) {
-	return _Payment.Contract.Withdraw(&_Payment.TransactOpts, token, client)
-}
-
-// PaymentNewPriceIterator is returned from FilterNewPrice and is used to iterate over the raw logs and unpacked data for NewPrice events raised by the Payment contract.
-type PaymentNewPriceIterator struct {
-	Event *PaymentNewPrice // Event containing the contract specifics and raw log
+// PaymentChannelClosedIterator is returned from FilterChannelClosed and is used to iterate over the raw logs and unpacked data for ChannelClosed events raised by the Payment contract.
+type PaymentChannelClosedIterator struct {
+	Event *PaymentChannelClosed // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -451,7 +451,7 @@ type PaymentNewPriceIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *PaymentNewPriceIterator) Next() bool {
+func (it *PaymentChannelClosedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -460,7 +460,7 @@ func (it *PaymentNewPriceIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(PaymentNewPrice)
+			it.Event = new(PaymentChannelClosed)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -475,7 +475,7 @@ func (it *PaymentNewPriceIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(PaymentNewPrice)
+		it.Event = new(PaymentChannelClosed)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -491,44 +491,69 @@ func (it *PaymentNewPriceIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *PaymentNewPriceIterator) Error() error {
+func (it *PaymentChannelClosedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *PaymentNewPriceIterator) Close() error {
+func (it *PaymentChannelClosedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// PaymentNewPrice represents a NewPrice event raised by the Payment contract.
-type PaymentNewPrice struct {
-	Client   common.Address
-	Provider common.Address
-	Token    common.Address
-	Price    *big.Int
-	Raw      types.Log // Blockchain specific contextual infos
+// PaymentChannelClosed represents a ChannelClosed event raised by the Payment contract.
+type PaymentChannelClosed struct {
+	Publisher common.Address
+	Provider  common.Address
+	Token     common.Address
+	Raw       types.Log // Blockchain specific contextual infos
 }
 
-// FilterNewPrice is a free log retrieval operation binding the contract event 0x8c86180e4992276e0f056bb49eed13ea7b192a0d9e795a7f219b5b281c22d78e.
+// FilterChannelClosed is a free log retrieval operation binding the contract event 0x4509c78f8c652633a480f64f4f56b8187ec70d118e774af3139ec088e6f3ea91.
 //
-// Solidity: event NewPrice(address client, address provider, address token, uint256 price)
-func (_Payment *PaymentFilterer) FilterNewPrice(opts *bind.FilterOpts) (*PaymentNewPriceIterator, error) {
+// Solidity: event ChannelClosed(address indexed publisher, address indexed provider, address indexed token)
+func (_Payment *PaymentFilterer) FilterChannelClosed(opts *bind.FilterOpts, publisher []common.Address, provider []common.Address, token []common.Address) (*PaymentChannelClosedIterator, error) {
 
-	logs, sub, err := _Payment.contract.FilterLogs(opts, "NewPrice")
+	var publisherRule []interface{}
+	for _, publisherItem := range publisher {
+		publisherRule = append(publisherRule, publisherItem)
+	}
+	var providerRule []interface{}
+	for _, providerItem := range provider {
+		providerRule = append(providerRule, providerItem)
+	}
+	var tokenRule []interface{}
+	for _, tokenItem := range token {
+		tokenRule = append(tokenRule, tokenItem)
+	}
+
+	logs, sub, err := _Payment.contract.FilterLogs(opts, "ChannelClosed", publisherRule, providerRule, tokenRule)
 	if err != nil {
 		return nil, err
 	}
-	return &PaymentNewPriceIterator{contract: _Payment.contract, event: "NewPrice", logs: logs, sub: sub}, nil
+	return &PaymentChannelClosedIterator{contract: _Payment.contract, event: "ChannelClosed", logs: logs, sub: sub}, nil
 }
 
-// WatchNewPrice is a free log subscription operation binding the contract event 0x8c86180e4992276e0f056bb49eed13ea7b192a0d9e795a7f219b5b281c22d78e.
+// WatchChannelClosed is a free log subscription operation binding the contract event 0x4509c78f8c652633a480f64f4f56b8187ec70d118e774af3139ec088e6f3ea91.
 //
-// Solidity: event NewPrice(address client, address provider, address token, uint256 price)
-func (_Payment *PaymentFilterer) WatchNewPrice(opts *bind.WatchOpts, sink chan<- *PaymentNewPrice) (event.Subscription, error) {
+// Solidity: event ChannelClosed(address indexed publisher, address indexed provider, address indexed token)
+func (_Payment *PaymentFilterer) WatchChannelClosed(opts *bind.WatchOpts, sink chan<- *PaymentChannelClosed, publisher []common.Address, provider []common.Address, token []common.Address) (event.Subscription, error) {
 
-	logs, sub, err := _Payment.contract.WatchLogs(opts, "NewPrice")
+	var publisherRule []interface{}
+	for _, publisherItem := range publisher {
+		publisherRule = append(publisherRule, publisherItem)
+	}
+	var providerRule []interface{}
+	for _, providerItem := range provider {
+		providerRule = append(providerRule, providerItem)
+	}
+	var tokenRule []interface{}
+	for _, tokenItem := range token {
+		tokenRule = append(tokenRule, tokenItem)
+	}
+
+	logs, sub, err := _Payment.contract.WatchLogs(opts, "ChannelClosed", publisherRule, providerRule, tokenRule)
 	if err != nil {
 		return nil, err
 	}
@@ -538,8 +563,8 @@ func (_Payment *PaymentFilterer) WatchNewPrice(opts *bind.WatchOpts, sink chan<-
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(PaymentNewPrice)
-				if err := _Payment.contract.UnpackLog(event, "NewPrice", log); err != nil {
+				event := new(PaymentChannelClosed)
+				if err := _Payment.contract.UnpackLog(event, "ChannelClosed", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -560,21 +585,21 @@ func (_Payment *PaymentFilterer) WatchNewPrice(opts *bind.WatchOpts, sink chan<-
 	}), nil
 }
 
-// ParseNewPrice is a log parse operation binding the contract event 0x8c86180e4992276e0f056bb49eed13ea7b192a0d9e795a7f219b5b281c22d78e.
+// ParseChannelClosed is a log parse operation binding the contract event 0x4509c78f8c652633a480f64f4f56b8187ec70d118e774af3139ec088e6f3ea91.
 //
-// Solidity: event NewPrice(address client, address provider, address token, uint256 price)
-func (_Payment *PaymentFilterer) ParseNewPrice(log types.Log) (*PaymentNewPrice, error) {
-	event := new(PaymentNewPrice)
-	if err := _Payment.contract.UnpackLog(event, "NewPrice", log); err != nil {
+// Solidity: event ChannelClosed(address indexed publisher, address indexed provider, address indexed token)
+func (_Payment *PaymentFilterer) ParseChannelClosed(log types.Log) (*PaymentChannelClosed, error) {
+	event := new(PaymentChannelClosed)
+	if err := _Payment.contract.UnpackLog(event, "ChannelClosed", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// PaymentNewPriceUpdateIterator is returned from FilterNewPriceUpdate and is used to iterate over the raw logs and unpacked data for NewPriceUpdate events raised by the Payment contract.
-type PaymentNewPriceUpdateIterator struct {
-	Event *PaymentNewPriceUpdate // Event containing the contract specifics and raw log
+// PaymentDepositedIterator is returned from FilterDeposited and is used to iterate over the raw logs and unpacked data for Deposited events raised by the Payment contract.
+type PaymentDepositedIterator struct {
+	Event *PaymentDeposited // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -588,7 +613,7 @@ type PaymentNewPriceUpdateIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *PaymentNewPriceUpdateIterator) Next() bool {
+func (it *PaymentDepositedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -597,7 +622,7 @@ func (it *PaymentNewPriceUpdateIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(PaymentNewPriceUpdate)
+			it.Event = new(PaymentDeposited)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -612,7 +637,7 @@ func (it *PaymentNewPriceUpdateIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(PaymentNewPriceUpdate)
+		it.Event = new(PaymentDeposited)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -628,44 +653,70 @@ func (it *PaymentNewPriceUpdateIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *PaymentNewPriceUpdateIterator) Error() error {
+func (it *PaymentDepositedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *PaymentNewPriceUpdateIterator) Close() error {
+func (it *PaymentDepositedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// PaymentNewPriceUpdate represents a NewPriceUpdate event raised by the Payment contract.
-type PaymentNewPriceUpdate struct {
-	Client   common.Address
-	Provider common.Address
-	Token    common.Address
-	Price    *big.Int
-	Raw      types.Log // Blockchain specific contextual infos
+// PaymentDeposited represents a Deposited event raised by the Payment contract.
+type PaymentDeposited struct {
+	Publisher     common.Address
+	Provider      common.Address
+	Token         common.Address
+	DepositAmount *big.Int
+	Raw           types.Log // Blockchain specific contextual infos
 }
 
-// FilterNewPriceUpdate is a free log retrieval operation binding the contract event 0x321c73989a5585f52e30bb8aabd608154125bf4413611a3b4d8b97105d9c6dc0.
+// FilterDeposited is a free log retrieval operation binding the contract event 0x4174a9435a04d04d274c76779cad136a41fde6937c56241c09ab9d3c7064a1a9.
 //
-// Solidity: event NewPriceUpdate(address client, address provider, address token, uint256 price)
-func (_Payment *PaymentFilterer) FilterNewPriceUpdate(opts *bind.FilterOpts) (*PaymentNewPriceUpdateIterator, error) {
+// Solidity: event Deposited(address indexed publisher, address indexed provider, address indexed token, uint256 depositAmount)
+func (_Payment *PaymentFilterer) FilterDeposited(opts *bind.FilterOpts, publisher []common.Address, provider []common.Address, token []common.Address) (*PaymentDepositedIterator, error) {
 
-	logs, sub, err := _Payment.contract.FilterLogs(opts, "NewPriceUpdate")
+	var publisherRule []interface{}
+	for _, publisherItem := range publisher {
+		publisherRule = append(publisherRule, publisherItem)
+	}
+	var providerRule []interface{}
+	for _, providerItem := range provider {
+		providerRule = append(providerRule, providerItem)
+	}
+	var tokenRule []interface{}
+	for _, tokenItem := range token {
+		tokenRule = append(tokenRule, tokenItem)
+	}
+
+	logs, sub, err := _Payment.contract.FilterLogs(opts, "Deposited", publisherRule, providerRule, tokenRule)
 	if err != nil {
 		return nil, err
 	}
-	return &PaymentNewPriceUpdateIterator{contract: _Payment.contract, event: "NewPriceUpdate", logs: logs, sub: sub}, nil
+	return &PaymentDepositedIterator{contract: _Payment.contract, event: "Deposited", logs: logs, sub: sub}, nil
 }
 
-// WatchNewPriceUpdate is a free log subscription operation binding the contract event 0x321c73989a5585f52e30bb8aabd608154125bf4413611a3b4d8b97105d9c6dc0.
+// WatchDeposited is a free log subscription operation binding the contract event 0x4174a9435a04d04d274c76779cad136a41fde6937c56241c09ab9d3c7064a1a9.
 //
-// Solidity: event NewPriceUpdate(address client, address provider, address token, uint256 price)
-func (_Payment *PaymentFilterer) WatchNewPriceUpdate(opts *bind.WatchOpts, sink chan<- *PaymentNewPriceUpdate) (event.Subscription, error) {
+// Solidity: event Deposited(address indexed publisher, address indexed provider, address indexed token, uint256 depositAmount)
+func (_Payment *PaymentFilterer) WatchDeposited(opts *bind.WatchOpts, sink chan<- *PaymentDeposited, publisher []common.Address, provider []common.Address, token []common.Address) (event.Subscription, error) {
 
-	logs, sub, err := _Payment.contract.WatchLogs(opts, "NewPriceUpdate")
+	var publisherRule []interface{}
+	for _, publisherItem := range publisher {
+		publisherRule = append(publisherRule, publisherItem)
+	}
+	var providerRule []interface{}
+	for _, providerItem := range provider {
+		providerRule = append(providerRule, providerItem)
+	}
+	var tokenRule []interface{}
+	for _, tokenItem := range token {
+		tokenRule = append(tokenRule, tokenItem)
+	}
+
+	logs, sub, err := _Payment.contract.WatchLogs(opts, "Deposited", publisherRule, providerRule, tokenRule)
 	if err != nil {
 		return nil, err
 	}
@@ -675,8 +726,8 @@ func (_Payment *PaymentFilterer) WatchNewPriceUpdate(opts *bind.WatchOpts, sink 
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(PaymentNewPriceUpdate)
-				if err := _Payment.contract.UnpackLog(event, "NewPriceUpdate", log); err != nil {
+				event := new(PaymentDeposited)
+				if err := _Payment.contract.UnpackLog(event, "Deposited", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -697,12 +748,501 @@ func (_Payment *PaymentFilterer) WatchNewPriceUpdate(opts *bind.WatchOpts, sink 
 	}), nil
 }
 
-// ParseNewPriceUpdate is a log parse operation binding the contract event 0x321c73989a5585f52e30bb8aabd608154125bf4413611a3b4d8b97105d9c6dc0.
+// ParseDeposited is a log parse operation binding the contract event 0x4174a9435a04d04d274c76779cad136a41fde6937c56241c09ab9d3c7064a1a9.
 //
-// Solidity: event NewPriceUpdate(address client, address provider, address token, uint256 price)
-func (_Payment *PaymentFilterer) ParseNewPriceUpdate(log types.Log) (*PaymentNewPriceUpdate, error) {
-	event := new(PaymentNewPriceUpdate)
-	if err := _Payment.contract.UnpackLog(event, "NewPriceUpdate", log); err != nil {
+// Solidity: event Deposited(address indexed publisher, address indexed provider, address indexed token, uint256 depositAmount)
+func (_Payment *PaymentFilterer) ParseDeposited(log types.Log) (*PaymentDeposited, error) {
+	event := new(PaymentDeposited)
+	if err := _Payment.contract.UnpackLog(event, "Deposited", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// PaymentUnlockTimerStartedIterator is returned from FilterUnlockTimerStarted and is used to iterate over the raw logs and unpacked data for UnlockTimerStarted events raised by the Payment contract.
+type PaymentUnlockTimerStartedIterator struct {
+	Event *PaymentUnlockTimerStarted // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *PaymentUnlockTimerStartedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(PaymentUnlockTimerStarted)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(PaymentUnlockTimerStarted)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *PaymentUnlockTimerStartedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *PaymentUnlockTimerStartedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// PaymentUnlockTimerStarted represents a UnlockTimerStarted event raised by the Payment contract.
+type PaymentUnlockTimerStarted struct {
+	Publisher  common.Address
+	Provider   common.Address
+	Token      common.Address
+	UnlockedAt *big.Int
+	Raw        types.Log // Blockchain specific contextual infos
+}
+
+// FilterUnlockTimerStarted is a free log retrieval operation binding the contract event 0x9c21c91a443e1aeab0e24df34b134bf134e2c0c9fecd918faa11306a0adfa62e.
+//
+// Solidity: event UnlockTimerStarted(address indexed publisher, address indexed provider, address indexed token, uint256 unlockedAt)
+func (_Payment *PaymentFilterer) FilterUnlockTimerStarted(opts *bind.FilterOpts, publisher []common.Address, provider []common.Address, token []common.Address) (*PaymentUnlockTimerStartedIterator, error) {
+
+	var publisherRule []interface{}
+	for _, publisherItem := range publisher {
+		publisherRule = append(publisherRule, publisherItem)
+	}
+	var providerRule []interface{}
+	for _, providerItem := range provider {
+		providerRule = append(providerRule, providerItem)
+	}
+	var tokenRule []interface{}
+	for _, tokenItem := range token {
+		tokenRule = append(tokenRule, tokenItem)
+	}
+
+	logs, sub, err := _Payment.contract.FilterLogs(opts, "UnlockTimerStarted", publisherRule, providerRule, tokenRule)
+	if err != nil {
+		return nil, err
+	}
+	return &PaymentUnlockTimerStartedIterator{contract: _Payment.contract, event: "UnlockTimerStarted", logs: logs, sub: sub}, nil
+}
+
+// WatchUnlockTimerStarted is a free log subscription operation binding the contract event 0x9c21c91a443e1aeab0e24df34b134bf134e2c0c9fecd918faa11306a0adfa62e.
+//
+// Solidity: event UnlockTimerStarted(address indexed publisher, address indexed provider, address indexed token, uint256 unlockedAt)
+func (_Payment *PaymentFilterer) WatchUnlockTimerStarted(opts *bind.WatchOpts, sink chan<- *PaymentUnlockTimerStarted, publisher []common.Address, provider []common.Address, token []common.Address) (event.Subscription, error) {
+
+	var publisherRule []interface{}
+	for _, publisherItem := range publisher {
+		publisherRule = append(publisherRule, publisherItem)
+	}
+	var providerRule []interface{}
+	for _, providerItem := range provider {
+		providerRule = append(providerRule, providerItem)
+	}
+	var tokenRule []interface{}
+	for _, tokenItem := range token {
+		tokenRule = append(tokenRule, tokenItem)
+	}
+
+	logs, sub, err := _Payment.contract.WatchLogs(opts, "UnlockTimerStarted", publisherRule, providerRule, tokenRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(PaymentUnlockTimerStarted)
+				if err := _Payment.contract.UnpackLog(event, "UnlockTimerStarted", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseUnlockTimerStarted is a log parse operation binding the contract event 0x9c21c91a443e1aeab0e24df34b134bf134e2c0c9fecd918faa11306a0adfa62e.
+//
+// Solidity: event UnlockTimerStarted(address indexed publisher, address indexed provider, address indexed token, uint256 unlockedAt)
+func (_Payment *PaymentFilterer) ParseUnlockTimerStarted(log types.Log) (*PaymentUnlockTimerStarted, error) {
+	event := new(PaymentUnlockTimerStarted)
+	if err := _Payment.contract.UnpackLog(event, "UnlockTimerStarted", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// PaymentUnlockedIterator is returned from FilterUnlocked and is used to iterate over the raw logs and unpacked data for Unlocked events raised by the Payment contract.
+type PaymentUnlockedIterator struct {
+	Event *PaymentUnlocked // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *PaymentUnlockedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(PaymentUnlocked)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(PaymentUnlocked)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *PaymentUnlockedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *PaymentUnlockedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// PaymentUnlocked represents a Unlocked event raised by the Payment contract.
+type PaymentUnlocked struct {
+	Publisher      common.Address
+	Provider       common.Address
+	Token          common.Address
+	UnlockedAmount *big.Int
+	Raw            types.Log // Blockchain specific contextual infos
+}
+
+// FilterUnlocked is a free log retrieval operation binding the contract event 0x6c5b0a34e5e78b423db3d15d7f4f72f3beb727025c0e535bf2bac21d0227c481.
+//
+// Solidity: event Unlocked(address indexed publisher, address indexed provider, address indexed token, uint256 unlockedAmount)
+func (_Payment *PaymentFilterer) FilterUnlocked(opts *bind.FilterOpts, publisher []common.Address, provider []common.Address, token []common.Address) (*PaymentUnlockedIterator, error) {
+
+	var publisherRule []interface{}
+	for _, publisherItem := range publisher {
+		publisherRule = append(publisherRule, publisherItem)
+	}
+	var providerRule []interface{}
+	for _, providerItem := range provider {
+		providerRule = append(providerRule, providerItem)
+	}
+	var tokenRule []interface{}
+	for _, tokenItem := range token {
+		tokenRule = append(tokenRule, tokenItem)
+	}
+
+	logs, sub, err := _Payment.contract.FilterLogs(opts, "Unlocked", publisherRule, providerRule, tokenRule)
+	if err != nil {
+		return nil, err
+	}
+	return &PaymentUnlockedIterator{contract: _Payment.contract, event: "Unlocked", logs: logs, sub: sub}, nil
+}
+
+// WatchUnlocked is a free log subscription operation binding the contract event 0x6c5b0a34e5e78b423db3d15d7f4f72f3beb727025c0e535bf2bac21d0227c481.
+//
+// Solidity: event Unlocked(address indexed publisher, address indexed provider, address indexed token, uint256 unlockedAmount)
+func (_Payment *PaymentFilterer) WatchUnlocked(opts *bind.WatchOpts, sink chan<- *PaymentUnlocked, publisher []common.Address, provider []common.Address, token []common.Address) (event.Subscription, error) {
+
+	var publisherRule []interface{}
+	for _, publisherItem := range publisher {
+		publisherRule = append(publisherRule, publisherItem)
+	}
+	var providerRule []interface{}
+	for _, providerItem := range provider {
+		providerRule = append(providerRule, providerItem)
+	}
+	var tokenRule []interface{}
+	for _, tokenItem := range token {
+		tokenRule = append(tokenRule, tokenItem)
+	}
+
+	logs, sub, err := _Payment.contract.WatchLogs(opts, "Unlocked", publisherRule, providerRule, tokenRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(PaymentUnlocked)
+				if err := _Payment.contract.UnpackLog(event, "Unlocked", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseUnlocked is a log parse operation binding the contract event 0x6c5b0a34e5e78b423db3d15d7f4f72f3beb727025c0e535bf2bac21d0227c481.
+//
+// Solidity: event Unlocked(address indexed publisher, address indexed provider, address indexed token, uint256 unlockedAmount)
+func (_Payment *PaymentFilterer) ParseUnlocked(log types.Log) (*PaymentUnlocked, error) {
+	event := new(PaymentUnlocked)
+	if err := _Payment.contract.UnpackLog(event, "Unlocked", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// PaymentWithdrawnIterator is returned from FilterWithdrawn and is used to iterate over the raw logs and unpacked data for Withdrawn events raised by the Payment contract.
+type PaymentWithdrawnIterator struct {
+	Event *PaymentWithdrawn // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *PaymentWithdrawnIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(PaymentWithdrawn)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(PaymentWithdrawn)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *PaymentWithdrawnIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *PaymentWithdrawnIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// PaymentWithdrawn represents a Withdrawn event raised by the Payment contract.
+type PaymentWithdrawn struct {
+	Publisher       common.Address
+	Provider        common.Address
+	Token           common.Address
+	WithdrawnAmount *big.Int
+	Raw             types.Log // Blockchain specific contextual infos
+}
+
+// FilterWithdrawn is a free log retrieval operation binding the contract event 0xa4195c37c2947bbe89165f03e320b6903116f0b10d8cfdb522330f7ce6f9fa24.
+//
+// Solidity: event Withdrawn(address indexed publisher, address indexed provider, address indexed token, uint256 withdrawnAmount)
+func (_Payment *PaymentFilterer) FilterWithdrawn(opts *bind.FilterOpts, publisher []common.Address, provider []common.Address, token []common.Address) (*PaymentWithdrawnIterator, error) {
+
+	var publisherRule []interface{}
+	for _, publisherItem := range publisher {
+		publisherRule = append(publisherRule, publisherItem)
+	}
+	var providerRule []interface{}
+	for _, providerItem := range provider {
+		providerRule = append(providerRule, providerItem)
+	}
+	var tokenRule []interface{}
+	for _, tokenItem := range token {
+		tokenRule = append(tokenRule, tokenItem)
+	}
+
+	logs, sub, err := _Payment.contract.FilterLogs(opts, "Withdrawn", publisherRule, providerRule, tokenRule)
+	if err != nil {
+		return nil, err
+	}
+	return &PaymentWithdrawnIterator{contract: _Payment.contract, event: "Withdrawn", logs: logs, sub: sub}, nil
+}
+
+// WatchWithdrawn is a free log subscription operation binding the contract event 0xa4195c37c2947bbe89165f03e320b6903116f0b10d8cfdb522330f7ce6f9fa24.
+//
+// Solidity: event Withdrawn(address indexed publisher, address indexed provider, address indexed token, uint256 withdrawnAmount)
+func (_Payment *PaymentFilterer) WatchWithdrawn(opts *bind.WatchOpts, sink chan<- *PaymentWithdrawn, publisher []common.Address, provider []common.Address, token []common.Address) (event.Subscription, error) {
+
+	var publisherRule []interface{}
+	for _, publisherItem := range publisher {
+		publisherRule = append(publisherRule, publisherItem)
+	}
+	var providerRule []interface{}
+	for _, providerItem := range provider {
+		providerRule = append(providerRule, providerItem)
+	}
+	var tokenRule []interface{}
+	for _, tokenItem := range token {
+		tokenRule = append(tokenRule, tokenItem)
+	}
+
+	logs, sub, err := _Payment.contract.WatchLogs(opts, "Withdrawn", publisherRule, providerRule, tokenRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(PaymentWithdrawn)
+				if err := _Payment.contract.UnpackLog(event, "Withdrawn", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseWithdrawn is a log parse operation binding the contract event 0xa4195c37c2947bbe89165f03e320b6903116f0b10d8cfdb522330f7ce6f9fa24.
+//
+// Solidity: event Withdrawn(address indexed publisher, address indexed provider, address indexed token, uint256 withdrawnAmount)
+func (_Payment *PaymentFilterer) ParseWithdrawn(log types.Log) (*PaymentWithdrawn, error) {
+	event := new(PaymentWithdrawn)
+	if err := _Payment.contract.UnpackLog(event, "Withdrawn", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

@@ -4,111 +4,141 @@ pragma solidity ^0.8.13;
 import {Test, console2} from "forge-std/Test.sol";
 import {Payment} from "../src/Payment.sol";
 import {MockToken} from "../src/MockToken.sol";
+import {IERC20Errors} from "openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol";
 
 contract PaymentTest is Test {
-    Payment public channel;
-    MockToken public mktn;
+    Payment public payment;
+    MockToken public token;
     address provider;
-    address client;
+    address publisher;
 
     function setUp() public {
-        channel = new Payment();
-        client = vm.createWallet("client").addr;
+        payment = new Payment();
+        publisher = vm.createWallet("publisher").addr;
         provider = vm.createWallet("provider").addr;
-        mktn = new MockToken();
-        vm.startPrank(client);
-        mktn.ClaimTokens(1000);
+        token = new MockToken();
     }
 
-    function test_Supply() public {
-        uint256 supply = mktn.balanceOf(client);
-        assertEq(supply, 1000);
+    function test_createChannel() public {
+        vm.startPrank(publisher);
+        token.mint(1000);
+
+        vm.expectRevert();
+        payment.createChannel(provider, token, 1, 500);
+
+        token.approve(address(payment), 500);
+        payment.createChannel(provider, token, 1, 500);
+
+        assertEq(500, token.balanceOf(address(payment)));
+
+        token.approve(address(payment), 500);
+
+        vm.expectRevert(Payment.AlreadyExists.selector);
+        payment.createChannel(provider, token, 1, 500);
     }
 
-    function test_CreateChannel() public {
-        vm.startPrank(client);
-        // aprove the payment contract to withdraw 500 of client mktn token
-        mktn.approve(address(channel), 500);
-        vm.expectRevert("Deadline Expired");
-        channel.createChannel(provider, address(mktn), 500, 1, 5, 5);
+    function test_deposit() public {
+        vm.startPrank(publisher);
+        token.mint(1000);
 
-        channel.createChannel(provider, address(mktn), 500, 2, 5, 5);
+        token.approve(address(payment), 500);
+        payment.createChannel(provider, token, 1, 500);
 
-        uint256 supply = mktn.balanceOf(client);
-        uint256 supplySC = mktn.balanceOf(address(channel));
-        assertEq(500, supply, "failed to lock funds");
-        assertEq(500, supplySC, "smart contract did not receive the funds");
+        token.approve(address(payment), 500);
+        payment.deposit(provider, token, 500);
 
-        mktn.approve(address(channel), 500);
-        vm.expectRevert("Channel already created");
-        channel.createChannel(provider, address(mktn), 500, 3, 5, 5);
-
-        mktn.approve(address(channel), 0);
-        vm.expectRevert("allowance does not match specified amount");
-        channel.createChannel(provider, address(mktn), 500, 3, 5, 5);
-    }
-
-    function test_UnlockFunds() public {
-        vm.startPrank(client);
-
-        // aprove the contract to withdraw 500 of client mktn token
-        mktn.approve(address(channel), 500);
-
-        channel.createChannel(provider, address(mktn), 500, 2, 5, 5);
-        // unlock the funds before deadline expires
-        vm.expectRevert("Deadline not reached yet");
-        channel.unclockFunds(address(mktn), provider);
-        // advance the block timestamp
-        vm.warp(2);
-        // withdraw the funds
-        channel.unclockFunds(address(mktn), provider);
-        uint256 supply = mktn.balanceOf(client);
-        assertEq(1000, supply, "failed to withdraw the funds");
-        // withdraw empty funds
-        vm.expectRevert("Empty Channel");
-        channel.unclockFunds(address(mktn), provider);
-    }
-
-    function test_LockFunds() public {
-		vm.startPrank(client);
-        mktn.approve(address(channel), 500);
-        channel.createChannel(provider, address(mktn), 500, 2, 5, 5);
-        mktn.approve(address(channel), 500);
-        channel.lockFunds(provider, address(mktn), 500);
-        uint256 balance = mktn.balanceOf(address(channel));
-        assertEq(balance, 1000);
+        assertEq(token.balanceOf(address(payment)), 1000);
     }
 
     function test_withdraw() public {
-        vm.startPrank(client);
-
-        mktn.approve(address(channel), 500);
-        channel.createChannel(provider, address(mktn), 500, 2, 5, 5);
-        vm.stopPrank();
+        vm.startPrank(publisher);
+        token.mint(500);
+        token.approve(address(payment), 500);
+        payment.createChannel(provider, token, 1, 500);
 
         vm.startPrank(provider);
-        channel.uploadMetrics(client, address(mktn),5);
-        channel.withdraw(address(mktn), client);
-        uint256 balance = mktn.balanceOf(provider);
-        assertEq(balance, 25);
+        token.mint(100);
+
+        payment.withdraw(publisher, token, 25, address(0));
+        assertEq(token.balanceOf(provider), 125);
+        payment.withdraw(publisher, token, 25, address(0));
+        assertEq(token.balanceOf(provider), 150);
+
+        vm.expectRevert(Payment.AmountRequired.selector);
+        payment.withdrawUpTo(publisher, token, 25, address(0));
+        vm.expectRevert(Payment.AmountRequired.selector);
+        payment.withdrawUpTo(publisher, token, 50, address(0));
+
+        payment.withdrawUpTo(publisher, token, 100, address(0));
+        assertEq(token.balanceOf(provider), 200);
+
+        vm.expectRevert(Payment.InsufficientFunds.selector);
+        payment.withdrawUpTo(publisher, token, 501, address(1));
+
+        payment.withdrawUpTo(publisher, token, 500, address(1));
+        assertEq(token.balanceOf(provider), 200);
+        assertEq(token.balanceOf(address(1)), 400);
     }
 
-    function test_UpdatePrice() public {
-        vm.startPrank(client);
-        mktn.approve(address(channel), 500);
-        channel.createChannel(provider, address(mktn), 500, 2, 5, 5);
+    function test_unlock() public {
+        vm.startPrank(publisher);
+        token.mint(500);
+        token.approve(address(payment), 1000);
+
+        vm.expectRevert(Payment.DoesNotExist.selector);
+        payment.unlock(provider, token);
+
+        payment.createChannel(provider, token, 20, 500);
+
+        vm.expectRevert(Payment.ChannelLocked.selector);
+        payment.withdrawUnlocked(provider, token);
 
         vm.startPrank(provider);
-        channel.updatePrice(client, address(mktn), 10);
+        payment.withdraw(publisher, token, 100, address(0));
+        assertEq(100, token.balanceOf(provider));
+        vm.startPrank(publisher);
 
-        vm.startPrank(client);
-        channel.acceptNewPrice(provider, address(mktn));
+        vm.expectRevert(Payment.ChannelLocked.selector);
+        payment.withdrawUnlocked(provider, token);
+
+        payment.unlock(provider, token);
+        // advance the block timestamp
+        vm.warp(block.timestamp + 20);
+
+        payment.withdrawUnlocked(provider, token);
+        assertEq(400, token.balanceOf(publisher));
+
+        vm.expectRevert(Payment.AmountRequired.selector);
+        payment.withdrawUnlocked(provider, token);
+
+        vm.expectRevert(Payment.AlreadyExists.selector);
+        payment.createChannel(provider, token, 20, 400);
+
+        payment.closeChannel(provider, token);
+
+        payment.createChannel(provider, token, 20, 400);
+    }
+
+    function test_unlock_withdraw() public {
+        vm.startPrank(publisher);
+        token.mint(500);
+        token.approve(address(payment), 500);
+
+        payment.createChannel(provider, token, 20, 500);
+
+        payment.unlock(provider, token);
+        vm.warp(10);
+
+        vm.expectRevert(Payment.ChannelLocked.selector);
+        payment.withdrawUnlocked(provider, token);
 
         vm.startPrank(provider);
-        channel.uploadMetrics(client, address(mktn), 5);
-        channel.withdraw(address(mktn), client);
+        payment.withdrawUpTo(publisher, token, 200, address(0));
+        assertEq(token.balanceOf(provider), 200);
 
-        uint256 balance = mktn.balanceOf(provider);
-        assertEq(balance, 50);
+        vm.startPrank(publisher);
+
+        payment.withdrawUnlocked(provider, token);
+        assertEq(token.balanceOf(publisher), 300);
     }
 }
