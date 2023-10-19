@@ -5,13 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net"
 
-	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	ipfs_utils "github.com/comrade-coop/trusted-pods/pkg/ipfs-utils"
 	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
-	tptypes "github.com/comrade-coop/trusted-pods/pkg/substrate/types"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ipfs/boxo/coreiface/path"
 	"github.com/ipfs/boxo/files"
 	"github.com/ipfs/go-cid"
@@ -38,6 +39,19 @@ func transformError(err error) (*pb.ProvisionPodResponse, error) {
 	}, nil
 }
 
+func VerifyPaymentChannel(publisher common.Address, podID common.Hash, token common.Address) error {
+
+	availableFunds, err := Instance.Available(&bind.CallOpts{Pending: false}, common.HexToAddress(ProviderAddress), publisher, podID, token)
+	if err != nil {
+		return err
+	}
+	minFunds := big.NewInt(1)
+	if availableFunds.Cmp(minFunds) < 0 {
+		return errors.New("insufficient funds available")
+	}
+	return nil
+}
+
 func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.ProvisionPodRequest) (*pb.ProvisionPodResponse, error) {
 	fmt.Printf("Received request for pod deployment, %v", request)
 	cid, err := cid.Cast(request.PodManifestCid)
@@ -62,13 +76,10 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.Provi
 		return transformError(err)
 	}
 
-	paymentContractAccountId, err := types.NewAccountID(request.PaymentContractAddress)
+	err = VerifyPaymentChannel(common.HexToAddress(request.ClientAddress), common.BytesToHash(request.PodID), common.HexToAddress(request.TokenAddress))
 	if err != nil {
 		return transformError(err)
 	}
-	paymentContract := tptypes.AccountIDToSS58(42, paymentContractAccountId)
-
-	//TODO: check paymentContract
 
 	response := &pb.ProvisionPodResponse{}
 	namespace := tpk8s.NewTrustedPodsNamespace(paymentContract)
@@ -88,6 +99,11 @@ var listenCmd = &cobra.Command{
 	Use:   "listen",
 	Short: "Start a service listening for incomming execution requests",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		err := setUp()
+		if err != nil {
+			return err
+		}
+
 		ipfs, ipfsMultiaddr, err := ipfs_utils.GetIpfsClient(ipfsApi)
 		if err != nil {
 			return err

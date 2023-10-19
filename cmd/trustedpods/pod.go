@@ -11,7 +11,6 @@ import (
 	keyservice "github.com/comrade-coop/trusted-pods/pkg/crypto"
 	ipfs_utils "github.com/comrade-coop/trusted-pods/pkg/ipfs-utils"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
-	tptypes "github.com/comrade-coop/trusted-pods/pkg/substrate/types"
 	iface "github.com/ipfs/boxo/coreiface"
 	"github.com/ipfs/boxo/files"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -122,15 +121,12 @@ var deployPodCmd = &cobra.Command{
 			return err
 		}
 
-		_, paymentContractAddress, err := tptypes.NewAccountIDFromSS58(paymentContract)
-		if err != nil {
-			return err
-		}
-
 		request := &pb.ProvisionPodRequest{
-			PodManifestCid:         podManifestPath.Cid().Bytes(),
-			Keys:                   keys,
-			PaymentContractAddress: paymentContractAddress.ToBytes(),
+			PodManifestCid: podManifestPath.Cid().Bytes(),
+			Keys:           keys,
+			ClientAddress:  ClientAddress,
+			TokenAddress:   TokenContractAddress,
+			PodID:          []byte{1},
 		}
 
 		providerPeerId, err := peer.Decode(providerPeer)
@@ -172,9 +168,6 @@ func init() {
 	podCmd.AddCommand(deployPodCmd)
 
 	deployPodCmd.Flags().StringVar(&manifestFormat, "format", "pb", fmt.Sprintf("Manifest format. One of %v", pb.UnmarshalFormatNames))
-	deployPodCmd.Flags().StringVar(&paymentContract, "payment", "", "Payment contract address.")
-
-	deployPodCmd.Flags().StringVar(&providerPeer, "provider", "", "P2p identity of the provider to deploy to")
 	deployPodCmd.Flags().StringVar(&ipfsApi, "ipfs", "-", "multiaddr where the ipfs/kubo api can be accessed (- to use the daemon running in IPFS_PATH)")
 
 }

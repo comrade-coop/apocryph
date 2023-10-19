@@ -7,7 +7,6 @@ import (
 	"github.com/comrade-coop/trusted-pods/pkg/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -23,14 +22,6 @@ func DeployTokenContract(auth *bind.TransactOpts, c *ethclient.Client) (*common.
 	return &address, instance, nil
 }
 
-func ClaimTokens(auth *bind.TransactOpts, c *ethclient.Client, instance *abi.MockToken, amount *big.Int) (*types.Transaction, error) {
-	tx, err := instance.ClaimTokens(auth, amount)
-	if err != nil {
-		log.Printf("could not claim tokens: %v", err)
-		return nil, err
-	}
-	return tx, nil
-}
 func Balance(auth *bind.TransactOpts, c *ethclient.Client, instance *abi.MockToken, a common.Address) (*big.Int, error) {
 	balance, err := instance.BalanceOf(&bind.CallOpts{Pending: false}, a)
 	if err != nil {

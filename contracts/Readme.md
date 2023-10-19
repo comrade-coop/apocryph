@@ -16,5 +16,5 @@ forge test
 ## Build 
 
 ```
-forge build
+forge build -o build
 ```

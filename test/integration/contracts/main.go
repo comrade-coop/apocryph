@@ -29,51 +29,66 @@ func main() {
 	_, err := contracts.CreatePaymentChannel(clientAuth, payment, provider.Address, tokenAddress, lockingAmount, deadline, mindAdvanceDuration, pricePerExecution)
 	if err != nil {
 		log.Printf("Error occured: %v", err)
+		return
 	}
 
 	log.Println("Uploading Metrics ...")
-	_, err = contracts.UploadMetrics(providerAuth, payment, client.Address, tokenAddress, unitsOfExecution)
+	_, err = contracts.UploadMetrics(providerAuth, payment, client.Address, big.NewInt(1), tokenAddress, unitsOfExecution)
 	if err != nil {
 		log.Printf("Error occured: %v", err)
+		return
 	}
 	log.Println("withdrawing owed Amount")
-	_, err = contracts.Withdraw(providerAuth, payment, tokenAddress, client.Address)
+
+	_, err = contracts.Withdraw(providerAuth, payment, client.Address, big.NewInt(1), tokenAddress)
 	if err != nil {
 		log.Printf("Error occured: %v", err)
+		return
 	}
 
 	balance, err := contracts.Balance(clientAuth, c, token, provider.Address)
 	if err != nil {
 		log.Printf("Error occured: %v", err)
+		return
 	}
 	log.Printf("Provider Balance: %v", balance)
 
-	_, err = contracts.UpdatePrice(providerAuth, payment, client.Address, tokenAddress, newPrice)
+	_, err = contracts.UpdatePrice(providerAuth, payment, client.Address, big.NewInt(1), tokenAddress, newPrice)
 	if err != nil {
 		log.Printf("Error occured: %v", err)
+		return
 	}
-	log.Println("Suggested new Price:", newPrice)
 
-	_, err = contracts.AcceptPrice(providerAuth, payment, provider.Address, tokenAddress)
+	channel, err := payment.Channels(&bind.CallOpts{Pending: false}, client.Address, provider.Address, big.NewInt(1), tokenAddress)
+	log.Println("Suggested Price", channel.SuggestedPrice)
+
+	_, err = contracts.AcceptPrice(clientAuth, payment, provider.Address, big.NewInt(1), tokenAddress)
 	if err != nil {
 		log.Printf("Error occured: %v", err)
+		return
 	}
 	log.Println("New Price Accepted")
 
+	channel, err = payment.Channels(&bind.CallOpts{Pending: false}, client.Address, provider.Address, big.NewInt(1), tokenAddress)
+	log.Println("Execution Price", channel.Price)
+
 	log.Println("Uploading Metrics ...")
-	_, err = contracts.UploadMetrics(providerAuth, payment, client.Address, tokenAddress, unitsOfExecution)
+	_, err = contracts.UploadMetrics(providerAuth, payment, client.Address, big.NewInt(1), tokenAddress, unitsOfExecution)
 	if err != nil {
 		log.Printf("Error occured: %v", err)
+		return
 	}
 
-	_, err = contracts.Withdraw(providerAuth, payment, tokenAddress, client.Address)
+	_, err = contracts.Withdraw(providerAuth, payment, client.Address, big.NewInt(1), tokenAddress)
 	if err != nil {
 		log.Printf("Error occured: %v", err)
+		return
 	}
 
 	balance, err = contracts.Balance(clientAuth, c, token, provider.Address)
 	if err != nil {
 		log.Printf("Error occured: %v", err)
+		return
 	}
 
 	log.Printf("Provider Balance: %v", balance)
@@ -123,11 +138,14 @@ func setUp() (accounts.Account, accounts.Account, *abi.Payment, *abi.MockToken, 
 	if err != nil {
 		log.Fatalf("could not connect to local ethereum node")
 	}
+
 	clientAuth, err := contracts.CreateTransactor(string(keyjson), "psw", client)
 	providerAuth, err := contracts.CreateTransactor(string(providerKeyjson), "psw", client)
 	log.Println("Accounts Retreived")
+
 	paymentAddress, payment, _ := contracts.DeployPaymentContract(clientAuth, client)
 	tokenAddress, token, _ := contracts.DeployTokenContract(clientAuth, client)
+
 	_, err = contracts.ClaimTokens(clientAuth, client, token, big.NewInt(1000))
 	if err != nil {
 		log.Fatalf("could not claim tokens: %v", err)
