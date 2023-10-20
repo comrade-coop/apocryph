@@ -2,18 +2,16 @@ package contracts
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log"
 	"strings"
 
-	"github.com/comrade-coop/trusted-pods/pkg/crypto"
-	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/external"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/cmd/utils"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"golang.org/x/exp/slices"
+	"github.com/mitchellh/go-homedir"
 )
 
 func ConnectToLocalNode() (*ethclient.Client, error) {
@@ -23,135 +21,72 @@ func ConnectToLocalNode() (*ethclient.Client, error) {
 func Connect(url string) (*ethclient.Client, error) {
 	conn, err := ethclient.Dial(url)
 	if err != nil {
-		log.Printf("could not connect to ethereum node: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("could not connect to ethereum node: %w", err)
 	}
 	return conn, nil
 }
 
-func GetAccounts(m *accounts.Manager) []common.Address {
-	return m.Accounts()
-}
+const PrivateKeySize = 256 / 8
+var DefaultKeystore = "~/.ethereum/keystore"
 
-func CreateTransactor(key string, psw string, c *ethclient.Client) (*bind.TransactOpts, error) {
-
-	context := context.Background()
-	chainID, err := c.ChainID(context)
-	if err != nil {
-		log.Printf("could not retreive chain id from client: %v", err)
-		return nil, err
-	}
-	auth, err := bind.NewTransactorWithChainID(strings.NewReader(key), psw, chainID)
+func GetAccount(accountString string, client *ethclient.Client) (*bind.TransactOpts, error) {
+	chainID, err := client.ChainID(context.Background())
 	if err != nil {
 		return nil, err
 	}
-	return auth, nil
+
+	if privKey, ok := strings.CutPrefix(accountString, "0x"); ok && len(privKey) == PrivateKeySize * 2 {
+		key, err := crypto.HexToECDSA(privKey)
+		if err != nil {
+			return nil, err
+		}
+
+		auth, err := bind.NewKeyedTransactorWithChainID(key, chainID)
+		if err != nil {
+			return nil, err
+		}
+		return auth, nil
+	}
+
+	uri, accountAddress, ok := strings.Cut(accountString, "#")
+
+	if !ok && strings.HasPrefix(accountString, "0x") {
+		accountAddress = accountString
+		var err error
+		uri, err = homedir.Expand(DefaultKeystore)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if strings.Contains(uri, "://") {
+		signer, err := external.NewExternalSigner(uri)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, account := range signer.Accounts() {
+			if account.Address.Hex() == accountAddress || account.URL.Path == accountAddress || accountAddress == "" {
+				return bind.NewClefTransactor(signer, account), nil
+			}
+		}
+		return nil, fmt.Errorf("Account %s not found in external signer %s", accountAddress, uri)
+	}
+
+	{
+		ks := keystore.NewKeyStore(uri, keystore.StandardScryptN, keystore.StandardScryptP)
+		accountAddress, accountPassphrase, _ := strings.Cut(accountAddress, ":")
+
+		for _, account := range ks.Accounts() {
+			if account.Address.Hex() == accountAddress || account.URL.Path == accountAddress || accountAddress == "" {
+				if accountPassphrase == "" {
+					accountPassphrase = utils.GetPassPhrase("", false)
+				}
+				ks.Unlock(account, accountPassphrase)
+				return bind.NewKeyStoreTransactorWithChainID(ks, account, chainID)
+			}
+		}
+
+		return nil, fmt.Errorf("Account %s not found in keystore %s", accountAddress, uri)
+	}
 }
-
-func DeriveAccountConfigs(privatekey string, psw string, exportpsw string, client *ethclient.Client, ks *keystore.KeyStore) (*accounts.Account, *bind.TransactOpts, error) {
-
-	key, err := crypto.DerivePrvKey(privatekey[2:])
-	if err != nil {
-		log.Printf("could not derive private key: %v", err)
-		return nil, nil, err
-	}
-
-	// derive the account from the key
-	acc, err := crypto.AccountFromECDSA(key, psw, ks)
-	if err != nil {
-		log.Printf("error creating account: %v \n", err)
-	}
-
-	//export the account to get the json string
-	keyjson, err := crypto.ExportAccount(acc, psw, exportpsw, ks)
-	if err != nil {
-		log.Printf("error exporting account: %v", err)
-	}
-	// get a transactor
-	providerAuth, err := CreateTransactor(string(keyjson), psw, client)
-	if err != nil {
-		log.Printf("Failed to create authorized transactor: %v\n", err)
-		return nil, nil, err
-	}
-	return &acc, providerAuth, nil
-
-}
-
-func VerifyContractAddress(address string, allowed []string) error {
-	if !slices.Contains(allowed, address) {
-		return errors.New(fmt.Sprintf("Contract address (%s) not in the list of allowed contract addresses %v", address, allowed))
-	}
-	return nil
-}
-
-//	type wallet struct {
-//		privateKey *ecdsa.PrivateKey
-//		pubaddress common.Address
-//	}
-//
-//	func GenerateWallet(prvkey ...string) (*wallet, error) {
-//		var privateKey *ecdsa.PrivateKey
-//		var err error
-//		if len(prvkey) > 0 {
-//			privateKey, err = DerivePrvKey(prvkey[0])
-//			if err != nil {
-//				log.Println("could not derive private key:", err)
-//				return nil, err
-//			}
-//		} else {
-//			privateKey, err = crypto.GenerateKey()
-//			if err != nil {
-//				log.Println("could not generate key:", err)
-//				return nil, err
-//			}
-//		}
-//
-//		// privateKeyBytes := crypto.FromECDSA(privateKey)
-//		// prvkey := hexutil.Encode(privateKeyBytes)[2:]
-//
-//		publicKey := privateKey.Public()
-//		publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-//		if !ok {
-//			log.Fatal("error casting public key to ECDSA")
-//		}
-//
-//		publicKeyBytes := crypto.FromECDSAPub(publicKeyECDSA)
-//		fmt.Println(hexutil.Encode(publicKeyBytes)[4:])
-//
-//		address := crypto.PubkeyToAddress(*publicKeyECDSA)
-//
-//		// hash := sha3.NewLegacyKeccak256()
-//		// hash.Write(publicKeyBytes[1:])
-//		// pubaddr := hexutil.Encode(hash.Sum(nil)[12:])
-//		return &wallet{
-//			privateKey: privateKey,
-//			pubaddress: address,
-//		}, nil
-//	}
-//
-// func (w *wallet) GetNonce(c *ethclient.Client) (uint64, error) {
-//
-// 	context := context.Background()
-//
-// 	nonce, err := c.PendingNonceAt(context, w.pubaddress)
-// 	if err != nil {
-// 		return 0, err
-// 	}
-// 	return nonce, nil
-//
-// }
-//
-// func (w *wallet) CreateSigner(client *ethclient.Client) (*bind.TransactOpts, error) {
-// 	context := context.Background()
-// 	chainID, err := client.ChainID(context)
-// 	if err != nil {
-// 		log.Printf("could not retreive chain id from client: %v", err)
-// 		return nil, err
-// 	}
-// 	auth, err := bind.NewKeyedTransactorWithChainID(w.privateKey, chainID)
-// 	if err != nil {
-// 		log.Printf("could not create signer: %v", err)
-// 		return nil, err
-// 	}
-// 	return auth, nil
-// }

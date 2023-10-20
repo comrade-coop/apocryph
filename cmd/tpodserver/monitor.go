@@ -6,19 +6,18 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/comrade-coop/trusted-pods/pkg/abi"
 	"github.com/comrade-coop/trusted-pods/pkg/contracts"
+	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
 	"github.com/comrade-coop/trusted-pods/pkg/prometheus"
 	"github.com/comrade-coop/trusted-pods/pkg/resource"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 )
 
-var clientAddress common.Address
-var tokenAddress common.Address
-var paymentAddress common.Address
+var withdrawAddressString string
+var withdrawTime int64
+var withdrawTolerance string
 
 var monitorCmd = &cobra.Command{
 	Use:   "monitor",
@@ -26,25 +25,36 @@ var monitorCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		pro := prometheus.NewPrometheusAPI(prometheusUrl)
 
-		err := contracts.VerifyContractAddress(PaymentContractAddress, allowedContractCodeHashes)
+		ethClient, err := contracts.Connect(ethereumRpc)
 		if err != nil {
 			return err
 		}
-		err = setUp()
-		if err != nil {
-			return err
-		}
-
-		clientAddress = common.HexToAddress(ClientAddress)
-		tokenAddress = common.HexToAddress(TokenContractAddress)
-		paymentAddress = common.HexToAddress(PaymentContractAddress)
 
 		pricingTable, err := openPricingTable()
 		if err != nil {
 			return err
 		}
-		if pricingTable == nil {
-			return errors.New("Pricing table is required for the monitor")
+
+		providerAuth, err := contracts.GetAccount(providerKey, ethClient)
+		if err != nil {
+			return err
+		}
+
+		paymentChannelValidator, err := contracts.NewPaymentChannelValidator(ethClient, allowedContractAddresses, providerAuth, pricingTable.TokenAddress)
+		if err != nil {
+			return err
+		}
+
+		client, err := tpk8s.GetClient(kubeConfig, dryRun)
+		if err != nil {
+			return err
+		}
+
+		withdrawAddress := common.HexToAddress(withdrawAddressString)
+
+		tolerance, _ := (&big.Int{}).SetString(withdrawTolerance, 10)
+		if tolerance == nil {
+			return errors.New("Invalid tolerance value")
 		}
 
 	Loop:
@@ -58,21 +68,47 @@ var monitorCmd = &cobra.Command{
 			amountsOwed := resourceMeasurements.Price(pricingTable)
 
 			namespaces := &corev1.NamespaceList{}
+			err = client.List(cmd.Context(), namespaces, tpk8s.TrustedPodsNamespaceFilter)
+			if err != nil {
+				return err
+			}
 
 			for _, n := range namespaces.Items {
 				if amountOwed, ok := amountsOwed[n.Name]; ok {
-					// TODO: Watch amounts left in contract!
-					// TODO: Only update contract if the difference is "too large"
-					err = setAmountOwed(ethClient, Instance, amountOwed)
+					err := func() error {
+						paymentChannelProto, err := tpk8s.TrustedPodsNamespaceGetChannel(&n)
+						if err != nil {
+							return err
+						}
+						if paymentChannelProto == nil {
+							return nil
+						}
+
+						paymentChannel, err := paymentChannelValidator.Parse(paymentChannelProto)
+						if err != nil {
+							// TODO: Stop namespaces that no longer parse (e.g. because they are under minFunds)!
+							return err
+						}
+
+						tx, err := paymentChannel.WithdrawIfOverMargin(withdrawAddress, amountOwed, tolerance)
+						if err != nil {
+							return err
+						}
+						if tx != nil {
+							fmt.Printf("namespace %s: Uploaded metrics for %d\n", n.Name, amountOwed)
+						}
+
+						return nil
+					}()
 					if err != nil {
-						fmt.Printf("Error while processing namespace %s: %v", n.Name, err)
+						fmt.Printf("Error while processing namespace %s: %v\n", n.Name, err)
 					}
 				}
 			}
 			select {
 			case <-cmd.Context().Done():
 				break Loop
-			case <-time.After(time.Minute * 1):
+			case <-time.After(time.Second * time.Duration(withdrawTime)):
 				continue
 			}
 		}
@@ -81,20 +117,15 @@ var monitorCmd = &cobra.Command{
 	},
 }
 
-func setAmountOwed(client *ethclient.Client, instance *abi.Payment, amount *big.Int) error {
-	_, err := instance.WithdrawUpTo(ProviderAuth, clientAddress, common.HexToHash(podID), tokenAddress, amount, common.Address{})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func init() {
 	monitorCmd.Flags().BoolVarP(&dryRun, "dry-run", "z", false, "Dry run mode; modify nothing.")
 	monitorCmd.Flags().StringVar(&kubeConfig, "kubeconfig", "-", "absolute path to the kubeconfig file (- to the first of in-cluster config and ~/.kube/config)")
 	monitorCmd.Flags().StringVar(&prometheusUrl, "prometheus", "", "address at which the prometheus API can be accessed")
-	monitorCmd.Flags().StringVar(&podID, "id", "00", "pod ID")
-	monitorCmd.Flags().StringVar(&ClientAddress, "cAddr", "", "client public address")
-	monitorCmd.Flags().StringVar(&TokenContractAddress, "tokenAddr", "", "token contract address")
+	monitorCmd.Flags().StringVar(&ethereumRpc, "ethereum-rpc", "http://127.0.0.1:8545", "client public address")
+	monitorCmd.Flags().StringVar(&providerKey, "ethereum-key", "", "provider account string (private key | http[s]://clef#account | /keystore#account | account (in default keystore))")
+
+	AddConfig("withdraw.address", &withdrawAddressString, "", "ethereum address to withdraw funds to")
+	AddConfig("withdraw.tolerace", &withdrawTolerance, "10", "tolerance for withdrawing from address")
+	AddConfig("withdraw.time", &withdrawTime, 100, "time in seconds between sucessive billing checks")
 
 }

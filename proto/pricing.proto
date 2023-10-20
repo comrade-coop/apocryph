@@ -5,7 +5,7 @@ option go_package = "github.com/comrade-coop/trusted-pods/pkg/proto";
 
 message PricingTable {
   repeated PricedResource resources = 1;
-  string currency = 2;
+  bytes tokenAddress = 2;
 }
 
 message PricedResource {

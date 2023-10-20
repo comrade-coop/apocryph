@@ -13,4 +13,5 @@ message CapacityRequest {
 message CapacityResponse {
   repeated pod.Resource availableResources = 1;
   pricing.PricingTable pricing = 2;
+  bytes providerAddress = 3;
 }

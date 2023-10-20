@@ -11,6 +11,7 @@ import (
 	keyservice "github.com/comrade-coop/trusted-pods/pkg/crypto"
 	ipfs_utils "github.com/comrade-coop/trusted-pods/pkg/ipfs-utils"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	"github.com/ethereum/go-ethereum/common"
 	iface "github.com/ipfs/boxo/coreiface"
 	"github.com/ipfs/boxo/files"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -111,6 +112,8 @@ var deployPodCmd = &cobra.Command{
 			return err
 		}
 
+		_, err = fmt.Fprintln(cmd.OutOrStdout(), protojson.Format(pod))
+
 		podManifestBytes, err := proto.Marshal(pod)
 		if err != nil {
 			return err
@@ -121,18 +124,27 @@ var deployPodCmd = &cobra.Command{
 			return err
 		}
 
+		var podIdBytes common.Hash
+		if podId != "" {
+			podIdBytes = common.HexToHash(podId)
+		} else {
+			podIdBytes = common.BytesToHash(podManifestPath.Cid().Bytes())
+		}
+
+		payment, err := createPaymentChannel(podIdBytes)
+
 		request := &pb.ProvisionPodRequest{
 			PodManifestCid: podManifestPath.Cid().Bytes(),
 			Keys:           keys,
-			ClientAddress:  ClientAddress,
-			TokenAddress:   TokenContractAddress,
-			PodID:          []byte{1},
+			Payment: payment,
 		}
 
 		providerPeerId, err := peer.Decode(providerPeer)
 		if err != nil {
 			return err
 		}
+
+		_, err = fmt.Fprintln(cmd.OutOrStdout(), protojson.Format(request))
 
 		addr, err := ipfs_utils.NewP2pApi(ipfs, ipfsMultiaddr).ConnectTo(pb.ProvisionPod, providerPeerId)
 		if err != nil {
@@ -168,6 +180,18 @@ func init() {
 	podCmd.AddCommand(deployPodCmd)
 
 	deployPodCmd.Flags().StringVar(&manifestFormat, "format", "pb", fmt.Sprintf("Manifest format. One of %v", pb.UnmarshalFormatNames))
+
 	deployPodCmd.Flags().StringVar(&ipfsApi, "ipfs", "-", "multiaddr where the ipfs/kubo api can be accessed (- to use the daemon running in IPFS_PATH)")
+	deployPodCmd.Flags().StringVar(&ethereumRpc, "ethereum-rpc", "http://127.0.0.1:8545", "ethereum rpc node")
+	deployPodCmd.Flags().StringVar(&publisherKey, "ethereum-key", "", "account string (private key | http[s]://clef#account | /keystore#account | account (in default keystore))")
+
+	deployPodCmd.Flags().StringVar(&providerPeer, "provider", "", "provider peer id")
+	deployPodCmd.Flags().StringVar(&providerEthAddress, "provider-eth", "", "provider public address")
+
+	deployPodCmd.Flags().StringVar(&paymentContractAddress, "payment-contract", "", "payment contract address")
+	deployPodCmd.Flags().StringVar(&podId, "pod-id", "", "pod id (empty to pick one automatically)")
+	deployPodCmd.Flags().StringVar(&tokenContractAddress, "token", "", "token contract address")
+	deployPodCmd.Flags().StringVar(&funds, "funds", "5000000000000000000", "intial funds")
+	deployPodCmd.Flags().Int64Var(&unlockTime, "unlock-time", 5 * 60, "time for unlocking tokens (in seconds)")
 
 }

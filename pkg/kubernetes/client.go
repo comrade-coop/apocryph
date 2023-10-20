@@ -8,7 +8,6 @@ import (
 
 	kedahttpscheme "github.com/kedacore/http-add-on/operator/generated/clientset/versioned/scheme"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -16,22 +15,6 @@ import (
 	"k8s.io/client-go/util/homedir"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-const LabelTrustedPodsPaymentChannel string = "coop.comrade/trusted-pods-payment-contract"
-const LabelIpfsP2P string = "coop.comrade/trusted-pods-p2p-helper"
-
-func NewTrustedPodsNamespace(paymentChannel string) *corev1.Namespace {
-	labels := map[string]string{}
-	if paymentChannel != "" {
-		labels[LabelTrustedPodsPaymentChannel] = paymentChannel
-	}
-	return &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "tpods",
-			Labels:       labels,
-		},
-	}
-}
 
 func GetScheme() (*runtime.Scheme, error) {
 	sch := runtime.NewScheme()

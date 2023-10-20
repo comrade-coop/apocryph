@@ -5,14 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/big"
 	"net"
 
+	"github.com/comrade-coop/trusted-pods/pkg/contracts"
 	ipfs_utils "github.com/comrade-coop/trusted-pods/pkg/ipfs-utils"
 	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ipfs/boxo/coreiface/path"
 	"github.com/ipfs/boxo/files"
 	"github.com/ipfs/go-cid"
@@ -31,6 +29,7 @@ type provisionPodServer struct {
 	pb.UnimplementedProvisionPodServiceServer
 	ipfs *rpc.HttpApi
 	k8cl client.Client
+	paymentValidator *contracts.PaymentChannelValidator
 }
 
 func transformError(err error) (*pb.ProvisionPodResponse, error) {
@@ -39,21 +38,8 @@ func transformError(err error) (*pb.ProvisionPodResponse, error) {
 	}, nil
 }
 
-func VerifyPaymentChannel(publisher common.Address, podID common.Hash, token common.Address) error {
-
-	availableFunds, err := Instance.Available(&bind.CallOpts{Pending: false}, common.HexToAddress(ProviderAddress), publisher, podID, token)
-	if err != nil {
-		return err
-	}
-	minFunds := big.NewInt(1)
-	if availableFunds.Cmp(minFunds) < 0 {
-		return errors.New("insufficient funds available")
-	}
-	return nil
-}
-
 func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.ProvisionPodRequest) (*pb.ProvisionPodResponse, error) {
-	fmt.Printf("Received request for pod deployment, %v", request)
+	fmt.Printf("Received request for pod deployment, %v\n", request)
 	cid, err := cid.Cast(request.PodManifestCid)
 	if err != nil {
 		return transformError(err)
@@ -76,13 +62,13 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.Provi
 		return transformError(err)
 	}
 
-	err = VerifyPaymentChannel(common.HexToAddress(request.ClientAddress), common.BytesToHash(request.PodID), common.HexToAddress(request.TokenAddress))
+	_, err = s.paymentValidator.Parse(request.Payment)
 	if err != nil {
 		return transformError(err)
 	}
 
 	response := &pb.ProvisionPodResponse{}
-	namespace := tpk8s.NewTrustedPodsNamespace(paymentContract)
+	namespace := tpk8s.NewTrustedPodsNamespace(request.Payment)
 	err = tpk8s.RunInNamespaceOrRevert(ctx, s.k8cl, namespace, dryRun, func(cl client.Client) error {
 		return tpk8s.ApplyPodRequest(ctx, cl, s.ipfs, request.Keys, pod, response)
 	})
@@ -90,7 +76,7 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.Provi
 		return transformError(err)
 	}
 
-	fmt.Printf("Request processed successfully, %v %v", response, namespace)
+	fmt.Printf("Request processed successfully, %v %v\n", response, namespace)
 
 	return response, nil
 }
@@ -99,11 +85,6 @@ var listenCmd = &cobra.Command{
 	Use:   "listen",
 	Short: "Start a service listening for incomming execution requests",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := setUp()
-		if err != nil {
-			return err
-		}
-
 		ipfs, ipfsMultiaddr, err := ipfs_utils.GetIpfsClient(ipfsApi)
 		if err != nil {
 			return err
@@ -114,6 +95,23 @@ var listenCmd = &cobra.Command{
 			return err
 		}
 
+		ethClient, err := contracts.Connect(ethereumRpc)
+		if err != nil {
+			return err
+		}
+
+		providerAuth, err := contracts.GetAccount(providerKey, ethClient)
+		if err != nil {
+			return err
+		}
+
+		pricingTable, err := openPricingTable()
+		if err != nil {
+			return err
+		}
+
+		validator, err := contracts.NewPaymentChannelValidator(ethClient, allowedContractAddresses, providerAuth, pricingTable.TokenAddress)
+
 		listener, err := GetListener(ipfs, ipfsMultiaddr, serveAddress)
 		if err != nil {
 			return err
@@ -123,6 +121,7 @@ var listenCmd = &cobra.Command{
 		pb.RegisterProvisionPodServiceServer(server, &provisionPodServer{
 			ipfs: ipfs,
 			k8cl: k8cl,
+			paymentValidator: validator,
 		})
 
 		go server.Serve(listener)
@@ -148,7 +147,10 @@ func GetListener(ipfs *rpc.HttpApi, ipfsMultiaddr multiaddr.Multiaddr, serveAddr
 func init() {
 	listenCmd.Flags().StringVar(&serveAddress, "address", "-", "port to serve on (- to automatically pick a port and register a listener for it in ipfs)")
 
+
 	listenCmd.Flags().BoolVarP(&dryRun, "dry-run", "z", false, "Dry run mode; modify nothing.")
 	listenCmd.Flags().StringVar(&kubeConfig, "kubeconfig", "-", "absolute path to the kubeconfig file (- to the first of in-cluster config and ~/.kube/config)")
 	listenCmd.Flags().StringVar(&ipfsApi, "ipfs", "-", "multiaddr where the ipfs/kubo api can be accessed (- to use the daemon running in IPFS_PATH)")
+	listenCmd.Flags().StringVar(&ethereumRpc, "ethereum-rpc", "http://127.0.0.1:8545", "client public address")
+	listenCmd.Flags().StringVar(&providerKey, "ethereum-key", "", "provider account string (private key | http[s]://clef#account | /keystore#account | account (in default keystore))")
 }

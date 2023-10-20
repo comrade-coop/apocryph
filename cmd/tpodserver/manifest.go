@@ -18,7 +18,6 @@ var manifestCmd = &cobra.Command{
 }
 
 var manifestFormat string
-var paymentContract string
 var kubeConfig string
 var dryRun bool
 
@@ -49,7 +48,7 @@ var applyManifestCmd = &cobra.Command{
 		}
 
 		response := &pb.ProvisionPodResponse{}
-		err = tpk8s.RunInNamespaceOrRevert(cmd.Context(), cl, tpk8s.NewTrustedPodsNamespace(paymentContract), dryRun, func(cl client.Client) error {
+		err = tpk8s.RunInNamespaceOrRevert(cmd.Context(), cl, tpk8s.NewTrustedPodsNamespace(nil), dryRun, func(cl client.Client) error {
 			return tpk8s.ApplyPodRequest(cmd.Context(), cl, nil, []*pb.Key{}, pod, response)
 		})
 		if err != nil {
@@ -69,8 +68,8 @@ func init() {
 	manifestCmd.AddCommand(applyManifestCmd)
 
 	applyManifestCmd.Flags().StringVar(&manifestFormat, "format", "pb", fmt.Sprintf("Manifest format. One of %v", pb.UnmarshalFormatNames))
-	applyManifestCmd.Flags().StringVar(&paymentContract, "payment", "", "Payment contract address.")
 
 	applyManifestCmd.Flags().BoolVarP(&dryRun, "dry-run", "z", false, "Dry run mode; modify nothing.")
 	applyManifestCmd.Flags().StringVar(&kubeConfig, "kubeconfig", "-", "absolute path to the kubeconfig file (- to the first of in-cluster config and ~/.kube/config)")
+
 }

@@ -1,15 +1,26 @@
 #!/usr/bin/env bash
+
+set -e
+
+trap 'kill $(jobs -p) &>/dev/null' EXIT
+
 cd "$(dirname "$0")"
-anvil > anvil_output.txt &
+
+which anvil >/dev/null
+which go >/dev/null
+which awk >/dev/null
+
+set -v
+
+export ANVIL_OUTPUT=$(mktemp ipfs.XXXX --tmpdir)
+anvil | tee $ANVIL_OUTPUT &
 
 sleep 2
 
-private_key1=$(awk '/Private Keys/ {flag=1; next} flag && /^\(0\)/ {print $2; exit}' anvil_output.txt)
-private_key2=$(awk '/Private Keys/ {flag=1; next} flag && /^\(1\)/ {print $2; exit}' anvil_output.txt)
-echo "client private key: $private_key1"
-echo "provider private key: $private_key2"
-go run . ./keystore $private_key1 $private_key2
+PUBLISHER_KEY=$(awk '/Private Keys/ {flag=1; next} flag && /^\(0\)/ {print $2; exit}' $ANVIL_OUTPUT); echo $PUBLISHER_KEY
+PROVIDER_KEY=$(awk '/Private Keys/ {flag=1; next} flag && /^\(1\)/ {print $2; exit}' $ANVIL_OUTPUT); echo $PROVIDER_KEY
 
-rm -r ./keystore > /dev/null
-pkill anvil
-rm anvil_output.txt
+set -x
+
+go run . "$PUBLISHER_KEY" "$PROVIDER_KEY"
+

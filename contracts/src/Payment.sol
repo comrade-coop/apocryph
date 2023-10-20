@@ -166,4 +166,14 @@ contract Payment {
         Channel storage channel = channels[publisher][provider][podId][token];
         return channel.investedByPublisher - channel.withdrawnByProvider;
     }
+
+    // allows one to check the amount of so-far claimed tokens
+    function withdrawn(address publisher, address provider, bytes32 podId, IERC20 token)
+        public
+        view
+        returns (uint256)
+    {
+        Channel storage channel = channels[publisher][provider][podId][token];
+        return channel.withdrawnByProvider;
+    }
 }

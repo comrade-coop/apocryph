@@ -1,158 +1,108 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"math/big"
 	"os"
 
 	"github.com/comrade-coop/trusted-pods/pkg/abi"
 	"github.com/comrade-coop/trusted-pods/pkg/contracts"
-	"github.com/comrade-coop/trusted-pods/pkg/crypto"
-	"github.com/ethereum/go-ethereum/accounts"
+	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 var deadline = big.NewInt(3275538098)
-var mindAdvanceDuration = big.NewInt(5)
+var unlockTime = big.NewInt(5)
 var pricePerExecution = big.NewInt(5)
 var lockingAmount = big.NewInt(500)
-var unitsOfExecution = big.NewInt(5)
+var amountOwed = big.NewInt(5)
+var podId = common.HexToHash("00")
 var newPrice = big.NewInt(10)
 
 func main() {
-	client, provider, payment, token, tokenAddress, paymentAddress, clientAuth, providerAuth, c := setUp()
-	token.Approve(clientAuth, paymentAddress, lockingAmount)
-
-	log.Println("Creating Payment Channel ...")
-	_, err := contracts.CreatePaymentChannel(clientAuth, payment, provider.Address, tokenAddress, lockingAmount, deadline, mindAdvanceDuration, pricePerExecution)
+	err := mainErr()
 	if err != nil {
-		log.Printf("Error occured: %v", err)
-		return
+		fmt.Printf("Error occured: %v", err)
+		os.Exit(1)
 	}
-
-	log.Println("Uploading Metrics ...")
-	_, err = contracts.UploadMetrics(providerAuth, payment, client.Address, big.NewInt(1), tokenAddress, unitsOfExecution)
-	if err != nil {
-		log.Printf("Error occured: %v", err)
-		return
-	}
-	log.Println("withdrawing owed Amount")
-
-	_, err = contracts.Withdraw(providerAuth, payment, client.Address, big.NewInt(1), tokenAddress)
-	if err != nil {
-		log.Printf("Error occured: %v", err)
-		return
-	}
-
-	balance, err := contracts.Balance(clientAuth, c, token, provider.Address)
-	if err != nil {
-		log.Printf("Error occured: %v", err)
-		return
-	}
-	log.Printf("Provider Balance: %v", balance)
-
-	_, err = contracts.UpdatePrice(providerAuth, payment, client.Address, big.NewInt(1), tokenAddress, newPrice)
-	if err != nil {
-		log.Printf("Error occured: %v", err)
-		return
-	}
-
-	channel, err := payment.Channels(&bind.CallOpts{Pending: false}, client.Address, provider.Address, big.NewInt(1), tokenAddress)
-	log.Println("Suggested Price", channel.SuggestedPrice)
-
-	_, err = contracts.AcceptPrice(clientAuth, payment, provider.Address, big.NewInt(1), tokenAddress)
-	if err != nil {
-		log.Printf("Error occured: %v", err)
-		return
-	}
-	log.Println("New Price Accepted")
-
-	channel, err = payment.Channels(&bind.CallOpts{Pending: false}, client.Address, provider.Address, big.NewInt(1), tokenAddress)
-	log.Println("Execution Price", channel.Price)
-
-	log.Println("Uploading Metrics ...")
-	_, err = contracts.UploadMetrics(providerAuth, payment, client.Address, big.NewInt(1), tokenAddress, unitsOfExecution)
-	if err != nil {
-		log.Printf("Error occured: %v", err)
-		return
-	}
-
-	_, err = contracts.Withdraw(providerAuth, payment, client.Address, big.NewInt(1), tokenAddress)
-	if err != nil {
-		log.Printf("Error occured: %v", err)
-		return
-	}
-
-	balance, err = contracts.Balance(clientAuth, c, token, provider.Address)
-	if err != nil {
-		log.Printf("Error occured: %v", err)
-		return
-	}
-
-	log.Printf("Provider Balance: %v", balance)
-	if balance.Int64() == 75 {
-		log.Println("Correct expected balance ✅")
-	} else {
-		log.Println("Incorrect balance ❌")
-	}
-
 }
-
-func setUp() (accounts.Account, accounts.Account, *abi.Payment, *abi.MockToken, common.Address, common.Address, *bind.TransactOpts, *bind.TransactOpts, *ethclient.Client) {
-	log.Println("Creating Provider & Client Accounts ...")
-	args := os.Args
-	if len(args) != 4 {
-		log.Fatalf("Usage: run-test <KesytorePath> <ClientPrivateKey> <ProviderPrivateKey>")
-	}
-	ks := crypto.CreateKeystore(args[1])
-	key, err := crypto.DerivePrvKey(args[2][2:])
-	if err != nil {
-		log.Fatalf("could not derive private key: %v", err)
-	}
-	clientAcc, err := crypto.AccountFromECDSA(key, "psw", ks)
-	if err != nil {
-		log.Printf("error creating account: %v \n", err)
-	}
-	keyjson, err := crypto.ExportAccount(clientAcc, "psw", "psw", ks)
-	if err != nil {
-		log.Printf("error exporting account: %v", err)
+func mainErr() error {
+	if len(os.Args) != 3 {
+		return fmt.Errorf("Usage: run-test <PublisherAccountString> <ProviderAccountString>")
 	}
 
-	providerKey, err := crypto.DerivePrvKey(args[3][2:])
+	ethClient, err := contracts.ConnectToLocalNode()
 	if err != nil {
-		log.Fatalf("could not derive private key: %v", err)
-	}
-	providerAcc, err := crypto.AccountFromECDSA(providerKey, "psw", ks)
-	if err != nil {
-		log.Printf("error creating account: %v \n", err)
+		return fmt.Errorf("could not connect to local ethereum node: %w", err)
 	}
 
-	providerKeyjson, err := crypto.ExportAccount(providerAcc, "psw", "psw", ks)
+	publisherAuth, err := contracts.GetAccount(os.Args[1], ethClient)
 	if err != nil {
-		log.Printf("error exporting account: %v", err)
+		return err
 	}
 
-	client, err := contracts.ConnectToLocalNode()
+	providerAuth, err := contracts.GetAccount(os.Args[2], ethClient)
 	if err != nil {
-		log.Fatalf("could not connect to local ethereum node")
+		return err
 	}
 
-	clientAuth, err := contracts.CreateTransactor(string(keyjson), "psw", client)
-	providerAuth, err := contracts.CreateTransactor(string(providerKeyjson), "psw", client)
-	log.Println("Accounts Retreived")
-
-	paymentAddress, payment, _ := contracts.DeployPaymentContract(clientAuth, client)
-	tokenAddress, token, _ := contracts.DeployTokenContract(clientAuth, client)
-
-	_, err = contracts.ClaimTokens(clientAuth, client, token, big.NewInt(1000))
+	paymentAddress, _, payment, err := abi.DeployPayment(publisherAuth, ethClient)
 	if err != nil {
-		log.Fatalf("could not claim tokens: %v", err)
+		return err
 	}
-	_, err = contracts.Balance(clientAuth, client, token, clientAcc.Address)
+	tokenAddress, _, token, err := abi.DeployMockToken(publisherAuth, ethClient)
 	if err != nil {
-		log.Fatalf("could not get balance: %v", err)
+		return err
 	}
-	return clientAcc, providerAcc, payment, token, *tokenAddress, *paymentAddress, clientAuth, providerAuth, client
+
+	_, err = token.Mint(publisherAuth, big.NewInt(1000))
+	if err != nil {
+		return fmt.Errorf("could not mint tokens: %w", err)
+	}
+
+	_, err = token.Approve(publisherAuth, paymentAddress, lockingAmount)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Creating Payment Channel ...")
+	_, err = payment.CreateChannel(publisherAuth, providerAuth.From, podId, tokenAddress, lockingAmount, unlockTime)
+	if err != nil {
+		return err
+	}
+
+	validator, err := contracts.NewPaymentChannelValidator(ethClient, []string{paymentAddress.Hex()}, providerAuth, tokenAddress.Bytes())
+	if err != nil {
+		return err
+	}
+
+	channel, err := validator.Parse(&pb.PaymentChannel{
+		ChainID: validator.ChainID.Bytes(),
+		ContractAddress: paymentAddress.Bytes(),
+		PublisherAddress: publisherAuth.From.Bytes(),
+		ProviderAddress: providerAuth.From.Bytes(),
+		PodID: podId.Bytes(),
+		TokenAddress: tokenAddress.Bytes(),
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = channel.WithdrawUpTo(providerAuth.From, amountOwed)
+	if err != nil {
+		return fmt.Errorf("could not upload metrics and withdraw: %w", err)
+	}
+
+	balance, err := token.BalanceOf(&bind.CallOpts{}, providerAuth.From)
+	if err != nil {
+		return err
+	}
+
+	if balance.Cmp(amountOwed) != 0 {
+		return fmt.Errorf("Incorrect balance ❌ - expected %v, got %v", amountOwed, balance)
+	}
+	fmt.Println("Correct balance ✅")
+
+	return nil
 }

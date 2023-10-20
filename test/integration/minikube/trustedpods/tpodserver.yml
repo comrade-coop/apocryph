@@ -33,9 +33,12 @@ data:
               { "resource": "cpu", "priceForReservation": 200000000000 },
               { "resource": "memory", "priceForReservation": 500 }
             ],
-            "currency": "Tokens"
+            "tokenAddress": "5/FyXnc0ziiPg2fhuxQ+kLs/BRI="
           }
-
+    withdraw:
+      address: "0x90F79bf6EB2c4f870365E785982E1f101E93b906"
+      time: 15
+  # tokenAddress=$(echo e7f1725E7734CE288F8367e1Bb143E90bb3F0512 | xxd -p -r | base64)
 
 ---
 apiVersion: apps/v1
@@ -56,7 +59,14 @@ spec:
       containers:
       - name: tpodserver
         image: host.minikube.internal:5000/comradecoop/trusted-pods/server
-        command: ["tpodserver", "listen", "--address", "0.0.0.0:8080", "--config", "config.yaml", "--ipfs", "/dns4/ipfs-rpc.ipfs.svc.cluster.local/tcp/5001"]
+        command: [
+          "tpodserver", "listen",
+          "--address", "0.0.0.0:8080",
+          "--config", "config.yaml",
+          "--ipfs", "/dns4/ipfs-rpc.ipfs.svc.cluster.local/tcp/5001",
+          "--ethereum-rpc", "http://eth-rpc.eth.svc.cluster.local:8545",
+          "--ethereum-key", "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d", # TODO= anvil.accounts[1]
+        ]
         ports:
         - containerPort: 8080
         volumeMounts:
@@ -66,7 +76,13 @@ spec:
           readOnly: true
       - name: tpodmonitor
         image: host.minikube.internal:5000/comradecoop/trusted-pods/server
-        command: ["tpodserver", "monitor", "--config", "config.yaml", "--prometheus", "http://prometheus-server.prometheus.svc.cluster.local:80/", "-z"]
+        command: [
+          "tpodserver", "monitor",
+          "--config", "config.yaml",
+          "--prometheus", "http://prometheus-server.prometheus.svc.cluster.local:80/",
+          "--ethereum-rpc", "http://eth-rpc.eth.svc.cluster.local:8545",
+          "--ethereum-key", "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d", # TODO= anvil.accounts[1]
+        ]
         ports:
         - containerPort: 8080
         volumeMounts:

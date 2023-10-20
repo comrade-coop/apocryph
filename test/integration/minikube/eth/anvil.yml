@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: eth-rpc
+  namespace: eth
+  labels:
+    app: eth
+spec:
+  ports:
+  - name: jsonrpc
+    port: 8545
+    targetPort: jsonrpc
+  selector:
+    provide: eth-rpc
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: anvil
+  namespace: eth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: anvil
+  serviceName: ipfs-rpc
+  template:
+    metadata:
+      labels:
+        app: anvil
+        provide: eth-rpc
+    spec:
+      containers:
+      - name: anvil
+        image: ghcr.io/foundry-rs/foundry:nightly-619f3c56302b5a665164002cb98263cd9812e4d5
+        command: ["anvil", "--state", "/data/anvil-state"]
+        ports:
+        - name: jsonrpc
+          containerPort: 8545
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        env:
+        - name: ANVIL_IP_ADDR
+          value: 0.0.0.0
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi

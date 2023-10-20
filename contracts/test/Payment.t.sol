@@ -63,8 +63,12 @@ contract PaymentTest is Test {
 
         payment.withdraw(publisher, podId, token, 25, address(0));
         assertEq(token.balanceOf(provider), 125);
+        assertEq(payment.withdrawn(publisher, provider, podId, token), 25);
+        assertEq(payment.available(publisher, provider, podId, token), 475);
         payment.withdraw(publisher, podId, token, 25, address(0));
         assertEq(token.balanceOf(provider), 150);
+        assertEq(payment.withdrawn(publisher, provider, podId, token), 50);
+        assertEq(payment.available(publisher, provider, podId, token), 450);
 
         vm.expectRevert(Payment.AmountRequired.selector);
         payment.withdrawUpTo(publisher, podId, token, 25, address(0));
@@ -73,6 +77,8 @@ contract PaymentTest is Test {
 
         payment.withdrawUpTo(publisher, podId, token, 100, address(0));
         assertEq(token.balanceOf(provider), 200);
+        assertEq(payment.withdrawn(publisher, provider, podId, token), 100);
+        assertEq(payment.available(publisher, provider, podId, token), 400);
 
         vm.expectRevert(Payment.InsufficientFunds.selector);
         payment.withdrawUpTo(publisher, podId, token, 501, address(1));
@@ -80,6 +86,8 @@ contract PaymentTest is Test {
         payment.withdrawUpTo(publisher, podId, token, 500, address(1));
         assertEq(token.balanceOf(provider), 200);
         assertEq(token.balanceOf(address(1)), 400);
+        assertEq(payment.withdrawn(publisher, provider, podId, token), 500);
+        assertEq(payment.available(publisher, provider, podId, token), 0);
     }
 
     function test_unlock() public {

@@ -58,10 +58,6 @@ func openPricingTable() (*pb.PricingTable, error) {
 		return pricingTable, nil
 	}
 
-	if pricingFile == "" {
-		return nil, nil
-	}
-
 	file, err := os.Open(pricingFile)
 	if err != nil {
 		return nil, err

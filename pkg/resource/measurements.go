@@ -22,14 +22,13 @@ func (r ResourceMeasurementsMap) Add(namespace string, resource *Resource, value
 	}
 }
 
-var CurrencyDisplayScale = big.NewFloat(1.0e-16)
+var CurrencyDisplayScale = big.NewFloat(1.0e-18)
+var currency = GetResource("Tokens", ResourceKindUsage)
 
 func (r ResourceMeasurementsMap) Display(writer io.Writer, priceTable *pb.PricingTable) {
 	var priceTableMap PricingTableMap
-	var currency *Resource
 	if priceTable != nil {
 		priceTableMap = NewPricingTableMap(priceTable)
-		currency = GetResource(priceTable.Currency, ResourceKindUsage)
 	}
 
 	fmt.Fprint(writer, "Resources:\n")
