@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/comrade-coop/trusted-pods/pkg/abi"
-	"github.com/comrade-coop/trusted-pods/pkg/contracts"
+	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -32,17 +32,17 @@ func mainErr() error {
 		return fmt.Errorf("Usage: run-test <PublisherAccountString> <ProviderAccountString>")
 	}
 
-	ethClient, err := contracts.ConnectToLocalNode()
+	ethClient, err := ethereum.GetClient("-")
 	if err != nil {
 		return fmt.Errorf("could not connect to local ethereum node: %w", err)
 	}
 
-	publisherAuth, err := contracts.GetAccount(os.Args[1], ethClient)
+	publisherAuth, err := ethereum.GetAccount(os.Args[1], ethClient)
 	if err != nil {
 		return err
 	}
 
-	providerAuth, err := contracts.GetAccount(os.Args[2], ethClient)
+	providerAuth, err := ethereum.GetAccount(os.Args[2], ethClient)
 	if err != nil {
 		return err
 	}
@@ -72,7 +72,7 @@ func mainErr() error {
 		return err
 	}
 
-	validator, err := contracts.NewPaymentChannelValidator(ethClient, []string{paymentAddress.Hex()}, providerAuth, tokenAddress.Bytes())
+	validator, err := ethereum.NewPaymentChannelValidator(ethClient, []string{paymentAddress.Hex()}, providerAuth, tokenAddress.Bytes())
 	if err != nil {
 		return err
 	}
