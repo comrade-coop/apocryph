@@ -15,7 +15,7 @@ import (
 )
 
 func GetClient(url string) (*ethclient.Client, error) {
-	if url == "-" {
+	if url == "" {
 		url = "http://127.0.0.1:8545"
 	}
 	conn, err := ethclient.Dial(url)

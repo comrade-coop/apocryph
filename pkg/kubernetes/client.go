@@ -28,7 +28,7 @@ func GetScheme() (*runtime.Scheme, error) {
 }
 
 func GetConfig(kubeConfig string) (*rest.Config, error) {
-	if kubeConfig == "-" {
+	if kubeConfig == "" {
 		config, err := rest.InClusterConfig()
 
 		if err == rest.ErrNotInCluster {

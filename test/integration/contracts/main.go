@@ -32,7 +32,7 @@ func mainErr() error {
 		return fmt.Errorf("Usage: run-test <PublisherAccountString> <ProviderAccountString>")
 	}
 
-	ethClient, err := ethereum.GetClient("-")
+	ethClient, err := ethereum.GetClient("")
 	if err != nil {
 		return fmt.Errorf("could not connect to local ethereum node: %w", err)
 	}

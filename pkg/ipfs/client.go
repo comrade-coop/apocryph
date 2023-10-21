@@ -9,7 +9,7 @@ import (
 )
 
 func GetIpfsClient(ipfsApi string) (api *rpc.HttpApi, apiMultiaddr multiaddr.Multiaddr, err error) {
-	if ipfsApi == "-" {
+	if ipfsApi == "" {
 		// via rpc.NewLocalApi()
 		ipfspath := os.Getenv(rpc.EnvDir)
 		if ipfspath == "" {

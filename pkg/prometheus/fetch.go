@@ -11,7 +11,7 @@ import (
 	"github.com/comrade-coop/trusted-pods/pkg/resource"
 )
 
-const resourceQuotaSecondsQuery = "sum by (namespace, resource)(sum_over_time(kube_pod_container_resource_requests[250000m]))"
+const resourceQuotaSecondsQuery = "sum by (namespace, resource)(sum_over_time(kube_pod_container_resource_requests[250000m]))" // TODO: 250000m might be too short?
 
 type QueryStatus string
 
@@ -36,7 +36,7 @@ type QueryResult struct {
 
 var sixty = big.NewFloat(60.0)
 
-func (api PrometheusAPI) FetchResourceMetrics(resourceMeasurements resource.ResourceMeasurementsMap) error {
+func (api *PrometheusAPI) FetchResourceMetrics(resourceMeasurements resource.ResourceMeasurementsMap) error {
 	queryUrl, err := url.JoinPath(api.baseUrl, "/api/v1/query")
 	if err != nil {
 		return err

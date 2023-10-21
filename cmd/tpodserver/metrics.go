@@ -29,7 +29,7 @@ var getMetricsCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		resourceMeasurements := resource.ResourceMeasurementsMap{}
 
-		err := prometheus.NewPrometheusAPI(prometheusUrl).FetchResourceMetrics(resourceMeasurements)
+		err := prometheus.GetPrometheusClient(prometheusUrl).FetchResourceMetrics(resourceMeasurements)
 		if err != nil {
 			return err
 		}

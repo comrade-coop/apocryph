@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	ipfs_utils "github.com/comrade-coop/trusted-pods/pkg/ipfs-utils"
+	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/spf13/cobra"
@@ -22,7 +22,7 @@ var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Start observing Kubernetes services and registering them in ipfs",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ipfs, ipfsMultiaddr, err := ipfs_utils.GetIpfsClient(ipfsApi)
+		ipfs, ipfsMultiaddr, err := tpipfs.GetIpfsClient(ipfsApi)
 		if err != nil {
 			return err
 		}
@@ -34,7 +34,7 @@ var runCmd = &cobra.Command{
 			}
 			fmt.Printf("IPFS is not started yet, %s", err)
 		}
-		ipfsp2p := ipfs_utils.NewP2pApi(ipfs, ipfsMultiaddr)
+		ipfsp2p := tpipfs.NewP2pApi(ipfs, ipfsMultiaddr)
 
 		scheme, err := tpk8s.GetScheme()
 		if err != nil {
@@ -91,7 +91,7 @@ var runCmd = &cobra.Command{
 	},
 }
 
-func handleEvent(ipfsp2p *ipfs_utils.P2pApi, eType watch.EventType, service *corev1.Service) error {
+func handleEvent(ipfsp2p *tpipfs.P2pApi, eType watch.EventType, service *corev1.Service) error {
 	if len(service.Spec.Ports) != 1 {
 		return errors.New("Expected exactly one exposed port")
 	}
@@ -110,11 +110,11 @@ func handleEvent(ipfsp2p *ipfs_utils.P2pApi, eType watch.EventType, service *cor
 		if eType == watch.Added {
 			fmt.Printf("Forwarding %s to %s\n", protocol, endpoint)
 		}
-		_, err := ipfsp2p.ExposeEndpoint(protocol, endpoint, ipfs_utils.ReturnExistingEndpoint)
+		_, err := ipfsp2p.ExposeEndpoint(protocol, endpoint, tpipfs.ReturnExistingEndpoint)
 		return err
 	} else {
 		fmt.Printf("Dropping forward for %s to %s\n", protocol, endpoint)
-		endpoint, err := ipfsp2p.ExposeEndpoint(protocol, endpoint, ipfs_utils.ReturnExistingEndpoint)
+		endpoint, err := ipfsp2p.ExposeEndpoint(protocol, endpoint, tpipfs.ReturnExistingEndpoint)
 		if err != nil {
 			return err
 		}
@@ -125,6 +125,6 @@ func handleEvent(ipfsp2p *ipfs_utils.P2pApi, eType watch.EventType, service *cor
 }
 
 func init() {
-	runCmd.Flags().StringVar(&kubeConfig, "kubeconfig", "-", "absolute path to the kubeconfig file (- to use in-cluster config)")
-	runCmd.Flags().StringVar(&ipfsApi, "ipfs", "-", "multiaddr where the ipfs/kubo api can be accessed (- to use the daemon running in IPFS_PATH)")
+	runCmd.Flags().StringVar(&kubeConfig, "kubeconfig", "", "absolute path to the kubeconfig file (leave blank to use in-cluster config)")
+	runCmd.Flags().StringVar(&ipfsApi, "ipfs", "", "multiaddr where the ipfs/kubo api can be accessed (leave blank to use the daemon running in IPFS_PATH)")
 }

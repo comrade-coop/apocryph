@@ -58,7 +58,7 @@ func (s *server) ProvisionPod(ctx context.Context, in *pb.ProvisionPodRequest) (
 }
 
 func mainProvider() error {
-	node, multiaddr, err := tpipfs.GetIpfsClient("-")
+	node, multiaddr, err := tpipfs.GetIpfsClient("")
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func mainProvider() error {
 }
 
 func mainPublisher() error {
-	node, multiaddr, err := tpipfs.GetIpfsClient("-")
+	node, multiaddr, err := tpipfs.GetIpfsClient("")
 	if err != nil {
 		return err
 	}
