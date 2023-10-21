@@ -1,5 +1,5 @@
 // this package contains ipfs helper functions
-package ipfs_utils
+package ipfs
 
 import (
 	"context"

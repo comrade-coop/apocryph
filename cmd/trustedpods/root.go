@@ -8,8 +8,6 @@ import (
 var cfgFileFields = make(map[string]interface{})
 var cfgFile string
 
-var allowedContracts []string = []string{"0x5FbDB2315678afecb367f032d93F642f64180aa3"}
-
 var rootCmd = &cobra.Command{
 	Use:   "trustedpods",
 	Short: "Trusted Pods is a decentralized compute marketplace for confidential container pods.",

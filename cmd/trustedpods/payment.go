@@ -6,7 +6,7 @@ import (
 	"math/big"
 
 	"github.com/comrade-coop/trusted-pods/pkg/abi"
-	"github.com/comrade-coop/trusted-pods/pkg/contracts"
+	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
@@ -37,19 +37,17 @@ func createPaymentChannel(podIdBytes common.Hash) (*pb.PaymentChannel, error) {
 		return nil, fmt.Errorf("Invalid number passed for funds: %s", funds)
 	}
 
-	// get an ethclient
-	client, err := contracts.Connect(ethereumRpc)
+	client, err := ethereum.GetClient(ethereumRpc)
+	if err != nil {
+		return nil, err
+	}
+
+	publisherAuth, err := ethereum.GetAccount(publisherKey, client)
 	if err != nil {
 		return nil, err
 	}
 
 	chainID, err := client.ChainID(context.Background())
-	if err != nil {
-		return nil, err
-	}
-
-	// derive the Account from the private key
-	publisherAuth, err := contracts.GetAccount(publisherKey, client)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +90,6 @@ func createPaymentChannel(podIdBytes common.Hash) (*pb.PaymentChannel, error) {
 var createPaymentCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create a payment channel with initial funds",
-	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_, err := createPaymentChannel(common.HexToHash(podId))
 		return err
@@ -102,7 +99,6 @@ var createPaymentCmd = &cobra.Command{
 var mintPaymentCmd = &cobra.Command{
 	Use:   "mint",
 	Short: "Mint some amount of tokens (debug)",
-	Args:  cobra.ExactArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		tokenContract := common.HexToAddress(tokenContractAddress)
 		fundsInt, _ := (&big.Int{}).SetString(funds, 10)
@@ -111,13 +107,13 @@ var mintPaymentCmd = &cobra.Command{
 		}
 
 		// get an ethclient
-		client, err := contracts.Connect(ethereumRpc)
+		client, err := ethereum.GetClient(ethereumRpc)
 		if err != nil {
 			return err
 		}
 
 		// derive the Account from the private key
-		publisherAuth, err := contracts.GetAccount(publisherKey, client)
+		publisherAuth, err := ethereum.GetAccount(publisherKey, client)
 		if err != nil {
 			return err
 		}
@@ -137,6 +133,9 @@ var mintPaymentCmd = &cobra.Command{
 		return nil
 	},
 }
+
+
+
 func init() {
 	paymentCmd.AddCommand(createPaymentCmd)
 	paymentCmd.AddCommand(mintPaymentCmd)

@@ -1,25 +1,18 @@
 package main
 
 import (
-	"context"
-	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path"
 
-	keyservice "github.com/comrade-coop/trusted-pods/pkg/crypto"
-	ipfs_utils "github.com/comrade-coop/trusted-pods/pkg/ipfs-utils"
+	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/ethereum/go-ethereum/common"
-	iface "github.com/ipfs/boxo/coreiface"
-	"github.com/ipfs/boxo/files"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
 )
 
 var podCmd = &cobra.Command{
@@ -32,94 +25,32 @@ var providerPeer string
 var ipfsApi string
 var paymentContract string
 
-func TransformSecrets(ctx context.Context, ipfs iface.CoreAPI, basepath string, pod *pb.Pod, keys *[]*pb.Key) error {
-	for _, volume := range pod.Volumes {
-		if volume.Type == pb.Volume_VOLUME_SECRET {
-			secretConfig := volume.GetSecret()
-			if secretConfig.File != "" {
-				secretPath := secretConfig.File
-				if !path.IsAbs(secretPath) {
-					secretPath = path.Join(basepath, secretPath)
-				}
-				secretFile, err := os.Open(secretPath)
-				if err != nil {
-					return err
-				}
-				secretBytes, err := io.ReadAll(secretFile)
-				if err != nil {
-					return err
-				}
-				keyData, err := keyservice.CreateRandomKey()
-				if err != nil {
-					return err
-				}
-
-				encryptedData, nonce, err := keyservice.AESEncryptWith(secretBytes, keyData)
-				if len(nonce) != keyservice.NONCE_SIZE {
-					return errors.New("Wrong nonce size")
-				}
-				encryptedSecretBytes := append(nonce, encryptedData...)
-
-				encryptedSecretPath, err := ipfs.Unixfs().Add(ctx, files.NewBytesFile(encryptedSecretBytes))
-				if err != nil {
-					return err
-				}
-
-				secretConfig.Cid = encryptedSecretPath.Cid().Bytes()
-				secretConfig.KeyIdx = int32(len(*keys))
-				secretConfig.File = ""
-				*keys = append(*keys, &pb.Key{
-					Data: keyData,
-				})
-			}
-		}
-	}
-	return nil
-}
 
 var deployPodCmd = &cobra.Command{
 	Use:   "deploy",
 	Short: "Deploy a pod from a local manifest",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ipfs, ipfsMultiaddr, err := ipfs_utils.GetIpfsClient(ipfsApi)
+		ipfs, ipfsMultiaddr, err := tpipfs.GetIpfsClient(ipfsApi)
 		if err != nil {
 			return err
 		}
-
-		podPath := args[0]
-
-		file, err := os.Open(podPath)
-		if err != nil {
-			return err
-		}
-
-		podManifestCotents, err := io.ReadAll(file)
-		if err != nil {
-			return err
-		}
+		podPath := os.Args[0]
 
 		pod := &pb.Pod{}
-		err = pb.Unmarshal(manifestFormat, podManifestCotents, pod)
+		err = pb.UnmarshalFile(podPath, manifestFormat, pod)
 		if err != nil {
 			return err
 		}
 
 		keys := []*pb.Key{}
 
-		err = TransformSecrets(cmd.Context(), ipfs, path.Dir(podPath), pod, &keys)
+		err = tpipfs.UploadSecrets(cmd.Context(), ipfs, path.Dir(podPath), pod, &keys)
 		if err != nil {
 			return err
 		}
 
-		_, err = fmt.Fprintln(cmd.OutOrStdout(), protojson.Format(pod))
-
-		podManifestBytes, err := proto.Marshal(pod)
-		if err != nil {
-			return err
-		}
-
-		podManifestPath, err := ipfs.Unixfs().Add(cmd.Context(), files.NewBytesFile(podManifestBytes))
+		podCid, err := tpipfs.AddProtobufFile(ipfs, pod)
 		if err != nil {
 			return err
 		}
@@ -128,15 +59,15 @@ var deployPodCmd = &cobra.Command{
 		if podId != "" {
 			podIdBytes = common.HexToHash(podId)
 		} else {
-			podIdBytes = common.BytesToHash(podManifestPath.Cid().Bytes())
+			podIdBytes = common.BytesToHash(podCid.Bytes())
 		}
 
 		payment, err := createPaymentChannel(podIdBytes)
 
 		request := &pb.ProvisionPodRequest{
-			PodManifestCid: podManifestPath.Cid().Bytes(),
+			PodManifestCid: podCid.Bytes(),
 			Keys:           keys,
-			Payment: payment,
+			Payment:        payment,
 		}
 
 		providerPeerId, err := peer.Decode(providerPeer)
@@ -144,9 +75,7 @@ var deployPodCmd = &cobra.Command{
 			return err
 		}
 
-		_, err = fmt.Fprintln(cmd.OutOrStdout(), protojson.Format(request))
-
-		addr, err := ipfs_utils.NewP2pApi(ipfs, ipfsMultiaddr).ConnectTo(pb.ProvisionPod, providerPeerId)
+		addr, err := tpipfs.NewP2pApi(ipfs, ipfsMultiaddr).ConnectTo(pb.ProvisionPod, providerPeerId)
 		if err != nil {
 			return err
 		}

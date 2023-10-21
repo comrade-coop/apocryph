@@ -7,15 +7,14 @@ import (
 	"io"
 	"net"
 
-	"github.com/comrade-coop/trusted-pods/pkg/contracts"
-	ipfs_utils "github.com/comrade-coop/trusted-pods/pkg/ipfs-utils"
+	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
+	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/ipfs/boxo/coreiface/path"
 	"github.com/ipfs/boxo/files"
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/kubo/client/rpc"
-	"github.com/multiformats/go-multiaddr"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
@@ -29,7 +28,7 @@ type provisionPodServer struct {
 	pb.UnimplementedProvisionPodServiceServer
 	ipfs *rpc.HttpApi
 	k8cl client.Client
-	paymentValidator *contracts.PaymentChannelValidator
+	paymentValidator *ethereum.PaymentChannelValidator
 }
 
 func transformError(err error) (*pb.ProvisionPodResponse, error) {
@@ -85,7 +84,7 @@ var listenCmd = &cobra.Command{
 	Use:   "listen",
 	Short: "Start a service listening for incomming execution requests",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ipfs, ipfsMultiaddr, err := ipfs_utils.GetIpfsClient(ipfsApi)
+		ipfs, ipfsMultiaddr, err := tpipfs.GetIpfsClient(ipfsApi)
 		if err != nil {
 			return err
 		}
@@ -95,12 +94,12 @@ var listenCmd = &cobra.Command{
 			return err
 		}
 
-		ethClient, err := contracts.Connect(ethereumRpc)
+		ethClient, err := ethereum.GetClient(ethereumRpc)
 		if err != nil {
 			return err
 		}
 
-		providerAuth, err := contracts.GetAccount(providerKey, ethClient)
+		providerAuth, err := ethereum.GetAccount(providerKey, ethClient)
 		if err != nil {
 			return err
 		}
@@ -110,9 +109,14 @@ var listenCmd = &cobra.Command{
 			return err
 		}
 
-		validator, err := contracts.NewPaymentChannelValidator(ethClient, allowedContractAddresses, providerAuth, pricingTable.TokenAddress)
+		validator, err := ethereum.NewPaymentChannelValidator(ethClient, allowedContractAddresses, providerAuth, pricingTable.TokenAddress)
 
-		listener, err := GetListener(ipfs, ipfsMultiaddr, serveAddress)
+		var listener net.Listener
+		if serveAddress == "-" {
+			listener, err = tpipfs.NewP2pApi(ipfs, ipfsMultiaddr).Listen(pb.ProvisionPod)
+		} else {
+			listener, err = net.Listen("tcp", serveAddress)
+		}
 		if err != nil {
 			return err
 		}
@@ -134,14 +138,6 @@ var listenCmd = &cobra.Command{
 
 		return nil
 	},
-}
-
-func GetListener(ipfs *rpc.HttpApi, ipfsMultiaddr multiaddr.Multiaddr, serveAddress string) (net.Listener, error) {
-	if serveAddress == "-" {
-		return ipfs_utils.NewP2pApi(ipfs, ipfsMultiaddr).Listen(pb.ProvisionPod)
-	} else {
-		return net.Listen("tcp", serveAddress)
-	}
 }
 
 func init() {

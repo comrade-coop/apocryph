@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/comrade-coop/trusted-pods/pkg/contracts"
+	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
 	"github.com/comrade-coop/trusted-pods/pkg/prometheus"
 	"github.com/comrade-coop/trusted-pods/pkg/resource"
@@ -25,7 +25,7 @@ var monitorCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		pro := prometheus.NewPrometheusAPI(prometheusUrl)
 
-		ethClient, err := contracts.Connect(ethereumRpc)
+		ethClient, err := ethereum.GetClient(ethereumRpc)
 		if err != nil {
 			return err
 		}
@@ -35,12 +35,12 @@ var monitorCmd = &cobra.Command{
 			return err
 		}
 
-		providerAuth, err := contracts.GetAccount(providerKey, ethClient)
+		providerAuth, err := ethereum.GetAccount(providerKey, ethClient)
 		if err != nil {
 			return err
 		}
 
-		paymentChannelValidator, err := contracts.NewPaymentChannelValidator(ethClient, allowedContractAddresses, providerAuth, pricingTable.TokenAddress)
+		paymentChannelValidator, err := ethereum.NewPaymentChannelValidator(ethClient, allowedContractAddresses, providerAuth, pricingTable.TokenAddress)
 		if err != nil {
 			return err
 		}

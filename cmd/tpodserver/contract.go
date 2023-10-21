@@ -5,7 +5,7 @@ import (
 	"log"
 	"math/big"
 
-	"github.com/comrade-coop/trusted-pods/pkg/contracts"
+	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -42,12 +42,12 @@ var checkContractCmd = &cobra.Command{
 	Use:   "check",
 	Short: "Check whether a payment contract is considered valid",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ethClient, err := contracts.Connect(ethereumRpc)
+		ethClient, err := ethereum.GetClient(ethereumRpc)
 		if err != nil {
 			return err
 		}
 
-		providerAuth, err := contracts.GetAccount(providerKey, ethClient)
+		providerAuth, err := ethereum.GetAccount(providerKey, ethClient)
 		if err != nil {
 			return err
 		}
@@ -57,7 +57,7 @@ var checkContractCmd = &cobra.Command{
 			return err
 		}
 
-		validator, err := contracts.NewPaymentChannelValidator(ethClient, allowedContractAddresses, providerAuth, pricingTable.TokenAddress)
+		validator, err := ethereum.NewPaymentChannelValidator(ethClient, allowedContractAddresses, providerAuth, pricingTable.TokenAddress)
 
 		_, err = validator.Parse(getPaymentChannelProto(providerAuth, validator.ChainID))
 		if err != nil {
@@ -74,17 +74,17 @@ var withdrawContractCmd = &cobra.Command{
 	Short: "Withdraw funds from a payment contract",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ethClient, err := contracts.Connect(ethereumRpc)
+		ethClient, err := ethereum.GetClient(ethereumRpc)
 		if err != nil {
 			return err
 		}
 
-		providerAuth, err := contracts.GetAccount(providerKey, ethClient)
+		providerAuth, err := ethereum.GetAccount(providerKey, ethClient)
 		if err != nil {
 			return err
 		}
 
-		validator, err := contracts.NewPaymentChannelValidator(ethClient, []string{paymentContractAddress}, providerAuth, common.HexToAddress(tokenContractAddress).Bytes())
+		validator, err := ethereum.NewPaymentChannelValidator(ethClient, []string{paymentContractAddress}, providerAuth, common.HexToAddress(tokenContractAddress).Bytes())
 
 		channel, err := validator.Parse(getPaymentChannelProto(providerAuth, validator.ChainID))
 		if err != nil {

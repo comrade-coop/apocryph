@@ -2,6 +2,9 @@ package proto
 
 import (
 	"errors"
+	"io"
+	"os"
+	"strings"
 
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/encoding/prototext"
@@ -12,7 +15,7 @@ import (
 var UnmarshalFormats = map[string]func(b []byte, m protoreflect.ProtoMessage) error{
 	"json": protojson.Unmarshal,
 	"pb":   proto.Unmarshal,
-	"text": prototext.Unmarshal,
+	"pbtext": prototext.Unmarshal,
 }
 
 var UnmarshalFormatNames []string
@@ -30,4 +33,30 @@ func Unmarshal(format string, bytes []byte, m protoreflect.ProtoMessage) error {
 		return errors.New("Unknown format: " + format)
 	}
 	return Unmarshal(bytes, m)
+}
+
+func DetectFormat(path string) string {
+	for name := range UnmarshalFormats {
+		if strings.HasSuffix(path, "." + name) {
+			return name
+		}
+	}
+	return path
+}
+
+func UnmarshalFile(path string, format string, m protoreflect.ProtoMessage) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	bytes, err := io.ReadAll(file)
+	if err != nil {
+		return err
+	}
+
+	if format == "" {
+		format = DetectFormat(path)
+	}
+
+	return Unmarshal(format, bytes, m)
 }
