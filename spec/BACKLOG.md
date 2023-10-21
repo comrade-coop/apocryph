@@ -8,7 +8,7 @@ Rationale for not shoving all of this in GitHub Issues: while Issues are a great
 
 * Write and integrate a Registry contract
 * Run the Provider in Constellation instead of Minikube, to allow for attestation
-* Implement a way for the Publisher to monitor, manage, and edit the deployed pod
+* Implement a way for the Publisher to monitor, manage, and edit the deployed pod (other than shutting down the payment channel)
 
 ## Technical debt accumulated
 
@@ -24,7 +24,29 @@ Despite that, the current [implementation](../pkg/prometheus/) uses Prometheus a
 
 Status: Correct as needed
 
-Currently, the whole of the Trusted Pods Provider client/node is implemented as a single long-running process deployed within Kubernetes. Despite this being easier to implement, it would be beneficial to make parts of that service more reusable by splitting off libp2p connections, pod deployment, metrics collection, and smart contract invoicing into their own parts can be changed or deployed on their own.
+Currently, the whole of the Trusted Pods' Provider client/node is implemented as a pair of long-running processes deployed within Kubernetes -- one for listening for incomming Pod deployments and one for monitoring them. Going forward, it could be beneficial to make more parts of that service reusable by splitting off libp2p connections, actual deployments, metrics collection, and smart contract invoicing into their own processes/services can be changed or reused on their own.
+
+### Payment contract is one contract and not multiple
+
+Status: Still evaluating, alternative prototyped
+
+The [payment contract](../contracts/src/Payment.sol) currently takes care of absolutely all payments that pass through Trusted Pods. However, it might be worth splitting it into a factory/library contract and small "flyweight" contracts instead. Currently, that is prototyped in the [`contract-factory`](https://github.com/comrade-coop/trusted-pods/tree/contract-factory) branch, but it ended up using more way more gas for deployment, so it was temporarily scrapped.
+
+### Using Kubo/IPFS p2p feature marked experimental
+
+Status: Requires research
+
+Kubo's [`p2p` API](https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-p2p-forward) is marked as an [experimental feature](https://github.com/ipfs/kubo/issues/3994), and is predictably rather finicky to work with. Moreover, it may very well be removed one day, with or without alternative, as is happening with the [`pubsub` feature](https://github.com/ipfs/kubo/issues/9717).
+
+As such, it would be prudent to move away from using the `p2p` features of Kubo (and away from requiring Kubo-based IPFS nodes), and instead roll out an alternative, likely based on `libp2p`. This will likely be easier once [the planned Amino/DHT refactor](https://blog.ipfs.tech/2023-09-amino-refactoring/) lands.
+
+#### `ipfs-p2p-helper` is a sidecar
+
+Status: Correct as needed
+
+Currently, the `ipfs-p2p-helper`, a small piece of code responsible for registering `p2p` listeners in Kubo. Doing so is a bit tricky, as the Kubo daemon does not persist `p2p` connections between restarts, and hence we have to re-register them every time the IPFS container restarts.
+
+This is currently done using a sidecar container (a container in the same pod), so the helper gets restarted together with IPFS -- and to top that off, it just watches the list of Services for ones that are labeled correctly. Ideally, if we keep using the `p2p` feature of Kubo, we would rewrite `ipfs-p2p-helper` to be a "proper" Kubernetes operator with a "proper" custom resource definition.
 
 ## Missing features
 
