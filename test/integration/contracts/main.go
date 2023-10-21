@@ -78,12 +78,12 @@ func mainErr() error {
 	}
 
 	channel, err := validator.Parse(&pb.PaymentChannel{
-		ChainID: validator.ChainID.Bytes(),
-		ContractAddress: paymentAddress.Bytes(),
+		ChainID:          validator.ChainID.Bytes(),
+		ContractAddress:  paymentAddress.Bytes(),
 		PublisherAddress: publisherAuth.From.Bytes(),
-		ProviderAddress: providerAuth.From.Bytes(),
-		PodID: podId.Bytes(),
-		TokenAddress: tokenAddress.Bytes(),
+		ProviderAddress:  providerAuth.From.Bytes(),
+		PodID:            podId.Bytes(),
+		TokenAddress:     tokenAddress.Bytes(),
 	})
 	if err != nil {
 		return err

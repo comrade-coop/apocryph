@@ -26,6 +26,7 @@ func GetClient(url string) (*ethclient.Client, error) {
 }
 
 const PrivateKeySize = 256 / 8
+
 var DefaultKeystore = "~/.ethereum/keystore"
 
 func GetAccount(accountString string, client *ethclient.Client) (*bind.TransactOpts, error) {
@@ -34,7 +35,7 @@ func GetAccount(accountString string, client *ethclient.Client) (*bind.TransactO
 		return nil, err
 	}
 
-	if privKey, ok := strings.CutPrefix(accountString, "0x"); ok && len(privKey) == PrivateKeySize * 2 {
+	if privKey, ok := strings.CutPrefix(accountString, "0x"); ok && len(privKey) == PrivateKeySize*2 {
 		key, err := crypto.HexToECDSA(privKey)
 		if err != nil {
 			return nil, err

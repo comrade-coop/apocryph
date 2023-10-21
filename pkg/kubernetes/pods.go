@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type FetchSecret func(cid []byte, ) (map[string][]byte, error)
+type FetchSecret func(cid []byte) (map[string][]byte, error)
 
 func ApplyPodRequest(ctx context.Context, client client.Client, ipfs iface.CoreAPI, keys []*pb.Key, podManifest *pb.Pod, response *pb.ProvisionPodResponse) error {
 	labels := map[string]string{"tpod": "1"}

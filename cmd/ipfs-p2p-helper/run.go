@@ -58,7 +58,7 @@ var runCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer func(){sub.Stop()}()
+		defer func() { sub.Stop() }()
 
 		fmt.Print("Now watching the list of services.\n")
 

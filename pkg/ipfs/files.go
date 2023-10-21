@@ -50,7 +50,7 @@ func AddProtobufFile(node *rpc.HttpApi, msg proto.Message) (cid.Cid, error) {
 }
 
 // Adds a file from a protobuf slice to IPFS
-func GetProtobufFile(node *rpc.HttpApi, cid cid.Cid, msg proto.Message) (error) {
+func GetProtobufFile(node *rpc.HttpApi, cid cid.Cid, msg proto.Message) error {
 	fileNode, err := node.Unixfs().Get(context.Background(), path.IpfsPath(cid))
 	if err != nil {
 		return err

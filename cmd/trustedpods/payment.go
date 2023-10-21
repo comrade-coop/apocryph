@@ -78,12 +78,12 @@ func createPaymentChannel(podIdBytes common.Hash) (*pb.PaymentChannel, error) {
 	}
 
 	return &pb.PaymentChannel{
-		ChainID: chainID.Bytes(),
-		ContractAddress:   paymentContract.Bytes(),
-		PublisherAddress:  publisherAuth.From.Bytes(),
+		ChainID:          chainID.Bytes(),
+		ContractAddress:  paymentContract.Bytes(),
+		PublisherAddress: publisherAuth.From.Bytes(),
 		ProviderAddress:  provider.Bytes(),
-		PodID:          podIdBytes.Bytes(),
-		TokenAddress:   tokenContract.Bytes(),
+		PodID:            podIdBytes.Bytes(),
+		TokenAddress:     tokenContract.Bytes(),
 	}, nil
 }
 
@@ -134,8 +134,6 @@ var mintPaymentCmd = &cobra.Command{
 	},
 }
 
-
-
 func init() {
 	paymentCmd.AddCommand(createPaymentCmd)
 	paymentCmd.AddCommand(mintPaymentCmd)
@@ -147,6 +145,6 @@ func init() {
 	createPaymentCmd.Flags().StringVar(&providerEthAddress, "provider-eth", "", "provider public address")
 	createPaymentCmd.Flags().StringVar(&podId, "pod-id", "00", "pod id")
 	createPaymentCmd.Flags().StringVar(&funds, "funds", "5000000000000000000", "intial funds")
-	createPaymentCmd.Flags().Int64Var(&unlockTime, "unlock-time", 5 * 60, "time for unlocking tokens (in seconds)")
+	createPaymentCmd.Flags().Int64Var(&unlockTime, "unlock-time", 5*60, "time for unlocking tokens (in seconds)")
 	mintPaymentCmd.Flags().StringVar(&funds, "funds", "5000000000000000000", "amount to mint")
 }

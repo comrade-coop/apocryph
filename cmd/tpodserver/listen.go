@@ -26,8 +26,8 @@ var serveAddress string
 
 type provisionPodServer struct {
 	pb.UnimplementedProvisionPodServiceServer
-	ipfs *rpc.HttpApi
-	k8cl client.Client
+	ipfs             *rpc.HttpApi
+	k8cl             client.Client
 	paymentValidator *ethereum.PaymentChannelValidator
 }
 
@@ -123,8 +123,8 @@ var listenCmd = &cobra.Command{
 
 		server := grpc.NewServer()
 		pb.RegisterProvisionPodServiceServer(server, &provisionPodServer{
-			ipfs: ipfs,
-			k8cl: k8cl,
+			ipfs:             ipfs,
+			k8cl:             k8cl,
 			paymentValidator: validator,
 		})
 
@@ -142,7 +142,6 @@ var listenCmd = &cobra.Command{
 
 func init() {
 	listenCmd.Flags().StringVar(&serveAddress, "address", "", "port to serve on (leave blank to automatically pick a port and register a listener for it in ipfs)")
-
 
 	listenCmd.Flags().BoolVarP(&dryRun, "dry-run", "z", false, "Dry run mode; modify nothing.")
 	listenCmd.Flags().StringVar(&kubeConfig, "kubeconfig", "", "absolute path to the kubeconfig file (leave blank for the first of in-cluster config and ~/.kube/config)")

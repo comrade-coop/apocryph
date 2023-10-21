@@ -15,14 +15,13 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-
 type PaymentChannelValidator struct {
-	ethClient *ethclient.Client
-	transactOpts *bind.TransactOpts
-	ChainID *big.Int
+	ethClient        *ethclient.Client
+	transactOpts     *bind.TransactOpts
+	ChainID          *big.Int
 	allowedContracts []common.Address
-	tokenAddress common.Address
-	minFunds *big.Int
+	tokenAddress     common.Address
+	minFunds         *big.Int
 }
 
 func NewPaymentChannelValidator(ethClient *ethclient.Client, allowedContractAddresses []string, transactOpts *bind.TransactOpts, tokenAddress []byte) (*PaymentChannelValidator, error) {
@@ -35,12 +34,12 @@ func NewPaymentChannelValidator(ethClient *ethclient.Client, allowedContractAddr
 		allowedContracts[i] = common.HexToAddress(a)
 	}
 	return &PaymentChannelValidator{
-		ethClient: ethClient,
-		transactOpts: transactOpts,
-		ChainID: chainID,
+		ethClient:        ethClient,
+		transactOpts:     transactOpts,
+		ChainID:          chainID,
 		allowedContracts: allowedContracts,
-		tokenAddress: common.BytesToAddress(tokenAddress),
-		minFunds: big.NewInt(1),
+		tokenAddress:     common.BytesToAddress(tokenAddress),
+		minFunds:         big.NewInt(1),
 	}, nil
 }
 
@@ -64,12 +63,12 @@ func (v *PaymentChannelValidator) Parse(channel *pb.PaymentChannel) (*PaymentCha
 	if err != nil {
 		return nil, err
 	}
-	p := &PaymentChannel {
+	p := &PaymentChannel{
 		TransactOpts: v.transactOpts,
-		Payment: payment,
-		Publisher: common.BytesToAddress(channel.PublisherAddress),
-		Token: token,
-		PodID: common.BytesToHash(channel.PodID),
+		Payment:      payment,
+		Publisher:    common.BytesToAddress(channel.PublisherAddress),
+		Token:        token,
+		PodID:        common.BytesToHash(channel.PodID),
 	}
 	available, err := p.Available()
 	if err != nil {
@@ -82,11 +81,11 @@ func (v *PaymentChannelValidator) Parse(channel *pb.PaymentChannel) (*PaymentCha
 }
 
 type PaymentChannel struct {
-	Payment *abi.Payment
+	Payment      *abi.Payment
 	TransactOpts *bind.TransactOpts
-	Publisher common.Address
-	PodID common.Hash
-	Token common.Address
+	Publisher    common.Address
+	PodID        common.Hash
+	Token        common.Address
 }
 
 func (p *PaymentChannel) Available() (*big.Int, error) {
@@ -112,5 +111,3 @@ func (p *PaymentChannel) WithdrawIfOverMargin(transferAddress common.Address, am
 func (p *PaymentChannel) WithdrawUpTo(transferAddress common.Address, amount *big.Int) (*types.Transaction, error) {
 	return p.Payment.WithdrawUpTo(p.TransactOpts, p.Publisher, p.PodID, p.Token, amount, transferAddress)
 }
-
-

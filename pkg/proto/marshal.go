@@ -13,8 +13,8 @@ import (
 )
 
 var UnmarshalFormats = map[string]func(b []byte, m protoreflect.ProtoMessage) error{
-	"json": protojson.Unmarshal,
-	"pb":   proto.Unmarshal,
+	"json":   protojson.Unmarshal,
+	"pb":     proto.Unmarshal,
 	"pbtext": prototext.Unmarshal,
 }
 
@@ -37,7 +37,7 @@ func Unmarshal(format string, bytes []byte, m protoreflect.ProtoMessage) error {
 
 func DetectFormat(path string) string {
 	for name := range UnmarshalFormats {
-		if strings.HasSuffix(path, "." + name) {
+		if strings.HasSuffix(path, "."+name) {
 			return name
 		}
 	}

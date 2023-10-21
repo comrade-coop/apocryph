@@ -25,7 +25,6 @@ var providerPeer string
 var ipfsApi string
 var paymentContract string
 
-
 var deployPodCmd = &cobra.Command{
 	Use:   "deploy",
 	Short: "Deploy a pod from a local manifest",
@@ -121,6 +120,6 @@ func init() {
 	deployPodCmd.Flags().StringVar(&podId, "pod-id", "", "pod id (empty to pick one automatically)")
 	deployPodCmd.Flags().StringVar(&tokenContractAddress, "token", "", "token contract address")
 	deployPodCmd.Flags().StringVar(&funds, "funds", "5000000000000000000", "intial funds")
-	deployPodCmd.Flags().Int64Var(&unlockTime, "unlock-time", 5 * 60, "time for unlocking tokens (in seconds)")
+	deployPodCmd.Flags().Int64Var(&unlockTime, "unlock-time", 5*60, "time for unlocking tokens (in seconds)")
 
 }

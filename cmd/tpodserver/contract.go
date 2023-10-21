@@ -29,12 +29,12 @@ var allowedContractAddresses []string
 
 func getPaymentChannelProto(providerAuth *bind.TransactOpts, chainID *big.Int) *pb.PaymentChannel {
 	return &pb.PaymentChannel{
-		ChainID: chainID.Bytes(),
-		ContractAddress: common.HexToAddress(paymentContractAddress).Bytes(),
+		ChainID:          chainID.Bytes(),
+		ContractAddress:  common.HexToAddress(paymentContractAddress).Bytes(),
 		PublisherAddress: common.HexToAddress(publisherEthAddress).Bytes(),
-		ProviderAddress: providerAuth.From.Bytes(),
-		PodID: common.HexToHash(podId).Bytes(),
-		TokenAddress: common.HexToAddress(tokenContractAddress).Bytes(),
+		ProviderAddress:  providerAuth.From.Bytes(),
+		PodID:            common.HexToHash(podId).Bytes(),
+		TokenAddress:     common.HexToAddress(tokenContractAddress).Bytes(),
 	}
 }
 
