@@ -5,9 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
-	iface "github.com/ipfs/boxo/coreiface"
 	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -19,7 +17,7 @@ import (
 
 type FetchSecret func(cid []byte) (map[string][]byte, error)
 
-func ApplyPodRequest(ctx context.Context, client client.Client, ipfs iface.CoreAPI, keys []*pb.Key, podManifest *pb.Pod, response *pb.ProvisionPodResponse) error {
+func ApplyPodRequest(ctx context.Context, client client.Client, podManifest *pb.Pod, response *pb.ProvisionPodResponse) error {
 	labels := map[string]string{"tpod": "1"}
 
 	startupReplicas := int32(0)
@@ -174,10 +172,7 @@ func ApplyPodRequest(ctx context.Context, client client.Client, ipfs iface.CoreA
 				ClaimName: persistentVolumeClaim.ObjectMeta.Name,
 			}
 		case pb.Volume_VOLUME_SECRET:
-			secretBytes, err := tpipfs.FetchSecret(ctx, ipfs, volume.GetSecret(), keys)
-			if err != nil {
-				return err
-			}
+			secretBytes := volume.GetSecret().Contents
 
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{

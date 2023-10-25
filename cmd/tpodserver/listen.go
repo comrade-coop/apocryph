@@ -61,6 +61,11 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.Provi
 		return transformError(err)
 	}
 
+	err = tpipfs.TransformSecrets(pod, tpipfs.DownloadSecrets(ctx, s.ipfs), tpipfs.DecryptSecrets(request.Keys))
+	if err != nil {
+		return transformError(err)
+	}
+
 	_, err = s.paymentValidator.Parse(request.Payment)
 	if err != nil {
 		return transformError(err)
@@ -69,7 +74,7 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.Provi
 	response := &pb.ProvisionPodResponse{}
 	namespace := tpk8s.NewTrustedPodsNamespace(request.Payment)
 	err = tpk8s.RunInNamespaceOrRevert(ctx, s.k8cl, namespace, dryRun, func(cl client.Client) error {
-		return tpk8s.ApplyPodRequest(ctx, cl, s.ipfs, request.Keys, pod, response)
+		return tpk8s.ApplyPodRequest(ctx, cl, pod, response)
 	})
 	if err != nil {
 		return transformError(err)

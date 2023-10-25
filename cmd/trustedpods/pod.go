@@ -44,7 +44,11 @@ var deployPodCmd = &cobra.Command{
 
 		keys := []*pb.Key{}
 
-		err = tpipfs.UploadSecrets(cmd.Context(), ipfs, path.Dir(podPath), pod, &keys)
+		err = tpipfs.TransformSecrets(pod,
+			tpipfs.ReadSecrets(path.Dir(podPath)),
+			tpipfs.EncryptSecrets(&keys),
+			tpipfs.UploadSecrets(cmd.Context(), ipfs),
+		)
 		if err != nil {
 			return err
 		}

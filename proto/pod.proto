@@ -70,6 +70,8 @@ message Volume {
     bytes cid = 1; // use 0x00 0x01 0x55 0x00 (unsigned-varint length) (raw contents) to encode the secret in the message
     int32 keyIdx = 2;
     string file = 101;
+    bytes contents = 102;
+    string contentsString = 103;
   }
 }
 

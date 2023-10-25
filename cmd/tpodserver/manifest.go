@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 
+	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/spf13/cobra"
@@ -26,7 +28,9 @@ var applyManifestCmd = &cobra.Command{
 	Short: "Apply a manifest from a file",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		file, err := os.Open(args[0])
+		manifestPath := args[0]
+
+		file, err := os.Open(manifestPath)
 		if err != nil {
 			return err
 		}
@@ -42,6 +46,11 @@ var applyManifestCmd = &cobra.Command{
 			return err
 		}
 
+		err = tpipfs.TransformSecrets(pod, tpipfs.ReadSecrets(path.Dir(manifestPath)))
+		if err != nil {
+			return err
+		}
+
 		cl, err := tpk8s.GetClient(kubeConfig, dryRun)
 		if err != nil {
 			return err
@@ -49,7 +58,7 @@ var applyManifestCmd = &cobra.Command{
 
 		response := &pb.ProvisionPodResponse{}
 		err = tpk8s.RunInNamespaceOrRevert(cmd.Context(), cl, tpk8s.NewTrustedPodsNamespace(nil), dryRun, func(cl client.Client) error {
-			return tpk8s.ApplyPodRequest(cmd.Context(), cl, nil, []*pb.Key{}, pod, response)
+			return tpk8s.ApplyPodRequest(cmd.Context(), cl, pod, response)
 		})
 		if err != nil {
 			return err
