@@ -1,0 +1,5 @@
+FROM ipfs/kubo
+RUN ipfs init
+RUN ipfs config --json Experimental.Libp2pStreamMounting true
+COPY . .
+ENTRYPOINT ["./start-server.sh"]

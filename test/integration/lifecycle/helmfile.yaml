@@ -1,0 +1,40 @@
+repositories:
+- name: kedacore
+  url: https://kedacore.github.io/charts
+- name: ingress-nginx
+  url: https://kubernetes.github.io/ingress-nginx
+- name: prometheus-community
+  url: https://prometheus-community.github.io/helm-charts
+
+releases:
+- name: keda
+  namespace: keda
+  chart: kedacore/keda
+- name: ingress-nginx
+  namespace: keda
+  chart: ingress-nginx/ingress-nginx
+- name: keda-http-addon
+  namespace: keda
+  chart: kedacore/keda-add-ons-http
+  set:
+  - name: interceptor.replicas.min
+    value: 1
+  needs:
+  - keda
+- name: prometheus
+  chart: prometheus-community/prometheus
+  namespace: prometheus
+  set:
+  - name: alertmanager.enabled
+    value: false
+  - name: prometheus-node-exporter.enabled
+    value: false
+- name: keda-fixes
+  chart: ./keda
+  namespace: keda
+  needs:
+  - keda-http-addon
+  - ingress-nginx # NOTE: helmfile typically fails to wait long enough for nginx to start at this step
+- name: trustedpods
+  chart: ./trustedpods
+  namespace: trustedpods

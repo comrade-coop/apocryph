@@ -1,0 +1,12 @@
+{
+	"containers": [
+		{
+			"ports": [
+				{
+					"containerPort": 99,
+					"hostHttpHost": "updatebook.localhost"
+				}
+			]
+		}
+	]
+}

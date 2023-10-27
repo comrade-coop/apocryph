@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
@@ -11,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -39,12 +37,7 @@ func ApplyPodRequest(ctx context.Context, client client.Client, podManifest *pb.
 
 	podTemplate := &deployment.Spec.Template
 
-	httpSO := &kedahttpv1alpha1.HTTPScaledObject{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "tpod-svc",
-		},
-		Spec: kedahttpv1alpha1.HTTPScaledObjectSpec{},
-	}
+	httpSO := CreateHttpSo()
 
 	localhostAliases := corev1.HostAlias{IP: "127.0.0.1"}
 
@@ -65,39 +58,10 @@ func ApplyPodRequest(ctx context.Context, client client.Client, podManifest *pb.
 				ContainerPort: int32(port.ContainerPort),
 				Name:          portName,
 			})
-			servicePort := int32(port.ServicePort)
-			if servicePort == 0 {
-				servicePort = int32(port.ContainerPort)
+			service, servicePort, err := GetService(port, portName, httpSO, labels)
+			if err != nil {
+				return err
 			}
-
-			service := &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "tpod-svc-",
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{{
-						Port:       servicePort,
-						TargetPort: intstr.FromString(portName),
-					}},
-					Selector: labels,
-				},
-			}
-
-			switch ep := port.ExposedPort.(type) {
-			case *pb.Container_Port_HostHttpHost:
-				service.Spec.Type = corev1.ServiceTypeClusterIP
-				if len(httpSO.Spec.Hosts) > 0 {
-					return errors.New("Multiple HTTP hosts in pod definition")
-				}
-				httpSO.Spec.Hosts = []string{ep.HostHttpHost}
-			case *pb.Container_Port_HostTcpPort:
-				service.Spec.Type = corev1.ServiceTypeNodePort
-				service.Spec.Ports[0].Protocol = "TCP"
-				if ep.HostTcpPort != 0 {
-					service.Spec.Ports[0].NodePort = int32(ep.HostTcpPort)
-				}
-			}
-
 			if err := client.Create(ctx, service); err != nil {
 				return err
 			}

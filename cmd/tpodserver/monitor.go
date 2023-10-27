@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/big"
@@ -86,7 +87,10 @@ var monitorCmd = &cobra.Command{
 
 						paymentChannel, err := paymentChannelValidator.Parse(paymentChannelProto)
 						if err != nil {
-							// TODO: Stop namespaces that no longer parse (e.g. because they are under minFunds)!
+							err = client.Delete(context.Background(), &n)
+							if err != nil {
+								return err
+							}
 							return err
 						}
 
