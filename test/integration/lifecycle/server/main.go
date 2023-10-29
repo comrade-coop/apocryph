@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
 	"github.com/comrade-coop/trusted-pods/pkg/provider"
 	"github.com/ipfs/kubo/client/rpc"
 )
@@ -21,8 +22,14 @@ func main() {
 		log.Printf("Failed to Connect to local ipfs node: %v", err)
 		return
 	}
+
+	k8cl, err := tpk8s.GetClient("", false)
+	if err != nil {
+		log.Printf("Failed to configure k8s client: %v", err)
+		return
+	}
 	// skip kubeConfig
-	s, err := provider.InitTPodServer(ipfsApi, "", false)
+	s, err := provider.NewTPodServer(ipfsApi, false, k8cl, nil)
 	if err != nil {
 		log.Printf("Failed to create grpc server: %v", err)
 		return

@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -19,10 +18,8 @@ import (
 	"github.com/ipfs/kubo/client/rpc"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
-	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -57,61 +54,11 @@ func (s *provisionPodServer) DeletePod(ctx context.Context, request *pb.DeletePo
 	response := &pb.DeletePodResponse{Namespace: ns.GetName()}
 	return response, nil
 }
-func (s *provisionPodServer) UpdatePod(ctx context.Context, request *pb.UpdatePodRequest) (*pb.UpdatePodResponse, error) {
+func (s *provisionPodServer) UpdatePod(ctx context.Context, request *pb.UpdatePodRequest) (*pb.ProvisionPodResponse, error) {
 	log.Println("Received request for updating pod")
 
-	serviceList := &v1.ServiceList{}
-	deploymentList := &apps.DeploymentList{}
-
-	listOptions := []client.ListOption{
-		client.InNamespace(request.Namespace),
-	}
-	if len(request.Pod.Containers) != 0 {
-		for cIdx, container := range request.Pod.Containers {
-			log.Printf("Processing container: %v\n", container)
-			if len(container.Ports) != 0 {
-				var newService *v1.Service
-				var err error
-				for i, port := range container.Ports {
-					log.Printf("Processing port: %v\n", port)
-					portName := fmt.Sprintf("p%d-%d", cIdx, port.ContainerPort)
-					httpSo := tpk8s.CreateHttpSo()
-					labels := map[string]string{"tpod": "1"}
-					newService, _, err = tpk8s.GetService(port, portName, httpSo, labels)
-					if err != nil {
-						return nil, err
-					}
-					err := s.k8cl.List(ctx, serviceList, listOptions...)
-					if err != nil {
-						log.Printf("retreiving services for namespace failed: %v\n", err)
-						return nil, err
-					}
-					service := serviceList.Items[i]
-					patch, err := json.Marshal(newService)
-					if err != nil {
-						log.Printf("Marshall faillure: %v\n", err)
-						return nil, err
-					}
-					err = s.k8cl.Patch(ctx, &service, client.RawPatch(types.MergePatchType, patch))
-					if err != nil {
-						log.Printf("Failed patching service: %v\n", err)
-						return nil, err
-					}
-				}
-			}
-		}
-	}
-	err := s.k8cl.List(ctx, deploymentList, listOptions...)
-	if err != nil {
-		log.Printf("retreiving deployments for namespace failed: %v\n", err)
-		return nil, err
-	}
-
-	for _, obj := range deploymentList.Items {
-		log.Printf("updating object %v", obj.GetName())
-	}
-
-	response := &pb.UpdatePodResponse{}
+	response := &pb.ProvisionPodResponse{}
+	tpk8s.ApplyPodRequest(ctx, s.k8cl, request.Pod, true, request.Namespace, response)
 
 	return response, nil
 }
@@ -157,7 +104,7 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.Provi
 	response := &pb.ProvisionPodResponse{}
 	namespace := tpk8s.NewTrustedPodsNamespace(request.Payment)
 	err = tpk8s.RunInNamespaceOrRevert(ctx, s.k8cl, namespace, s.dryRun, func(cl client.Client) error {
-		return tpk8s.ApplyPodRequest(ctx, cl, pod, response)
+		return tpk8s.ApplyPodRequest(ctx, cl, pod, false, namespace.ObjectMeta.Name, response)
 	})
 	if err != nil {
 		return transformError(err)
@@ -169,19 +116,9 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.Provi
 	return response, nil
 }
 
-func InitTPodServer(ipfsApi *rpc.HttpApi, kubeConfig string, dryRun bool, val ...*ethereum.PaymentChannelValidator) (*grpc.Server, error) {
+func NewTPodServer(ipfsApi *rpc.HttpApi, dryRun bool, k8cl client.Client, validator *ethereum.PaymentChannelValidator) (*grpc.Server, error) {
 	server := grpc.NewServer()
 
-	k8cl, err := tpk8s.GetClient(kubeConfig, dryRun)
-	if err != nil {
-		return nil, err
-	}
-	var validator *ethereum.PaymentChannelValidator
-	if len(val) > 0 {
-		validator = val[0]
-	} else {
-		validator = nil
-	}
 	pb.RegisterProvisionPodServiceServer(server, &provisionPodServer{
 		ipfs:             ipfsApi,
 		k8cl:             k8cl,

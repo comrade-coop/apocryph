@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
@@ -10,19 +11,20 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/apimachinery/pkg/types"
+	k8cl "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type FetchSecret func(cid []byte) (map[string][]byte, error)
 
-func ApplyPodRequest(ctx context.Context, client client.Client, podManifest *pb.Pod, response *pb.ProvisionPodResponse) error {
+func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Pod, patch bool, namespace string, response *pb.ProvisionPodResponse) error {
 	labels := map[string]string{"tpod": "1"}
 
 	startupReplicas := int32(0)
-
+	var deploymentName = fmt.Sprintf("tpod-dep-%v", namespace)
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "tpod-dep-",
+			Name: deploymentName,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &startupReplicas,
@@ -37,7 +39,7 @@ func ApplyPodRequest(ctx context.Context, client client.Client, podManifest *pb.
 
 	podTemplate := &deployment.Spec.Template
 
-	httpSO := CreateHttpSo()
+	httpSO := NewHttpSo(namespace)
 
 	localhostAliases := corev1.HostAlias{IP: "127.0.0.1"}
 
@@ -58,12 +60,34 @@ func ApplyPodRequest(ctx context.Context, client client.Client, podManifest *pb.
 				ContainerPort: int32(port.ContainerPort),
 				Name:          portName,
 			})
-			service, servicePort, err := GetService(port, portName, httpSO, labels)
+			service, servicePort, err := NewService(port, portName, httpSO, labels)
 			if err != nil {
 				return err
 			}
-			if err := client.Create(ctx, service); err != nil {
-				return err
+			if patch == true {
+				key := &k8cl.ObjectKey{
+					Namespace: namespace,
+					Name:      service.GetName(),
+				}
+
+				oldService := &corev1.Service{}
+				err = client.Get(ctx, *key, oldService)
+				if err != nil {
+					return err
+				}
+
+				patch, err := json.Marshal(service)
+
+				err = client.Patch(ctx, oldService, k8cl.RawPatch(types.MergePatchType, patch))
+				if err != nil {
+					return err
+				}
+
+			} else {
+				if err := client.Create(ctx, service); err != nil {
+					return err
+				}
+
 			}
 
 			multiaddrPart := ""
@@ -106,13 +130,14 @@ func ApplyPodRequest(ctx context.Context, client client.Client, podManifest *pb.
 		volumeSpec := corev1.Volume{
 			Name: volume.Name,
 		}
+		var volumeName = fmt.Sprintf("tpod-pvc-%v", volume.Name)
 		switch volume.Type {
 		case pb.Volume_VOLUME_EMPTY:
 			volumeSpec.VolumeSource.EmptyDir = &corev1.EmptyDirVolumeSource{}
 		case pb.Volume_VOLUME_FILESYSTEM:
 			persistentVolumeClaim := &corev1.PersistentVolumeClaim{
 				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "tpod-pvc-",
+					Name: volumeName,
 				},
 				Spec: corev1.PersistentVolumeClaimSpec{
 					Resources: corev1.ResourceRequirements{
@@ -128,27 +153,71 @@ func ApplyPodRequest(ctx context.Context, client client.Client, podManifest *pb.
 				persistentVolumeClaim.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany}
 			}
 
-			if err := client.Create(ctx, persistentVolumeClaim); err != nil {
-				return err
+			if patch == true {
+				key := &k8cl.ObjectKey{
+					Namespace: namespace,
+					Name:      volumeName,
+				}
+
+				oldVolume := &corev1.PersistentVolumeClaim{}
+				err := client.Get(ctx, *key, oldVolume)
+				if err != nil {
+					return err
+				}
+
+				patch, err := json.Marshal(persistentVolumeClaim)
+
+				err = client.Patch(ctx, oldVolume, k8cl.RawPatch(types.MergePatchType, patch))
+				if err != nil {
+					return err
+				}
+
+			} else {
+				if err := client.Create(ctx, persistentVolumeClaim); err != nil {
+					return err
+				}
+
 			}
 
 			volumeSpec.VolumeSource.PersistentVolumeClaim = &corev1.PersistentVolumeClaimVolumeSource{
 				ClaimName: persistentVolumeClaim.ObjectMeta.Name,
 			}
 		case pb.Volume_VOLUME_SECRET:
+			var secretName = fmt.Sprintf("tpod-secret-%v", volume.Name)
 			secretBytes := volume.GetSecret().Contents
 
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "tpod-secret-",
+					Name: secretName,
 				},
 				Data: map[string][]byte{
 					"data": secretBytes,
 				},
 			}
+			if patch == true {
+				key := &k8cl.ObjectKey{
+					Namespace: namespace,
+					Name:      secretName,
+				}
 
-			if err := client.Create(ctx, secret); err != nil {
-				return err
+				oldSecret := &corev1.Secret{}
+				err := client.Get(ctx, *key, oldSecret)
+				if err != nil {
+					return err
+				}
+
+				patch, err := json.Marshal(secret)
+
+				err = client.Patch(ctx, oldSecret, k8cl.RawPatch(types.MergePatchType, patch))
+				if err != nil {
+					return err
+				}
+
+			} else {
+				if err := client.Create(ctx, secret); err != nil {
+					return err
+				}
+
 			}
 
 			volumeSpec.VolumeSource.Secret = &corev1.SecretVolumeSource{
@@ -157,9 +226,30 @@ func ApplyPodRequest(ctx context.Context, client client.Client, podManifest *pb.
 		}
 		podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, volumeSpec)
 	}
+	if patch == true {
+		key := &k8cl.ObjectKey{
+			Namespace: namespace,
+			Name:      deploymentName,
+		}
 
-	if err := client.Create(ctx, deployment); err != nil {
-		return err
+		oldDeployment := &corev1.Secret{}
+		err := client.Get(ctx, *key, oldDeployment)
+		if err != nil {
+			return err
+		}
+
+		patch, err := json.Marshal(deployment)
+
+		err = client.Patch(ctx, oldDeployment, k8cl.RawPatch(types.MergePatchType, patch))
+		if err != nil {
+			return err
+		}
+
+	} else {
+		if err := client.Create(ctx, deployment); err != nil {
+			return err
+		}
+
 	}
 
 	if httpSO.Spec.ScaleTargetRef.Service != "" {
@@ -176,9 +266,30 @@ func ApplyPodRequest(ctx context.Context, client client.Client, podManifest *pb.
 		if targetPendingRequests > 0 {
 			httpSO.Spec.TargetPendingRequests = &targetPendingRequests
 		}
+		if patch == true {
+			key := &k8cl.ObjectKey{
+				Namespace: namespace,
+				Name:      fmt.Sprintf("tpod-httpSo-%v", namespace),
+			}
 
-		if err := client.Create(ctx, httpSO); err != nil {
-			return err
+			oldHttpSo := &corev1.Secret{}
+			err := client.Get(ctx, *key, oldHttpSo)
+			if err != nil {
+				return err
+			}
+
+			patch, err := json.Marshal(deployment)
+
+			err = client.Patch(ctx, oldHttpSo, k8cl.RawPatch(types.MergePatchType, patch))
+			if err != nil {
+				return err
+			}
+
+		} else {
+			if err := client.Create(ctx, httpSO); err != nil {
+				return err
+			}
+
 		}
 	}
 

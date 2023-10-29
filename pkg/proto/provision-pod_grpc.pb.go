@@ -23,7 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ProvisionPodServiceClient interface {
 	ProvisionPod(ctx context.Context, in *ProvisionPodRequest, opts ...grpc.CallOption) (*ProvisionPodResponse, error)
-	UpdatePod(ctx context.Context, in *UpdatePodRequest, opts ...grpc.CallOption) (*UpdatePodResponse, error)
+	UpdatePod(ctx context.Context, in *UpdatePodRequest, opts ...grpc.CallOption) (*ProvisionPodResponse, error)
 	DeletePod(ctx context.Context, in *DeletePodRequest, opts ...grpc.CallOption) (*DeletePodResponse, error)
 }
 
@@ -44,8 +44,8 @@ func (c *provisionPodServiceClient) ProvisionPod(ctx context.Context, in *Provis
 	return out, nil
 }
 
-func (c *provisionPodServiceClient) UpdatePod(ctx context.Context, in *UpdatePodRequest, opts ...grpc.CallOption) (*UpdatePodResponse, error) {
-	out := new(UpdatePodResponse)
+func (c *provisionPodServiceClient) UpdatePod(ctx context.Context, in *UpdatePodRequest, opts ...grpc.CallOption) (*ProvisionPodResponse, error) {
+	out := new(ProvisionPodResponse)
 	err := c.cc.Invoke(ctx, "/apocryph.proto.v0.provisionPod.ProvisionPodService/UpdatePod", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (c *provisionPodServiceClient) DeletePod(ctx context.Context, in *DeletePod
 // for forward compatibility
 type ProvisionPodServiceServer interface {
 	ProvisionPod(context.Context, *ProvisionPodRequest) (*ProvisionPodResponse, error)
-	UpdatePod(context.Context, *UpdatePodRequest) (*UpdatePodResponse, error)
+	UpdatePod(context.Context, *UpdatePodRequest) (*ProvisionPodResponse, error)
 	DeletePod(context.Context, *DeletePodRequest) (*DeletePodResponse, error)
 	mustEmbedUnimplementedProvisionPodServiceServer()
 }
@@ -79,7 +79,7 @@ type UnimplementedProvisionPodServiceServer struct {
 func (UnimplementedProvisionPodServiceServer) ProvisionPod(context.Context, *ProvisionPodRequest) (*ProvisionPodResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ProvisionPod not implemented")
 }
-func (UnimplementedProvisionPodServiceServer) UpdatePod(context.Context, *UpdatePodRequest) (*UpdatePodResponse, error) {
+func (UnimplementedProvisionPodServiceServer) UpdatePod(context.Context, *UpdatePodRequest) (*ProvisionPodResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdatePod not implemented")
 }
 func (UnimplementedProvisionPodServiceServer) DeletePod(context.Context, *DeletePodRequest) (*DeletePodResponse, error) {

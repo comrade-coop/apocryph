@@ -27,10 +27,11 @@ message Container {
   }
 
   message Port {
-    uint64 containerPort = 1;
-    uint64 servicePort = 2;
+    string name = 1;
+    uint64 containerPort = 2;
+    uint64 servicePort = 3;
     oneof exposedPort {
-      string hostHttpHost = 3;
+      string hostHttpHost = 4;
       // string hostHttpsHost = 4;
       uint64 hostTcpPort = 5;
       // uint64 hostUdpPort = 6;

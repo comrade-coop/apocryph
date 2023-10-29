@@ -37,20 +37,15 @@ func main() {
 	}
 
 	client := pb.NewProvisionPodServiceClient(conn)
-	response, _, err := ProvisionPod(client, "./manifest-guestbook.json")
+	response, pod, err := ProvisionPod(client, "./manifest-guestbook.json")
 	if err != nil {
 		log.Printf("Could not provision pod: %v", err)
 		return
 	}
 
-	updates := &pb.Pod{}
-	err = pb.UnmarshalFile("./updates.json", "json", updates)
-	if err != nil {
-		log.Println("failed unmarshalling")
-		return
-	}
-
-	request := &pb.UpdatePodRequest{Namespace: response.Namespace, Pod: updates}
+	pod.Containers[0].Ports[0].ContainerPort = 99
+	pod.Containers[0].Name = "js-redis"
+	request := &pb.UpdatePodRequest{Namespace: response.Namespace, Pod: pod}
 	UpdatePod(client, request)
 	log.Println("Press Enter to Delete Namespace")
 	reader := bufio.NewReader(os.Stdin)
@@ -89,7 +84,7 @@ func ProvisionPod(client pb.ProvisionPodServiceClient, podPath string) (*pb.Prov
 
 	response, err := client.ProvisionPod(context.Background(), request)
 	if err != nil {
-		log.Printf("publisher: rpc provision pod failed: %v", err)
+		return nil, nil, err
 	}
 	log.Printf("pod provision response: %v", response)
 
@@ -100,6 +95,7 @@ func DeletePod(client pb.ProvisionPodServiceClient, request *pb.DeletePodRequest
 	response, err := client.DeletePod(context.Background(), request)
 	if err != nil {
 		log.Printf("rpc delete method failed: %v", err)
+		return
 	}
 	log.Printf("Pod Deletion response: %v", response)
 }
@@ -108,6 +104,7 @@ func UpdatePod(client pb.ProvisionPodServiceClient, request *pb.UpdatePodRequest
 	response, err := client.UpdatePod(context.Background(), request)
 	if err != nil {
 		log.Printf("rpc update method failed: %v", err)
+		return
 	}
 	log.Printf("Pod Update response: %v", response)
 

@@ -5,6 +5,7 @@ import (
 
 	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
+	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/comrade-coop/trusted-pods/pkg/provider"
 	"github.com/spf13/cobra"
@@ -49,7 +50,12 @@ var listenCmd = &cobra.Command{
 			return err
 		}
 
-		server, err := provider.InitTPodServer(ipfs, kubeConfig, dryRun, validator)
+		k8cl, err := tpk8s.GetClient(kubeConfig, dryRun)
+		if err != nil {
+			return err
+		}
+
+		server, err := provider.NewTPodServer(ipfs, dryRun, k8cl, validator)
 		if err != nil {
 			return err
 		}
