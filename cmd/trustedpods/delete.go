@@ -65,7 +65,7 @@ var deletePodCmd = &cobra.Command{
 func init() {
 	podCmd.AddCommand(deletePodCmd)
 
-	deletePodCmd.Flags().StringVar(&manifestFormat, "format", "pb", fmt.Sprintf("Manifest format. One of %v", pb.UnmarshalFormatNames))
+	deletePodCmd.Flags().StringVar(&manifestFormat, "format", "", fmt.Sprintf("Manifest format. One of %v", pb.UnmarshalFormatNames))
 
 	deletePodCmd.Flags().StringVar(&ipfsApi, "ipfs", "", "multiaddr where the ipfs/kubo api can be accessed (leave blank to use the daemon running in IPFS_PATH)")
 
