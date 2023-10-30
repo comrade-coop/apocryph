@@ -3,9 +3,7 @@
     {
       "name": "test-container",
       "image": {
-        "url": "docker.io/nginxdemos/nginx-hello",
-        "cid": "bafybeictl64l66w7npqlpw7jaxxbmsv5222xhqja6xicgfam4s7txa75tq",
-        "keyIdx": -1
+        "url": "docker.io/nginxdemos/nginx-hello:latest"
       },
       "ports": [
         {

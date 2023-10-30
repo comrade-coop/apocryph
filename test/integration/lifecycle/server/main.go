@@ -29,7 +29,7 @@ func main() {
 		return
 	}
 	// skip kubeConfig
-	s, err := provider.NewTPodServer(ipfsApi, false, k8cl, nil)
+	s, err := provider.NewTPodServer(ipfsApi, false, k8cl, "", nil)
 	if err != nil {
 		log.Printf("Failed to create grpc server: %v", err)
 		return

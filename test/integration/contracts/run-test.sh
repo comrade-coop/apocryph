@@ -12,7 +12,7 @@ which awk >/dev/null
 
 set -v
 
-export ANVIL_OUTPUT=$(mktemp ipfs.XXXX --tmpdir)
+export ANVIL_OUTPUT=$(mktemp --tmpdir)
 anvil | tee $ANVIL_OUTPUT &
 
 sleep 2

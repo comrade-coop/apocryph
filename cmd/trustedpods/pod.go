@@ -31,14 +31,14 @@ var deployPodCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ipfs, ipfsMultiaddr, err := tpipfs.GetIpfsClient(ipfsApi)
 		if err != nil {
-			return err
+			return fmt.Errorf("Failed connectig to IPFS: %w", err)
 		}
 		podPath := args[0]
 
 		pod := &pb.Pod{}
 		err = pb.UnmarshalFile(podPath, manifestFormat, pod)
 		if err != nil {
-			return err
+			return fmt.Errorf("Failed reading the manifest file: %w", err)
 		}
 
 		keys := []*pb.Key{}
@@ -49,7 +49,12 @@ var deployPodCmd = &cobra.Command{
 			tpipfs.UploadSecrets(cmd.Context(), ipfs),
 		)
 		if err != nil {
-			return err
+			return fmt.Errorf("Failed encrypting and uploading secrets to IPFS: %w", err)
+		}
+
+		err = tpipfs.UploadImagesToIpdr(pod, cmd.Context(), ipfs, nil, &keys)
+		if err != nil {
+			return fmt.Errorf("Failed encrypting and uploading images to IPDR: %w", err)
 		}
 
 		podCid, err := tpipfs.AddProtobufFile(ipfs, pod)
@@ -110,7 +115,7 @@ var deployPodCmd = &cobra.Command{
 func init() {
 	podCmd.AddCommand(deployPodCmd)
 
-	deployPodCmd.Flags().StringVar(&manifestFormat, "format", "pb", fmt.Sprintf("Manifest format. One of %v", pb.UnmarshalFormatNames))
+	deployPodCmd.Flags().StringVar(&manifestFormat, "format", "", fmt.Sprintf("Manifest format. One of %v (leave empty to auto-detect)", pb.UnmarshalFormatNames))
 
 	deployPodCmd.Flags().StringVar(&ipfsApi, "ipfs", "", "multiaddr where the ipfs/kubo api can be accessed (leave blank to use the daemon running in IPFS_PATH)")
 	deployPodCmd.Flags().StringVar(&ethereumRpc, "ethereum-rpc", "http://127.0.0.1:8545", "ethereum rpc node")
