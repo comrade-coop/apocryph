@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"path"
 
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
@@ -34,7 +33,7 @@ var deployPodCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		podPath := os.Args[0]
+		podPath := args[0]
 
 		pod := &pb.Pod{}
 		err = pb.UnmarshalFile(podPath, manifestFormat, pod)

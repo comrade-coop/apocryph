@@ -72,10 +72,10 @@ kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 &
 
 DEPLOYER_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 #TODO= anvil.accounts[0]
 
-forge create --root ../../../contracts Payment --private-key $DEPLOYER_KEY --nonce 0 --silent || true
+~/.foundry/bin/forge create --root ../../../contracts Payment --private-key $DEPLOYER_KEY --nonce 0 --silent || true
 PAYMENT_CONTRACT=0x5FbDB2315678afecb367f032d93F642f64180aa3 # TODO= result of forge create
 
-forge create --root ../../../contracts MockToken --private-key $DEPLOYER_KEY --nonce 1 --silent || true
+~/.foundry/bin/forge create --root ../../../contracts MockToken --private-key $DEPLOYER_KEY --nonce 1 --silent || true
 TOKEN_CONTACT=0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 # TODO= result of forge create
 
 ## 3: Deploy example manifest to cluster ##
