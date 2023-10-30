@@ -3,7 +3,9 @@ package ipfs
 import (
 	"context"
 	"errors"
+	"os"
 
+	tpcrypto "github.com/comrade-coop/trusted-pods/pkg/crypto"
 	"github.com/comrade-coop/trusted-pods/pkg/ipdr"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	imageCopy "github.com/containers/image/v5/copy"
@@ -26,7 +28,26 @@ func UploadImagesToIpdr(pod *pb.Pod, ctx context.Context, ipfs iface.CoreAPI, sy
 	for _, container := range pod.Containers {
 		image := container.Image
 		if image.Url != "" {
-			copyOptions := &imageCopy.Options{}
+			copyOptions := &imageCopy.Options{
+				DestinationCtx: sys,
+				SourceCtx: sys,
+				ReportWriter: os.Stderr,
+			}
+
+			if keys != nil {
+				var err error
+				image.KeyIdx, err = tpcrypto.CreateKey(keys, tpcrypto.KeyTypeOcicrypt)
+				if err != nil {
+					return err
+				}
+				cryptoConfig, err := tpcrypto.GetCryptoConfig(*keys, image.KeyIdx)
+				if err != nil {
+					return err
+				}
+
+				copyOptions.OciEncryptConfig = cryptoConfig.EncryptConfig
+				copyOptions.OciEncryptLayers = &[]int{}
+			}
 
 			policy := &signature.Policy{
 				Default: signature.PolicyRequirements{
@@ -70,12 +91,29 @@ func UploadImagesToIpdr(pod *pb.Pod, ctx context.Context, ipfs iface.CoreAPI, sy
 }
 
 func ReuploadImagesFromIpdr(pod *pb.Pod, ctx context.Context, ipfs iface.CoreAPI, localRegistryUrl string, sys *types.SystemContext, keys []*pb.Key) error {
+	if sys == nil {
+		sys = &types.SystemContext{
+			DockerInsecureSkipTLSVerify: types.OptionalBoolTrue,
+		}
+	}
+
 	ipdrTransport := ipdr.NewIpdrTransport(ipfs)
 	registryTransport := docker.Transport
 	for _, container := range pod.Containers {
 		image := container.Image
 		if len(image.Cid) > 0 {
-			copyOptions := &imageCopy.Options{}
+			copyOptions := &imageCopy.Options{
+				DestinationCtx: sys,
+				SourceCtx: sys,
+			}
+
+			if keys != nil {
+				cryptoConfig, err := tpcrypto.GetCryptoConfig(keys, image.KeyIdx)
+				if err != nil {
+					return err
+				}
+				copyOptions.OciDecryptConfig = cryptoConfig.DecryptConfig
+			}
 
 			policy := &signature.Policy{
 				Default: signature.PolicyRequirements{

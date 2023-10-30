@@ -11,6 +11,7 @@ import (
 	"github.com/containers/image/v5/signature"
 	"github.com/containers/image/v5/transports"
 	"github.com/containers/image/v5/transports/alltransports"
+	"github.com/containers/image/v5/types"
 )
 
 func main() {
@@ -46,7 +47,10 @@ func mainErr() error {
 	pc, _ := signature.NewPolicyContext(policy)
 	defer pc.Destroy()
 
-	_, err = imageCopy.Image(context.Background(), pc, dstImageReference, srcImageReference, &imageCopy.Options{})
+	_, err = imageCopy.Image(context.Background(), pc, dstImageReference, srcImageReference, &imageCopy.Options{
+		DestinationCtx: &types.SystemContext{},
+		SourceCtx: &types.SystemContext{},
+	})
 	if err != nil {
 		return err
 	}

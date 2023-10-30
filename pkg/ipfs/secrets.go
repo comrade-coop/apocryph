@@ -63,40 +63,26 @@ func ReadSecrets(basepath string) SecretTransformation {
 
 func EncryptSecrets(keys *[]*pb.Key) SecretTransformation {
 	return func(secret *pb.Volume_SecretConfig) error {
-		keyData, err := tpcrypto.CreateRandomKey()
+		var err error
+		secret.KeyIdx, err = tpcrypto.CreateKey(keys, tpcrypto.KeyTypeEncrypt)
 		if err != nil {
 			return err
 		}
-		encryptedSecretBytes, err := tpcrypto.AESEncrypt(secret.Contents, keyData)
+		secret.Contents, err = tpcrypto.EncryptWith(*keys, secret.KeyIdx, secret.Contents)
 		if err != nil {
 			return err
 		}
-
-		secret.KeyIdx = int32(len(*keys))
-		*keys = append(*keys, &pb.Key{
-			Data: keyData,
-		})
-		secret.Contents = encryptedSecretBytes
 		return nil
 	}
 }
 
 func DecryptSecrets(keys []*pb.Key) SecretTransformation {
 	return func(secret *pb.Volume_SecretConfig) error {
-		keyIdx := secret.KeyIdx
-		if keyIdx < 0 {
-			return nil
-		}
-		if int(keyIdx) >= len(keys) {
-			return errors.New("Invalid keyIdx")
-		}
-		key := keys[keyIdx]
-		secretBytes, err := tpcrypto.AESDecrypt(secret.Contents, key.Data)
+		var err error
+		secret.Contents, err = tpcrypto.DecryptWith(keys, secret.KeyIdx, secret.Contents)
 		if err != nil {
 			return err
 		}
-
-		secret.Contents = secretBytes
 		return nil
 	}
 }

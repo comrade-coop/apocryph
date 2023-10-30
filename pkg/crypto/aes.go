@@ -14,12 +14,12 @@ const NONCE_SIZE = 12
 const AES_KEY_SIZE = 32
 const ITER_COUNT = 10
 
-func AESEncrypt(data []byte, key []byte) ([]byte, error) {
+func EncryptWithAES(data []byte, key []byte) ([]byte, error) {
 	aesGCM, err := createAESGCMMode(key)
 	if err != nil {
 		return nil, err
 	}
-	nonce, err := CreateRandomNonce()
+	nonce, err := GenerateNonce()
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +28,7 @@ func AESEncrypt(data []byte, key []byte) ([]byte, error) {
 	return ciphertext, nil
 }
 
-func AESDecrypt(data []byte, key []byte) ([]byte, error) {
+func DecryptWithAES(data []byte, key []byte) ([]byte, error) {
 	aesGCM, err := createAESGCMMode(key)
 	if err != nil {
 		return nil, err
@@ -44,16 +44,16 @@ func AESDecrypt(data []byte, key []byte) ([]byte, error) {
 }
 
 // Generate a AES_KEY_SIZE-byte random key
-func CreateRandomKey() ([]byte, error) {
+func GenerateAESKey(random io.Reader) ([]byte, error) {
 	key := make([]byte, AES_KEY_SIZE)
-	if _, err := io.ReadFull(rand.Reader, key); err != nil {
+	if _, err := io.ReadFull(random, key); err != nil {
 		return nil, err
 	}
 	return key, nil
 }
 
 // Generate a NONCE_SIZE-byte random nonce
-func CreateRandomNonce() ([]byte, error) {
+func GenerateNonce() ([]byte, error) {
 	nonce := make([]byte, NONCE_SIZE)
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func CreateRandomNonce() ([]byte, error) {
 }
 
 // could drive a nonce or a symmetric key, both are []byte
-func DeriveKey(password []byte, salt []byte) []byte {
+func DeriveAesKey(password []byte, salt []byte) []byte {
 	return pbkdf2.Key(password, salt, ITER_COUNT, AES_KEY_SIZE, sha256.New)
 }
 
