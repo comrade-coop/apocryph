@@ -23,6 +23,7 @@ var manifestFormat string
 var providerPeer string
 var ipfsApi string
 var paymentContract string
+var noIpdr bool
 
 var deployPodCmd = &cobra.Command{
 	Use:   "deploy",
@@ -52,9 +53,11 @@ var deployPodCmd = &cobra.Command{
 			return fmt.Errorf("Failed encrypting and uploading secrets to IPFS: %w", err)
 		}
 
-		err = tpipfs.UploadImagesToIpdr(pod, cmd.Context(), ipfs, nil, &keys)
-		if err != nil {
-			return fmt.Errorf("Failed encrypting and uploading images to IPDR: %w", err)
+		if !noIpdr {
+			err = tpipfs.UploadImagesToIpdr(pod, cmd.Context(), ipfs, nil, &keys)
+			if err != nil {
+				return fmt.Errorf("Failed encrypting and uploading images to IPDR: %w", err)
+			}
 		}
 
 		podCid, err := tpipfs.AddProtobufFile(ipfs, pod)
@@ -129,5 +132,6 @@ func init() {
 	deployPodCmd.Flags().StringVar(&tokenContractAddress, "token", "", "token contract address")
 	deployPodCmd.Flags().StringVar(&funds, "funds", "5000000000000000000", "intial funds")
 	deployPodCmd.Flags().Int64Var(&unlockTime, "unlock-time", 5*60, "time for unlocking tokens (in seconds)")
+	deployPodCmd.Flags().BoolVar(&noIpdr, "no-ipdr", false, "disable ipdr")
 
 }
