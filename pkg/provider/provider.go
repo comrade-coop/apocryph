@@ -67,7 +67,7 @@ func (s *provisionPodServer) UpdatePod(ctx context.Context, request *pb.UpdatePo
 	return response, nil
 }
 
-func (s *provisionPodServer) GetPodLogs(ctx context.Context, request *pb.PodLogsRequest) (*pb.PodLogResponse, error) {
+func (s *provisionPodServer) GetPodLogs(ctx context.Context, request *pb.PodLogRequest) (*pb.PodLogResponse, error) {
 	log.Println("Received Log request")
 	response := pb.PodLogResponse{}
 	entries, err := loki.GetLogs(request.ContainerName, s.loki.Limit, s.loki.Url)

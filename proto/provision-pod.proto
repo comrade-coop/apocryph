@@ -7,7 +7,7 @@ service ProvisionPodService {
   rpc ProvisionPod(ProvisionPodRequest) returns (ProvisionPodResponse);
   rpc UpdatePod(UpdatePodRequest) returns (ProvisionPodResponse);
   rpc DeletePod(DeletePodRequest) returns (DeletePodResponse);
-  rpc GetPodLogs(PodLogsRequest) returns (PodLogResponse);
+  rpc GetPodLogs(PodLogRequest) returns (PodLogResponse);
 }
 
 message ProvisionPodRequest {
@@ -59,8 +59,9 @@ message ProvisionPodResponse {
   }
 }
 
-message PodLogsRequest{
+message PodLogRequest{
   string containerName = 1;
+  repeated Key keys = 2;
 }
 
 message PodLogResponse{

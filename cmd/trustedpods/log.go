@@ -12,9 +12,11 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-var deletePodCmd = &cobra.Command{
-	Use:   "delete",
-	Short: "delete a deployed pod",
+var containerName string
+
+var logPodCmd = &cobra.Command{
+	Use:   "log",
+	Short: "get pod conatiner logs",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ipfs, ipfsMultiaddr, err := tpipfs.GetIpfsClient(ipfsApi)
@@ -22,9 +24,9 @@ var deletePodCmd = &cobra.Command{
 			return err
 		}
 
-		request := &pb.DeletePodRequest{
-			Namespace: namespace,
-			Keys:      []*pb.Key{},
+		request := &pb.PodLogRequest{
+			ContainerName: containerName,
+			Keys:          []*pb.Key{},
 		}
 
 		providerPeerId, err := peer.Decode(providerPeer)
@@ -48,7 +50,7 @@ var deletePodCmd = &cobra.Command{
 
 		client := pb.NewProvisionPodServiceClient(conn)
 
-		response, err := client.DeletePod(cmd.Context(), request)
+		response, err := client.GetPodLogs(cmd.Context(), request)
 		if err != nil {
 			return err
 		}
@@ -63,12 +65,10 @@ var deletePodCmd = &cobra.Command{
 }
 
 func init() {
-	podCmd.AddCommand(deletePodCmd)
+	podCmd.AddCommand(logPodCmd)
 
-	deletePodCmd.Flags().StringVar(&manifestFormat, "format", "", fmt.Sprintf("Manifest format. One of %v", pb.UnmarshalFormatNames))
+	logPodCmd.Flags().StringVar(&ipfsApi, "ipfs", "", "multiaddr where the ipfs/kubo api can be accessed (leave blank to use the daemon running in IPFS_PATH)")
 
-	deletePodCmd.Flags().StringVar(&ipfsApi, "ipfs", "", "multiaddr where the ipfs/kubo api can be accessed (leave blank to use the daemon running in IPFS_PATH)")
-
-	deletePodCmd.Flags().StringVar(&providerPeer, "provider", "", "provider peer id")
-	deletePodCmd.Flags().StringVar(&namespace, "namespace", "", "pod namespace (returned from deploy pod)")
+	logPodCmd.Flags().StringVar(&providerPeer, "provider", "", "provider peer id")
+	logPodCmd.Flags().StringVar(&containerName, "container", "", "pod namespace (returned from deploy pod)")
 }
