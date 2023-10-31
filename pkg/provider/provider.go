@@ -11,6 +11,7 @@ import (
 	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
+	"github.com/comrade-coop/trusted-pods/pkg/loki"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/ipfs/boxo/coreiface/path"
 	"github.com/ipfs/boxo/files"
@@ -27,6 +28,7 @@ type provisionPodServer struct {
 	pb.UnimplementedProvisionPodServiceServer
 	ipfs             *rpc.HttpApi
 	k8cl             client.Client
+	loki             loki.LokiConfig
 	paymentValidator *ethereum.PaymentChannelValidator
 	dryRun           bool
 }
@@ -54,6 +56,7 @@ func (s *provisionPodServer) DeletePod(ctx context.Context, request *pb.DeletePo
 	response := &pb.DeletePodResponse{Namespace: ns.GetName()}
 	return response, nil
 }
+
 func (s *provisionPodServer) UpdatePod(ctx context.Context, request *pb.UpdatePodRequest) (*pb.ProvisionPodResponse, error) {
 	log.Println("Received request for updating pod")
 
@@ -61,6 +64,17 @@ func (s *provisionPodServer) UpdatePod(ctx context.Context, request *pb.UpdatePo
 	tpk8s.ApplyPodRequest(ctx, s.k8cl, request.Pod, true, request.Namespace, response)
 
 	return response, nil
+}
+
+func (s *provisionPodServer) GetPodLogs(ctx context.Context, request *pb.PodLogsRequest) (*pb.PodLogResponse, error) {
+	log.Println("Received Log request")
+	response := pb.PodLogResponse{}
+	entries, err := loki.GetLogs(request.ContainerName, s.loki.Limit, s.loki.Url)
+	if err != nil {
+		return nil, err
+	}
+	response.LogEntries = entries
+	return &response, nil
 }
 
 func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.ProvisionPodRequest) (*pb.ProvisionPodResponse, error) {
@@ -122,6 +136,7 @@ func NewTPodServer(ipfsApi *rpc.HttpApi, dryRun bool, k8cl client.Client, valida
 	pb.RegisterProvisionPodServiceServer(server, &provisionPodServer{
 		ipfs:             ipfsApi,
 		k8cl:             k8cl,
+		loki:             loki.LokiConfig{Url: "http://loki.loki.svc.cluster.local:3100/loki/api/v1/query_range", Limit: "100"},
 		paymentValidator: validator,
 		dryRun:           dryRun,
 	})

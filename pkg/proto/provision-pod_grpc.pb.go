@@ -25,6 +25,7 @@ type ProvisionPodServiceClient interface {
 	ProvisionPod(ctx context.Context, in *ProvisionPodRequest, opts ...grpc.CallOption) (*ProvisionPodResponse, error)
 	UpdatePod(ctx context.Context, in *UpdatePodRequest, opts ...grpc.CallOption) (*ProvisionPodResponse, error)
 	DeletePod(ctx context.Context, in *DeletePodRequest, opts ...grpc.CallOption) (*DeletePodResponse, error)
+	GetPodLogs(ctx context.Context, in *PodLogsRequest, opts ...grpc.CallOption) (*PodLogResponse, error)
 }
 
 type provisionPodServiceClient struct {
@@ -62,6 +63,15 @@ func (c *provisionPodServiceClient) DeletePod(ctx context.Context, in *DeletePod
 	return out, nil
 }
 
+func (c *provisionPodServiceClient) GetPodLogs(ctx context.Context, in *PodLogsRequest, opts ...grpc.CallOption) (*PodLogResponse, error) {
+	out := new(PodLogResponse)
+	err := c.cc.Invoke(ctx, "/apocryph.proto.v0.provisionPod.ProvisionPodService/GetPodLogs", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ProvisionPodServiceServer is the server API for ProvisionPodService service.
 // All implementations must embed UnimplementedProvisionPodServiceServer
 // for forward compatibility
@@ -69,6 +79,7 @@ type ProvisionPodServiceServer interface {
 	ProvisionPod(context.Context, *ProvisionPodRequest) (*ProvisionPodResponse, error)
 	UpdatePod(context.Context, *UpdatePodRequest) (*ProvisionPodResponse, error)
 	DeletePod(context.Context, *DeletePodRequest) (*DeletePodResponse, error)
+	GetPodLogs(context.Context, *PodLogsRequest) (*PodLogResponse, error)
 	mustEmbedUnimplementedProvisionPodServiceServer()
 }
 
@@ -84,6 +95,9 @@ func (UnimplementedProvisionPodServiceServer) UpdatePod(context.Context, *Update
 }
 func (UnimplementedProvisionPodServiceServer) DeletePod(context.Context, *DeletePodRequest) (*DeletePodResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeletePod not implemented")
+}
+func (UnimplementedProvisionPodServiceServer) GetPodLogs(context.Context, *PodLogsRequest) (*PodLogResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPodLogs not implemented")
 }
 func (UnimplementedProvisionPodServiceServer) mustEmbedUnimplementedProvisionPodServiceServer() {}
 
@@ -152,6 +166,24 @@ func _ProvisionPodService_DeletePod_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProvisionPodService_GetPodLogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PodLogsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProvisionPodServiceServer).GetPodLogs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/apocryph.proto.v0.provisionPod.ProvisionPodService/GetPodLogs",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProvisionPodServiceServer).GetPodLogs(ctx, req.(*PodLogsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ProvisionPodService_ServiceDesc is the grpc.ServiceDesc for ProvisionPodService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -170,6 +202,10 @@ var ProvisionPodService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeletePod",
 			Handler:    _ProvisionPodService_DeletePod_Handler,
+		},
+		{
+			MethodName: "GetPodLogs",
+			Handler:    _ProvisionPodService_GetPodLogs_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

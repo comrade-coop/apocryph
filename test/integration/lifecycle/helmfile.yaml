@@ -35,6 +35,6 @@ releases:
   needs:
   - keda-http-addon
   - ingress-nginx # NOTE: helmfile typically fails to wait long enough for nginx to start at this step
-- name: trustedpods
-  chart: ./trustedpods
-  namespace: trustedpods
+- name: devserver
+  chart: ./devserver
+  namespace: devspace

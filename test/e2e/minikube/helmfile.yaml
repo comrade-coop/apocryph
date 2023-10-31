@@ -5,6 +5,8 @@ repositories:
   url: https://kubernetes.github.io/ingress-nginx
 - name: prometheus-community
   url: https://prometheus-community.github.io/helm-charts
+- name: grafana
+  url: https://grafana.github.io/helm-charts
 
 releases:
 - name: keda
@@ -38,6 +40,11 @@ releases:
 - name: ipfs
   chart: ./ipfs
   namespace: ipfs
+- name: loki
+  chart: grafana/loki-stack
+  namespace: loki
+  values:
+    - ./loki/values.yml
 - name: trustedpods
   chart: ./trustedpods
   namespace: trustedpods

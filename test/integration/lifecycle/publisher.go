@@ -47,9 +47,12 @@ func main() {
 	pod.Containers[0].Name = "js-redis"
 	request := &pb.UpdatePodRequest{Namespace: response.Namespace, Pod: pod}
 	UpdatePod(client, request)
+	// GetPodLogs(client, &pb.PodLogsRequest{ContainerName: "anvil"})
+	// GetPodLogs(client, &pb.PodLogsRequest{ContainerName: response.Addresses[0].ContainerName}) // the pod quickly scaled down?
 	log.Println("Press Enter to Delete Namespace")
 	reader := bufio.NewReader(os.Stdin)
 	_, _ = reader.ReadString('\n')
+
 	DeletePod(client, &pb.DeletePodRequest{Namespace: response.Namespace})
 }
 
@@ -110,5 +113,12 @@ func UpdatePod(client pb.ProvisionPodServiceClient, request *pb.UpdatePodRequest
 
 }
 
-func GetPodLogs(client pb.ProvisionPodServiceClient, request *pb.UpdatePodRequest) {
+func GetPodLogs(client pb.ProvisionPodServiceClient, request *pb.PodLogsRequest) {
+	response, err := client.GetPodLogs(context.Background(), request)
+	if err != nil {
+		log.Printf("rpc log method failed: %v", err)
+		return
+	}
+	log.Printf("Pod Log response: %v", response)
+
 }

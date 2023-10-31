@@ -1,33 +1,33 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: tpodserver
-  namespace: trustedpods
+  name: devserver
+  namespace: devspace
 spec:
   ports:
   - port: 8090
   type: NodePort
   selector:
-    app: tpodserver
+    app: devserver
 ---
 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: tpodserver
-  namespace: trustedpods
+  name: devserver
+  namespace: devspace
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: tpodserver
+      app: devserver
   template:
     metadata:
       labels:
-        app: tpodserver
+        app: devserver
     spec:
       containers:
-      - name: tpodserver
+      - name: devserver
         image: host.minikube.internal:5000/comradecoop/trusted-pods/devserver
         env:
           - name: SERVER_PORT
@@ -36,4 +36,4 @@ spec:
             value: '0.0.0.0:8090'
         ports:
         - containerPort: 8090
-      serviceAccountName: tpodserver-serviceaccount
+      serviceAccountName: devserver-serviceaccount
