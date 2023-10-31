@@ -68,13 +68,13 @@ func createPaymentChannel(podIdBytes common.Hash) (*pb.PaymentChannel, error) {
 		if err != nil {
 			return nil, err
 		}
-		fmt.Printf("Token approval successful! %v", tx)
+		fmt.Printf("Token approval successful! %v\n", tx.Hash())
 
 		tx, err = payment.CreateChannel(publisherAuth, provider, podIdBytes, tokenContract, unlockTimeInt, fundsInt)
 		if err != nil {
 			return nil, err
 		}
-		fmt.Printf("Payment channel created! %v", tx)
+		fmt.Printf("Payment channel created! %v\n", tx.Hash())
 	}
 
 	return &pb.PaymentChannel{
@@ -129,7 +129,7 @@ var mintPaymentCmd = &cobra.Command{
 			return err
 		}
 
-		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Mint successful! %v", tx)
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Mint successful! %v", tx.Hash())
 		return nil
 	},
 }

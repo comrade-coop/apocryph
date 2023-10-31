@@ -48,6 +48,24 @@ Currently, the `ipfs-p2p-helper`, a small piece of code responsible for register
 
 This is currently done using a sidecar container (a container in the same pod), so the helper gets restarted together with IPFS -- and to top that off, it just watches the list of Services for ones that are labeled correctly. Ideally, if we keep using the `p2p` feature of Kubo, we would rewrite `ipfs-p2p-helper` to be a "proper" Kubernetes operator with a "proper" custom resource definition.
 
+### Reuploading IPDR images
+
+Status: Correct as needed, upstream available but needs bugfixing
+
+Currently, the [code (see `ReuploadImagesFromIpdr`)](../pkg/ipfs/images.go) dealing with transforming images that have been uploaded as IPDR takes those same images and uploads them to a local registry. Ideally, what would happen instead is that IPDR images would instead be treated as first-class citizens and downloaded on-demand (probably with some prefetching to reduce first-boot time).
+
+There are a couple ways to implement that. One would be to run an IPDR registry in the cluster and fetch images from it. Unfortunatelly, as the [relevant issue in ipdr/ipdr notes](https://github.com/ipdr/ipdr/issues/18), the IPDR's code currently (flawedly) assumes CIDv1 multihashes are CIDv0 -- and as a whole, the `ipdr/ipdr` repository is outdated (checked 2023-10-27) and full of code which is not making use of the Go IPFS libraries nor of the OCI image-handling libraries -- making depeding on that library an overall increase of tech debt.
+
+Another way to implement first-class IPDR images would be to develop a `containerd` [plugin](https://github.com/containerd/containerd/blob/main/docs/PLUGINS.md) which handles image downloads using our (surprisingly functional, considering the code size) [IPDR transport](../pkg/ipdr) -- or better yet, getting IPDR support merged into mainline `containerd`. A potential hurdle to actually doing that is that Constellation has hardcoded their [`containerd` config](https://github.com/edgelesssys/constellation/blob/main/image/base/mkosi.skeleton/usr/etc/containerd/config.toml) as part of the base layer that is later attested to.
+
+### Secret encryption done with AESGCM directly
+
+Status: Correct as needed
+
+Currently, we encrypt secrets' data ([(see `EncryptWith`/`DecryptWith`)](../pkg/crypto/key_management.go)) with AESGCM directly, forgoing using any libraries that could do this for us and give us a more generic encrypted package. Ideally, given that the rest of the code uses `go-jose` we would use `go-jose`'s encryption facilities directly -- however, JWE objects base64-encode the whole ciphertext... making them ~33% less efficient in terms of space on-wire! Hence, we opt to directly write the bytes ourselves and save on some space.
+
+Some ways to improve the situation would be to contribute `BSON` functionallity to `go-jose` (unfortunatelly, such functionallity would not be standards-compliant, unless someone goes the whole way to suggest `BSON` (or other binary) serialization for [RFC7516](https://www.rfc-editor.org/rfc/rfc7516.html)), to switch to using PKCS11 instead of JSON Web Keys, or implementing our own key provider for `ocicrypt` (which was the reason to start using JSON Web Keys in the first place), perhaps one based on [ERC-5630](https://eips.ethereum.org/EIPS/eip-5630).
+
 ## Missing features
 
 ### Storage reliability

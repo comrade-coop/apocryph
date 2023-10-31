@@ -30,6 +30,7 @@ type provisionPodServer struct {
 	k8cl             client.Client
 	loki             loki.LokiConfig
 	paymentValidator *ethereum.PaymentChannelValidator
+	localOciRegistry string
 	dryRun           bool
 }
 
@@ -102,17 +103,23 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.Provi
 		return transformError(err)
 	}
 
-	err = tpipfs.TransformSecrets(pod, tpipfs.DownloadSecrets(ctx, s.ipfs), tpipfs.DecryptSecrets(request.Keys))
-	if err != nil {
-		return transformError(err)
-	}
-
 	if s.paymentValidator != nil {
 		_, err = s.paymentValidator.Parse(request.Payment)
 		if err != nil {
 			return transformError(err)
 		}
+	}
 
+	err = tpipfs.TransformSecrets(pod, tpipfs.DownloadSecrets(ctx, s.ipfs), tpipfs.DecryptSecrets(request.Keys))
+	if err != nil {
+		return transformError(err)
+	}
+
+	if s.localOciRegistry != "" {
+		err = tpipfs.ReuploadImagesFromIpdr(pod, ctx, s.ipfs, s.localOciRegistry, nil, request.Keys)
+		if err != nil {
+			return transformError(err)
+		}
 	}
 
 	response := &pb.ProvisionPodResponse{}
@@ -130,7 +137,7 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.Provi
 	return response, nil
 }
 
-func NewTPodServer(ipfsApi *rpc.HttpApi, dryRun bool, k8cl client.Client, validator *ethereum.PaymentChannelValidator) (*grpc.Server, error) {
+func NewTPodServer(ipfsApi *rpc.HttpApi, dryRun bool, k8cl client.Client, localOciRegistry string, validator *ethereum.PaymentChannelValidator) (*grpc.Server, error) {
 	server := grpc.NewServer()
 
 	pb.RegisterProvisionPodServiceServer(server, &provisionPodServer{
@@ -138,6 +145,7 @@ func NewTPodServer(ipfsApi *rpc.HttpApi, dryRun bool, k8cl client.Client, valida
 		k8cl:             k8cl,
 		loki:             loki.LokiConfig{Url: "http://loki.loki.svc.cluster.local:3100/loki/api/v1/query_range", Limit: "100"},
 		paymentValidator: validator,
+		localOciRegistry: localOciRegistry,
 		dryRun:           dryRun,
 	})
 	return server, nil

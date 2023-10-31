@@ -3,12 +3,12 @@
     {
       "name": "test-container",
       "image": {
-        "url": "docker.io/nginxdemos/nginx-hello:latest"
+        "url": "docker.io/library/hello-world:latest"
       },
       "ports": [
         {
-          "containerPort": 8080,
-          "hostHttpHost": "example.local"
+          "containerPort": 1234,
+          "hostHttpHost": "nonsense.example"
         }
       ],
       "resourceRequests": [
@@ -18,7 +18,7 @@
         },
         {
           "resource": "memory",
-          "amount": 100000000
+          "amount": 1000000
         }
       ]
 

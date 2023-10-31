@@ -64,6 +64,7 @@ spec:
           "--address", "0.0.0.0:8080",
           "--config", "config.yaml",
           "--ipfs", "/dns4/ipfs-rpc.ipfs.svc.cluster.local/tcp/5001",
+          "--registry", "host.minikube.internal:5000",
           "--ethereum-rpc", "http://eth-rpc.eth.svc.cluster.local:8545",
           "--ethereum-key", "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d", # TODO= anvil.accounts[1]
         ]

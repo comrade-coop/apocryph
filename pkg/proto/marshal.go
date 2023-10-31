@@ -2,6 +2,7 @@ package proto
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -32,7 +33,11 @@ func Unmarshal(format string, bytes []byte, m protoreflect.ProtoMessage) error {
 	if Unmarshal == nil {
 		return errors.New("Unknown format: " + format)
 	}
-	return Unmarshal(bytes, m)
+	err := Unmarshal(bytes, m)
+	if err != nil {
+		return fmt.Errorf("Failed unmarshalling as %s: %w", format, err)
+	}
+	return nil
 }
 
 func DetectFormat(path string) string {

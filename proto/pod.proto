@@ -21,7 +21,7 @@ message Container {
   repeated Resource resourceRequests = 9; // "cpu", "memory", custom
 
   message Image {
-    string cid = 1;
+    bytes cid = 1;
     int32 keyIdx = 2;
     string url = 3;
   }
