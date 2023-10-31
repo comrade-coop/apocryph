@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/bufbuild/protoyaml-go"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/ethereum/go-ethereum/common"
@@ -26,6 +27,7 @@ var providerPeer string
 var ipfsApi string
 var paymentContract string
 var noIpdr bool
+var readSecrets bool
 
 func uploadManifest(ctx context.Context, manifestFile string) (*pb.ProvisionPodRequest, error) {
 	ipfs, _, err := tpipfs.GetIpfsClient(ipfsApi)
@@ -74,6 +76,40 @@ func uploadManifest(ctx context.Context, manifestFile string) (*pb.ProvisionPodR
 		PodManifestCid: podCid.Bytes(),
 		Keys:           keys,
 	}, nil
+}
+
+var parsePodCmd = &cobra.Command{
+	Use:   "parse",
+	Short: "Parse a pod from a local manifest",
+	Args:  cobra.ExactArgs(1),
+	Hidden: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		manifestFile := args[0]
+
+		pod := &pb.Pod{}
+		err := pb.UnmarshalFile(manifestFile, manifestFormat, pod)
+		if err != nil {
+			return fmt.Errorf("Failed reading the manifest file: %w", err)
+		}
+
+		if readSecrets {
+			err = tpipfs.TransformSecrets(pod,
+				tpipfs.ReadSecrets(path.Dir(manifestFile)),
+			)
+			if err != nil {
+				return fmt.Errorf("Failed reading from the filesystem: %w", err)
+			}
+		}
+
+		resultBytes, err := protoyaml.MarshalOptions{}.Marshal(pod)
+		if err != nil {
+			return fmt.Errorf("Failed reading the manifest file: %w", err)
+		}
+
+		_, err = cmd.OutOrStdout().Write(resultBytes)
+
+		return err
+	},
 }
 
 var uploadPodCmd = &cobra.Command{
@@ -174,6 +210,7 @@ var deployPodCmd = &cobra.Command{
 func init() {
 	podCmd.AddCommand(deployPodCmd)
 	podCmd.AddCommand(uploadPodCmd)
+	podCmd.AddCommand(parsePodCmd)
 
 	podCmd.PersistentFlags().StringVar(&manifestFormat, "format", "", fmt.Sprintf("Manifest format. One of %v (leave empty to auto-detect)", pb.UnmarshalFormatNames))
 
@@ -190,6 +227,8 @@ func init() {
 	deployPodCmd.Flags().StringVar(&tokenContractAddress, "token", "", "token contract address")
 	deployPodCmd.Flags().StringVar(&funds, "funds", "5000000000000000000", "intial funds")
 	deployPodCmd.Flags().Int64Var(&unlockTime, "unlock-time", 5*60, "time for unlocking tokens (in seconds)")
-	deployPodCmd.Flags().BoolVar(&noIpdr, "no-ipdr", false, "disable ipdr")
+	podCmd.PersistentFlags().BoolVar(&noIpdr, "no-ipdr", false, "disable ipdr")
+
+	parsePodCmd.Flags().BoolVar(&readSecrets, "with-secrets", false, "include secrets in the parsed output")
 
 }

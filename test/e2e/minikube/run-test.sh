@@ -23,6 +23,7 @@ if [ -n "$1" ]; then
   eval "set -v; $(sed -n "/## $STEP: /{:a;n;p;ba};" $0)"
   exit
 fi
+set -v
 
 ## 1: Set up the Kubernetes environment ##
 
@@ -99,7 +100,7 @@ go run ../../../cmd/trustedpods/ payment mint \
   --token "$TOKEN_CONTACT" \
   --funds "$FUNDS"
 
-go run ../../../cmd/trustedpods/ pod deploy manifest-guestbook.json --format json \
+go run ../../../cmd/trustedpods/ pod deploy manifest-guestbook.yaml \
   --ethereum-key "$PUBLISHER_KEY" \
   --provider "$PROVIDER_IPFS" \
   --provider-eth "$PROVIDER_ETH" \
@@ -115,7 +116,7 @@ set -v
 WITHDRAW_ETH=0x90F79bf6EB2c4f870365E785982E1f101E93b906 # From trustedpods/tpodserver.yml
 TOKEN_CONTACT=0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 # TODO= result of forge create
 INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true | head -n 1); echo $INGRESS_URL
-MANIFEST_HOST=$(jq -r '.containers[]?.ports[]?.hostHttpHost' manifest-guestbook.json); echo $MANIFEST_HOST
+MANIFEST_HOST=guestbook.localhost # From manifest-guestbook.yaml
 
 [ -n "$PORT_8545" ] || PORT_8545=yes && { kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
 

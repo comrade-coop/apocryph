@@ -1,0 +1,45 @@
+containers:
+- name: php-redis
+  image:
+    url: gcr.io/google-samples/gb-frontend:v4
+  env:
+    GET_HOSTS_FROM: env
+    REDIS_MASTER_SERVICE_HOST: redis
+    REDIS_SLAVE_SERVICE_HOST: redis
+  volumes:
+  - mountPath: /var/www/html/test.html
+    name: test-html
+  ports:
+  - containerPort: '80'
+    hostHttpHost: guestbook.localhost
+    name: internal
+  resourceRequests:
+  - amountMillis: '100'
+    resource: cpu
+  - amount: '100000000'
+    resource: memory
+- name: redis
+  image:
+    url: docker.io/library/redis:alpine
+  volumes:
+  - mountPath: /data
+    name: db-data
+  resourceRequests:
+  - amountMillis: '10'
+    resource: cpu
+  - amount: '100000000'
+    resource: memory
+volumes:
+- filesystem:
+    resourceRequests:
+    - amount: '1000000000'
+      resource: storage
+  name: db-data
+  type: VOLUME_FILESYSTEM
+- name: test-html
+  secret:
+    file: "test.html"
+  type: VOLUME_SECRET
+replicas:
+  max: 1
+

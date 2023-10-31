@@ -1,0 +1,15 @@
+containers:
+- name: test-container
+  image:
+    url: docker.io/library/hello-world:latest
+  ports:
+  - containerPort: '1234'
+    hostHttpHost: nonsense.example
+  resourceRequests:
+  - amountMillis: '10'
+    resource: cpu
+  - amount: '1000000'
+    resource: memory
+replicas:
+  max: 1
+

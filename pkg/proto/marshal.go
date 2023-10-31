@@ -11,10 +11,13 @@ import (
 	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"github.com/bufbuild/protoyaml-go"
 )
 
 var UnmarshalFormats = map[string]func(b []byte, m protoreflect.ProtoMessage) error{
 	"json":   protojson.Unmarshal,
+	"yaml":   protoyaml.Unmarshal,
+	"yml":   protoyaml.Unmarshal,
 	"pb":     proto.Unmarshal,
 	"pbtext": prototext.Unmarshal,
 }
