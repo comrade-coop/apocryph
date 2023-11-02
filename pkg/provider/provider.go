@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"strings"
 
 	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
@@ -42,27 +43,33 @@ func transformError(err error) (*pb.ProvisionPodResponse, error) {
 
 func (s *provisionPodServer) DeletePod(ctx context.Context, request *pb.DeletePodRequest) (*pb.DeletePodResponse, error) {
 	log.Printf("\n Received request for pod deletion: %v\n", request)
-	// TODO Authentication
+
+	namespace := "tpod-" + strings.ToLower(string(request.Credentials.PublisherAddress))
 	// Create a new namespace object
 	ns := &v1.Namespace{
 		ObjectMeta: meta.ObjectMeta{
-			Name: request.Namespace,
+			Name: namespace,
+			Labels: map[string]string{
+				"pubkey": string(request.Credentials.PublisherAddress),
+			},
 		},
 	}
+
 	err := s.k8cl.Delete(ctx, ns)
 	if err != nil {
 		log.Printf("Could not delete namespace: %v\n", request)
 		return nil, err
 	}
-	response := &pb.DeletePodResponse{Namespace: ns.GetName()}
+	response := &pb.DeletePodResponse{Success: true}
 	return response, nil
 }
 
 func (s *provisionPodServer) UpdatePod(ctx context.Context, request *pb.UpdatePodRequest) (*pb.ProvisionPodResponse, error) {
 	log.Println("Received request for updating pod")
+	namespace := "tpod-" + strings.ToLower(string(request.Credentials.PublisherAddress))
 
 	response := &pb.ProvisionPodResponse{}
-	tpk8s.ApplyPodRequest(ctx, s.k8cl, request.Pod, true, request.Namespace, response)
+	tpk8s.ApplyPodRequest(ctx, s.k8cl, request.Pod, true, namespace, response)
 
 	return response, nil
 }
@@ -138,7 +145,7 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.Provi
 }
 
 func NewTPodServer(ipfsApi *rpc.HttpApi, dryRun bool, k8cl client.Client, localOciRegistry string, validator *ethereum.PaymentChannelValidator) (*grpc.Server, error) {
-	server := grpc.NewServer()
+	server := grpc.NewServer(grpc.UnaryInterceptor(pb.AuthUnaryServerInterceptor()))
 
 	pb.RegisterProvisionPodServiceServer(server, &provisionPodServer{
 		ipfs:             ipfsApi,

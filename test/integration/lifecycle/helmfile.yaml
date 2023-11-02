@@ -38,3 +38,8 @@ releases:
 - name: devserver
   chart: ./devserver
   namespace: devspace
+- name: loki
+  chart: grafana/loki-stack
+  namespace: loki
+  values:
+    - ./loki/values.yml

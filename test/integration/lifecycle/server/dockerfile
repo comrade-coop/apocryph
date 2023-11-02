@@ -1,4 +1,9 @@
-FROM ipfs/kubo
+FROM docker.io/golang:1.21-bookworm
+
+RUN apt-get update && apt-get install -y libgpgme-dev
+
+RUN wget https://dist.ipfs.tech/kubo/v0.23.0/kubo_v0.23.0_linux-amd64.tar.gz && tar -xvzf kubo_v0.23.0_linux-amd64.tar.gz && cd kubo && bash install.sh
+
 RUN ipfs init
 RUN ipfs config --json Experimental.Libp2pStreamMounting true
 COPY . .

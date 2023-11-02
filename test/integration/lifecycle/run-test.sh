@@ -7,3 +7,5 @@ MINIKUBE_IP=$(minikube ip)
 
 SERVER_PORT=$(kubectl get svc devserver -n devspace -o jsonpath='{.spec.ports[0].nodePort}')
 go run publisher.go $MINIKUBE_IP:$SERVER_PORT
+
+rm -r ./keystore

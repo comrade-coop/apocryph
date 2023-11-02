@@ -12,27 +12,26 @@ service ProvisionPodService {
 
 message ProvisionPodRequest {
   bytes podManifestCid = 1;
-  repeated Key keys = 2;
-  PaymentChannel payment = 3;
+  repeated Key keys = 3;
+  PaymentChannel payment = 4;
 }
 
 message DeletePodRequest {
-  string namespace = 3;
-  repeated Key keys = 2;
+  Credentials credentials = 1;
 }
-message DeletePodResponse{
-  string namespace = 1;
-  string error =  2;
+
+message DeletePodResponse {
+ bool success = 1;
+ string error = 2;
 }
 
 message UpdatePodRequest {
-  string namespace = 1;
-  pod.Pod pod = 2;
-  repeated Key keys = 3;
+  pod.Pod pod = 1;
+  Credentials credentials = 2;
 }
 message UpdatePodResponse {
-  string status = 2;
-  string error = 3;
+  bool success = 1;
+  string error = 2;
 }
 
 message PaymentChannel {
@@ -61,7 +60,8 @@ message ProvisionPodResponse {
 
 message PodLogRequest{
   string containerName = 1;
-  repeated Key keys = 2;
+  Credentials credentials = 2;
+  repeated Key keys = 3;
 }
 
 message PodLogResponse{
@@ -73,4 +73,9 @@ message LogEntry{
   string log = 2;
   string stream = 3;
   string time = 4;
+}
+
+message Credentials{
+  bytes signature = 1;
+  bytes publisherAddress = 2;
 }

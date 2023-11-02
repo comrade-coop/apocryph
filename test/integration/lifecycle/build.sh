@@ -1,6 +1,15 @@
 #!/bin/sh
 
 cd "$(dirname "$0")"
+
+# docker image inspect coop/ipfs > /dev/null
+
+# if [ $? -ne 0 ]; then
+#     cd ipfs
+#     docker build . -t coop/ipfs
+#     cd ..
+# fi
+
 cd server
 go build .
 
