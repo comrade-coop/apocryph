@@ -2,8 +2,10 @@ package proto
 
 import (
 	context "context"
+	"crypto/ecdsa"
 	"fmt"
 	"log"
+	"reflect"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -53,10 +55,21 @@ func SignPayload(data []byte, acc accounts.Account, psw string, ks *keystore.Key
 
 func VerifyPayload(message []byte, signature []byte) (bool, error) {
 
-	pubKey, err := ExtractPubKey(message, signature)
+	pubKeyECDSA, err := ExtractPubKey(message, signature)
 	if err != nil {
 		return false, err
 	}
+
+	// Ensure the signed address corresponds to the public key's address in the signature.
+	// The signer should exclusively sign their own address;
+	// thus, only the pods associated with their address used as IDs will be affected.
+	address := []byte(crypto.PubkeyToAddress(*pubKeyECDSA).Hex())
+
+	if !reflect.DeepEqual(message, address) {
+		return false, nil
+	}
+
+	pubKey := crypto.FromECDSAPub(pubKeyECDSA)
 	valid := crypto.VerifySignature(pubKey, crypto.Keccak256(message), signature[:len(signature)-1])
 
 	if valid {
@@ -65,11 +78,10 @@ func VerifyPayload(message []byte, signature []byte) (bool, error) {
 	return false, nil
 }
 
-func ExtractPubKey(message []byte, signature []byte) ([]byte, error) {
+func ExtractPubKey(message []byte, signature []byte) (*ecdsa.PublicKey, error) {
 	pubKeyECDSA, err := crypto.SigToPub(crypto.Keccak256(message), signature)
 	if err != nil {
 		return nil, err
 	}
-	return crypto.FromECDSAPub(pubKeyECDSA), nil
-
+	return pubKeyECDSA, nil
 }
