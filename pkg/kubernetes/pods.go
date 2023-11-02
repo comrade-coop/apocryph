@@ -17,6 +17,48 @@ import (
 
 type FetchSecret func(cid []byte) (map[string][]byte, error)
 
+func GetRessource(kind string) interface{} {
+	switch kind {
+	case "Service":
+		return &corev1.Service{}
+	case "Volume":
+		return &corev1.PersistentVolumeClaim{}
+	case "Secret":
+		return &corev1.Secret{}
+	case "Deployment":
+		return &appsv1.Deployment{}
+	case "HttpSo":
+		return &kedahttpv1alpha1.HTTPScaledObject{}
+	}
+	return nil
+}
+func patchOrCreate(ressourceName, kind, namespace string, ressource interface{}, client k8cl.Client, patch bool) error {
+	if patch == true {
+		key := &k8cl.ObjectKey{
+			Namespace: namespace,
+			Name:      ressourceName,
+		}
+		oldRessource := GetRessource(kind).(k8cl.Object)
+
+		err := client.Get(context.Background(), *key, oldRessource)
+		if err != nil {
+			return err
+		}
+
+		patch, err := json.Marshal(ressource)
+
+		err = client.Patch(context.Background(), oldRessource, k8cl.RawPatch(types.MergePatchType, patch))
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	if err := client.Create(context.Background(), ressource.(k8cl.Object)); err != nil {
+		return err
+	}
+	return nil
+}
+
 func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Pod, patch bool, namespace string, response *pb.ProvisionPodResponse) error {
 	labels := map[string]string{"tpod": "1"}
 
@@ -64,30 +106,10 @@ func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Po
 			if err != nil {
 				return err
 			}
-			if patch == true {
-				key := &k8cl.ObjectKey{
-					Namespace: namespace,
-					Name:      service.GetName(),
-				}
 
-				oldService := &corev1.Service{}
-				err = client.Get(ctx, *key, oldService)
-				if err != nil {
-					return err
-				}
-
-				patch, err := json.Marshal(service)
-
-				err = client.Patch(ctx, oldService, k8cl.RawPatch(types.MergePatchType, patch))
-				if err != nil {
-					return err
-				}
-
-			} else {
-				if err := client.Create(ctx, service); err != nil {
-					return err
-				}
-
+			err = patchOrCreate(service.GetName(), "Service", namespace, service, client, patch)
+			if err != nil {
+				return err
 			}
 
 			multiaddrPart := ""
@@ -153,30 +175,9 @@ func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Po
 				persistentVolumeClaim.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany}
 			}
 
-			if patch == true {
-				key := &k8cl.ObjectKey{
-					Namespace: namespace,
-					Name:      volumeName,
-				}
-
-				oldVolume := &corev1.PersistentVolumeClaim{}
-				err := client.Get(ctx, *key, oldVolume)
-				if err != nil {
-					return err
-				}
-
-				patch, err := json.Marshal(persistentVolumeClaim)
-
-				err = client.Patch(ctx, oldVolume, k8cl.RawPatch(types.MergePatchType, patch))
-				if err != nil {
-					return err
-				}
-
-			} else {
-				if err := client.Create(ctx, persistentVolumeClaim); err != nil {
-					return err
-				}
-
+			err := patchOrCreate(volumeName, "Volume", namespace, persistentVolumeClaim, client, patch)
+			if err != nil {
+				return err
 			}
 
 			volumeSpec.VolumeSource.PersistentVolumeClaim = &corev1.PersistentVolumeClaimVolumeSource{
@@ -194,30 +195,10 @@ func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Po
 					"data": secretBytes,
 				},
 			}
-			if patch == true {
-				key := &k8cl.ObjectKey{
-					Namespace: namespace,
-					Name:      secretName,
-				}
 
-				oldSecret := &corev1.Secret{}
-				err := client.Get(ctx, *key, oldSecret)
-				if err != nil {
-					return err
-				}
-
-				patch, err := json.Marshal(secret)
-
-				err = client.Patch(ctx, oldSecret, k8cl.RawPatch(types.MergePatchType, patch))
-				if err != nil {
-					return err
-				}
-
-			} else {
-				if err := client.Create(ctx, secret); err != nil {
-					return err
-				}
-
+			err := patchOrCreate(secretName, "Secret", namespace, secret, client, patch)
+			if err != nil {
+				return err
 			}
 
 			volumeSpec.VolumeSource.Secret = &corev1.SecretVolumeSource{
@@ -226,30 +207,10 @@ func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Po
 		}
 		podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, volumeSpec)
 	}
-	if patch == true {
-		key := &k8cl.ObjectKey{
-			Namespace: namespace,
-			Name:      deploymentName,
-		}
 
-		oldDeployment := &corev1.Secret{}
-		err := client.Get(ctx, *key, oldDeployment)
-		if err != nil {
-			return err
-		}
-
-		patch, err := json.Marshal(deployment)
-
-		err = client.Patch(ctx, oldDeployment, k8cl.RawPatch(types.MergePatchType, patch))
-		if err != nil {
-			return err
-		}
-
-	} else {
-		if err := client.Create(ctx, deployment); err != nil {
-			return err
-		}
-
+	err := patchOrCreate(deploymentName, "Deployment", namespace, deployment, client, patch)
+	if err != nil {
+		return err
 	}
 
 	if httpSO.Spec.ScaleTargetRef.Service != "" {
@@ -266,31 +227,13 @@ func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Po
 		if targetPendingRequests > 0 {
 			httpSO.Spec.TargetPendingRequests = &targetPendingRequests
 		}
-		if patch == true {
-			key := &k8cl.ObjectKey{
-				Namespace: namespace,
-				Name:      fmt.Sprintf("tpod-httpSo-%v", namespace),
-			}
+		httpSoName := fmt.Sprintf("tpod-httpSo-%v", namespace)
 
-			oldHttpSo := &corev1.Secret{}
-			err := client.Get(ctx, *key, oldHttpSo)
-			if err != nil {
-				return err
-			}
-
-			patch, err := json.Marshal(deployment)
-
-			err = client.Patch(ctx, oldHttpSo, k8cl.RawPatch(types.MergePatchType, patch))
-			if err != nil {
-				return err
-			}
-
-		} else {
-			if err := client.Create(ctx, httpSO); err != nil {
-				return err
-			}
-
+		err := patchOrCreate(httpSoName, "HttpSo", namespace, httpSO, client, patch)
+		if err != nil {
+			return err
 		}
+
 	}
 
 	return nil
