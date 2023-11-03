@@ -6,10 +6,9 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
 
-	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	"github.com/comrade-coop/trusted-pods/pkg/publisher"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ipfs/kubo/client/rpc"
 	"google.golang.org/grpc"
@@ -75,34 +74,11 @@ func main() {
 
 func ProvisionPod(client pb.ProvisionPodServiceClient, publisherAddress []byte, podPath string) (*pb.ProvisionPodResponse, *pb.Pod, error) {
 
-	pod := &pb.Pod{}
-	err := pb.UnmarshalFile(podPath, "json", pod)
+	request, pod, err := publisher.UploadManifest(context.Background(), "./manifest-guestbook.json", "json", "", false)
 	if err != nil {
-		return nil, nil, err
+		log.Printf("failed uploading Manifest: %v", err)
 	}
-
-	keys := []*pb.Key{}
-
-	err = tpipfs.TransformSecrets(pod,
-		tpipfs.ReadSecrets(path.Dir(podPath)),
-		tpipfs.EncryptSecrets(&keys),
-		tpipfs.UploadSecrets(context.Background(), ipfs),
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	podCid, err := tpipfs.AddProtobufFile(ipfs, pod)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	request := &pb.ProvisionPodRequest{
-		PodManifestCid: podCid.Bytes(),
-		Payment:        &pb.PaymentChannel{PublisherAddress: publisherAddress},
-		Keys:           keys,
-	}
-
+	request.Payment = &pb.PaymentChannel{PublisherAddress: publisherAddress}
 	response, err := client.ProvisionPod(context.Background(), request)
 	if err != nil {
 		return nil, nil, err

@@ -42,7 +42,7 @@ func transformError(err error) (*pb.ProvisionPodResponse, error) {
 }
 
 func (s *provisionPodServer) DeletePod(ctx context.Context, request *pb.DeletePodRequest) (*pb.DeletePodResponse, error) {
-	log.Printf("\n Received request for pod deletion: %v\n", request)
+	log.Println("Received request for pod deletion")
 
 	namespace := "tpod-" + strings.ToLower(string(request.Credentials.PublisherAddress))
 	// Create a new namespace object
@@ -69,9 +69,9 @@ func (s *provisionPodServer) UpdatePod(ctx context.Context, request *pb.UpdatePo
 	namespace := "tpod-" + strings.ToLower(string(request.Credentials.PublisherAddress))
 
 	response := &pb.ProvisionPodResponse{}
-	tpk8s.ApplyPodRequest(ctx, s.k8cl, request.Pod, true, namespace, response)
+	err := tpk8s.ApplyPodRequest(ctx, s.k8cl, request.Pod, true, namespace, response)
 
-	return response, nil
+	return response, err
 }
 
 func (s *provisionPodServer) GetPodLogs(ctx context.Context, request *pb.PodLogRequest) (*pb.PodLogResponse, error) {
@@ -86,11 +86,12 @@ func (s *provisionPodServer) GetPodLogs(ctx context.Context, request *pb.PodLogR
 }
 
 func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.ProvisionPodRequest) (*pb.ProvisionPodResponse, error) {
-	fmt.Printf("Received request for pod deployment, %v\n", request)
+	fmt.Println("Received request for pod deployment")
 	cid, err := cid.Cast(request.PodManifestCid)
 	if err != nil {
 		return transformError(err)
 	}
+	fmt.Println("Retreiving pod from Ipfs")
 	// TODO verify CID size before downloading from ipfs
 	node, err := s.ipfs.Unixfs().Get(ctx, path.IpfsPath(cid))
 	if err != nil {
@@ -100,6 +101,7 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.Provi
 	if !ok {
 		return transformError(errors.New("Supplied CID not a file"))
 	}
+	fmt.Println("Reading pod manifest")
 	manifestBytes, err := io.ReadAll(file)
 	if err != nil {
 		return transformError(err)
@@ -139,7 +141,7 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.Provi
 	}
 	response.Namespace = namespace.GetName()
 
-	fmt.Printf("Request processed successfully, %v %v\n", response, namespace)
+	fmt.Println("Request processed successfully")
 
 	return response, nil
 }

@@ -1,14 +1,13 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"os"
 	"path"
 
 	"github.com/bufbuild/protoyaml-go"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	"github.com/comrade-coop/trusted-pods/pkg/publisher"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/spf13/cobra"
@@ -29,59 +28,10 @@ var paymentContract string
 var noIpdr bool
 var readSecrets bool
 
-func uploadManifest(ctx context.Context, manifestFile string) (*pb.ProvisionPodRequest, error) {
-	ipfs, _, err := tpipfs.GetIpfsClient(ipfsApi)
-	if err != nil {
-		return nil, fmt.Errorf("Failed connectig to IPFS: %w", err)
-	}
-
-	pod := &pb.Pod{}
-	err = pb.UnmarshalFile(manifestFile, manifestFormat, pod)
-	if err != nil {
-		return nil, fmt.Errorf("Failed reading the manifest file: %w", err)
-	}
-
-	fmt.Fprintf(os.Stderr, "Parsed pod manifest\n")
-
-	keys := []*pb.Key{}
-
-	err = tpipfs.TransformSecrets(pod,
-		tpipfs.ReadSecrets(path.Dir(manifestFile)),
-		tpipfs.EncryptSecrets(&keys),
-		tpipfs.UploadSecrets(ctx, ipfs),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("Failed encrypting and uploading secrets to IPFS: %w", err)
-	}
-
-	fmt.Fprintf(os.Stderr, "Encrypted and uploaded pod secrets to IPFS\n")
-
-	if !noIpdr {
-		err = tpipfs.UploadImagesToIpdr(pod, ctx, ipfs, nil, &keys)
-		if err != nil {
-			return nil, fmt.Errorf("Failed encrypting and uploading images to IPDR: %w", err)
-		}
-	}
-
-	fmt.Fprintf(os.Stderr, "Encrypted and uploaded pod images to IPDR\n")
-
-	podCid, err := tpipfs.AddProtobufFile(ipfs, pod)
-	if err != nil {
-		return nil, err
-	}
-
-	fmt.Fprintf(os.Stderr, "Uploaded pod manifest to IPFS\n")
-
-	return  &pb.ProvisionPodRequest{
-		PodManifestCid: podCid.Bytes(),
-		Keys:           keys,
-	}, nil
-}
-
 var parsePodCmd = &cobra.Command{
-	Use:   "parse",
-	Short: "Parse a pod from a local manifest",
-	Args:  cobra.ExactArgs(1),
+	Use:    "parse",
+	Short:  "Parse a pod from a local manifest",
+	Args:   cobra.ExactArgs(1),
 	Hidden: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		manifestFile := args[0]
@@ -117,13 +67,12 @@ var uploadPodCmd = &cobra.Command{
 	Short: "Upload a pod from a local manifest",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		partialRequest, err := uploadManifest(cmd.Context(), args[0])
+		partialRequest, _, err := publisher.UploadManifest(cmd.Context(), args[0], manifestFormat, ipfsApi, noIpdr)
 		if err != nil {
 			return err
 		}
 
 		fmt.Fprintf(cmd.ErrOrStderr(), "Pass the following parameter instead of a pod file to deploy the pod\n")
-
 
 		_, err = fmt.Fprintln(cmd.OutOrStdout(), protojson.MarshalOptions{}.Format(partialRequest))
 		if err != nil {
@@ -148,7 +97,7 @@ var deployPodCmd = &cobra.Command{
 
 		err = protojson.Unmarshal([]byte(args[0]), request)
 		if err != nil {
-			request, err = uploadManifest(cmd.Context(), args[0])
+			request, _, err = publisher.UploadManifest(cmd.Context(), args[0], manifestFormat, ipfsApi, noIpdr)
 			if err != nil {
 				return err
 			}

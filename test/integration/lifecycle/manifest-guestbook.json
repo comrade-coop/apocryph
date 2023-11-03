@@ -3,7 +3,7 @@
     {
       "name": "php-redis",
       "image": {
-        "url": "gcr.io/google-samples/gb-frontend:v4"
+        "url": "hello-world:latest"
       },
       "ports": [
         {
@@ -38,7 +38,7 @@
     {
       "name": "redis",
       "image": {
-        "url": "docker.io/library/redis:alpine"
+        "url": "hello-world:latest"
       },
       "resourceRequests": [
         {

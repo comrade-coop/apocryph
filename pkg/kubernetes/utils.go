@@ -47,10 +47,10 @@ func NewService(port *pb.Container_Port, portName string, httpSO *kedahttpv1alph
 	return service, servicePort, nil
 }
 
-func NewHttpSo(namespace string) *kedahttpv1alpha1.HTTPScaledObject {
+func NewHttpSo(namespace, name string) *kedahttpv1alpha1.HTTPScaledObject {
 	return &kedahttpv1alpha1.HTTPScaledObject{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("tpod-httpso-%v", namespace),
+			Name: name,
 		},
 		Spec: kedahttpv1alpha1.HTTPScaledObjectSpec{},
 	}

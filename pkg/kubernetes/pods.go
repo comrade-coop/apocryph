@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
+	"golang.org/x/exp/slices"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -32,36 +34,112 @@ func GetRessource(kind string) interface{} {
 	}
 	return nil
 }
-func patchOrCreate(ressourceName, kind, namespace string, ressource interface{}, client k8cl.Client, patch bool) error {
+
+func patchOrCreate(ctx context.Context, ressourceName, kind, namespace string, ressource interface{}, client k8cl.Client, patch bool) error {
 	if patch == true {
 		key := &k8cl.ObjectKey{
 			Namespace: namespace,
 			Name:      ressourceName,
 		}
-		oldRessource := GetRessource(kind).(k8cl.Object)
+		oldRessource := GetRessource(kind)
 
-		err := client.Get(context.Background(), *key, oldRessource)
+		err := client.Get(ctx, *key, oldRessource.(k8cl.Object))
 		if err != nil {
 			return err
 		}
 
 		patch, err := json.Marshal(ressource)
+		if err != nil {
+			return err
+		}
 
-		err = client.Patch(context.Background(), oldRessource, k8cl.RawPatch(types.MergePatchType, patch))
+		err = client.Patch(ctx, oldRessource.(k8cl.Object), k8cl.RawPatch(types.MergePatchType, patch))
 		if err != nil {
 			return err
 		}
 		return nil
 	}
-	if err := client.Create(context.Background(), ressource.(k8cl.Object)); err != nil {
+	if err := client.Create(ctx, ressource.(k8cl.Object)); err != nil {
 		return err
 	}
 	return nil
 }
 
+func cleanNamespace(ctx context.Context, namespace string, activeRessources []string, client k8cl.Client) error {
+	kindList := []string{"Service", "Volume", "Secret", "Deployment", "HttpSo"}
+	fmt.Printf("Active Ressources: %v \n", activeRessources)
+	for _, kind := range kindList {
+		switch kind {
+		case "Service":
+			list := &corev1.ServiceList{}
+			err := client.List(ctx, list, &k8cl.ListOptions{Namespace: namespace})
+			if err != nil {
+				return err
+			}
+			for i, rsrc := range list.Items {
+				if !slices.Contains(activeRessources, rsrc.GetName()) && strings.Contains(rsrc.GetName(), "tpod") {
+					fmt.Printf("Deleting Service %v:%v \n", i, rsrc.GetName())
+					client.Delete(ctx, &rsrc)
+				}
+			}
+		case "Volume":
+			list := &corev1.PersistentVolumeList{}
+			err := client.List(ctx, list, &k8cl.ListOptions{Namespace: namespace})
+			if err != nil {
+				return err
+			}
+			for i, rsrc := range list.Items {
+				if !slices.Contains(activeRessources, rsrc.GetName()) && strings.Contains(rsrc.GetName(), "tpod") {
+					fmt.Printf("Deleting Volume %v: %v \n", i, rsrc.GetName())
+					client.Delete(ctx, &rsrc)
+				}
+			}
+		case "Secret":
+			list := &corev1.SecretList{}
+			err := client.List(ctx, list, &k8cl.ListOptions{Namespace: namespace})
+			if err != nil {
+				return err
+			}
+			for i, rsrc := range list.Items {
+				if !slices.Contains(activeRessources, rsrc.GetName()) && strings.Contains(rsrc.GetName(), "tpod") {
+					fmt.Printf("Deleting Secret %v: %v \n", i, rsrc.GetName())
+					client.Delete(ctx, &rsrc)
+				}
+			}
+		case "Deployment":
+			list := &appsv1.DeploymentList{}
+			err := client.List(ctx, list, &k8cl.ListOptions{Namespace: namespace})
+			if err != nil {
+				return err
+			}
+			for i, rsrc := range list.Items {
+				if !slices.Contains(activeRessources, rsrc.GetName()) && strings.Contains(rsrc.GetName(), "tpod") {
+					fmt.Printf("Deleting Deployment %v: %v \n", i, rsrc.GetName())
+					client.Delete(ctx, &rsrc)
+				}
+			}
+		case "HttpSo":
+			list := &kedahttpv1alpha1.HTTPScaledObjectList{}
+			err := client.List(ctx, list, &k8cl.ListOptions{Namespace: namespace})
+			if err != nil {
+				return err
+			}
+			for i, rsrc := range list.Items {
+				if !slices.Contains(activeRessources, rsrc.GetName()) && strings.Contains(rsrc.GetName(), "tpod") {
+					fmt.Printf("Deleting HttpSo %v: %v \n", i, rsrc.GetName())
+					client.Delete(ctx, &rsrc)
+				}
+			}
+		}
+
+	}
+	return nil
+
+}
+
 func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Pod, patch bool, namespace string, response *pb.ProvisionPodResponse) error {
 	labels := map[string]string{"tpod": "1"}
-
+	activeRessource := []string{}
 	startupReplicas := int32(0)
 	var deploymentName = fmt.Sprintf("tpod-dep-%v", namespace)
 	deployment := &appsv1.Deployment{
@@ -81,7 +159,8 @@ func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Po
 
 	podTemplate := &deployment.Spec.Template
 
-	httpSO := NewHttpSo(namespace)
+	httpSoName := fmt.Sprintf("tpod-httpso-%v", namespace)
+	httpSO := NewHttpSo(namespace, httpSoName)
 
 	localhostAliases := corev1.HostAlias{IP: "127.0.0.1"}
 
@@ -107,11 +186,12 @@ func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Po
 				return err
 			}
 
-			err = patchOrCreate(service.GetName(), "Service", namespace, service, client, patch)
+			err = patchOrCreate(ctx, service.GetName(), "Service", namespace, service, client, patch)
 			if err != nil {
 				return err
 			}
 
+			activeRessource = append(activeRessource, service.GetName())
 			multiaddrPart := ""
 
 			switch port.ExposedPort.(type) {
@@ -175,10 +255,11 @@ func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Po
 				persistentVolumeClaim.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany}
 			}
 
-			err := patchOrCreate(volumeName, "Volume", namespace, persistentVolumeClaim, client, patch)
+			err := patchOrCreate(ctx, volumeName, "Volume", namespace, persistentVolumeClaim, client, patch)
 			if err != nil {
 				return err
 			}
+			activeRessource = append(activeRessource, volumeName)
 
 			volumeSpec.VolumeSource.PersistentVolumeClaim = &corev1.PersistentVolumeClaimVolumeSource{
 				ClaimName: persistentVolumeClaim.ObjectMeta.Name,
@@ -196,10 +277,11 @@ func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Po
 				},
 			}
 
-			err := patchOrCreate(secretName, "Secret", namespace, secret, client, patch)
+			err := patchOrCreate(ctx, secretName, "Secret", namespace, secret, client, patch)
 			if err != nil {
 				return err
 			}
+			activeRessource = append(activeRessource, secretName)
 
 			volumeSpec.VolumeSource.Secret = &corev1.SecretVolumeSource{
 				SecretName: secret.ObjectMeta.Name,
@@ -208,10 +290,11 @@ func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Po
 		podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, volumeSpec)
 	}
 
-	err := patchOrCreate(deploymentName, "Deployment", namespace, deployment, client, patch)
+	err := patchOrCreate(ctx, deploymentName, "Deployment", namespace, deployment, client, patch)
 	if err != nil {
 		return err
 	}
+	activeRessource = append(activeRessource, deploymentName)
 
 	if httpSO.Spec.ScaleTargetRef.Service != "" {
 		httpSO.Spec.ScaleTargetRef.Deployment = deployment.ObjectMeta.Name
@@ -227,13 +310,19 @@ func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Po
 		if targetPendingRequests > 0 {
 			httpSO.Spec.TargetPendingRequests = &targetPendingRequests
 		}
-		httpSoName := fmt.Sprintf("tpod-httpSo-%v", namespace)
 
-		err := patchOrCreate(httpSoName, "HttpSo", namespace, httpSO, client, patch)
+		err := patchOrCreate(ctx, httpSoName, "HttpSo", namespace, httpSO, client, patch)
 		if err != nil {
 			return err
 		}
+		activeRessource = append(activeRessource, httpSoName)
 
+	}
+	if patch == true {
+		err := cleanNamespace(ctx, namespace, activeRessource, client)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
