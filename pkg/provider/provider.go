@@ -66,10 +66,22 @@ func (s *provisionPodServer) DeletePod(ctx context.Context, request *pb.DeletePo
 
 func (s *provisionPodServer) UpdatePod(ctx context.Context, request *pb.UpdatePodRequest) (*pb.ProvisionPodResponse, error) {
 	log.Println("Received request for updating pod")
+	err := tpipfs.TransformSecrets(request.Pod, tpipfs.DownloadSecrets(ctx, s.ipfs), tpipfs.DecryptSecrets(request.Keys))
+	if err != nil {
+		return nil, err
+	}
+
+	if s.localOciRegistry != "" {
+		err = tpipfs.ReuploadImagesFromIpdr(request.Pod, ctx, s.ipfs, s.localOciRegistry, nil, request.Keys)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	namespace := "tpod-" + strings.ToLower(string(request.Credentials.PublisherAddress))
 
 	response := &pb.ProvisionPodResponse{}
-	err := tpk8s.ApplyPodRequest(ctx, s.k8cl, request.Pod, true, namespace, response)
+	err = tpk8s.ApplyPodRequest(ctx, s.k8cl, request.Pod, true, namespace, response)
 
 	return response, err
 }
@@ -112,6 +124,7 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.Provi
 		return transformError(err)
 	}
 
+	// TODO should return error (just usefull for now in testing lifecycle without payment)
 	if s.paymentValidator != nil {
 		_, err = s.paymentValidator.Parse(request.Payment)
 		if err != nil {

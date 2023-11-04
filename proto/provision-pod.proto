@@ -27,7 +27,8 @@ message DeletePodResponse {
 
 message UpdatePodRequest {
   pod.Pod pod = 1;
-  Credentials credentials = 2;
+  repeated Key keys = 2;
+  Credentials credentials = 3;
 }
 message UpdatePodResponse {
   bool success = 1;

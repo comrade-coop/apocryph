@@ -51,20 +51,10 @@ func main() {
 	}
 
 	client := pb.NewProvisionPodServiceClient(conn)
-	_, pod, err := ProvisionPod(client, publisherAddress, "./manifest-guestbook.json")
-	if err != nil {
-		log.Printf("Could not provision pod: %v", err)
-		return
-	}
-
-	pod.Containers[0].Ports[0].ContainerPort = 99
-	pod.Containers[0].Name = "js-redis"
-	request := &pb.UpdatePodRequest{Credentials: Credentials, Pod: pod}
-	UpdatePod(client, request)
-
+	ProvisionPod(client, publisherAddress, "./manifest-guestbook.json")
+	UpdatePod(client, Credentials)
 	// GetPodLogs(client, &pb.PodLogRequest{ContainerName: "anvil"}) // empty credentials should fail
 	// GetPodLogs(client, &pb.PodLogRequest{ContainerName: response.Addresses[0].ContainerName, Credentials: Credentials}) // the pod quickly scaled down?
-
 	log.Println("Press Enter to Delete Namespace")
 	reader := bufio.NewReader(os.Stdin)
 	_, _ = reader.ReadString('\n')
@@ -72,20 +62,18 @@ func main() {
 	DeletePod(client, &pb.DeletePodRequest{Credentials: Credentials})
 }
 
-func ProvisionPod(client pb.ProvisionPodServiceClient, publisherAddress []byte, podPath string) (*pb.ProvisionPodResponse, *pb.Pod, error) {
+func ProvisionPod(client pb.ProvisionPodServiceClient, publisherAddress []byte, podPath string) {
 
-	request, pod, err := publisher.UploadManifest(context.Background(), "./manifest-guestbook.json", "json", "", false)
+	request, _, err := publisher.UploadManifest(context.Background(), "./manifest-guestbook.json", "json", "", false)
 	if err != nil {
-		log.Printf("failed uploading Manifest: %v", err)
+		log.Fatalf("failed uploading Manifest: %v", err)
 	}
 	request.Payment = &pb.PaymentChannel{PublisherAddress: publisherAddress}
 	response, err := client.ProvisionPod(context.Background(), request)
 	if err != nil {
-		return nil, nil, err
+		log.Fatalf("Provision Pod failed: %v", err)
 	}
 	log.Printf("pod provision response: %v", response)
-
-	return response, pod, nil
 }
 
 func DeletePod(client pb.ProvisionPodServiceClient, request *pb.DeletePodRequest) {
@@ -97,8 +85,10 @@ func DeletePod(client pb.ProvisionPodServiceClient, request *pb.DeletePodRequest
 	log.Printf("Pod Deletion response: %v", response)
 }
 
-func UpdatePod(client pb.ProvisionPodServiceClient, request *pb.UpdatePodRequest) {
-	response, err := client.UpdatePod(context.Background(), request)
+func UpdatePod(client pb.ProvisionPodServiceClient, credentials *pb.Credentials) {
+
+	request, pod, err := publisher.UploadManifest(context.Background(), "./updated-guestbook.json", "json", "", false)
+	response, err := client.UpdatePod(context.Background(), &pb.UpdatePodRequest{Pod: pod, Credentials: credentials, Keys: request.Keys})
 	if err != nil {
 		log.Printf("rpc update method failed: %v", err)
 		return
