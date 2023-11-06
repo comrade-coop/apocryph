@@ -23,8 +23,7 @@ var deletePodCmd = &cobra.Command{
 		}
 
 		request := &pb.DeletePodRequest{
-			Namespace: namespace,
-			Keys:      []*pb.Key{},
+			Credentials: &pb.Credentials{},
 		}
 
 		providerPeerId, err := peer.Decode(providerPeer)

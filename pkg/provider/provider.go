@@ -86,15 +86,21 @@ func (s *provisionPodServer) UpdatePod(ctx context.Context, request *pb.UpdatePo
 	return response, err
 }
 
-func (s *provisionPodServer) GetPodLogs(ctx context.Context, request *pb.PodLogRequest) (*pb.PodLogResponse, error) {
+func (s *provisionPodServer) GetPodLogs(request *pb.PodLogRequest, srv pb.ProvisionPodService_GetPodLogsServer) error {
 	log.Println("Received Log request")
-	response := pb.PodLogResponse{}
-	entries, err := loki.GetLogs(request.ContainerName, s.loki.Limit, s.loki.Url)
+	// verify if container exists or not
+	namespace := "tpod-" + strings.ToLower(string(request.Credentials.PublisherAddress))
+	err := s.k8cl.Get(context.Background(), client.ObjectKey{Namespace: namespace, Name: request.ContainerName}, nil)
 	if err != nil {
-		return nil, err
+		return errors.New("Container Does not exists")
 	}
-	response.LogEntries = entries
-	return &response, nil
+
+	err = loki.GetStreamedEntries(namespace, request.ContainerName, srv)
+	if err != nil {
+		return err
+	}
+	log.Println("Finished Streaming logs")
+	return nil
 }
 
 func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.ProvisionPodRequest) (*pb.ProvisionPodResponse, error) {
@@ -165,7 +171,7 @@ func NewTPodServer(ipfsApi *rpc.HttpApi, dryRun bool, k8cl client.Client, localO
 	pb.RegisterProvisionPodServiceServer(server, &provisionPodServer{
 		ipfs:             ipfsApi,
 		k8cl:             k8cl,
-		loki:             loki.LokiConfig{Url: "http://loki.loki.svc.cluster.local:3100/loki/api/v1/query_range", Limit: "100"},
+		loki:             loki.LokiConfig{Url: "http://loki.loki.svc.cluster.local:3100/loki", Limit: "100"},
 		paymentValidator: validator,
 		localOciRegistry: localOciRegistry,
 		dryRun:           dryRun,

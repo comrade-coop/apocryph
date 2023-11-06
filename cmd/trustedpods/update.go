@@ -45,8 +45,9 @@ var updatePodCmd = &cobra.Command{
 		}
 
 		request := &pb.UpdatePodRequest{
-			Pod:       pod,
-			Namespace: namespace,
+			Pod:         pod,
+			Keys:        keys,
+			Credentials: &pb.Credentials{},
 		}
 
 		providerPeerId, err := peer.Decode(providerPeer)

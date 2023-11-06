@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
 
@@ -52,9 +53,8 @@ func main() {
 
 	client := pb.NewProvisionPodServiceClient(conn)
 	ProvisionPod(client, publisherAddress, "./manifest-guestbook.json")
+	GetPodLogs(client, &pb.PodLogRequest{ContainerName: "php-redis", Credentials: Credentials})
 	UpdatePod(client, Credentials)
-	// GetPodLogs(client, &pb.PodLogRequest{ContainerName: "anvil"}) // empty credentials should fail
-	// GetPodLogs(client, &pb.PodLogRequest{ContainerName: response.Addresses[0].ContainerName, Credentials: Credentials}) // the pod quickly scaled down?
 	log.Println("Press Enter to Delete Namespace")
 	reader := bufio.NewReader(os.Stdin)
 	_, _ = reader.ReadString('\n')
@@ -98,11 +98,25 @@ func UpdatePod(client pb.ProvisionPodServiceClient, credentials *pb.Credentials)
 }
 
 func GetPodLogs(client pb.ProvisionPodServiceClient, request *pb.PodLogRequest) {
-	response, err := client.GetPodLogs(context.Background(), request)
+	stream, err := client.GetPodLogs(context.Background(), request)
 	if err != nil {
-		log.Printf("rpc log method failed: %v", err)
+		log.Printf("Could not get logs stream: %v", err)
 		return
 	}
-	log.Printf("Pod Log response: %v", response)
+	for {
+		resp, err := stream.Recv()
+		if err == io.EOF {
+			log.Println("Log Stream Ended")
+			return
+		} else if err == nil {
+			valStr := fmt.Sprintf("%s:%s", resp.LogEntry.Time, resp.LogEntry.Log)
+			log.Println(valStr)
+		}
 
+		if err != nil {
+			log.Printf("Failed reading Stream: %v", err)
+			return
+		}
+
+	}
 }

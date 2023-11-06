@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	"github.com/gorilla/websocket"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -38,15 +39,20 @@ type QueryResult struct {
 	Values [][]string        `json:"values"`
 }
 
-func GetLogs(containerName string, limit string, url string) ([]*pb.LogEntry, error) {
+type TailData struct {
+	Streams []QueryResult `json:"streams"`
+}
 
-	query := fmt.Sprintf("{container=\"%s\"}", containerName)
+func GetLogs(namespace, containerName, limit string, url string) ([]*pb.LogEntry, error) {
+
+	requestURL := fmt.Sprintf("%s/api/v1/query_range", url)
+	query := fmt.Sprintf("{container=\"%s\",namespace=\"%s\"}", containerName, namespace)
 	params := map[string]string{
 		"query": query,
 		"limit": limit,
 	}
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -106,6 +112,43 @@ func parseEntries(lines [][]string) ([]*pb.LogEntry, error) {
 	return logEntries, nil
 }
 
+func GetStreamedEntries(namespace, containerName string, srv pb.ProvisionPodService_GetPodLogsServer) error {
+
+	query := fmt.Sprintf("{container=\"%s\",namespace=\"%s\"}", containerName, namespace)
+	requestURL := fmt.Sprintf("ws://loki.loki.svc.cluster.local:3100/loki/api/v1/tail?query=%s", query)
+
+	c, _, err := websocket.DefaultDialer.Dial(requestURL, nil)
+	if err != nil {
+		fmt.Println("Failed Dialing Server:", err)
+		return err
+	}
+	defer c.Close()
+	for {
+		var logs TailData
+		err := c.ReadJSON(&logs)
+		if err != nil {
+			fmt.Printf("Failed unmarshalling Json: %v \n", err)
+			return err
+		}
+		for _, result := range logs.Streams {
+			entries, err := parseEntries(result.Values)
+			if err != nil {
+				fmt.Println("Failed Parsing Entries:", err)
+				return err
+			}
+			for _, entry := range entries {
+				response := pb.PodLogResponse{}
+				response.LogEntry = entry
+				if err := srv.Send(&response); err != nil {
+					fmt.Printf("Error generating response: %v", err)
+					return err
+				}
+			}
+		}
+	}
+}
+
+//
 // type LogEntry struct {
 // 	NanosecondsUnixEpoch int64  `json:"nanoseconds_unix_epoch"`
 // 	Log                  string `json:"log"`

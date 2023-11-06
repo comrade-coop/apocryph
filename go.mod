@@ -8,6 +8,7 @@ require (
 	github.com/containers/ocicrypt v1.1.8
 	github.com/ethereum/go-ethereum v1.13.3
 	github.com/go-jose/go-jose/v3 v3.0.0
+	github.com/gorilla/websocket v1.5.0
 	github.com/ipfs/boxo v0.13.1
 	github.com/ipfs/go-cid v0.4.1
 	github.com/ipfs/kubo v0.23.0
@@ -111,7 +112,6 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/uuid v1.3.1 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
-	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/graph-gophers/graphql-go v1.3.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect

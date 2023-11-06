@@ -7,7 +7,7 @@ service ProvisionPodService {
   rpc ProvisionPod(ProvisionPodRequest) returns (ProvisionPodResponse);
   rpc UpdatePod(UpdatePodRequest) returns (ProvisionPodResponse);
   rpc DeletePod(DeletePodRequest) returns (DeletePodResponse);
-  rpc GetPodLogs(PodLogRequest) returns (PodLogResponse);
+  rpc GetPodLogs(PodLogRequest) returns (stream PodLogResponse);
 }
 
 message ProvisionPodRequest {
@@ -62,17 +62,16 @@ message ProvisionPodResponse {
 message PodLogRequest{
   string containerName = 1;
   Credentials credentials = 2;
-  repeated Key keys = 3;
 }
 
 message PodLogResponse{
-repeated LogEntry logEntries =1;
+ LogEntry logEntry = 1;
 }
 
 message LogEntry{
   uint64 NanosecondsUnixEpoch = 1;
   string log = 2;
-  string stream = 3;
+  string stream = 3; // std(in/out/err)
   string time = 4;
 }
 
