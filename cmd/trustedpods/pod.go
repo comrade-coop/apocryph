@@ -173,7 +173,6 @@ func init() {
 
 	deployPodCmd.Flags().StringVar(&paymentContractAddress, "payment-contract", "", "payment contract address")
 	deployPodCmd.Flags().StringVar(&podId, "pod-id", "", "pod id (empty to pick one automatically)")
-	deployPodCmd.Flags().StringVar(&tokenContractAddress, "token", "", "token contract address")
 	deployPodCmd.Flags().StringVar(&funds, "funds", "5000000000000000000", "intial funds")
 	deployPodCmd.Flags().Int64Var(&unlockTime, "unlock-time", 5*60, "time for unlocking tokens (in seconds)")
 	podCmd.PersistentFlags().BoolVar(&noIpdr, "no-ipdr", false, "disable ipdr")

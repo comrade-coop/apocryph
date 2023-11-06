@@ -34,12 +34,12 @@ var listenCmd = &cobra.Command{
 			return err
 		}
 
-		pricingTable, err := openPricingTable()
+		pricingTables, err := openPricingTables()
 		if err != nil {
 			return err
 		}
 
-		validator, err := ethereum.NewPaymentChannelValidator(ethClient, allowedContractAddresses, providerAuth, pricingTable.TokenAddress)
+		validator, err := ethereum.NewPaymentChannelValidator(ethClient, pricingTables, providerAuth)
 
 		var listener net.Listener
 		if serveAddress == "" {

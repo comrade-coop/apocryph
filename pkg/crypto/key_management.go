@@ -15,7 +15,7 @@ import (
 
 const (
 	KeyTypeEcdsaP256 = "ECDSAP256"
-	KeyTypeRsa4096 = "RSA4096"
+	KeyTypeRsa4096   = "RSA4096"
 	KeyTypeAESGCM256 = "AESGCM256"
 )
 
@@ -42,8 +42,8 @@ func CreateKey(keys *[]*pb.Key, keyType string) (int32, error) {
 	}
 	keyIdx := int32(len(*keys))
 	jwk, err := jose.JSONWebKey{
-		Key: key,
-		KeyID: fmt.Sprintf("key-%d", keyIdx),
+		Key:       key,
+		KeyID:     fmt.Sprintf("key-%d", keyIdx),
 		Algorithm: keyAlg,
 	}.MarshalJSON()
 	if err != nil {

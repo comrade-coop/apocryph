@@ -31,20 +31,17 @@ var monitorCmd = &cobra.Command{
 			return err
 		}
 
-		pricingTable, err := openPricingTable()
-		if err != nil {
-			return err
-		}
-
 		providerAuth, err := ethereum.GetAccount(providerKey, ethClient)
 		if err != nil {
 			return err
 		}
 
-		paymentChannelValidator, err := ethereum.NewPaymentChannelValidator(ethClient, allowedContractAddresses, providerAuth, pricingTable.TokenAddress)
+		pricingTables, err := openPricingTables()
 		if err != nil {
 			return err
 		}
+
+		validator, err := ethereum.NewPaymentChannelValidator(ethClient, pricingTables, providerAuth)
 
 		client, err := tpk8s.GetClient(kubeConfig, dryRun)
 		if err != nil {
@@ -66,8 +63,6 @@ var monitorCmd = &cobra.Command{
 				return err
 			}
 
-			amountsOwed := resourceMeasurements.Price(pricingTable)
-
 			namespaces := &corev1.NamespaceList{}
 			err = client.List(cmd.Context(), namespaces, tpk8s.TrustedPodsNamespaceFilter)
 			if err != nil {
@@ -75,7 +70,7 @@ var monitorCmd = &cobra.Command{
 			}
 
 			for _, n := range namespaces.Items {
-				if amountOwed, ok := amountsOwed[n.Name]; ok {
+				if resourceMeasurement, ok := resourceMeasurements[n.Name]; ok {
 					err := func() error {
 						paymentChannelProto, err := tpk8s.TrustedPodsNamespaceGetChannel(&n)
 						if err != nil {
@@ -85,7 +80,7 @@ var monitorCmd = &cobra.Command{
 							return nil
 						}
 
-						paymentChannel, err := paymentChannelValidator.Parse(paymentChannelProto)
+						paymentChannel, err := validator.Parse(paymentChannelProto)
 						if err != nil {
 							err = client.Delete(context.Background(), &n)
 							if err != nil {
@@ -93,6 +88,8 @@ var monitorCmd = &cobra.Command{
 							}
 							return err
 						}
+
+						amountOwed := resourceMeasurement.Price(paymentChannel.PricingTable)
 
 						tx, err := paymentChannel.WithdrawIfOverMargin(withdrawAddress, amountOwed, tolerance)
 						if err != nil {

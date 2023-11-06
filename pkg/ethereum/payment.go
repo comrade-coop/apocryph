@@ -8,38 +8,32 @@ import (
 
 	"github.com/comrade-coop/trusted-pods/pkg/abi"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	"github.com/comrade-coop/trusted-pods/pkg/resource"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"golang.org/x/exp/slices"
 )
 
 type PaymentChannelValidator struct {
-	ethClient        *ethclient.Client
-	transactOpts     *bind.TransactOpts
-	ChainID          *big.Int
-	allowedContracts []common.Address
-	tokenAddress     common.Address
-	minFunds         *big.Int
+	ethClient     *ethclient.Client
+	transactOpts  *bind.TransactOpts
+	ChainID       *big.Int
+	pricingTables map[common.Address]resource.PricingTableMap
+	minFunds      *big.Int
 }
 
-func NewPaymentChannelValidator(ethClient *ethclient.Client, allowedContractAddresses []string, transactOpts *bind.TransactOpts, tokenAddress []byte) (*PaymentChannelValidator, error) {
+func NewPaymentChannelValidator(ethClient *ethclient.Client, pricingTables map[common.Address]resource.PricingTableMap, transactOpts *bind.TransactOpts) (*PaymentChannelValidator, error) {
 	chainID, err := ethClient.ChainID(context.Background())
 	if err != nil {
 		return nil, err
 	}
-	allowedContracts := make([]common.Address, len(allowedContractAddresses))
-	for i, a := range allowedContractAddresses {
-		allowedContracts[i] = common.HexToAddress(a)
-	}
 	return &PaymentChannelValidator{
-		ethClient:        ethClient,
-		transactOpts:     transactOpts,
-		ChainID:          chainID,
-		allowedContracts: allowedContracts,
-		tokenAddress:     common.BytesToAddress(tokenAddress),
-		minFunds:         big.NewInt(1),
+		ethClient:     ethClient,
+		transactOpts:  transactOpts,
+		ChainID:       chainID,
+		pricingTables: pricingTables,
+		minFunds:      big.NewInt(1),
 	}, nil
 }
 
@@ -52,12 +46,13 @@ func (v *PaymentChannelValidator) Parse(channel *pb.PaymentChannel) (*PaymentCha
 		return nil, fmt.Errorf("Invalid provider address in payment channel (expected %s)", provider)
 	}
 	paymentContract := common.BytesToAddress(channel.ContractAddress)
-	if !slices.Contains(v.allowedContracts, paymentContract) {
-		return nil, fmt.Errorf("Invaid payment contract address (expected one of %v)", v.allowedContracts)
-	}
-	token := common.BytesToAddress(channel.TokenAddress)
-	if v.tokenAddress.Cmp(token) != 0 {
-		return nil, fmt.Errorf("Wrong token address (expected %v)", v.tokenAddress)
+	pricingTable, ok := v.pricingTables[paymentContract]
+	if !ok {
+		allowedContracts := make([]common.Address, 0, len(v.pricingTables))
+		for a := range v.pricingTables {
+			allowedContracts = append(allowedContracts, a)
+		}
+		return nil, fmt.Errorf("Invaid payment contract address (expected one of %v)", allowedContracts)
 	}
 	payment, err := abi.NewPayment(paymentContract, v.ethClient)
 	if err != nil {
@@ -67,8 +62,8 @@ func (v *PaymentChannelValidator) Parse(channel *pb.PaymentChannel) (*PaymentCha
 		TransactOpts: v.transactOpts,
 		Payment:      payment,
 		Publisher:    common.BytesToAddress(channel.PublisherAddress),
-		Token:        token,
 		PodID:        common.BytesToHash(channel.PodID),
+		PricingTable: pricingTable,
 	}
 	available, err := p.Available()
 	if err != nil {
@@ -85,15 +80,15 @@ type PaymentChannel struct {
 	TransactOpts *bind.TransactOpts
 	Publisher    common.Address
 	PodID        common.Hash
-	Token        common.Address
+	PricingTable resource.PricingTableMap
 }
 
 func (p *PaymentChannel) Available() (*big.Int, error) {
-	return p.Payment.Available(&bind.CallOpts{Pending: false}, p.Publisher, p.TransactOpts.From, p.PodID, p.Token)
+	return p.Payment.Available(&bind.CallOpts{Pending: false}, p.Publisher, p.TransactOpts.From, p.PodID)
 }
 
 func (p *PaymentChannel) Withdrawn() (*big.Int, error) {
-	return p.Payment.Withdrawn(&bind.CallOpts{Pending: false}, p.Publisher, p.TransactOpts.From, p.PodID, p.Token)
+	return p.Payment.Withdrawn(&bind.CallOpts{Pending: false}, p.Publisher, p.TransactOpts.From, p.PodID)
 }
 
 func (p *PaymentChannel) WithdrawIfOverMargin(transferAddress common.Address, amount *big.Int, tolerance *big.Int) (*types.Transaction, error) {
@@ -109,5 +104,5 @@ func (p *PaymentChannel) WithdrawIfOverMargin(transferAddress common.Address, am
 }
 
 func (p *PaymentChannel) WithdrawUpTo(transferAddress common.Address, amount *big.Int) (*types.Transaction, error) {
-	return p.Payment.WithdrawUpTo(p.TransactOpts, p.Publisher, p.PodID, p.Token, amount, transferAddress)
+	return p.Payment.WithdrawUpTo(p.TransactOpts, p.Publisher, p.PodID, amount, transferAddress)
 }

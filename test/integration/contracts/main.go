@@ -8,6 +8,7 @@ import (
 	"github.com/comrade-coop/trusted-pods/pkg/abi"
 	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	"github.com/comrade-coop/trusted-pods/pkg/resource"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -46,12 +47,12 @@ func mainErr() error {
 	if err != nil {
 		return err
 	}
-
-	paymentAddress, _, payment, err := abi.DeployPayment(publisherAuth, ethClient)
+	tokenAddress, _, token, err := abi.DeployMockToken(publisherAuth, ethClient)
 	if err != nil {
 		return err
 	}
-	tokenAddress, _, token, err := abi.DeployMockToken(publisherAuth, ethClient)
+
+	paymentAddress, _, payment, err := abi.DeployPayment(publisherAuth, ethClient, tokenAddress)
 	if err != nil {
 		return err
 	}
@@ -67,12 +68,12 @@ func mainErr() error {
 	}
 
 	fmt.Println("Creating Payment Channel ...")
-	_, err = payment.CreateChannel(publisherAuth, providerAuth.From, podId, tokenAddress, lockingAmount, unlockTime)
+	_, err = payment.CreateChannel(publisherAuth, providerAuth.From, podId, lockingAmount, unlockTime)
 	if err != nil {
 		return err
 	}
 
-	validator, err := ethereum.NewPaymentChannelValidator(ethClient, []string{paymentAddress.Hex()}, providerAuth, tokenAddress.Bytes())
+	validator, err := ethereum.NewPaymentChannelValidator(ethClient, map[common.Address]resource.PricingTableMap{paymentAddress: make(resource.PricingTableMap)}, providerAuth)
 	if err != nil {
 		return err
 	}
@@ -83,7 +84,6 @@ func mainErr() error {
 		PublisherAddress: publisherAuth.From.Bytes(),
 		ProviderAddress:  providerAuth.From.Bytes(),
 		PodID:            podId.Bytes(),
-		TokenAddress:     tokenAddress.Bytes(),
 	})
 	if err != nil {
 		return err

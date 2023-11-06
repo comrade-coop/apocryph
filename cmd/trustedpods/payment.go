@@ -8,6 +8,7 @@ import (
 	"github.com/comrade-coop/trusted-pods/pkg/abi"
 	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 )
@@ -17,7 +18,6 @@ var publisherKey string
 var paymentContractAddress string
 var providerEthAddress string
 var podId string
-var tokenContractAddress string
 var unlockTime int64
 var funds string
 
@@ -30,7 +30,6 @@ func createPaymentChannel(podIdBytes common.Hash) (*pb.PaymentChannel, error) {
 	paymentContract := common.HexToAddress(paymentContractAddress)
 	unlockTimeInt := big.NewInt(unlockTime)
 	provider := common.HexToAddress(providerEthAddress)
-	tokenContract := common.HexToAddress(tokenContractAddress)
 
 	fundsInt, _ := (&big.Int{}).SetString(funds, 10)
 	if fundsInt == nil {
@@ -58,19 +57,24 @@ func createPaymentChannel(podIdBytes common.Hash) (*pb.PaymentChannel, error) {
 		return nil, err
 	}
 
-	token, err := abi.NewIERC20(tokenContract, client)
-	if err != nil {
-		return nil, err
-	}
-
 	if fundsInt.Cmp(common.Big0) != 0 {
+		tokenContract, err := payment.Token(&bind.CallOpts{})
+		if err != nil {
+			return nil, err
+		}
+
+		token, err := abi.NewIERC20(tokenContract, client)
+		if err != nil {
+			return nil, err
+		}
+
 		tx, err := token.Approve(publisherAuth, paymentContract, fundsInt)
 		if err != nil {
 			return nil, err
 		}
 		fmt.Printf("Token approval successful! %v\n", tx.Hash())
 
-		tx, err = payment.CreateChannel(publisherAuth, provider, podIdBytes, tokenContract, unlockTimeInt, fundsInt)
+		tx, err = payment.CreateChannel(publisherAuth, provider, podIdBytes, unlockTimeInt, fundsInt)
 		if err != nil {
 			return nil, err
 		}
@@ -83,7 +87,6 @@ func createPaymentChannel(podIdBytes common.Hash) (*pb.PaymentChannel, error) {
 		PublisherAddress: publisherAuth.From.Bytes(),
 		ProviderAddress:  provider.Bytes(),
 		PodID:            podIdBytes.Bytes(),
-		TokenAddress:     tokenContract.Bytes(),
 	}, nil
 }
 
@@ -100,7 +103,7 @@ var mintPaymentCmd = &cobra.Command{
 	Use:   "mint",
 	Short: "Mint some amount of tokens (debug)",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		tokenContract := common.HexToAddress(tokenContractAddress)
+		paymentContract := common.HexToAddress(paymentContractAddress)
 		fundsInt, _ := (&big.Int{}).SetString(funds, 10)
 		if fundsInt == nil {
 			return fmt.Errorf("Invalid number passed for funds: %s", funds)
@@ -114,6 +117,16 @@ var mintPaymentCmd = &cobra.Command{
 
 		// derive the Account from the private key
 		publisherAuth, err := ethereum.GetAccount(publisherKey, client)
+		if err != nil {
+			return err
+		}
+
+		payment, err := abi.NewPayment(paymentContract, client)
+		if err != nil {
+			return err
+		}
+
+		tokenContract, err := payment.Token(&bind.CallOpts{})
 		if err != nil {
 			return err
 		}
@@ -140,8 +153,7 @@ func init() {
 
 	paymentCmd.PersistentFlags().StringVar(&ethereumRpc, "ethereum-rpc", "http://127.0.0.1:8545", "ethereum rpc node")
 	paymentCmd.PersistentFlags().StringVar(&publisherKey, "ethereum-key", "", "account string (private key | http[s]://clef#account | /keystore#account | account (in default keystore))")
-	paymentCmd.PersistentFlags().StringVar(&tokenContractAddress, "token", "", "token contract address")
-	createPaymentCmd.Flags().StringVar(&paymentContractAddress, "payment-contract", "", "payment contract address")
+	paymentCmd.PersistentFlags().StringVar(&paymentContractAddress, "payment-contract", "", "payment contract address")
 	createPaymentCmd.Flags().StringVar(&providerEthAddress, "provider-eth", "", "provider public address")
 	createPaymentCmd.Flags().StringVar(&podId, "pod-id", "00", "pod id")
 	createPaymentCmd.Flags().StringVar(&funds, "funds", "5000000000000000000", "intial funds")

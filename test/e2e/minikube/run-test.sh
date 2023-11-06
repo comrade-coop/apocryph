@@ -77,14 +77,15 @@ sleep 1
 
 DEPLOYER_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 #TODO= anvil.accounts[0]
 
-forge create --root ../../../contracts Payment --private-key $DEPLOYER_KEY --nonce 0 --silent || true
+forge create --root ../../../contracts MockToken --private-key $DEPLOYER_KEY --nonce 0 --silent || true
+TOKEN_CONTACT=0x5FbDB2315678afecb367f032d93F642f64180aa3 # TODO= result of forge create
 
-forge create --root ../../../contracts MockToken --private-key $DEPLOYER_KEY --nonce 1 --silent || true
+forge create --root ../../../contracts Payment --private-key $DEPLOYER_KEY --nonce 1 --silent --constructor-args "$TOKEN_CONTACT" || true
 
 ## 2: Deploy example manifest to cluster ##
 
-PAYMENT_CONTRACT=0x5FbDB2315678afecb367f032d93F642f64180aa3 # TODO= result of forge create
-TOKEN_CONTACT=0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 # TODO= result of forge create
+TOKEN_CONTACT=0x5FbDB2315678afecb367f032d93F642f64180aa3 # TODO= result of forge create
+PAYMENT_CONTRACT=0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 # TODO= result of forge create
 PROVIDER_ETH=0x70997970C51812dc3A010C7d01b50e0d17dc79C8 #TODO= anvil.accounts[1]
 PUBLISHER_KEY=0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a #TODO= anvil.accounts[2]
 FUNDS=10000000000000000000000
@@ -98,7 +99,7 @@ set -x
 
 go run ../../../cmd/trustedpods/ payment mint \
   --ethereum-key $PUBLISHER_KEY \
-  --token "$TOKEN_CONTACT" \
+  --payment-contract "$PAYMENT_CONTRACT" \
   --funds "$FUNDS"
 
 go run ../../../cmd/trustedpods/ pod deploy manifest-guestbook.yaml \
@@ -106,7 +107,6 @@ go run ../../../cmd/trustedpods/ pod deploy manifest-guestbook.yaml \
   --provider "$PROVIDER_IPFS" \
   --provider-eth "$PROVIDER_ETH" \
   --payment-contract "$PAYMENT_CONTRACT" \
-  --token "$TOKEN_CONTACT" \
   --funds "$FUNDS"
 
 set +x

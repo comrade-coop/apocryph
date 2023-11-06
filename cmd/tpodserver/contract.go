@@ -7,6 +7,7 @@ import (
 
 	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	"github.com/comrade-coop/trusted-pods/pkg/resource"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
@@ -22,10 +23,7 @@ var providerKey string
 var paymentContractAddress string
 var publisherEthAddress string
 var podId string
-var tokenContractAddress string
 var metricsTotal int64
-
-var allowedContractAddresses []string
 
 func getPaymentChannelProto(providerAuth *bind.TransactOpts, chainID *big.Int) *pb.PaymentChannel {
 	return &pb.PaymentChannel{
@@ -34,7 +32,6 @@ func getPaymentChannelProto(providerAuth *bind.TransactOpts, chainID *big.Int) *
 		PublisherAddress: common.HexToAddress(publisherEthAddress).Bytes(),
 		ProviderAddress:  providerAuth.From.Bytes(),
 		PodID:            common.HexToHash(podId).Bytes(),
-		TokenAddress:     common.HexToAddress(tokenContractAddress).Bytes(),
 	}
 }
 
@@ -52,12 +49,12 @@ var checkContractCmd = &cobra.Command{
 			return err
 		}
 
-		pricingTable, err := openPricingTable()
+		pricingTables, err := openPricingTables()
 		if err != nil {
 			return err
 		}
 
-		validator, err := ethereum.NewPaymentChannelValidator(ethClient, allowedContractAddresses, providerAuth, pricingTable.TokenAddress)
+		validator, err := ethereum.NewPaymentChannelValidator(ethClient, pricingTables, providerAuth)
 
 		_, err = validator.Parse(getPaymentChannelProto(providerAuth, validator.ChainID))
 		if err != nil {
@@ -84,7 +81,13 @@ var withdrawContractCmd = &cobra.Command{
 			return err
 		}
 
-		validator, err := ethereum.NewPaymentChannelValidator(ethClient, []string{paymentContractAddress}, providerAuth, common.HexToAddress(tokenContractAddress).Bytes())
+		paymentContract := common.HexToAddress(paymentContractAddress)
+
+		validator, err := ethereum.NewPaymentChannelValidator(
+			ethClient,
+			map[common.Address]resource.PricingTableMap{paymentContract: make(resource.PricingTableMap)},
+			providerAuth,
+		)
 
 		channel, err := validator.Parse(getPaymentChannelProto(providerAuth, validator.ChainID))
 		if err != nil {
@@ -112,8 +115,5 @@ func init() {
 	contractCmd.PersistentFlags().StringVar(&paymentContractAddress, "payment-contract", "", "payment contract address")
 	contractCmd.PersistentFlags().StringVar(&publisherEthAddress, "publisher", "", "payment contract address")
 	contractCmd.PersistentFlags().StringVar(&podId, "pod-id", "00", "pod id")
-	contractCmd.PersistentFlags().StringVar(&tokenContractAddress, "token", "", "token contract address")
 	withdrawContractCmd.Flags().Int64Var(&metricsTotal, "metric-price", 0, "amount to withdraw up to")
-
-	AddConfig("payment.allowedContracts", &allowedContractAddresses, []string{"0x610178dA211FEF7D417bC0e6FeD39F05609AD788", "0x5FbDB2315678afecb367f032d93F642f64180aa3"}, "List of allowed contract addresses")
 }

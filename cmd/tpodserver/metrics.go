@@ -8,6 +8,7 @@ import (
 	"github.com/comrade-coop/trusted-pods/pkg/prometheus"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/comrade-coop/trusted-pods/pkg/resource"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -34,28 +35,33 @@ var getMetricsCmd = &cobra.Command{
 			return err
 		}
 
-		pricingTable, err := openPricingTable()
+		pricingTables, err := openPricingTables()
 		if err != nil {
 			return err
 		}
-		resourceMeasurements.Display(cmd.OutOrStdout(), pricingTable)
-		if pricingTable != nil {
-			fmt.Fprintf(cmd.OutOrStdout(), "totals: %v\n", resourceMeasurements.Price(pricingTable))
+
+		if len(pricingTables) > 0 {
+			for _, ptm := range pricingTables {
+				resourceMeasurements.Display(cmd.OutOrStdout(), ptm)
+				fmt.Fprintf(cmd.OutOrStdout(), "totals: %v\n", resourceMeasurements.Price(ptm))
+			}
+		} else {
+			resourceMeasurements.Display(cmd.OutOrStdout(), nil)
 		}
 
 		return err
 	},
 }
 
-func openPricingTable() (*pb.PricingTable, error) {
+func openPricingTables() (map[common.Address]resource.PricingTableMap, error) {
 	if pricingFileContents != "" {
-		pricingTable := &pb.PricingTable{}
-		err := protojson.Unmarshal([]byte(pricingFileContents), pricingTable)
+		pricingTables := &pb.PricingTables{}
+		err := protojson.Unmarshal([]byte(pricingFileContents), pricingTables)
 		if err != nil {
 			return nil, err
 		}
 
-		return pricingTable, nil
+		return resource.ConvertPricingTables(pricingTables.Tables), nil
 	}
 
 	file, err := os.Open(pricingFile)
@@ -68,13 +74,13 @@ func openPricingTable() (*pb.PricingTable, error) {
 		return nil, err
 	}
 
-	pricingTable := &pb.PricingTable{}
-	err = pb.Unmarshal(pricingFileFormat, pricingTableContents, pricingTable)
+	pricingTables := &pb.PricingTables{}
+	err = pb.Unmarshal(pricingFileFormat, pricingTableContents, pricingTables)
 	if err != nil {
 		return nil, err
 	}
 
-	return pricingTable, nil
+	return resource.ConvertPricingTables(pricingTables.Tables), nil
 }
 
 func init() {

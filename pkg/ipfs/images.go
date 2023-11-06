@@ -30,8 +30,8 @@ func UploadImagesToIpdr(pod *pb.Pod, ctx context.Context, ipfs iface.CoreAPI, sy
 		if image.Url != "" {
 			copyOptions := &imageCopy.Options{
 				DestinationCtx: sys,
-				SourceCtx: sys,
-				ReportWriter: os.Stderr,
+				SourceCtx:      sys,
+				ReportWriter:   os.Stderr,
 			}
 
 			if keys != nil {
@@ -104,7 +104,7 @@ func ReuploadImagesFromIpdr(pod *pb.Pod, ctx context.Context, ipfs iface.CoreAPI
 		if len(image.Cid) > 0 {
 			copyOptions := &imageCopy.Options{
 				DestinationCtx: sys,
-				SourceCtx: sys,
+				SourceCtx:      sys,
 			}
 
 			if keys != nil {
