@@ -42,7 +42,7 @@ var initPodCmd = &cobra.Command{
 					},
 					Ports: []*pb.Container_Port{
 						{
-							Name: "http",
+							Name:          "http",
 							ContainerPort: 80,
 							ExposedPort: &pb.Container_Port_HostHttpHost{
 								HostHttpHost: initHostname,
@@ -85,12 +85,18 @@ var initPodCmd = &cobra.Command{
 								return fmt.Errorf("Invalid volume size: %w", err)
 							}
 							switch matches[1] {
-								case "KB": amountBytes *= 1024
-								case "MB": amountBytes *= 1024 * 1024
-								case "GB": amountBytes *= 1024 * 1024 * 1024
-								case "KiB": amountBytes *= 1000
-								case "MiB": amountBytes *= 1000 * 1000
-								case "GiB": amountBytes *= 1000 * 1000 * 1000
+							case "KB":
+								amountBytes *= 1024
+							case "MB":
+								amountBytes *= 1024 * 1024
+							case "GB":
+								amountBytes *= 1024 * 1024 * 1024
+							case "KiB":
+								amountBytes *= 1000
+							case "MiB":
+								amountBytes *= 1000 * 1000
+							case "GiB":
+								amountBytes *= 1000 * 1000 * 1000
 							}
 							volumeSize = uint64(amountBytes)
 						}
@@ -139,9 +145,9 @@ var initPodCmd = &cobra.Command{
 			volume.Name = disallowedVolumeNameCharacters.ReplaceAllString(mountPath, "")
 
 			pod.Containers[0].Volumes = append(pod.Containers[0].Volumes, &pb.Container_VolumeMount{
-				Name: volume.Name,
+				Name:      volume.Name,
 				MountPath: mountPath,
-				ReadOnly: readOnly,
+				ReadOnly:  readOnly,
 			})
 
 			pod.Volumes = append(pod.Volumes, volume)

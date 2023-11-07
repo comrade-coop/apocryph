@@ -17,7 +17,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-
 type Format struct {
 	unmarshal func(b []byte, m protoreflect.ProtoMessage) error
 	marshal   func(m protoreflect.ProtoMessage) ([]byte, error)
@@ -44,11 +43,11 @@ func MarshalYaml(message proto.Message) ([]byte, error) { // Copied from protoya
 }
 
 var Formats = map[string]Format{
-	"json":   { protojson.Unmarshal, protojson.Marshal },
-	"yaml":   { protoyaml.Unmarshal, MarshalYaml },
-	"yml":    { protoyaml.Unmarshal, MarshalYaml },
-	"pb":     { proto.Unmarshal, proto.Marshal },
-	"pbtext": { prototext.Unmarshal, prototext.Marshal },
+	"json":   {protojson.Unmarshal, protojson.Marshal},
+	"yaml":   {protoyaml.Unmarshal, MarshalYaml},
+	"yml":    {protoyaml.Unmarshal, MarshalYaml},
+	"pb":     {proto.Unmarshal, proto.Marshal},
+	"pbtext": {prototext.Unmarshal, prototext.Marshal},
 }
 
 var FormatNames []string
@@ -111,7 +110,7 @@ func UnmarshalFile(path string, format string, m protoreflect.ProtoMessage) erro
 }
 
 func MarshalFile(path string, format string, m protoreflect.ProtoMessage) error {
-	file, err := os.OpenFile(path, os.O_WRONLY | os.O_CREATE | os.O_TRUNC, 0666)
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
 		return err
 	}

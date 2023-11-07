@@ -49,7 +49,7 @@ func mainErr() error {
 
 	_, err = imageCopy.Image(context.Background(), pc, dstImageReference, srcImageReference, &imageCopy.Options{
 		DestinationCtx: &types.SystemContext{},
-		SourceCtx: &types.SystemContext{},
+		SourceCtx:      &types.SystemContext{},
 	})
 	if err != nil {
 		return err
