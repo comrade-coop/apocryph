@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
@@ -26,7 +27,7 @@ var logPodCmd = &cobra.Command{
 
 		request := &pb.PodLogRequest{
 			ContainerName: containerName,
-			Keys:          []*pb.Key{},
+			Credentials:   &pb.Credentials{},
 		}
 
 		providerPeerId, err := peer.Decode(providerPeer)
@@ -50,14 +51,23 @@ var logPodCmd = &cobra.Command{
 
 		client := pb.NewProvisionPodServiceClient(conn)
 
-		response, err := client.GetPodLogs(cmd.Context(), request)
+		stream, err := client.GetPodLogs(cmd.Context(), request)
 		if err != nil {
 			return err
 		}
 
-		_, err = fmt.Fprintln(cmd.OutOrStdout(), protojson.Format(response))
-		if err != nil {
-			return err
+		for {
+			response, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return err
+			}
+			_, err = fmt.Fprintln(cmd.OutOrStdout(), protojson.Format(response))
+			if err != nil {
+				return err
+			}
 		}
 
 		return nil
