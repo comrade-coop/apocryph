@@ -161,7 +161,7 @@ func init() {
 	podCmd.AddCommand(uploadPodCmd)
 	podCmd.AddCommand(parsePodCmd)
 
-	podCmd.PersistentFlags().StringVar(&manifestFormat, "format", "", fmt.Sprintf("Manifest format. One of %v (leave empty to auto-detect)", pb.UnmarshalFormatNames))
+	podCmd.PersistentFlags().StringVar(&manifestFormat, "format", "", fmt.Sprintf("Manifest format. One of %v (leave empty to auto-detect)", pb.FormatNames))
 
 	podCmd.PersistentFlags().StringVar(&ipfsApi, "ipfs", "", "multiaddr where the ipfs/kubo api can be accessed (leave blank to use the daemon running in IPFS_PATH)")
 

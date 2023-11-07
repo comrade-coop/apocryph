@@ -88,8 +88,6 @@ var updatePodCmd = &cobra.Command{
 func init() {
 	podCmd.AddCommand(updatePodCmd)
 
-	updatePodCmd.Flags().StringVar(&manifestFormat, "format", "", fmt.Sprintf("Manifest format. One of %v", pb.UnmarshalFormatNames))
-
 	updatePodCmd.Flags().StringVar(&ipfsApi, "ipfs", "", "multiaddr where the ipfs/kubo api can be accessed (leave blank to use the daemon running in IPFS_PATH)")
 
 	updatePodCmd.Flags().StringVar(&providerPeer, "provider", "", "provider peer id")

@@ -90,5 +90,5 @@ func init() {
 
 	AddConfig("pricing.table.filename", &pricingFile, "", "absolute path to file containing pricing information")
 	AddConfig("pricing.table.contents", &pricingFileContents, "", "absolute path to file containing pricing information")
-	AddConfig("pricing.table.format", &pricingFileFormat, "", fmt.Sprintf("pricing file format. one of %v", pb.UnmarshalFormatNames))
+	AddConfig("pricing.table.format", &pricingFileFormat, "", fmt.Sprintf("pricing file format. one of %v", pb.FormatNames))
 }
