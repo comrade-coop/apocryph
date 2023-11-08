@@ -10,7 +10,6 @@ import (
 	"github.com/comrade-coop/trusted-pods/pkg/resource"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var metricsCmd = &cobra.Command{
@@ -56,7 +55,7 @@ var getMetricsCmd = &cobra.Command{
 func openPricingTables() (map[common.Address]resource.PricingTableMap, error) {
 	if pricingFileContents != "" {
 		pricingTables := &pb.PricingTables{}
-		err := protojson.Unmarshal([]byte(pricingFileContents), pricingTables)
+		err := pb.Unmarshal(pricingFileFormat, []byte(pricingFileContents), pricingTables)
 		if err != nil {
 			return nil, err
 		}

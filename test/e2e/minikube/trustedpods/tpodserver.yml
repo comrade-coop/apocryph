@@ -25,16 +25,16 @@ data:
   config.yaml: |
     pricing:
       table:
-        format: json
-        # filename: pricing.json
+        format: yaml
+        # filename: pricing.yaml
         contents: |
-          {
-            "resources": [
-              { "resource": "cpu", "priceForReservation": 200000000000 },
-              { "resource": "memory", "priceForReservation": 500 }
-            ],
-            "tokenAddress": "5/FyXnc0ziiPg2fhuxQ+kLs/BRI="
-          }
+          tables:
+          - paymentContractAddress: "5/FyXnc0ziiPg2fhuxQ+kLs/BRI="
+            resources:
+            - resource: "cpu"
+              priceForReservation: 200000000000
+            - resource: "memory"
+              priceForReservation: 500
     withdraw:
       address: "0x90F79bf6EB2c4f870365E785982E1f101E93b906"
       time: 15
