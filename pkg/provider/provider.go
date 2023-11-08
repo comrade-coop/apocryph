@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -13,6 +12,7 @@ import (
 	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
 	"github.com/comrade-coop/trusted-pods/pkg/loki"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ipfs/kubo/client/rpc"
 	"google.golang.org/grpc"
 	v1 "k8s.io/api/core/v1"
@@ -39,14 +39,12 @@ func transformError(err error) (*pb.ProvisionPodResponse, error) {
 func (s *provisionPodServer) DeletePod(ctx context.Context, request *pb.DeletePodRequest) (*pb.DeletePodResponse, error) {
 	log.Println("Received request for pod deletion")
 
-	namespace := "tpod-" + strings.ToLower(string(request.Credentials.PublisherAddress))
+	namespace := "tpod-" + strings.ToLower(common.BytesToAddress(request.Credentials.PublisherAddress).String())
 	// Create a new namespace object
 	ns := &v1.Namespace{
 		ObjectMeta: meta.ObjectMeta{
-			Name: namespace,
-			Labels: map[string]string{
-				"pubkey": string(request.Credentials.PublisherAddress),
-			},
+			Name:   namespace,
+			Labels: map[string]string{},
 		},
 	}
 
@@ -73,7 +71,7 @@ func (s *provisionPodServer) UpdatePod(ctx context.Context, request *pb.UpdatePo
 		}
 	}
 
-	namespace := "tpod-" + strings.ToLower(string(request.Credentials.PublisherAddress))
+	namespace := "tpod-" + strings.ToLower(common.BytesToAddress(request.Credentials.PublisherAddress).String())
 
 	response := &pb.ProvisionPodResponse{}
 	err = tpk8s.ApplyPodRequest(ctx, s.k8cl, request.Pod, true, namespace, response)
@@ -86,7 +84,7 @@ func (s *provisionPodServer) GetPodLogs(request *pb.PodLogRequest, srv pb.Provis
 	// verify if container exists or not
 	p := &v1.Namespace{}
 
-	namespace := "tpod-" + strings.ToLower(string(request.Credentials.PublisherAddress))
+	namespace := "tpod-" + strings.ToLower(common.BytesToAddress(request.Credentials.PublisherAddress).String())
 	err := s.k8cl.Get(context.Background(), client.ObjectKey{Namespace: namespace, Name: namespace}, p)
 	if err != nil {
 		return err

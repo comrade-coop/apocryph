@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	"github.com/ethereum/go-ethereum/common"
 	"google.golang.org/protobuf/encoding/protojson"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,10 +23,9 @@ var TrustedPodsNamespaceFilter = client.HasLabels{LabelTrustedPodsNamespace}
 func NewTrustedPodsNamespace(paymentChannel *pb.PaymentChannel) *corev1.Namespace {
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "tpod-" + strings.ToLower(string(paymentChannel.PublisherAddress)),
+			Name: "tpod-" + strings.ToLower(common.BytesToAddress(paymentChannel.PublisherAddress).String()),
 			Labels: map[string]string{
 				LabelTrustedPodsNamespace: "true",
-				"pubkey":                  string(paymentChannel.PublisherAddress),
 			},
 		},
 	}
