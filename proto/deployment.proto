@@ -1,0 +1,40 @@
+syntax = "proto3";
+package apocryph.proto.v0.deployment;
+option go_package = "github.com/comrade-coop/trusted-pods/pkg/proto";
+
+import "provision-pod.proto";
+
+message Deployment {
+  string podManifestFile = 1;
+  ProviderConfig provider = 2;
+  PaymentChannelConfig payment = 3;
+  repeated UploadedImage images = 4;
+  repeated UploadedSecret secrets = 5;
+  provisionPod.ProvisionPodResponse deployed = 6;
+}
+
+message ProviderConfig {
+  bytes ethereumAddress = 1;
+  string libp2pAddress = 2;
+}
+
+message PaymentChannelConfig {
+  bytes chainID = 1;
+  bytes paymentContractAddress = 2;
+  bytes publisherAddress = 3;
+  bytes podID = 5;
+}
+
+message UploadedImage {
+  string sourceUrl = 1;
+  string digest = 2;
+  bytes cid = 3;
+  provisionPod.Key key = 4;
+}
+
+message UploadedSecret {
+  string volumeName = 1;
+  bytes sha256sum = 2;
+  bytes cid = 3;
+  provisionPod.Key key = 4;
+}

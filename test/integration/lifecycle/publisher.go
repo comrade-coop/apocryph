@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/comrade-coop/trusted-pods/pkg/publisher"
@@ -66,11 +67,20 @@ func main() {
 
 func ProvisionPod(client pb.ProvisionPodServiceClient, publisherAddress []byte, podPath string) string {
 
-	request, _, err := publisher.UploadManifest(context.Background(), "./manifest-guestbook.json", "json", "", false)
+	podFile, _, pod, deployment, err := publisher.ReadPodAndDeployment([]string{"./manifest-guestbook.json"}, "", "")
+
+	err = publisher.UploadSecrets(context.Background(), ipfs, filepath.Dir(podFile), pod, deployment)
 	if err != nil {
 		log.Fatalf("failed uploading Manifest: %v", err)
 	}
+	err = publisher.UploadImages(context.Background(), ipfs, pod, deployment)
+	if err != nil {
+		log.Fatalf("failed uploading Manifest: %v", err)
+	}
+	request := &pb.ProvisionPodRequest{}
+	request.Pod = publisher.LinkUploadsFromDeployment(pod, &request.Keys, deployment)
 	request.Payment = &pb.PaymentChannel{PublisherAddress: publisherAddress}
+
 	response, err := client.ProvisionPod(context.Background(), request)
 	if err != nil {
 		log.Fatalf("Provision Pod failed: %v", err)
@@ -90,8 +100,19 @@ func DeletePod(client pb.ProvisionPodServiceClient, request *pb.DeletePodRequest
 
 func UpdatePod(client pb.ProvisionPodServiceClient, credentials *pb.Credentials) {
 
-	request, pod, err := publisher.UploadManifest(context.Background(), "./updated-guestbook.json", "json", "", false)
-	response, err := client.UpdatePod(context.Background(), &pb.UpdatePodRequest{Pod: pod, Credentials: credentials, Keys: request.Keys})
+	podFile, _, pod, deployment, err := publisher.ReadPodAndDeployment([]string{"./updated-guestbook.json"}, "", "")
+
+	err = publisher.UploadSecrets(context.Background(), ipfs, filepath.Dir(podFile), pod, deployment)
+	if err != nil {
+		log.Fatalf("failed uploading Manifest: %v", err)
+	}
+	err = publisher.UploadImages(context.Background(), ipfs, pod, deployment)
+	if err != nil {
+		log.Fatalf("failed uploading Manifest: %v", err)
+	}
+	request :=  &pb.UpdatePodRequest{Credentials: credentials}
+	request.Pod = publisher.LinkUploadsFromDeployment(pod, &request.Keys, deployment)
+	response, err := client.UpdatePod(context.Background(), request)
 	if err != nil {
 		log.Printf("rpc update method failed: %v", err)
 		return

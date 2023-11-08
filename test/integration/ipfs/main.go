@@ -8,10 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
-	"github.com/ipfs/go-cid"
 	"github.com/ipfs/kubo/client/rpc"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"google.golang.org/grpc"
@@ -51,10 +49,7 @@ type server struct {
 }
 
 func (s *server) ProvisionPod(ctx context.Context, in *pb.ProvisionPodRequest) (*pb.ProvisionPodResponse, error) {
-	pod := &pb.Pod{}
-	tpipfs.GetProtobufFile(s.node, cid.MustParse(in.PodManifestCid), pod)
-
-	return &pb.ProvisionPodResponse{Error: fmt.Sprint(pod.Replicas.Max)}, nil
+	return &pb.ProvisionPodResponse{Error: fmt.Sprint(in.Pod.Replicas.Max)}, nil
 }
 
 func mainProvider() error {
@@ -89,13 +84,8 @@ func mainPublisher() error {
 
 	num := rand.Uint32()
 
-	cid, err := ipfs.AddProtobufFile(node, &pb.Pod{Replicas: &pb.Replicas{Max: num}})
-	if err != nil {
-		return err
-	}
-
 	request := &pb.ProvisionPodRequest{
-		PodManifestCid: cid.Bytes(),
+		Pod: &pb.Pod{Replicas: &pb.Replicas{Max: num}},
 	}
 
 	addr, err := tpipfs.NewP2pApi(node, multiaddr).ConnectTo(pb.ProvisionPod, providerPeerId)

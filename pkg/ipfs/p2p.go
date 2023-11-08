@@ -12,6 +12,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
+	"google.golang.org/grpc"
 )
 
 type P2pApi struct {
@@ -87,6 +88,30 @@ func (l *IpfsListener) Close() error {
 type IpfsAddr struct {
 	net.Addr
 	*ForwardedConnection
+}
+
+type IpfsClientConn struct {
+	*grpc.ClientConn
+	Addr *IpfsAddr
+}
+
+func (i *IpfsClientConn) Close() error {
+	return errors.Join(i.Addr.Close(), i.ClientConn.Close())
+}
+
+func (api *P2pApi) ConnectToGrpc(protocol string, target peer.ID, dialOptions ...grpc.DialOption) (*IpfsClientConn, error) {
+	addr, err := api.ConnectTo(protocol, target)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to dial provider: %w", err)
+	}
+
+	conn, err := grpc.Dial(addr.String(), dialOptions...)
+	if err != nil {
+		addr.Close()
+		return nil, fmt.Errorf("Failed to dial provider: %w", err)
+	}
+
+	return &IpfsClientConn{conn, addr}, nil
 }
 
 func (api *P2pApi) ConnectTo(protocol string, target peer.ID) (*IpfsAddr, error) {

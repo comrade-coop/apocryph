@@ -13,77 +13,104 @@ import (
 	"github.com/containers/image/v5/docker/daemon"
 	"github.com/containers/image/v5/signature"
 	"github.com/containers/image/v5/types"
+	encconfig "github.com/containers/ocicrypt/config"
 	iface "github.com/ipfs/boxo/coreiface"
 	"github.com/ipfs/boxo/coreiface/path"
 	"github.com/ipfs/go-cid"
 )
 
-// TODO: Add way for encrypting(/decrypting) the images
+func GetImageRef(ctx context.Context, sys *types.SystemContext, image *pb.Container_Image) (imageRef types.ImageReference, digest string, err error) {
+	if image.Url != "" {
+		var imageCloser types.ImageCloser
+		imageRef, err = daemon.Transport.ParseReference(image.Url)
+		if err == nil {
+			imageCloser, err = imageRef.NewImage(ctx, sys)
+		}
+		if err != nil {
+			var err2 error
+			imageRef, err2 = docker.Transport.ParseReference("//" + image.Url)
+			if err2 == nil {
+				imageCloser, err2 = imageRef.NewImage(ctx, sys)
+			}
+			if err2 != nil {
+				err = errors.Join(err, err2)
+				return
+			}
+			err = nil
+		}
+		defer imageCloser.Close()
+
+		digest = imageCloser.ConfigInfo().Digest.String()
+		return
+	}
+	return
+}
+
+func UploadImageToIpdr(ctx context.Context, ipfs iface.CoreAPI, sys *types.SystemContext, imageRef types.ImageReference) (key *pb.Key, imageCid []byte, err error) {
+	ipdrTransport := ipdr.NewIpdrTransport(ipfs)
+
+	copyOptions := &imageCopy.Options{
+		DestinationCtx: sys,
+		SourceCtx:      sys,
+		ReportWriter:   os.Stderr,
+	}
+
+	key, err = tpcrypto.NewKey(tpcrypto.KeyTypeOcicrypt)
+	if err != nil {
+		return
+	}
+
+	var cryptoConfig encconfig.CryptoConfig
+	cryptoConfig, err = tpcrypto.GetCryptoConfigKey(key)
+	if err != nil {
+		return
+	}
+
+	copyOptions.OciEncryptConfig = cryptoConfig.EncryptConfig
+	copyOptions.OciEncryptLayers = &[]int{}
+
+	policy := &signature.Policy{
+		Default: signature.PolicyRequirements{
+			signature.NewPRInsecureAcceptAnything(),
+		},
+	}
+	policyContext, _ := signature.NewPolicyContext(policy)
+	defer policyContext.Destroy()
+
+	destinationRef := ipdrTransport.NewDestinationReference("")
+
+	_, err = imageCopy.Image(ctx, policyContext, destinationRef, imageRef, copyOptions)
+	if err != nil {
+		return
+	}
+
+	resolved, ok := destinationRef.Path().(path.Resolved)
+	if !ok {
+		err = errors.New("Destination path not resolved") // Shouldn't get here
+		return
+	}
+
+	imageCid = resolved.Cid().Bytes()
+
+	return
+}
 
 func UploadImagesToIpdr(pod *pb.Pod, ctx context.Context, ipfs iface.CoreAPI, sys *types.SystemContext, keys *[]*pb.Key) error {
-	ipdrTransport := ipdr.NewIpdrTransport(ipfs)
-	registryTransport := docker.Transport
-	daemonTransport := daemon.Transport
-
 	for _, container := range pod.Containers {
 		image := container.Image
 		if image.Url != "" {
-			copyOptions := &imageCopy.Options{
-				DestinationCtx: sys,
-				SourceCtx:      sys,
-				ReportWriter:   os.Stderr,
-			}
-
-			if keys != nil {
-				var err error
-				image.KeyIdx, err = tpcrypto.CreateKey(keys, tpcrypto.KeyTypeOcicrypt)
-				if err != nil {
-					return err
-				}
-				cryptoConfig, err := tpcrypto.GetCryptoConfig(*keys, image.KeyIdx)
-				if err != nil {
-					return err
-				}
-
-				copyOptions.OciEncryptConfig = cryptoConfig.EncryptConfig
-				copyOptions.OciEncryptLayers = &[]int{}
-			}
-
-			policy := &signature.Policy{
-				Default: signature.PolicyRequirements{
-					signature.NewPRInsecureAcceptAnything(),
-				},
-			}
-			policyContext, _ := signature.NewPolicyContext(policy)
-			defer policyContext.Destroy()
-
-			destinationRef := ipdrTransport.NewDestinationReference("")
-
-			sourceRef, err := daemonTransport.ParseReference(image.Url)
+			imageRef, _, err := GetImageRef(ctx, sys, image)
 			if err != nil {
 				return err
 			}
 
-			_, err = imageCopy.Image(ctx, policyContext, destinationRef, sourceRef, copyOptions)
-
+			var key *pb.Key
+			key, image.Cid, err = UploadImageToIpdr(ctx, ipfs, sys, imageRef)
 			if err != nil {
-				sourceRef, err2 := registryTransport.ParseReference("//" + image.Url) // Retry from remote docker registry
-				if err2 != nil {
-					return errors.Join(err, err2)
-				}
-
-				_, err2 = imageCopy.Image(ctx, policyContext, destinationRef, sourceRef, copyOptions)
-				if err2 != nil {
-					return errors.Join(err, err2)
-				}
+				return err
 			}
 
-			resolved, ok := destinationRef.Path().(path.Resolved)
-			if !ok {
-				return errors.New("Destination path not resolved") // Shouldn't get here
-			}
-
-			image.Cid = resolved.Cid().Bytes()
+			image.KeyIdx = tpcrypto.InsertKey(keys, key)
 			image.Url = ""
 		}
 	}

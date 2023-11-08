@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -16,7 +17,10 @@ var disallowedVolumeNameCharacters = regexp.MustCompile("[\\.-_/\\\\0-9\n ]+$|^[
 var volumeSizeFlag = regexp.MustCompile("^ *([0-9]+) *([KMG]i?B) *$")
 var initImageName string
 var initVolumes []string
-var initHostname string
+var initPort string
+
+const initDefaultHostname = "pod.XXXX.hostname.example"
+const initDefaultPort = uint64(80)
 
 var initPodCmd = &cobra.Command{
 	Use:    "init [manifest.yaml]",
@@ -28,28 +32,58 @@ var initPodCmd = &cobra.Command{
 		if len(args) >= 1 {
 			manifestFile = args[0]
 		}
+		manifestFileAbs, err := filepath.Abs(manifestFile)
+		if err != nil {
+			return err
+		}
 
 		imageParts := strings.Split(initImageName, "/")
+		containerName, _, _ := strings.Cut(imageParts[len(imageParts)-1], ":")
 
-		initHostname = strings.Replace(initHostname, "XXXX", strconv.FormatInt(rand.Int63(), 16), 1)
+		initPortParts := strings.SplitN(initPort, ":", 2)
+		port := initDefaultPort
+		hostname := initDefaultHostname
+		if len(initPortParts) == 1 {
+			potentialPort, err := strconv.ParseUint(initPortParts[0], 10, 64)
+			if err == nil {
+				port = potentialPort
+			} else {
+				hostname = initPortParts[0]
+			}
+		} else if len(initPortParts) == 2 {
+			port, err = strconv.ParseUint(initPortParts[0], 10, 64)
+			if err != nil {
+				return fmt.Errorf("Invalid port specification %s: %w", initPort, err)
+			}
+			hostname = initPortParts[1]
+		}
+		hostname = strings.Replace(hostname, "XXXX", strconv.FormatInt(rand.Int63(), 16), 1)
 
 		pod := &pb.Pod{
 			Containers: []*pb.Container{
 				{
-					Name: imageParts[len(imageParts)-1],
+					Name: containerName,
 					Image: &pb.Container_Image{
 						Url: initImageName,
 					},
 					Ports: []*pb.Container_Port{
 						{
 							Name:          "http",
-							ContainerPort: 80,
+							ContainerPort: port,
 							ExposedPort: &pb.Container_Port_HostHttpHost{
-								HostHttpHost: initHostname,
+								HostHttpHost: hostname,
 							},
 						},
 					},
+					ResourceRequests: []*pb.Resource{
+						{Resource: "cpu", Quantity: &pb.Resource_AmountMillis{AmountMillis: 100}},
+						{Resource: "memory", Quantity: &pb.Resource_Amount{Amount: 100000000}},
+					},
 				},
+			},
+			Replicas: &pb.Replicas{
+				Min: 0,
+				Max: 1,
 			},
 		}
 
@@ -119,9 +153,17 @@ var initPodCmd = &cobra.Command{
 			}
 
 			if secretPath != "" {
+				secretPathAbs, err := filepath.Abs(secretPath)
+				if err != nil {
+					return err
+				}
+				secretPathRel, err := filepath.Rel(manifestFileAbs, secretPathAbs)
+				if err != nil {
+					return err
+				}
 				volume.Configuration = &pb.Volume_Secret{
 					Secret: &pb.Volume_SecretConfig{
-						File: secretPath,
+						File: secretPathRel,
 					},
 				}
 				if mountPath == "" {
@@ -153,7 +195,7 @@ var initPodCmd = &cobra.Command{
 			pod.Volumes = append(pod.Volumes, volume)
 		}
 
-		err := pb.MarshalFile(manifestFile, manifestFormat, pod)
+		err = pb.MarshalFile(manifestFile, manifestFormat, pod)
 		if err != nil {
 			return fmt.Errorf("Failed writing the manifest file: %w", err)
 		}
@@ -167,7 +209,7 @@ var initPodCmd = &cobra.Command{
 func init() {
 	podCmd.AddCommand(initPodCmd)
 
-	initPodCmd.Flags().StringVarP(&initImageName, "image", "t", "docker.io/library/hello-world", "Image to initialize the pod with")
+	initPodCmd.Flags().StringVarP(&initImageName, "image", "t", "docker.io/library/hello-world:latest", "Image to initialize the pod with")
 	initPodCmd.Flags().StringArrayVarP(&initVolumes, "volume", "v", []string{}, "Volumes to initialize the pod with. Specify similar to Docker volumes; e.g. secret.txt:/path/in/container.txt for secrets and /path/in/container:rw,5GB for volume mounts")
-	initPodCmd.Flags().StringVar(&initHostname, "http", "pod.XXXX.hostname.example", "Hostname to initialize the pod with (XXXX is replaced with a random string)")
+	initPodCmd.Flags().StringVarP(&initPort, "http", "p", fmt.Sprintf("%d:%s", initDefaultPort, initDefaultHostname), "Port and hostname to initialize the pod with (XXXX is replaced with a random string)")
 }

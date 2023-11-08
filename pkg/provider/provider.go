@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"strings"
@@ -14,12 +13,8 @@ import (
 	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
 	"github.com/comrade-coop/trusted-pods/pkg/loki"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
-	"github.com/ipfs/boxo/coreiface/path"
-	"github.com/ipfs/boxo/files"
-	"github.com/ipfs/go-cid"
 	"github.com/ipfs/kubo/client/rpc"
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/proto"
 	v1 "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -107,30 +102,9 @@ func (s *provisionPodServer) GetPodLogs(request *pb.PodLogRequest, srv pb.Provis
 
 func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.ProvisionPodRequest) (*pb.ProvisionPodResponse, error) {
 	fmt.Println("Received request for pod deployment")
-	cid, err := cid.Cast(request.PodManifestCid)
-	if err != nil {
-		return transformError(err)
-	}
-	fmt.Println("Retreiving pod from Ipfs")
-	// TODO verify CID size before downloading from ipfs
-	node, err := s.ipfs.Unixfs().Get(ctx, path.IpfsPath(cid))
-	if err != nil {
-		return transformError(err)
-	}
-	file, ok := node.(files.File)
-	if !ok {
-		return transformError(errors.New("Supplied CID not a file"))
-	}
-	fmt.Println("Reading pod manifest")
-	manifestBytes, err := io.ReadAll(file)
-	if err != nil {
-		return transformError(err)
-	}
-	pod := &pb.Pod{}
-	err = proto.Unmarshal(manifestBytes, pod)
-	if err != nil {
-		return transformError(err)
-	}
+	pod := request.Pod
+
+	var err error
 
 	// TODO should return error (just usefull for now in testing lifecycle without payment)
 	if s.paymentValidator != nil {

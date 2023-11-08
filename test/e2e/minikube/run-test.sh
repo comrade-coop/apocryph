@@ -62,8 +62,7 @@ ipfs id &>/dev/null || ipfs init
 
 ipfs config --json Experimental.Libp2pStreamMounting true
 
-ipfs daemon &
-{ while ! [ -f ${IPFS_PATH:-~/.ipfs}/api ]; do sleep 0.1; done; } 2>/dev/null
+[ -n "$IPFS_DAEMON" ] || { IPFS_DAEMON=yes; ipfs daemon & { while ! [ -f ${IPFS_PATH:-~/.ipfs}/api ]; do sleep 0.1; done; } 2>/dev/null; }
 
 echo "$SWARM_ADDRESSES" | jq -r '.[] + "/p2p/'"$PROVIDER_IPFS"'"' | xargs -n 1 ipfs swarm connect || true
 
@@ -93,6 +92,7 @@ FUNDS=10000000000000000000000
 [ -n "$PORT_8545" ] || { PORT_8545=yes && kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
 [ -n "$PORT_5004" ] || { PORT_5004=yes && kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
 [ -n "$PROVIDER_IPFS" ] || { PROVIDER_IPFS=$(curl -X POST "http://127.0.0.1:5004/api/v0/id" -s | jq '.ID' -r); echo $PROVIDER_IPFS; }
+[ -n "$IPFS_DAEMON" ] || { IPFS_DAEMON=yes; ipfs daemon & { while ! [ -f ${IPFS_PATH:-~/.ipfs}/api ]; do sleep 0.1; done; } 2>/dev/null; }
 
 set +v
 set -x

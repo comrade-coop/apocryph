@@ -11,9 +11,10 @@ service ProvisionPodService {
 }
 
 message ProvisionPodRequest {
-  bytes podManifestCid = 1;
+  pod.Pod pod = 1;
   repeated Key keys = 3;
   PaymentChannel payment = 4;
+  Credentials credentials = 5;
 }
 
 message DeletePodRequest {

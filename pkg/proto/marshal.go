@@ -110,7 +110,7 @@ func UnmarshalFile(path string, format string, m protoreflect.ProtoMessage) erro
 }
 
 func MarshalFile(path string, format string, m protoreflect.ProtoMessage) error {
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}

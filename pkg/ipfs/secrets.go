@@ -32,6 +32,31 @@ func TransformSecrets(pod *pb.Pod, transformations ...SecretTransformation) erro
 	return nil
 }
 
+func ReadSecret(basepath string, secret *pb.Volume_SecretConfig) ([]byte, error) {
+	if secret.File != "" {
+		secretPath := secret.File
+		if !path.IsAbs(secretPath) {
+			secretPath = path.Join(basepath, secretPath)
+		}
+		secretFile, err := os.Open(secretPath)
+		if err != nil {
+			return nil, err
+		}
+		defer secretFile.Close()
+
+		secretBytes, err := io.ReadAll(secretFile)
+		if err != nil {
+			return nil, err
+		}
+
+		return secretBytes, nil
+	}
+	if secret.ContentsString != "" {
+		return []byte(secret.ContentsString), nil
+	}
+	return nil, nil
+}
+
 func ReadSecrets(basepath string) SecretTransformation {
 	return func(secret *pb.Volume_SecretConfig) error {
 		if secret.File != "" {
@@ -61,6 +86,15 @@ func ReadSecrets(basepath string) SecretTransformation {
 	}
 }
 
+func EncryptSecret(data []byte) (key *pb.Key, contents []byte, err error) {
+	key, err = tpcrypto.NewKey(tpcrypto.KeyTypeEncrypt)
+	if err != nil {
+		return
+	}
+	contents, err = tpcrypto.EncryptWithKey(key, data)
+	return
+}
+
 func EncryptSecrets(keys *[]*pb.Key) SecretTransformation {
 	return func(secret *pb.Volume_SecretConfig) error {
 		var err error
@@ -85,6 +119,14 @@ func DecryptSecrets(keys []*pb.Key) SecretTransformation {
 		}
 		return nil
 	}
+}
+
+func UploadSecret(ctx context.Context, ipfs iface.CoreAPI, contents []byte) (cid []byte, err error) {
+	secretPath, err := ipfs.Unixfs().Add(ctx, files.NewBytesFile(contents))
+	if err != nil {
+		return nil, err
+	}
+	return secretPath.Cid().Bytes(), nil
 }
 
 func UploadSecrets(ctx context.Context, ipfs iface.CoreAPI) SecretTransformation {

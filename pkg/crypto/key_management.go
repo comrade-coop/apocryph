@@ -6,7 +6,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"errors"
-	"fmt"
 
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	encconfig "github.com/containers/ocicrypt/config"
@@ -22,7 +21,7 @@ const (
 var KeyTypeOcicrypt = KeyTypeRsa4096 // NOTE: ocicrypt JWE keywrap does not allow us to use any JWK key algorithms other than RSA_OAEP
 var KeyTypeEncrypt = KeyTypeAESGCM256
 
-func CreateKey(keys *[]*pb.Key, keyType string) (int32, error) {
+func NewKey(keyType string) (*pb.Key, error) {
 	var err error
 	var key interface{}
 	var keyAlg string
@@ -38,21 +37,33 @@ func CreateKey(keys *[]*pb.Key, keyType string) (int32, error) {
 		keyAlg = string(jose.DIRECT)
 	}
 	if err != nil {
-		return -1, err
+		return nil, err
 	}
-	keyIdx := int32(len(*keys))
 	jwk, err := jose.JSONWebKey{
 		Key:       key,
-		KeyID:     fmt.Sprintf("key-%d", keyIdx),
+		KeyID:     "key",
 		Algorithm: keyAlg,
 	}.MarshalJSON()
 	if err != nil {
+		return nil, err
+	}
+	return &pb.Key{
+		Data: jwk,
+	}, nil
+}
+
+func InsertKey(keys *[]*pb.Key, key *pb.Key) int32 {
+	keyIdx := int32(len(*keys))
+	*keys = append(*keys, key)
+	return keyIdx
+}
+
+func CreateKey(keys *[]*pb.Key, keyType string) (int32, error) {
+	key, err := NewKey(keyType)
+	if err != nil {
 		return -1, err
 	}
-	*keys = append(*keys, &pb.Key{
-		Data: jwk,
-	})
-	return keyIdx, nil
+	return InsertKey(keys, key), nil
 }
 
 func getJwk(keys []*pb.Key, keyIdx int32) (*jose.JSONWebKey, error) {
@@ -98,6 +109,10 @@ func EncryptWith(keys []*pb.Key, keyIdx int32, plaintext []byte) ([]byte, error)
 	return EncryptWithAES(plaintext, aesKey)
 }
 
+func EncryptWithKey(key *pb.Key, plaintext []byte) ([]byte, error) {
+	return EncryptWith([]*pb.Key{key}, 0, plaintext)
+}
+
 func DecryptWith(keys []*pb.Key, keyIdx int32, cyphertext []byte) ([]byte, error) {
 	aesKey, err := getAESKey(keys, keyIdx)
 	if err != nil {
@@ -112,6 +127,34 @@ func DecryptWith(keys []*pb.Key, keyIdx int32, cyphertext []byte) ([]byte, error
 func GetCryptoConfig(keys []*pb.Key, keyIdx int32) (encconfig.CryptoConfig, error) {
 	jwkUnmarshalled, err := getJwk(keys, keyIdx)
 	if err != nil || jwkUnmarshalled == nil {
+		return encconfig.CryptoConfig{}, err
+	}
+	jwk, err := jwkUnmarshalled.MarshalJSON()
+	if err != nil {
+		return encconfig.CryptoConfig{}, err
+	}
+	jwkPub, err := jwkUnmarshalled.Public().MarshalJSON()
+	if err != nil {
+		return encconfig.CryptoConfig{}, err
+	}
+	encryptConfig, err := encconfig.EncryptWithJwe([][]byte{jwkPub})
+	if err != nil {
+		return encconfig.CryptoConfig{}, err
+	}
+	decryptConfig, err := encconfig.DecryptWithPrivKeys([][]byte{jwk}, [][]byte{nil})
+	if err != nil {
+		return encconfig.CryptoConfig{}, err
+	}
+	return encconfig.CombineCryptoConfigs([]encconfig.CryptoConfig{
+		encryptConfig,
+		decryptConfig,
+	}), nil
+}
+
+func GetCryptoConfigKey(key *pb.Key) (encconfig.CryptoConfig, error) {
+	jwkUnmarshalled := &jose.JSONWebKey{}
+	err := jwkUnmarshalled.UnmarshalJSON(key.Data)
+	if err != nil {
 		return encconfig.CryptoConfig{}, err
 	}
 	jwk, err := jwkUnmarshalled.MarshalJSON()

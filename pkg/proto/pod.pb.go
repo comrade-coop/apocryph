@@ -831,7 +831,7 @@ type Volume_SecretConfig struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Cid            []byte `protobuf:"bytes,1,opt,name=cid,proto3" json:"cid,omitempty"` // use 0x00 0x01 0x55 0x00 (unsigned-varint length) (raw contents) to encode the secret in the message
+	Cid            []byte `protobuf:"bytes,1,opt,name=cid,proto3" json:"cid,omitempty"`
 	KeyIdx         int32  `protobuf:"varint,2,opt,name=keyIdx,proto3" json:"keyIdx,omitempty"`
 	File           string `protobuf:"bytes,101,opt,name=file,proto3" json:"file,omitempty"`
 	Contents       []byte `protobuf:"bytes,102,opt,name=contents,proto3" json:"contents,omitempty"`

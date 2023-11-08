@@ -20,8 +20,8 @@ var rootCmd = &cobra.Command{
 		} else {
 			viper.SetConfigName("config")
 			viper.SetConfigType("yaml")
-			viper.AddConfigPath("$XDG_CONFIG_HOME/trustedpods")
-			viper.AddConfigPath("$HOME/.config/trustedpods")
+			//viper.AddConfigPath("$XDG_CONFIG_HOME/trustedpods")
+			//viper.AddConfigPath("$HOME/.config/trustedpods")
 			viper.AddConfigPath("$HOME/.trustedpods")
 			viper.AddConfigPath("/etc/trustedpods")
 		}
@@ -48,7 +48,4 @@ func AddConfig(key string, value interface{}, defaultValue interface{}, usage st
 
 func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default: $XDG_CONFIG_HOME/.trustedpods/config.yaml)")
-
-	rootCmd.AddCommand(podCmd)
-	rootCmd.AddCommand(paymentCmd)
 }
