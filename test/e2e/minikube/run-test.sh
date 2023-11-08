@@ -97,17 +97,13 @@ FUNDS=10000000000000000000000
 set +v
 set -x
 
-go run ../../../cmd/trustedpods/ payment mint \
-  --ethereum-key $PUBLISHER_KEY \
-  --payment-contract "$PAYMENT_CONTRACT" \
-  --funds "$FUNDS"
-
 go run ../../../cmd/trustedpods/ pod deploy manifest-guestbook.yaml \
   --ethereum-key "$PUBLISHER_KEY" \
   --provider "$PROVIDER_IPFS" \
   --provider-eth "$PROVIDER_ETH" \
   --payment-contract "$PAYMENT_CONTRACT" \
   --funds "$FUNDS"
+  --mint-funds
 
 set +x
 set -v
