@@ -51,18 +51,20 @@ func main() {
 		return
 	}
 
-	client := pb.NewProvisionPodServiceClient(conn)
-	ProvisionPod(client, publisherAddress, "./manifest-guestbook.json")
-	GetPodLogs(client, &pb.PodLogRequest{ContainerName: "php-redis", Credentials: Credentials})
-	UpdatePod(client, Credentials)
-	log.Println("Press Enter to Delete Namespace")
 	reader := bufio.NewReader(os.Stdin)
+	client := pb.NewProvisionPodServiceClient(conn)
+	containerName := ProvisionPod(client, publisherAddress, "./manifest-guestbook.json")
+	go GetPodLogs(client, &pb.PodLogRequest{ContainerName: containerName, Credentials: Credentials})
+	log.Printf("Press Enter to Update Pod \n\n")
+	_, _ = reader.ReadString('\n')
+	UpdatePod(client, Credentials)
+	log.Printf("Press Enter to Delete Namespace\n\n")
 	_, _ = reader.ReadString('\n')
 
 	DeletePod(client, &pb.DeletePodRequest{Credentials: Credentials})
 }
 
-func ProvisionPod(client pb.ProvisionPodServiceClient, publisherAddress []byte, podPath string) {
+func ProvisionPod(client pb.ProvisionPodServiceClient, publisherAddress []byte, podPath string) string {
 
 	request, _, err := publisher.UploadManifest(context.Background(), "./manifest-guestbook.json", "json", "", false)
 	if err != nil {
@@ -74,6 +76,7 @@ func ProvisionPod(client pb.ProvisionPodServiceClient, publisherAddress []byte, 
 		log.Fatalf("Provision Pod failed: %v", err)
 	}
 	log.Printf("pod provision response: %v", response)
+	return response.Addresses[0].ContainerName
 }
 
 func DeletePod(client pb.ProvisionPodServiceClient, request *pb.DeletePodRequest) {

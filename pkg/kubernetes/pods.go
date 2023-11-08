@@ -89,7 +89,6 @@ func cleanNamespace(ctx context.Context, namespace string, activeRessources []st
 				return err
 			}
 			for i, rsrc := range list.Items {
-				// fmt.Printf("volume: %v\n", rsrc.GetName()) // where do all these come from and where is tpod-pvc-db-data?
 				if !slices.Contains(activeRessources, rsrc.GetName()) && strings.Contains(rsrc.GetName(), "tpod") {
 					fmt.Printf("Deleting Volume %v: %v \n", i, rsrc.GetName())
 					client.Delete(ctx, &rsrc)

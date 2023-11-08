@@ -89,10 +89,12 @@ func (s *provisionPodServer) UpdatePod(ctx context.Context, request *pb.UpdatePo
 func (s *provisionPodServer) GetPodLogs(request *pb.PodLogRequest, srv pb.ProvisionPodService_GetPodLogsServer) error {
 	log.Println("Received Log request")
 	// verify if container exists or not
+	p := &v1.Namespace{}
+
 	namespace := "tpod-" + strings.ToLower(string(request.Credentials.PublisherAddress))
-	err := s.k8cl.Get(context.Background(), client.ObjectKey{Namespace: namespace, Name: request.ContainerName}, nil)
+	err := s.k8cl.Get(context.Background(), client.ObjectKey{Namespace: namespace, Name: namespace}, p)
 	if err != nil {
-		return errors.New("Container Does not exists")
+		return err
 	}
 
 	err = loki.GetStreamedEntries(namespace, request.ContainerName, srv)

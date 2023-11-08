@@ -3,7 +3,7 @@
     {
       "name": "php-redis",
       "image": {
-        "url": "hello-world:latest"
+        "url": "chentex/random-logger:latest"
       },
       "ports": [
         {
@@ -38,7 +38,7 @@
     {
       "name": "redis",
       "image": {
-        "url": "hello-world:latest"
+        "url": "docker.io/library/redis:alpine"
       },
       "resourceRequests": [
         {
@@ -80,7 +80,7 @@
     }
   ],
   "replicas": {
-    "min": 0,
-    "max": 1
+    "min": 2,
+    "max": 2
   }
 }
