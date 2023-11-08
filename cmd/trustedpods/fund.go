@@ -11,9 +11,10 @@ import (
 )
 
 var fundPodCmd = &cobra.Command{
-	Use:   fmt.Sprintf("fund [%s|deployment.yaml]", publisher.DefaultPodFile),
-	Short: "Fund the pod's execution",
-	Args:  cobra.MaximumNArgs(1),
+	Use:     fmt.Sprintf("fund [%s|deployment.yaml]", publisher.DefaultPodFile),
+	Short:   "Fund the pod's execution",
+	Args:    cobra.MaximumNArgs(1),
+	GroupID: "main",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_, deploymentFile, _, deployment, err := publisher.ReadPodAndDeployment(args, manifestFormat, deploymentFormat)
 		if err != nil {

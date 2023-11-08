@@ -39,6 +39,10 @@ func init() {
 	rootCmd.AddCommand(podCmd)
 
 	podCmd.AddGroup(&cobra.Group{
+		ID:    "main",
+		Title: "Commands",
+	})
+	podCmd.AddGroup(&cobra.Group{
 		ID:    "lowlevel",
 		Title: "Low-level commands",
 	})

@@ -14,9 +14,10 @@ import (
 var containerName string
 
 var logPodCmd = &cobra.Command{
-	Use:   fmt.Sprintf("log [%s] [deployment.yaml]", publisher.DefaultPodFile),
-	Short: "get pod conatiner logs",
-	Args:  cobra.ExactArgs(1),
+	Use:     fmt.Sprintf("log [%s] [deployment.yaml]", publisher.DefaultPodFile),
+	Short:   "get pod conatiner logs",
+	Args:    cobra.ExactArgs(1),
+	GroupID: "main",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_, _, pod, deployment, err := publisher.ReadPodAndDeployment(args, manifestFormat, deploymentFormat)
 		if err != nil {
@@ -74,8 +75,6 @@ var logPodCmd = &cobra.Command{
 func init() {
 	podCmd.AddCommand(logPodCmd)
 
-	logPodCmd.Flags().StringVar(&ipfsApi, "ipfs", "", "multiaddr where the ipfs/kubo api can be accessed (leave blank to use the daemon running in IPFS_PATH)")
-
-	logPodCmd.Flags().StringVar(&providerPeer, "provider", "", "provider peer id")
-	logPodCmd.Flags().StringVarP(&containerName, "container", "c", "", "container name")
+	logPodCmd.Flags().AddFlagSet(deploymentFlags)
+	logPodCmd.Flags().AddFlagSet(syncFlags)
 }

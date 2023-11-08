@@ -12,11 +12,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// FIXME: Massive code duplication with upload, fund, and sync commands.
 var deployPodCmd = &cobra.Command{
 	Use:     fmt.Sprintf("deploy [%s] [deployment.yaml]", publisher.DefaultPodFile),
 	Aliases: []string{"update"},
 	Short:   "Deploy a pod from a local manifest",
 	Args:    cobra.MaximumNArgs(2),
+	GroupID: "main",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		podFile, deploymentFile, pod, deployment, err := publisher.ReadPodAndDeployment(args, manifestFormat, deploymentFormat)
 		if err != nil {
@@ -96,6 +98,7 @@ var deletePodCmd = &cobra.Command{
 	Aliases: []string{"undeploy"},
 	Short:   "Delete a pod from a local deployment",
 	Args:    cobra.MaximumNArgs(1),
+	GroupID: "main",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_, deploymentFile, _, deployment, err := publisher.ReadPodAndDeployment(args, manifestFormat, deploymentFormat)
 		if err != nil {

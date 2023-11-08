@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	"github.com/comrade-coop/trusted-pods/pkg/publisher"
 	"github.com/spf13/cobra"
 )
 
@@ -23,12 +24,11 @@ const initDefaultHostname = "pod.XXXX.hostname.example"
 const initDefaultPort = uint64(80)
 
 var initPodCmd = &cobra.Command{
-	Use:    "init [manifest.yaml]",
-	Short:  "Parse a pod from a local manifest",
-	Args:   cobra.MaximumNArgs(1),
-	Hidden: true,
+	Use:   "init [manifest.yaml]",
+	Short: "Create a new pod manifest",
+	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		manifestFile := "manifest.yaml"
+		manifestFile := publisher.DefaultPodFile
 		if len(args) >= 1 {
 			manifestFile = args[0]
 		}
