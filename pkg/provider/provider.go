@@ -90,7 +90,7 @@ func (s *provisionPodServer) GetPodLogs(request *pb.PodLogRequest, srv pb.Provis
 		return err
 	}
 
-	err = loki.GetStreamedEntries(namespace, request.ContainerName, srv)
+	err = loki.GetStreamedEntries(namespace, request.ContainerName, srv, s.loki.Host)
 	if err != nil {
 		return err
 	}
@@ -139,13 +139,13 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.Provi
 	return response, nil
 }
 
-func NewTPodServer(ipfsApi *rpc.HttpApi, dryRun bool, k8cl client.Client, localOciRegistry string, validator *ethereum.PaymentChannelValidator) (*grpc.Server, error) {
+func NewTPodServer(ipfsApi *rpc.HttpApi, dryRun bool, k8cl client.Client, localOciRegistry string, validator *ethereum.PaymentChannelValidator, lokiHost string) (*grpc.Server, error) {
 	server := grpc.NewServer(grpc.UnaryInterceptor(pb.AuthUnaryServerInterceptor()))
 
 	pb.RegisterProvisionPodServiceServer(server, &provisionPodServer{
 		ipfs:             ipfsApi,
 		k8cl:             k8cl,
-		loki:             loki.LokiConfig{Url: "http://loki.loki.svc.cluster.local:3100/loki", Limit: "100"},
+		loki:             loki.LokiConfig{Host: lokiHost, Limit: "100"},
 		paymentValidator: validator,
 		localOciRegistry: localOciRegistry,
 		dryRun:           dryRun,

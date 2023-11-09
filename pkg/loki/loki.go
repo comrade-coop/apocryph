@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
@@ -13,8 +14,10 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
+const tailPath = "/loki/api/v1/tail"
+
 type LokiConfig struct {
-	Url   string
+	Host  string
 	Limit string
 }
 
@@ -112,10 +115,21 @@ func parseEntries(lines [][]string) ([]*pb.LogEntry, error) {
 	return logEntries, nil
 }
 
-func GetStreamedEntries(namespace, containerName string, srv pb.ProvisionPodService_GetPodLogsServer) error {
+func GetStreamedEntries(namespace, containerName string, srv pb.ProvisionPodService_GetPodLogsServer, lokiHost string) error {
 
 	query := fmt.Sprintf("{container=\"%s\",namespace=\"%s\"}", containerName, namespace)
-	requestURL := fmt.Sprintf("ws://loki.loki.svc.cluster.local:3100/loki/api/v1/tail?query=%s", query)
+	requestURL := fmt.Sprintf("ws://%s/loki/api/v1/tail?query=%s", lokiHost, query)
+	baseURL := &url.URL{
+		Scheme: "ws",
+		Host:   "loki.loki.svc.cluster.local:3100",
+		Path:   tailPath,
+	}
+	queryValues := baseURL.Query()
+
+	queryValues.Set("query", fmt.Sprintf("{container=\"%s\",namespace=\"%s\"}", containerName, namespace))
+	baseURL.RawQuery = queryValues.Encode()
+	requestURL = baseURL.String()
+	fmt.Printf("Loki Request Url: %v \n", requestURL)
 
 	c, _, err := websocket.DefaultDialer.Dial(requestURL, nil)
 	if err != nil {

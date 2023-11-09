@@ -2,9 +2,7 @@ package kubernetes
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"strings"
 
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
@@ -13,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	k8cl "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -48,15 +45,15 @@ func patchOrCreate(ctx context.Context, ressourceName, kind, namespace string, r
 			return err
 		}
 
-		patch, err := json.Marshal(ressource)
+		updatedRessource := ressource.(k8cl.Object)
+		updatedRessource.SetNamespace(namespace)
+		updatedRessource.SetName(ressourceName)
+		updatedRessource.SetResourceVersion(oldRessource.(k8cl.Object).GetResourceVersion())
+		err = client.Update(ctx, updatedRessource)
 		if err != nil {
 			return err
 		}
-
-		err = client.Patch(ctx, oldRessource.(k8cl.Object), k8cl.RawPatch(types.MergePatchType, patch))
-		if err != nil {
-			return err
-		}
+		fmt.Printf("Updated %v", ressourceName)
 		return nil
 	}
 	if err := client.Create(ctx, ressource.(k8cl.Object)); err != nil {
@@ -77,9 +74,12 @@ func cleanNamespace(ctx context.Context, namespace string, activeRessources []st
 				return err
 			}
 			for i, rsrc := range list.Items {
-				if !slices.Contains(activeRessources, rsrc.GetName()) && strings.Contains(rsrc.GetName(), "tpod") {
+				if !slices.Contains(activeRessources, rsrc.GetName()) {
 					fmt.Printf("Deleting Service %v:%v \n", i, rsrc.GetName())
-					client.Delete(ctx, &rsrc)
+					err := client.Delete(ctx, &rsrc)
+					if err != nil {
+						fmt.Printf("Could not delete Service: %v \n", err)
+					}
 				}
 			}
 		case "Volume":
@@ -89,9 +89,12 @@ func cleanNamespace(ctx context.Context, namespace string, activeRessources []st
 				return err
 			}
 			for i, rsrc := range list.Items {
-				if !slices.Contains(activeRessources, rsrc.GetName()) && strings.Contains(rsrc.GetName(), "tpod") {
+				if !slices.Contains(activeRessources, rsrc.GetName()) {
 					fmt.Printf("Deleting PVC %v: %v \n", i, rsrc.GetName())
-					client.Delete(ctx, &rsrc)
+					err := client.Delete(ctx, &rsrc)
+					if err != nil {
+						fmt.Printf("Could not delete PVC: %v \n", err)
+					}
 				}
 			}
 		case "Secret":
@@ -101,9 +104,12 @@ func cleanNamespace(ctx context.Context, namespace string, activeRessources []st
 				return err
 			}
 			for i, rsrc := range list.Items {
-				if !slices.Contains(activeRessources, rsrc.GetName()) && strings.Contains(rsrc.GetName(), "tpod") {
+				if !slices.Contains(activeRessources, rsrc.GetName()) {
 					fmt.Printf("Deleting Secret %v: %v \n", i, rsrc.GetName())
-					client.Delete(ctx, &rsrc)
+					err := client.Delete(ctx, &rsrc)
+					if err != nil {
+						fmt.Printf("Could not delete Secret: %v \n", err)
+					}
 				}
 			}
 		case "Deployment":
@@ -113,9 +119,12 @@ func cleanNamespace(ctx context.Context, namespace string, activeRessources []st
 				return err
 			}
 			for i, rsrc := range list.Items {
-				if !slices.Contains(activeRessources, rsrc.GetName()) && strings.Contains(rsrc.GetName(), "tpod") {
+				if !slices.Contains(activeRessources, rsrc.GetName()) {
 					fmt.Printf("Deleting Deployment %v: %v \n", i, rsrc.GetName())
-					client.Delete(ctx, &rsrc)
+					err := client.Delete(ctx, &rsrc)
+					if err != nil {
+						fmt.Printf("Could not delete Deployment: %v \n", err)
+					}
 				}
 			}
 		case "HttpSo":
@@ -125,9 +134,12 @@ func cleanNamespace(ctx context.Context, namespace string, activeRessources []st
 				return err
 			}
 			for i, rsrc := range list.Items {
-				if !slices.Contains(activeRessources, rsrc.GetName()) && strings.Contains(rsrc.GetName(), "tpod") {
+				if !slices.Contains(activeRessources, rsrc.GetName()) {
 					fmt.Printf("Deleting HttpSo %v: %v \n", i, rsrc.GetName())
-					client.Delete(ctx, &rsrc)
+					err := client.Delete(ctx, &rsrc)
+					if err != nil {
+						fmt.Printf("Could not delete HttpSo: %v \n", err)
+					}
 				}
 			}
 		}
@@ -289,7 +301,6 @@ func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Po
 		}
 		podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, volumeSpec)
 	}
-
 	err := patchOrCreate(ctx, deploymentName, "Deployment", namespace, deployment, client, patch)
 	if err != nil {
 		return err

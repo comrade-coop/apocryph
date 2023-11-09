@@ -56,7 +56,7 @@ var listenCmd = &cobra.Command{
 			return err
 		}
 
-		server, err := provider.NewTPodServer(ipfs, dryRun, k8cl, localOciRegistry, validator)
+		server, err := provider.NewTPodServer(ipfs, dryRun, k8cl, localOciRegistry, validator, "loki.loki.svc.cluster.local:3100")
 		if err != nil {
 			return err
 		}

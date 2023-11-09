@@ -10,6 +10,22 @@ spec:
   selector:
     app: devserver
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ipfs
+  namespace: devspace
+  labels:
+    app: ipfs
+spec:
+  ports:
+  - name: rpc
+    port: 5001
+    targetPort: rpc
+  clusterIP: None
+  selector:
+    app: ipfs
+---
 
 apiVersion: apps/v1
 kind: Deployment
@@ -36,4 +52,28 @@ spec:
             value: '0.0.0.0:8090'
         ports:
         - containerPort: 8090
+      serviceAccountName: devserver-serviceaccount
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ipfs
+  namespace: devspace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ipfs
+  serviceName: ipfs
+  template:
+    metadata:
+      labels:
+        app: ipfs
+    spec:
+      containers:
+      - name: ipfs
+        image: ipfs/kubo
+        ports:
+        - containerPort: 5001
       serviceAccountName: devserver-serviceaccount

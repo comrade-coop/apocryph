@@ -1,14 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
+	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
 	"github.com/comrade-coop/trusted-pods/pkg/provider"
-	"github.com/ipfs/kubo/client/rpc"
 )
 
 func main() {
@@ -17,9 +18,11 @@ func main() {
 		return
 	}
 	serverAddress := os.Args[1]
-	ipfsApi, err := rpc.NewLocalApi()
+
+	ipfsApi, _, err := tpipfs.GetIpfsClient("/dns4/ipfs.devspace.svc.cluster.local/tcp/5001")
+
 	if err != nil {
-		log.Printf("Failed to Connect to local ipfs node: %v", err)
+		fmt.Printf("failed to retreived Ipfs Client: %v", err)
 		return
 	}
 
@@ -29,11 +32,12 @@ func main() {
 		return
 	}
 	// skip kubeConfig
-	s, err := provider.NewTPodServer(ipfsApi, false, k8cl, "host.minikube.internal:5000", nil)
+	s, err := provider.NewTPodServer(ipfsApi, false, k8cl, "host.minikube.internal:5000", nil, "loki.loki.svc.cluster.local:3100")
 	if err != nil {
 		log.Printf("Failed to create grpc server: %v", err)
 		return
 	}
+
 	// listen on regular address instead of p2p
 	listener, err := provider.GetListener(serverAddress)
 	if err != nil {
