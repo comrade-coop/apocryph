@@ -83,14 +83,14 @@ func cleanNamespace(ctx context.Context, namespace string, activeRessources []st
 				}
 			}
 		case "Volume":
-			list := &corev1.PersistentVolumeList{}
+			list := &corev1.PersistentVolumeClaimList{}
 			err := client.List(ctx, list, &k8cl.ListOptions{Namespace: namespace})
 			if err != nil {
 				return err
 			}
 			for i, rsrc := range list.Items {
 				if !slices.Contains(activeRessources, rsrc.GetName()) && strings.Contains(rsrc.GetName(), "tpod") {
-					fmt.Printf("Deleting Volume %v: %v \n", i, rsrc.GetName())
+					fmt.Printf("Deleting PVC %v: %v \n", i, rsrc.GetName())
 					client.Delete(ctx, &rsrc)
 				}
 			}

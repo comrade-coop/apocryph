@@ -67,7 +67,7 @@ func main() {
 
 func ProvisionPod(client pb.ProvisionPodServiceClient, publisherAddress []byte, podPath string) string {
 
-	podFile, _, pod, deployment, err := publisher.ReadPodAndDeployment([]string{"./manifest-guestbook.json"}, "", "")
+	podFile, _, pod, deployment, err := publisher.ReadPodAndDeployment([]string{"./logger-manifest.json"}, "", "")
 
 	err = publisher.UploadSecrets(context.Background(), ipfs, filepath.Dir(podFile), pod, deployment)
 	if err != nil {
@@ -100,7 +100,7 @@ func DeletePod(client pb.ProvisionPodServiceClient, request *pb.DeletePodRequest
 
 func UpdatePod(client pb.ProvisionPodServiceClient, credentials *pb.Credentials) {
 
-	podFile, _, pod, deployment, err := publisher.ReadPodAndDeployment([]string{"./updated-guestbook.json"}, "", "")
+	podFile, _, pod, deployment, err := publisher.ReadPodAndDeployment([]string{"./updated-logger.json"}, "", "")
 
 	err = publisher.UploadSecrets(context.Background(), ipfs, filepath.Dir(podFile), pod, deployment)
 	if err != nil {
@@ -110,7 +110,7 @@ func UpdatePod(client pb.ProvisionPodServiceClient, credentials *pb.Credentials)
 	if err != nil {
 		log.Fatalf("failed uploading Manifest: %v", err)
 	}
-	request :=  &pb.UpdatePodRequest{Credentials: credentials}
+	request := &pb.UpdatePodRequest{Credentials: credentials}
 	request.Pod = publisher.LinkUploadsFromDeployment(pod, &request.Keys, deployment)
 	response, err := client.UpdatePod(context.Background(), request)
 	if err != nil {

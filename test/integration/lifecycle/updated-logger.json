@@ -27,22 +27,6 @@
 					"amount": 100000000
 				}
 			]
-		},
-		{
-			"name": "bepis",
-			"image": {
-				"url": "docker.io/library/redis:alpine"
-			},
-			"resourceRequests": [
-				{
-					"resource": "cpu",
-					"amountMillis": 10
-				},
-				{
-					"resource": "memory",
-					"amount": 100000000
-				}
-			]
 		}
 	],
 	"replicas": {
