@@ -54,11 +54,16 @@ func main() {
 
 	reader := bufio.NewReader(os.Stdin)
 	client := pb.NewProvisionPodServiceClient(conn)
+
 	containerName := ProvisionPod(client, publisherAddress, "./manifest-guestbook.json")
 	go GetPodLogs(client, &pb.PodLogRequest{ContainerName: containerName, Credentials: Credentials})
+
 	log.Printf("Press Enter to Update Pod \n\n")
 	_, _ = reader.ReadString('\n')
-	UpdatePod(client, Credentials)
+	containerName = UpdatePod(client, Credentials)
+	// retreived logs for the updated container
+	go GetPodLogs(client, &pb.PodLogRequest{ContainerName: containerName, Credentials: Credentials})
+
 	log.Printf("Press Enter to Delete Namespace\n\n")
 	_, _ = reader.ReadString('\n')
 
@@ -98,7 +103,7 @@ func DeletePod(client pb.ProvisionPodServiceClient, request *pb.DeletePodRequest
 	log.Printf("Pod Deletion response: %v", response)
 }
 
-func UpdatePod(client pb.ProvisionPodServiceClient, credentials *pb.Credentials) {
+func UpdatePod(client pb.ProvisionPodServiceClient, credentials *pb.Credentials) string {
 
 	podFile, _, pod, deployment, err := publisher.ReadPodAndDeployment([]string{"./updated-logger.json"}, "", "")
 
@@ -115,10 +120,10 @@ func UpdatePod(client pb.ProvisionPodServiceClient, credentials *pb.Credentials)
 	response, err := client.UpdatePod(context.Background(), request)
 	if err != nil {
 		log.Printf("rpc update method failed: %v", err)
-		return
+		return ""
 	}
 	log.Printf("Pod Update response: %v", response)
-
+	return response.Addresses[0].ContainerName
 }
 
 func GetPodLogs(client pb.ProvisionPodServiceClient, request *pb.PodLogRequest) {

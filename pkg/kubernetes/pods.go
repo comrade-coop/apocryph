@@ -32,7 +32,7 @@ func GetRessource(kind string) interface{} {
 	return nil
 }
 
-func patchOrCreate(ctx context.Context, ressourceName, kind, namespace string, ressource interface{}, client k8cl.Client, patch bool) error {
+func updateOrCreate(ctx context.Context, ressourceName, kind, namespace string, ressource interface{}, client k8cl.Client, patch bool) error {
 	if patch == true {
 		key := &k8cl.ObjectKey{
 			Namespace: namespace,
@@ -40,20 +40,25 @@ func patchOrCreate(ctx context.Context, ressourceName, kind, namespace string, r
 		}
 		oldRessource := GetRessource(kind)
 
-		err := client.Get(ctx, *key, oldRessource.(k8cl.Object))
-		if err != nil {
-			return err
-		}
-
 		updatedRessource := ressource.(k8cl.Object)
 		updatedRessource.SetNamespace(namespace)
 		updatedRessource.SetName(ressourceName)
-		updatedRessource.SetResourceVersion(oldRessource.(k8cl.Object).GetResourceVersion())
+
+		err := client.Get(ctx, *key, oldRessource.(k8cl.Object))
+		updatedRessource.SetResourceVersion(oldRessource.(k8cl.Object).GetResourceVersion()) // resource version should be retreived from the old ressource in order for httpSo to work
+		if err != nil {
+			fmt.Printf("Added New Ressource: %v \n", ressourceName)
+			if err := client.Create(ctx, updatedRessource); err != nil {
+				return err
+			}
+			return nil
+		}
+
 		err = client.Update(ctx, updatedRessource)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Updated %v", ressourceName)
+		fmt.Printf("Updated %v \n", ressourceName)
 		return nil
 	}
 	if err := client.Create(ctx, ressource.(k8cl.Object)); err != nil {
@@ -198,7 +203,7 @@ func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Po
 				return err
 			}
 
-			err = patchOrCreate(ctx, service.GetName(), "Service", namespace, service, client, patch)
+			err = updateOrCreate(ctx, service.GetName(), "Service", namespace, service, client, patch)
 			if err != nil {
 				return err
 			}
