@@ -10,7 +10,6 @@ import (
 	iface "github.com/ipfs/boxo/coreiface"
 	"golang.org/x/exp/slices"
 
-	tpcrypto "github.com/comrade-coop/trusted-pods/pkg/crypto"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 )
 
@@ -95,7 +94,7 @@ func UploadImages(ctx context.Context, ipfs iface.CoreAPI, pod *pb.Pod, deployme
 	return nil
 }
 
-func LinkUploadsFromDeployment(pod *pb.Pod, keys *[]*pb.Key, deployment *pb.Deployment) *pb.Pod {
+func LinkUploadsFromDeployment(pod *pb.Pod, deployment *pb.Deployment) *pb.Pod {
 	if pod == nil {
 		return nil
 	}
@@ -110,8 +109,8 @@ func LinkUploadsFromDeployment(pod *pb.Pod, keys *[]*pb.Key, deployment *pb.Depl
 			if uploadedSecret, ok := uploadedSecrets[volume.Name]; ok {
 				volume.Configuration = &pb.Volume_Secret{
 					Secret: &pb.Volume_SecretConfig{
-						Cid:    uploadedSecret.Cid,
-						KeyIdx: tpcrypto.InsertKey(keys, uploadedSecret.Key),
+						Cid: uploadedSecret.Cid,
+						Key: uploadedSecret.Key,
 					},
 				}
 			}
@@ -127,8 +126,8 @@ func LinkUploadsFromDeployment(pod *pb.Pod, keys *[]*pb.Key, deployment *pb.Depl
 	for _, container := range pod.Containers {
 		if uploadedImage, ok := uploadedImages[container.Image.Url]; ok {
 			container.Image = &pb.Container_Image{
-				Cid:    uploadedImage.Cid,
-				KeyIdx: tpcrypto.InsertKey(keys, uploadedImage.Key),
+				Cid: uploadedImage.Cid,
+				Key: uploadedImage.Key,
 			}
 		}
 	}

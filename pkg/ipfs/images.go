@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 
 	tpcrypto "github.com/comrade-coop/trusted-pods/pkg/crypto"
 	"github.com/comrade-coop/trusted-pods/pkg/ipdr"
@@ -44,6 +45,19 @@ func GetImageRef(ctx context.Context, sys *types.SystemContext, image *pb.Contai
 		return
 	}
 	return
+}
+
+func GetRefUrl(imageRef types.ImageReference) string {
+	if imageRef.Transport() == docker.Transport {
+		return strings.TrimPrefix(imageRef.StringWithinTransport(), "//")
+	}
+	if imageRef.Transport() == daemon.Transport {
+		return imageRef.StringWithinTransport()
+	}
+	if _, ok := imageRef.Transport().(ipdr.IpdrTransport); ok {
+		return imageRef.StringWithinTransport()
+	}
+	return ""
 }
 
 func UploadImageToIpdr(ctx context.Context, ipfs iface.CoreAPI, sys *types.SystemContext, imageRef types.ImageReference) (key *pb.Key, imageCid []byte, err error) {
@@ -95,29 +109,7 @@ func UploadImageToIpdr(ctx context.Context, ipfs iface.CoreAPI, sys *types.Syste
 	return
 }
 
-func UploadImagesToIpdr(pod *pb.Pod, ctx context.Context, ipfs iface.CoreAPI, sys *types.SystemContext, keys *[]*pb.Key) error {
-	for _, container := range pod.Containers {
-		image := container.Image
-		if image.Url != "" {
-			imageRef, _, err := GetImageRef(ctx, sys, image)
-			if err != nil {
-				return err
-			}
-
-			var key *pb.Key
-			key, image.Cid, err = UploadImageToIpdr(ctx, ipfs, sys, imageRef)
-			if err != nil {
-				return err
-			}
-
-			image.KeyIdx = tpcrypto.InsertKey(keys, key)
-			image.Url = ""
-		}
-	}
-	return nil
-}
-
-func ReuploadImagesFromIpdr(pod *pb.Pod, ctx context.Context, ipfs iface.CoreAPI, localRegistryUrl string, sys *types.SystemContext, keys []*pb.Key) error {
+func ReuploadImageFromIpdr(ctx context.Context, ipfs iface.CoreAPI, localRegistryUrl string, sys *types.SystemContext, image *pb.Container_Image) (types.ImageReference, error) {
 	if sys == nil {
 		sys = &types.SystemContext{
 			DockerInsecureSkipTLSVerify: types.OptionalBoolTrue,
@@ -126,51 +118,52 @@ func ReuploadImagesFromIpdr(pod *pb.Pod, ctx context.Context, ipfs iface.CoreAPI
 
 	ipdrTransport := ipdr.NewIpdrTransport(ipfs)
 	registryTransport := docker.Transport
-	for _, container := range pod.Containers {
-		image := container.Image
-		if len(image.Cid) > 0 {
-			copyOptions := &imageCopy.Options{
-				DestinationCtx: sys,
-				SourceCtx:      sys,
-			}
 
-			if keys != nil {
-				cryptoConfig, err := tpcrypto.GetCryptoConfig(keys, image.KeyIdx)
-				if err != nil {
-					return err
-				}
-				copyOptions.OciDecryptConfig = cryptoConfig.DecryptConfig
-			}
-
-			policy := &signature.Policy{
-				Default: signature.PolicyRequirements{
-					signature.NewPRInsecureAcceptAnything(),
-				},
-			}
-			policyContext, _ := signature.NewPolicyContext(policy)
-			defer policyContext.Destroy()
-
-			c, err := cid.Cast(image.Cid)
-			if err != nil {
-				return err
-			}
-			sourceRef := ipdrTransport.NewReference(path.IpfsPath(c), "")
-
-			url := localRegistryUrl + "/" + c.Hash().HexString()
-			destinationRef, err := registryTransport.ParseReference("//" + url)
-			if err != nil {
-				return err
-			}
-
-			_, err = imageCopy.Image(ctx, policyContext, destinationRef, sourceRef, copyOptions)
-
-			if err != nil {
-				return err
-			}
-
-			image.Url = url
-			image.Cid = nil
+	if image.Cid != nil && localRegistryUrl != "" {
+		copyOptions := &imageCopy.Options{
+			DestinationCtx: sys,
+			SourceCtx:      sys,
 		}
+
+		if image.Key != nil {
+			cryptoConfig, err := tpcrypto.GetCryptoConfigKey(image.Key)
+			if err != nil {
+				return nil, err
+			}
+			copyOptions.OciDecryptConfig = cryptoConfig.DecryptConfig
+		}
+
+		policy := &signature.Policy{
+			Default: signature.PolicyRequirements{
+				signature.NewPRInsecureAcceptAnything(),
+			},
+		}
+		policyContext, _ := signature.NewPolicyContext(policy)
+		defer policyContext.Destroy()
+
+		c, err := cid.Cast(image.Cid)
+		if err != nil {
+			return nil, err
+		}
+		sourceRef := ipdrTransport.NewReference(path.IpfsPath(c), "")
+
+		url := localRegistryUrl + "/" + c.Hash().HexString()
+		destinationRef, err := registryTransport.ParseReference("//" + url)
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = imageCopy.Image(ctx, policyContext, destinationRef, sourceRef, copyOptions)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return destinationRef, nil
 	}
-	return nil
+	if image.Url != "" {
+		ref, _, err := GetImageRef(ctx, sys, image)
+		return ref, err
+	}
+	return nil, errors.New("Failed to read supplied image")
 }

@@ -52,28 +52,8 @@ func NewKey(keyType string) (*pb.Key, error) {
 	}, nil
 }
 
-func InsertKey(keys *[]*pb.Key, key *pb.Key) int32 {
-	keyIdx := int32(len(*keys))
-	*keys = append(*keys, key)
-	return keyIdx
-}
-
-func CreateKey(keys *[]*pb.Key, keyType string) (int32, error) {
-	key, err := NewKey(keyType)
-	if err != nil {
-		return -1, err
-	}
-	return InsertKey(keys, key), nil
-}
-
-func getJwk(keys []*pb.Key, keyIdx int32) (*jose.JSONWebKey, error) {
-	if keyIdx < 0 {
-		return nil, nil
-	}
-	if int(keyIdx) >= len(keys) {
-		return nil, errors.New("Invalid keyIdx")
-	}
-	jwk := keys[keyIdx].Data
+func getJwkKey(key *pb.Key) (*jose.JSONWebKey, error) {
+	jwk := key.Data
 	jwkUnmarshalled := &jose.JSONWebKey{}
 	err := jwkUnmarshalled.UnmarshalJSON(jwk)
 	if err != nil {
@@ -82,8 +62,8 @@ func getJwk(keys []*pb.Key, keyIdx int32) (*jose.JSONWebKey, error) {
 	return jwkUnmarshalled, nil
 }
 
-func getAESKey(keys []*pb.Key, keyIdx int32) ([]byte, error) {
-	jwkUnmarshalled, err := getJwk(keys, keyIdx)
+func getAESKey(key *pb.Key) ([]byte, error) {
+	jwkUnmarshalled, err := getJwkKey(key)
 	if err != nil {
 		return nil, err
 	}
@@ -98,8 +78,8 @@ func getAESKey(keys []*pb.Key, keyIdx int32) ([]byte, error) {
 	}
 }
 
-func EncryptWith(keys []*pb.Key, keyIdx int32, plaintext []byte) ([]byte, error) {
-	aesKey, err := getAESKey(keys, keyIdx)
+func EncryptWithKey(key *pb.Key, plaintext []byte) ([]byte, error) {
+	aesKey, err := getAESKey(key)
 	if err != nil {
 		return nil, err
 	}
@@ -109,12 +89,8 @@ func EncryptWith(keys []*pb.Key, keyIdx int32, plaintext []byte) ([]byte, error)
 	return EncryptWithAES(plaintext, aesKey)
 }
 
-func EncryptWithKey(key *pb.Key, plaintext []byte) ([]byte, error) {
-	return EncryptWith([]*pb.Key{key}, 0, plaintext)
-}
-
-func DecryptWith(keys []*pb.Key, keyIdx int32, cyphertext []byte) ([]byte, error) {
-	aesKey, err := getAESKey(keys, keyIdx)
+func DecryptWithKey(key *pb.Key, cyphertext []byte) ([]byte, error) {
+	aesKey, err := getAESKey(key)
 	if err != nil {
 		return nil, err
 	}
@@ -124,36 +100,8 @@ func DecryptWith(keys []*pb.Key, keyIdx int32, cyphertext []byte) ([]byte, error
 	return DecryptWithAES(cyphertext, aesKey)
 }
 
-func GetCryptoConfig(keys []*pb.Key, keyIdx int32) (encconfig.CryptoConfig, error) {
-	jwkUnmarshalled, err := getJwk(keys, keyIdx)
-	if err != nil || jwkUnmarshalled == nil {
-		return encconfig.CryptoConfig{}, err
-	}
-	jwk, err := jwkUnmarshalled.MarshalJSON()
-	if err != nil {
-		return encconfig.CryptoConfig{}, err
-	}
-	jwkPub, err := jwkUnmarshalled.Public().MarshalJSON()
-	if err != nil {
-		return encconfig.CryptoConfig{}, err
-	}
-	encryptConfig, err := encconfig.EncryptWithJwe([][]byte{jwkPub})
-	if err != nil {
-		return encconfig.CryptoConfig{}, err
-	}
-	decryptConfig, err := encconfig.DecryptWithPrivKeys([][]byte{jwk}, [][]byte{nil})
-	if err != nil {
-		return encconfig.CryptoConfig{}, err
-	}
-	return encconfig.CombineCryptoConfigs([]encconfig.CryptoConfig{
-		encryptConfig,
-		decryptConfig,
-	}), nil
-}
-
 func GetCryptoConfigKey(key *pb.Key) (encconfig.CryptoConfig, error) {
-	jwkUnmarshalled := &jose.JSONWebKey{}
-	err := jwkUnmarshalled.UnmarshalJSON(key.Data)
+	jwkUnmarshalled, err := getJwkKey(key)
 	if err != nil {
 		return encconfig.CryptoConfig{}, err
 	}

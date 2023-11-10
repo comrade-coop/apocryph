@@ -1,5 +1,5 @@
 syntax = "proto3";
-package apocryph.proto.pod;
+package apocryph.proto.v0.pod;
 
 option go_package = "github.com/comrade-coop/trusted-pods/pkg/proto";
 
@@ -22,7 +22,7 @@ message Container {
 
   message Image {
     bytes cid = 1;
-    int32 keyIdx = 2;
+    Key key = 2;
     string url = 3;
   }
 
@@ -69,7 +69,7 @@ message Volume {
   }
   message SecretConfig {
     bytes cid = 1;
-    int32 keyIdx = 2;
+    Key key = 2;
     string file = 101;
     bytes contents = 102;
     string contentsString = 103;
@@ -88,4 +88,8 @@ message Resource {
     uint64 amount = 2;
     uint64 amountMillis = 3;
   }
+}
+
+message Key {
+  bytes data = 1;
 }

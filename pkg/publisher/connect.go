@@ -30,8 +30,7 @@ func ConnectToProvider(ipfsP2p *ipfs.P2pApi, deployment *pb.Deployment) (*tpipfs
 
 func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, deployment *pb.Deployment) error {
 	// tpipfs.NewP2pApi(ipfs, ipfsMultiaddr)
-	keys := []*pb.Key{}
-	pod = LinkUploadsFromDeployment(pod, &keys, deployment)
+	pod = LinkUploadsFromDeployment(pod, deployment)
 
 	conn, err := ConnectToProvider(ipfsP2p, deployment)
 	if err != nil {
@@ -47,8 +46,7 @@ func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, depl
 		var response *pb.ProvisionPodResponse
 		if deployment.Deployed == nil || deployment.Deployed.Error != "" {
 			request := &pb.ProvisionPodRequest{
-				Pod:  pod,
-				Keys: keys,
+				Pod: pod,
 				Payment: &pb.PaymentChannel{
 					ChainID:          deployment.Payment.ChainID,
 					ProviderAddress:  deployment.Provider.EthereumAddress,
@@ -64,7 +62,6 @@ func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, depl
 		} else {
 			request := &pb.UpdatePodRequest{
 				Pod:         pod,
-				Keys:        keys,
 				Credentials: &pb.Credentials{},
 			}
 			response, err = client.UpdatePod(ctx, request)

@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
-	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
 	"github.com/comrade-coop/trusted-pods/pkg/loki"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
@@ -62,22 +61,18 @@ func (s *provisionPodServer) DeletePod(ctx context.Context, request *pb.DeletePo
 
 func (s *provisionPodServer) UpdatePod(ctx context.Context, request *pb.UpdatePodRequest) (*pb.ProvisionPodResponse, error) {
 	log.Println("Received request for updating pod")
-	err := tpipfs.TransformSecrets(request.Pod, tpipfs.DownloadSecrets(ctx, s.ipfs), tpipfs.DecryptSecrets(request.Keys))
+	secrets, err := DownloadSecrets(ctx, s.ipfs, request.Pod)
 	if err != nil {
-		return nil, err
+		return transformError(err)
 	}
-
-	if s.localOciRegistry != "" {
-		err = tpipfs.ReuploadImagesFromIpdr(request.Pod, ctx, s.ipfs, s.localOciRegistry, nil, request.Keys)
-		if err != nil {
-			return nil, err
-		}
+	images, err := DownloadImages(ctx, s.ipfs, s.localOciRegistry, request.Pod)
+	if err != nil {
+		return transformError(err)
 	}
 
 	namespace := "tpod-" + strings.ToLower(common.BytesToAddress(request.Credentials.PublisherAddress).String())
-
 	response := &pb.ProvisionPodResponse{}
-	err = tpk8s.ApplyPodRequest(ctx, s.k8cl, request.Pod, true, namespace, response)
+	err = tpk8s.ApplyPodRequest(ctx, s.k8cl, namespace, true, request.Pod, images, secrets, response)
 
 	return response, err
 }
@@ -112,34 +107,28 @@ func (s *provisionPodServer) GetPodLogs(request *pb.PodLogRequest, srv pb.Provis
 
 func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.ProvisionPodRequest) (*pb.ProvisionPodResponse, error) {
 	fmt.Println("Received request for pod deployment")
-	pod := request.Pod
-
-	var err error
 
 	// TODO should return error (just usefull for now in testing lifecycle without payment)
 	if s.paymentValidator != nil {
-		_, err = s.paymentValidator.Parse(request.Payment)
+		_, err := s.paymentValidator.Parse(request.Payment)
 		if err != nil {
 			return transformError(err)
 		}
 	}
 
-	err = tpipfs.TransformSecrets(pod, tpipfs.DownloadSecrets(ctx, s.ipfs), tpipfs.DecryptSecrets(request.Keys))
+	secrets, err := DownloadSecrets(ctx, s.ipfs, request.Pod)
 	if err != nil {
 		return transformError(err)
 	}
-
-	if s.localOciRegistry != "" {
-		err = tpipfs.ReuploadImagesFromIpdr(pod, ctx, s.ipfs, s.localOciRegistry, nil, request.Keys)
-		if err != nil {
-			return transformError(err)
-		}
+	images, err := DownloadImages(ctx, s.ipfs, s.localOciRegistry, request.Pod)
+	if err != nil {
+		return transformError(err)
 	}
 
 	response := &pb.ProvisionPodResponse{}
 	namespace := tpk8s.NewTrustedPodsNamespace(request.Payment)
 	err = tpk8s.RunInNamespaceOrRevert(ctx, s.k8cl, namespace, s.dryRun, func(cl client.Client) error {
-		return tpk8s.ApplyPodRequest(ctx, cl, pod, false, namespace.ObjectMeta.Name, response)
+		return tpk8s.ApplyPodRequest(ctx, s.k8cl, namespace.ObjectMeta.Name, false, request.Pod, images, secrets, response)
 	})
 	if err != nil {
 		return transformError(err)

@@ -3,6 +3,7 @@ package apocryph.proto.v0.deployment;
 option go_package = "github.com/comrade-coop/trusted-pods/pkg/proto";
 
 import "provision-pod.proto";
+import "pod.proto";
 
 message Deployment {
   string podManifestFile = 1;
@@ -29,12 +30,12 @@ message UploadedImage {
   string sourceUrl = 1;
   string digest = 2;
   bytes cid = 3;
-  provisionPod.Key key = 4;
+  pod.Key key = 4;
 }
 
 message UploadedSecret {
   string volumeName = 1;
   bytes sha256sum = 2;
   bytes cid = 3;
-  provisionPod.Key key = 4;
+  pod.Key key = 4;
 }

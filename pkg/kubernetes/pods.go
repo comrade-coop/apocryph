@@ -154,7 +154,16 @@ func cleanNamespace(ctx context.Context, namespace string, activeRessources []st
 
 }
 
-func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Pod, patch bool, namespace string, response *pb.ProvisionPodResponse) error {
+func ApplyPodRequest(
+	ctx context.Context,
+	client k8cl.Client,
+	namespace string,
+	patch bool,
+	podManifest *pb.Pod,
+	images map[string]string,
+	secrets map[string][]byte,
+	response *pb.ProvisionPodResponse,
+) error {
 	labels := map[string]string{"tpod": "1"}
 	depLabels := map[string]string{}
 	activeRessource := []string{}
@@ -186,7 +195,7 @@ func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Po
 	for cIdx, container := range podManifest.Containers {
 		containerSpec := corev1.Container{
 			Name:       container.Name,
-			Image:      container.Image.Url,
+			Image:      images[container.Name],
 			Command:    container.Entrypoint,
 			Args:       container.Command,
 			WorkingDir: container.WorkingDir,
@@ -290,14 +299,13 @@ func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Po
 			}
 		case pb.Volume_VOLUME_SECRET:
 			var secretName = fmt.Sprintf("tpod-secret-%v", volume.Name)
-			secretBytes := volume.GetSecret().Contents
 
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: secretName,
 				},
 				Data: map[string][]byte{
-					"data": secretBytes,
+					"data": secrets[volume.Name],
 				},
 			}
 

@@ -91,7 +91,7 @@ func ProvisionPod(client pb.ProvisionPodServiceClient, publisherAddress []byte, 
 		log.Fatalf("failed uploading Manifest: %v", err)
 	}
 	request := &pb.ProvisionPodRequest{}
-	request.Pod = publisher.LinkUploadsFromDeployment(pod, &request.Keys, deployment)
+	request.Pod = publisher.LinkUploadsFromDeployment(pod, deployment)
 	request.Payment = &pb.PaymentChannel{PublisherAddress: publisherAddress}
 
 	response, err := client.ProvisionPod(context.Background(), request)
@@ -124,7 +124,7 @@ func UpdatePod(client pb.ProvisionPodServiceClient, credentials *pb.Credentials)
 		log.Fatalf("failed uploading Manifest: %v", err)
 	}
 	request := &pb.UpdatePodRequest{Credentials: credentials}
-	request.Pod = publisher.LinkUploadsFromDeployment(pod, &request.Keys, deployment)
+	request.Pod = publisher.LinkUploadsFromDeployment(pod, deployment)
 	response, err := client.UpdatePod(context.Background(), request)
 	if err != nil {
 		log.Printf("rpc update method failed: %v", err)

@@ -2,9 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io"
-	"os"
-	"path"
+	"path/filepath"
 
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
@@ -30,25 +28,27 @@ var applyManifestCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		manifestPath := args[0]
 
-		file, err := os.Open(manifestPath)
-		if err != nil {
-			return err
-		}
-
-		manifestContents, err := io.ReadAll(file)
-		if err != nil {
-			return err
-		}
-
 		pod := &pb.Pod{}
-		err = pb.Unmarshal(manifestFormat, manifestContents, pod)
+		err := pb.UnmarshalFile(manifestFormat, manifestPath, pod)
 		if err != nil {
 			return err
 		}
 
-		err = tpipfs.TransformSecrets(pod, tpipfs.ReadSecrets(path.Dir(manifestPath)))
-		if err != nil {
-			return err
+		images := make(map[string]string)
+		for _, c := range pod.Containers {
+			images[c.Name] = c.Image.Url
+		}
+
+		secrets := make(map[string][]byte)
+		for _, v := range pod.Volumes {
+			if v.Type == pb.Volume_VOLUME_SECRET {
+				secret := v.GetSecret()
+				contents, err := tpipfs.ReadSecret(filepath.Dir(manifestPath), secret)
+				if err != nil {
+					return err
+				}
+				secrets[v.Name] = contents
+			}
 		}
 
 		cl, err := tpk8s.GetClient(kubeConfig, dryRun)
@@ -58,8 +58,8 @@ var applyManifestCmd = &cobra.Command{
 
 		response := &pb.ProvisionPodResponse{}
 		namespace := tpk8s.NewTrustedPodsNamespace(nil)
-		err = tpk8s.RunInNamespaceOrRevert(cmd.Context(), cl, tpk8s.NewTrustedPodsNamespace(nil), dryRun, func(cl client.Client) error {
-			return tpk8s.ApplyPodRequest(cmd.Context(), cl, pod, false, namespace.ObjectMeta.Name, response)
+		err = tpk8s.RunInNamespaceOrRevert(cmd.Context(), cl, namespace, dryRun, func(cl client.Client) error {
+			return tpk8s.ApplyPodRequest(cmd.Context(), cl, namespace.ObjectMeta.Name, false, pod, images, secrets, response)
 		})
 		if err != nil {
 			return err
@@ -77,7 +77,7 @@ var applyManifestCmd = &cobra.Command{
 func init() {
 	manifestCmd.AddCommand(applyManifestCmd)
 
-	applyManifestCmd.Flags().StringVar(&manifestFormat, "format", "pb", fmt.Sprintf("Manifest format. One of %v", pb.FormatNames))
+	applyManifestCmd.Flags().StringVar(&manifestFormat, "format", "", fmt.Sprintf("Manifest format. One of %v", pb.FormatNames))
 
 	applyManifestCmd.Flags().BoolVarP(&dryRun, "dry-run", "z", false, "Dry run mode; modify nothing.")
 	applyManifestCmd.Flags().StringVar(&kubeConfig, "kubeconfig", "", "absolute path to the kubeconfig file (leave blank for the first of in-cluster config and ~/.kube/config)")
