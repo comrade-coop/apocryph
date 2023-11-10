@@ -22,11 +22,22 @@ spec:
   - name: rpc
     port: 5001
     targetPort: rpc
-  clusterIP: None
+  - name: swarm-tcp
+    port: 4001
+    protocol: TCP
+    targetPort: swarm-tcp
+  - name: swarm-udp
+    port: 4001
+    protocol: UDP
+    targetPort: swarm-udp
+  - name: gateway
+    port: 8080
+    protocol: TCP
+    targetPort: gateway
+  type: NodePort
   selector:
     app: ipfs
 ---
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -73,7 +84,17 @@ spec:
     spec:
       containers:
       - name: ipfs
-        image: ipfs/kubo
+        image: docker.io/ipfs/kubo:v0.23.0
         ports:
-        - containerPort: 5001
+        - name: rpc
+          containerPort: 5001
+          protocol: TCP
+        - name: swarm-tcp
+          containerPort: 4001
+          protocol: TCP
+        - name: swarm-udp
+          containerPort: 4001
+          protocol: UDP
+        - name: gateway
+          containerPort: 8080
       serviceAccountName: devserver-serviceaccount

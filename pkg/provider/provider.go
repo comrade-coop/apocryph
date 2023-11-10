@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -14,7 +15,9 @@ import (
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ipfs/kubo/client/rpc"
+	"golang.org/x/exp/slices"
 	"google.golang.org/grpc"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -81,13 +84,22 @@ func (s *provisionPodServer) UpdatePod(ctx context.Context, request *pb.UpdatePo
 
 func (s *provisionPodServer) GetPodLogs(request *pb.PodLogRequest, srv pb.ProvisionPodService_GetPodLogsServer) error {
 	log.Println("Received Log request")
-	// verify if container exists or not
-	p := &v1.Namespace{}
 
 	namespace := "tpod-" + strings.ToLower(common.BytesToAddress(request.Credentials.PublisherAddress).String())
-	err := s.k8cl.Get(context.Background(), client.ObjectKey{Namespace: namespace, Name: namespace}, p)
+	deploymentName := "tpod-dep-" + namespace
+	deployment := appsv1.Deployment{}
+	key := client.ObjectKey{Namespace: namespace, Name: deploymentName}
+	err := s.k8cl.Get(context.Background(), key, &deployment)
 	if err != nil {
 		return err
+	}
+	for key, value := range deployment.GetLabels() {
+		if key == "containers" {
+			containers := strings.Split(value, "_")
+			if !slices.Contains(containers, request.ContainerName) {
+				return errors.New("Container Does not exist")
+			}
+		}
 	}
 
 	err = loki.GetStreamedEntries(namespace, request.ContainerName, srv, s.loki.Host)
@@ -140,7 +152,7 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.Provi
 }
 
 func NewTPodServer(ipfsApi *rpc.HttpApi, dryRun bool, k8cl client.Client, localOciRegistry string, validator *ethereum.PaymentChannelValidator, lokiHost string) (*grpc.Server, error) {
-	server := grpc.NewServer(grpc.UnaryInterceptor(pb.AuthUnaryServerInterceptor()))
+	server := grpc.NewServer(grpc.UnaryInterceptor(pb.AuthUnaryServerInterceptor(k8cl)))
 
 	pb.RegisterProvisionPodServiceServer(server, &provisionPodServer{
 		ipfs:             ipfsApi,

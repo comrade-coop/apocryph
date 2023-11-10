@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/comrade-coop/trusted-pods/pkg/publisher"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -24,7 +25,12 @@ func main() {
 		println("Usage: server <Server-Address>")
 		return
 	}
-	serverAddress := os.Args[1]
+	minikubeIp := os.Args[1]
+	grpcPort := os.Args[2]
+	ipfsPort := os.Args[3]
+	serverAddress := fmt.Sprintf("%v:%v", minikubeIp, grpcPort)
+	ipfsAddress := fmt.Sprintf("/ip4/%v/tcp/%v", minikubeIp, ipfsPort)
+
 	conn, err := grpc.Dial(serverAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Printf("Could not dial server: %v", serverAddress)
@@ -46,9 +52,11 @@ func main() {
 		fmt.Printf("could not sign message: %v", err)
 	}
 	Credentials := &pb.Credentials{PublisherAddress: publisherAddress, Signature: signature}
-	ipfs, err = rpc.NewLocalApi()
+
+	ipfs, _, err = tpipfs.GetIpfsClient(ipfsAddress)
+
 	if err != nil {
-		log.Printf("Failed to Connect to local ipfs node: %v", err)
+		fmt.Printf("failed to retreived Ipfs Client: %v", err)
 		return
 	}
 

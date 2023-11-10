@@ -156,12 +156,14 @@ func cleanNamespace(ctx context.Context, namespace string, activeRessources []st
 
 func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Pod, patch bool, namespace string, response *pb.ProvisionPodResponse) error {
 	labels := map[string]string{"tpod": "1"}
+	depLabels := map[string]string{}
 	activeRessource := []string{}
 	startupReplicas := int32(0)
 	var deploymentName = fmt.Sprintf("tpod-dep-%v", namespace)
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: deploymentName,
+			Name:   deploymentName,
+			Labels: depLabels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &startupReplicas,
@@ -243,6 +245,11 @@ func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Po
 		// TODO: Enforce specifying resources?
 		podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, containerSpec)
 		localhostAliases.Hostnames = append(localhostAliases.Hostnames, container.Name)
+		if depLabels["containers"] == "" {
+			depLabels["containers"] = containerSpec.Name
+		} else {
+			depLabels["containers"] = depLabels["containers"] + "_" + containerSpec.Name
+		}
 	}
 	podTemplate.Spec.HostAliases = append(podTemplate.Spec.HostAliases, localhostAliases)
 	for _, volume := range podManifest.Volumes {
@@ -272,7 +279,7 @@ func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Po
 				persistentVolumeClaim.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany}
 			}
 
-			err := patchOrCreate(ctx, volumeName, "Volume", namespace, persistentVolumeClaim, client, patch)
+			err := updateOrCreate(ctx, volumeName, "Volume", namespace, persistentVolumeClaim, client, patch)
 			if err != nil {
 				return err
 			}
@@ -294,7 +301,7 @@ func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Po
 				},
 			}
 
-			err := patchOrCreate(ctx, secretName, "Secret", namespace, secret, client, patch)
+			err := updateOrCreate(ctx, secretName, "Secret", namespace, secret, client, patch)
 			if err != nil {
 				return err
 			}
@@ -306,7 +313,7 @@ func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Po
 		}
 		podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, volumeSpec)
 	}
-	err := patchOrCreate(ctx, deploymentName, "Deployment", namespace, deployment, client, patch)
+	err := updateOrCreate(ctx, deploymentName, "Deployment", namespace, deployment, client, patch)
 	if err != nil {
 		return err
 	}
@@ -327,7 +334,7 @@ func ApplyPodRequest(ctx context.Context, client k8cl.Client, podManifest *pb.Po
 			httpSO.Spec.TargetPendingRequests = &targetPendingRequests
 		}
 
-		err := patchOrCreate(ctx, httpSoName, "HttpSo", namespace, httpSO, client, patch)
+		err := updateOrCreate(ctx, httpSoName, "HttpSo", namespace, httpSO, client, patch)
 		if err != nil {
 			return err
 		}

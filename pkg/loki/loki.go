@@ -129,7 +129,6 @@ func GetStreamedEntries(namespace, containerName string, srv pb.ProvisionPodServ
 	queryValues.Set("query", fmt.Sprintf("{container=\"%s\",namespace=\"%s\"}", containerName, namespace))
 	baseURL.RawQuery = queryValues.Encode()
 	requestURL = baseURL.String()
-	fmt.Printf("Loki Request Url: %v \n", requestURL)
 
 	c, _, err := websocket.DefaultDialer.Dial(requestURL, nil)
 	if err != nil {

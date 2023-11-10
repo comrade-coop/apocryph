@@ -6,6 +6,14 @@
 MINIKUBE_IP=$(minikube ip)
 
 SERVER_PORT=$(kubectl get svc devserver -n devspace -o jsonpath='{.spec.ports[0].nodePort}')
-go run publisher.go $MINIKUBE_IP:$SERVER_PORT
+IPFS_PORT=$(kubectl get svc ipfs -n devspace -o jsonpath='{.spec.ports[0].nodePort}')
+# knwon k8s issue, broken pipes when transfering large files
+# kubectl port-forward --namespace devspace svc/ipfs 5001:5001 > /dev/null & sleep 0.5;
+# kubectl port-forward --namespace devspace svc/ipfs 4001:4001 > /dev/null & sleep 0.5;
+# kubectl port-forward --namespace devspace svc/ipfs 8080:8080 > /dev/null & sleep 0.5;
+
+# PROVIDER_IPFS=$(curl -X POST "http://$MINIKUBE_IP:$IPFS_PORT/api/v0/id" | jq '.ID' -r); echo $PROVIDER_IPFS
+
+go run publisher.go $MINIKUBE_IP $SERVER_PORT $IPFS_PORT
 
 rm -r ./keystore
