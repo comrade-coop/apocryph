@@ -164,6 +164,10 @@ func ApplyPodRequest(
 	secrets map[string][]byte,
 	response *pb.ProvisionPodResponse,
 ) error {
+	if podManifest == nil {
+		return fmt.Errorf("Expected value for pod")
+	}
+
 	labels := map[string]string{"tpod": "1"}
 	depLabels := map[string]string{}
 	activeRessource := []string{}
@@ -329,9 +333,9 @@ func ApplyPodRequest(
 
 	if httpSO.Spec.ScaleTargetRef.Service != "" {
 		httpSO.Spec.ScaleTargetRef.Deployment = deployment.ObjectMeta.Name
-		minReplicas := int32(podManifest.Replicas.Min)
-		maxReplicas := int32(podManifest.Replicas.Max)
-		targetPendingRequests := int32(podManifest.Replicas.TargetPendingRequests)
+		minReplicas := int32(podManifest.Replicas.GetMin())
+		maxReplicas := int32(podManifest.Replicas.GetMax())
+		targetPendingRequests := int32(podManifest.Replicas.GetTargetPendingRequests())
 		httpSO.Spec.Replicas = &kedahttpv1alpha1.ReplicaStruct{
 			Min: &minReplicas,
 		}
