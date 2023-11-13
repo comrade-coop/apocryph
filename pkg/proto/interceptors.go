@@ -23,6 +23,28 @@ type HasCredentials interface{ GetCredentials() *Credentials }
 
 // func (p *PodLogRequest) GetCredentials() *Credentials { return p.Credentials }
 
+func NoCrashUnaryServerInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (res any, err error) {
+	defer func() {
+		if errRecover := recover(); errRecover != nil {
+			fmt.Printf("Caught panic while processing GRPC call! %v %v\n", info, errRecover)
+			err = fmt.Errorf("panic: %v", errRecover)
+		}
+	}()
+	res, err = handler(ctx, req)
+	return
+}
+
+func NoCrashStreamServerInterceptor(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
+	defer func() {
+		if errRecover := recover(); errRecover != nil {
+			fmt.Printf("Caught panic while processing GRPC call! %v %v\n", info, errRecover)
+			err = fmt.Errorf("panic: %v", errRecover)
+		}
+	}()
+	err = handler(srv, ss)
+	return
+}
+
 func AuthUnaryServerInterceptor(c client.Client) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		if info.FullMethod != "/apocryph.proto.v0.provisionPod.ProvisionPodService/ProvisionPod" {

@@ -141,7 +141,10 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.Provi
 }
 
 func NewTPodServer(ipfsApi *rpc.HttpApi, dryRun bool, k8cl client.Client, localOciRegistry string, validator *ethereum.PaymentChannelValidator, lokiHost string) (*grpc.Server, error) {
-	server := grpc.NewServer(grpc.UnaryInterceptor(pb.AuthUnaryServerInterceptor(k8cl)))
+	server := grpc.NewServer(
+		grpc.ChainStreamInterceptor(pb.NoCrashStreamServerInterceptor),
+		grpc.ChainUnaryInterceptor(pb.NoCrashUnaryServerInterceptor, pb.AuthUnaryServerInterceptor(k8cl)),
+	)
 
 	pb.RegisterProvisionPodServiceServer(server, &provisionPodServer{
 		ipfs:             ipfsApi,
