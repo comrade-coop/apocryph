@@ -1,7 +1,6 @@
 package kubernetes
 
 import (
-	"fmt"
 	"strings"
 
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
@@ -23,7 +22,6 @@ var TrustedPodsNamespaceFilter = client.HasLabels{LabelTrustedPodsNamespace}
 
 func NewTrustedPodsNamespace(paymentChannel *pb.PaymentChannel) *corev1.Namespace {
 	name := "tpod-" + strings.ToLower(common.BytesToAddress(paymentChannel.PublisherAddress).String()+"-"+string(paymentChannel.PodID))
-	fmt.Printf("namespace: %v\n", name)
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,

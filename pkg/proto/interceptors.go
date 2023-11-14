@@ -13,6 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -140,6 +141,13 @@ func authenticate(md metadata.MD, c client.Client) error {
 		return err
 	}
 
+	// verify publisherAddress in namespace is same one signed in token
+	namespace := md.Get("namespace")[0]
+	publisherAddress := strings.Split(namespace, "-")[1]
+	tokenAddress := strings.ToLower(common.BytesToAddress(token.Publisher).String())
+	if publisherAddress != tokenAddress {
+		return status.Errorf(codes.Unauthenticated, "Inavlid namespace")
+	}
 	if !valid {
 		return status.Errorf(codes.Unauthenticated, "Invalid signature")
 	}
