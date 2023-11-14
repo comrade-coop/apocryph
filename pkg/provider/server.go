@@ -128,7 +128,7 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.Provi
 	response := &pb.ProvisionPodResponse{}
 	namespace := tpk8s.NewTrustedPodsNamespace(request.Payment)
 	err = tpk8s.RunInNamespaceOrRevert(ctx, s.k8cl, namespace, s.dryRun, func(cl client.Client) error {
-		return tpk8s.ApplyPodRequest(ctx, s.k8cl, namespace.ObjectMeta.Name, false, request.Pod, images, secrets, response)
+		return tpk8s.ApplyPodRequest(ctx, cl, namespace.ObjectMeta.Name, false, request.Pod, images, secrets, response)
 	})
 	if err != nil {
 		return transformError(err)
