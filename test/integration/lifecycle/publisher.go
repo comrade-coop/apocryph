@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
@@ -31,51 +32,52 @@ func main() {
 	serverAddress := fmt.Sprintf("%v:%v", minikubeIp, grpcPort)
 	ipfsAddress := fmt.Sprintf("/ip4/%v/tcp/%v", minikubeIp, ipfsPort)
 
-	conn, err := grpc.Dial(serverAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Printf("Could not dial server: %v", serverAddress)
-		return
-	}
-
-	defer conn.Close()
-
 	ks := keystore.NewKeyStore("./keystore", keystore.StandardScryptN, keystore.StandardScryptP)
 	acc, err := ks.NewAccount("123")
 	if err != nil {
 		fmt.Printf("could not create account %v", err)
 		return
 	}
-	publisherAddress := []byte(acc.Address.Hex())
-
-	signature, err := pb.SignPayload(publisherAddress, acc, "123", ks)
-	if err != nil {
-		fmt.Printf("could not sign message: %v", err)
-	}
-	Credentials := &pb.Credentials{PublisherAddress: publisherAddress, Signature: signature}
+	publisherAddress := acc.Address.Bytes()
 
 	ipfs, _, err = tpipfs.GetIpfsClient(ipfsAddress)
 
 	if err != nil {
-		fmt.Printf("failed to retreived Ipfs Client: %v", err)
-		return
+		log.Fatalf("failed to retreived Ipfs Client: %v", err)
+	}
+	token := pb.Token{PodId: "123456", Operation: pb.CreatePod, ExpirationTime: time.Now().Add(10 * time.Second), Publisher: publisherAddress}
+	interceptor := &pb.AuthInterceptorClient{Token: token, Account: acc, Keystore: ks, ExpirationOffset: 2 * time.Second}
+
+	conn, err := grpc.Dial(serverAddress, grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(interceptor.UnaryClientInterceptor()),
+		grpc.WithStreamInterceptor(interceptor.StreamClientInterceptor()))
+	if err != nil {
+		log.Fatalf("Could not dial server: %v", serverAddress)
 	}
 
-	reader := bufio.NewReader(os.Stdin)
+	defer conn.Close()
+
 	client := pb.NewProvisionPodServiceClient(conn)
+	reader := bufio.NewReader(os.Stdin)
 
+	// Create Pod
 	containerName := ProvisionPod(client, publisherAddress, "./manifest-guestbook.json")
-	go GetPodLogs(client, &pb.PodLogRequest{ContainerName: containerName, Credentials: Credentials})
 
+	// Get Pod logs
+	go GetPodLogs(client, &pb.PodLogRequest{ContainerName: containerName, PublisherAddress: publisherAddress})
+	// Update Pod
 	log.Printf("Press Enter to Update Pod \n\n")
 	_, _ = reader.ReadString('\n')
-	containerName = UpdatePod(client, Credentials)
-	// retreived logs for the updated container
-	go GetPodLogs(client, &pb.PodLogRequest{ContainerName: containerName, Credentials: Credentials})
+	// containerName = UpdatePod(client, Credentials)
+	UpdatePod(client, publisherAddress)
 
+	// retreived logs for the updated container
+	go GetPodLogs(client, &pb.PodLogRequest{ContainerName: containerName, PublisherAddress: publisherAddress})
+
+	// Delete Pod
 	log.Printf("Press Enter to Delete Namespace\n\n")
 	_, _ = reader.ReadString('\n')
-
-	DeletePod(client, &pb.DeletePodRequest{Credentials: Credentials})
+	DeletePod(client, &pb.DeletePodRequest{PublisherAddress: publisherAddress})
 }
 
 func ProvisionPod(client pb.ProvisionPodServiceClient, publisherAddress []byte, podPath string) string {
@@ -90,9 +92,9 @@ func ProvisionPod(client pb.ProvisionPodServiceClient, publisherAddress []byte, 
 	if err != nil {
 		log.Fatalf("failed uploading Manifest: %v", err)
 	}
-	request := &pb.ProvisionPodRequest{}
+	request := &pb.ProvisionPodRequest{PublisherAddress: publisherAddress}
 	request.Pod = publisher.LinkUploadsFromDeployment(pod, deployment)
-	request.Payment = &pb.PaymentChannel{PublisherAddress: publisherAddress}
+	request.Payment = &pb.PaymentChannel{PublisherAddress: publisherAddress, PodID: []byte("123456")}
 
 	response, err := client.ProvisionPod(context.Background(), request)
 	if err != nil {
@@ -111,7 +113,7 @@ func DeletePod(client pb.ProvisionPodServiceClient, request *pb.DeletePodRequest
 	log.Printf("Pod Deletion response: %v", response)
 }
 
-func UpdatePod(client pb.ProvisionPodServiceClient, credentials *pb.Credentials) string {
+func UpdatePod(client pb.ProvisionPodServiceClient, publisherAddress []byte) string {
 
 	podFile, _, pod, deployment, err := publisher.ReadPodAndDeployment([]string{"./updated-logger.json"}, "", "")
 
@@ -123,7 +125,7 @@ func UpdatePod(client pb.ProvisionPodServiceClient, credentials *pb.Credentials)
 	if err != nil {
 		log.Fatalf("failed uploading Manifest: %v", err)
 	}
-	request := &pb.UpdatePodRequest{Credentials: credentials}
+	request := &pb.UpdatePodRequest{PublisherAddress: publisherAddress}
 	request.Pod = publisher.LinkUploadsFromDeployment(pod, deployment)
 	response, err := client.UpdatePod(context.Background(), request)
 	if err != nil {

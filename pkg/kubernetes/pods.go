@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
@@ -172,7 +173,8 @@ func ApplyPodRequest(
 	depLabels := map[string]string{}
 	activeRessource := []string{}
 	startupReplicas := int32(0)
-	var deploymentName = fmt.Sprintf("tpod-dep-%v", namespace)
+	podId := strings.Split(namespace, "-")[2]
+	var deploymentName = fmt.Sprintf("tpod-dep-%v", podId)
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   deploymentName,
@@ -191,7 +193,7 @@ func ApplyPodRequest(
 
 	podTemplate := &deployment.Spec.Template
 
-	httpSoName := fmt.Sprintf("tpod-httpso-%v", namespace)
+	httpSoName := fmt.Sprintf("tpod-httpso-%v", podId)
 	httpSO := NewHttpSo(namespace, httpSoName)
 
 	localhostAliases := corev1.HostAlias{IP: "127.0.0.1"}

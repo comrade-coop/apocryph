@@ -61,8 +61,8 @@ func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, depl
 			}
 		} else {
 			request := &pb.UpdatePodRequest{
-				Pod:         pod,
-				Credentials: &pb.Credentials{},
+				Pod:              pod,
+				PublisherAddress: deployment.Payment.PublisherAddress,
 			}
 			response, err = client.UpdatePod(ctx, request)
 			if err != nil {
@@ -78,7 +78,7 @@ func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, depl
 		fmt.Fprintf(os.Stderr, "Successfully deployed! %v\n", response)
 	} else {
 		request := &pb.DeletePodRequest{
-			Credentials: &pb.Credentials{},
+			PublisherAddress: deployment.Payment.PublisherAddress,
 		}
 		response, err := client.DeletePod(ctx, request)
 		if err != nil {

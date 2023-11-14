@@ -8,6 +8,7 @@ require (
 	github.com/containers/ocicrypt v1.1.8
 	github.com/ethereum/go-ethereum v1.13.3
 	github.com/go-jose/go-jose/v3 v3.0.0
+	github.com/gogo/status v1.1.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/ipfs/boxo v0.13.1
 	github.com/ipfs/go-cid v0.4.1
@@ -101,6 +102,7 @@ require (
 	github.com/go-openapi/validate v0.22.1 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/gofrs/flock v0.8.1 // indirect
+	github.com/gogo/googleapis v0.0.0-20180223154316-0cd9801be74a // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect

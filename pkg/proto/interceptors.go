@@ -3,23 +3,35 @@ package proto
 import (
 	context "context"
 	"crypto/ecdsa"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log"
-	"reflect"
+	reflect "reflect"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	status "google.golang.org/grpc/status"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type HasCredentials interface{ GetCredentials() *Credentials }
+const (
+	tpPrefix      = "tpod"
+	CreatePod     = "/apocryph.proto.v0.provisionPod.ProvisionPodService/ProvisionPod"
+	UpdatePod     = "/apocryph.proto.v0.provisionPod.ProvisionPodService/UpdatePod"
+	DeletePod     = "/apocryph.proto.v0.provisionPod.ProvisionPodService/DeletePod"
+	GetPodLogs    = "/apocryph.proto.v0.provisionPod.ProvisionPodService/GetPodLogs"
+	authorization = "Authorization"
+)
+
+type HasPubAddress interface{ GetPublisherAddress() []byte }
 
 // func (p *PodLogRequest) GetCredentials() *Credentials { return p.Credentials }
 
@@ -45,39 +57,161 @@ func NoCrashStreamServerInterceptor(srv any, ss grpc.ServerStream, info *grpc.St
 	return
 }
 
+func AuthStreamServerInterceptor(c client.Client) grpc.StreamServerInterceptor {
+	return func(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		fmt.Printf("Authenticating gRPC call: %v \n", info.FullMethod)
+
+		// Extract metadata from the incoming context
+		md, ok := metadata.FromIncomingContext(stream.Context())
+		if !ok {
+			return status.Errorf(codes.Unauthenticated, "metadata not found")
+		}
+
+		err := authenticate(md, c)
+		if err != nil {
+			return err
+		}
+
+		// Call the handler function
+		err = handler(srv, stream)
+		if err != nil {
+			log.Printf("Error handling stream: %v\n", err)
+		}
+		return err
+	}
+}
 func AuthUnaryServerInterceptor(c client.Client) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-		if info.FullMethod != "/apocryph.proto.v0.provisionPod.ProvisionPodService/ProvisionPod" {
-			fmt.Printf("Authenticating gRPC call: %v \n", info.FullMethod)
-			// Extract the credentials from the request
-			credentials := req.(HasCredentials).GetCredentials()
-			// because the auto-genrated protobuf code only checks the whole message not the internal field
-			if credentials == nil {
-				return nil, status.Errorf(codes.Unauthenticated, "Empty Credentials")
-			}
+		fmt.Printf("Authenticating gRPC call: %v \n", info.FullMethod)
+		md, ok := metadata.FromIncomingContext(ctx)
+		if !ok {
+			return nil, status.Errorf(codes.Unauthenticated, "metadata not found")
+		}
 
+		err := authenticate(md, c)
+		if err != nil {
+			return nil, err
+		}
+
+		// verify that pod exists for the rest of the methods
+		if info.FullMethod != CreatePod {
 			p := &v1.Namespace{}
-			namespace := "tpod-" + strings.ToLower(common.BytesToAddress(credentials.PublisherAddress).String())
-			err := c.Get(context.Background(), client.ObjectKey{Namespace: namespace, Name: namespace}, p)
+			namespace := md.Get("namespace")[0]
+			err = c.Get(context.Background(), client.ObjectKey{Namespace: namespace, Name: namespace}, p)
 			if err != nil {
 				return nil, err
-			}
-
-			// Perform authentication
-			valid, err := VerifyPayload(credentials.PublisherAddress, credentials.Signature)
-			if err != nil {
-				log.Printf("Error verifying payload: %v\n", err)
-				return nil, err
-			}
-
-			if !valid {
-				return nil, status.Errorf(codes.Unauthenticated, "Invalid signature")
 			}
 		}
+
 		// Call the handler function
 		return handler(ctx, req)
 	}
 }
+
+func authenticate(md metadata.MD, c client.Client) error {
+	auth := md.Get(authorization)
+	if len(auth) == 0 {
+		return status.Errorf(codes.Unauthenticated, "Empty Authentication field")
+	}
+	signature, err := base64.StdEncoding.DecodeString(auth[0])
+	if err != nil {
+		return err
+	}
+	tokenMd := md.Get("token")[0]
+	jsonData, err := base64.StdEncoding.DecodeString(tokenMd)
+	if err != nil {
+		return err
+	}
+
+	// verify if token has exired or not
+	token := &Token{}
+	err = json.Unmarshal(jsonData, token)
+	if err != nil {
+		return status.Errorf(codes.DataLoss, "Failed Unmarshalling token")
+	}
+	if time.Now().After(token.ExpirationTime) {
+		return status.Errorf(codes.DeadlineExceeded, "Token Expired")
+	}
+
+	// Verify Signature
+	valid, err := VerifyPayload(token.Publisher, jsonData, signature)
+	if err != nil {
+		log.Printf("Error verifying payload: %v\n", err)
+		return err
+	}
+
+	if !valid {
+		return status.Errorf(codes.Unauthenticated, "Invalid signature")
+	}
+
+	return nil
+}
+
+type AuthInterceptorClient struct {
+	Token            Token
+	Account          accounts.Account
+	Signature        string
+	ExpirationOffset time.Duration
+	Keystore         *keystore.KeyStore
+}
+
+type Token struct {
+	PodId          string
+	Operation      string
+	ExpirationTime time.Time
+	Publisher      []byte
+}
+
+func (a *AuthInterceptorClient) UnaryClientInterceptor() grpc.UnaryClientInterceptor {
+	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		a.updateContext(&ctx)
+		return invoker(ctx, method, req, reply, cc, opts...)
+	}
+}
+
+func (a *AuthInterceptorClient) StreamClientInterceptor() grpc.StreamClientInterceptor {
+	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
+		a.updateContext(&ctx)
+		// Call the streamer function to obtain a client stream
+		clientStream, err := streamer(ctx, desc, cc, method, opts...)
+		if err != nil {
+			return nil, err
+		}
+
+		return clientStream, nil
+	}
+}
+
+func (a *AuthInterceptorClient) token() []byte {
+	jsonData, err := json.Marshal(a.Token)
+	if err != nil {
+		return nil
+	}
+	return jsonData
+}
+
+func (a *AuthInterceptorClient) updateContext(ctx *context.Context) error {
+
+	// check if reached expiring date or first call to create a new signature
+	if time.Now().After(a.Token.ExpirationTime) || a.Signature == "" {
+		fmt.Println("Token Expired, Signing a New one ...")
+		a.Token.ExpirationTime = time.Now().Add(a.ExpirationOffset)
+		signature, err := SignPayload(a.token(), a.Account, "123", a.Keystore)
+		if err != nil {
+			return err
+		}
+		a.Signature = base64.StdEncoding.EncodeToString(signature)
+	}
+	token := base64.StdEncoding.EncodeToString(a.token())
+	namespace := "tpod-" + strings.ToLower(a.Account.Address.String()+"-"+a.Token.PodId)
+
+	// Append custom metadata to the outgoing context
+	*ctx = metadata.AppendToOutgoingContext(*ctx, authorization, a.Signature)
+	*ctx = metadata.AppendToOutgoingContext(*ctx, "token", token)
+	*ctx = metadata.AppendToOutgoingContext(*ctx, "namespace", namespace)
+	return nil
+}
+
 func SignPayload(data []byte, acc accounts.Account, psw string, ks *keystore.KeyStore) ([]byte, error) {
 	hash := crypto.Keccak256(data)
 	signature, err := ks.SignHashWithPassphrase(acc, psw, hash)
@@ -87,7 +221,7 @@ func SignPayload(data []byte, acc accounts.Account, psw string, ks *keystore.Key
 	return signature, nil
 }
 
-func VerifyPayload(message []byte, signature []byte) (bool, error) {
+func VerifyPayload(publisher, message []byte, signature []byte) (bool, error) {
 
 	pubKeyECDSA, err := ExtractPubKey(message, signature)
 	if err != nil {
@@ -97,9 +231,9 @@ func VerifyPayload(message []byte, signature []byte) (bool, error) {
 	// Ensure the signed address corresponds to the public key's address in the signature.
 	// The signer should exclusively sign their own address;
 	// thus, only the pods associated with their address used as IDs will be affected.
-	address := []byte(crypto.PubkeyToAddress(*pubKeyECDSA).Hex())
+	address := crypto.PubkeyToAddress(*pubKeyECDSA).Bytes()
 
-	if !reflect.DeepEqual(message, address) {
+	if !reflect.DeepEqual(publisher, address) {
 		return false, nil
 	}
 

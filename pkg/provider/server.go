@@ -12,10 +12,12 @@ import (
 	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
 	"github.com/comrade-coop/trusted-pods/pkg/loki"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/gogo/status"
 	"github.com/ipfs/kubo/client/rpc"
 	"golang.org/x/exp/slices"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,7 +43,11 @@ func transformError(err error) (*pb.ProvisionPodResponse, error) {
 func (s *provisionPodServer) DeletePod(ctx context.Context, request *pb.DeletePodRequest) (*pb.DeletePodResponse, error) {
 	log.Println("Received request for pod deletion")
 
-	namespace := "tpod-" + strings.ToLower(common.BytesToAddress(request.Credentials.PublisherAddress).String())
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, status.Errorf(codes.Unauthenticated, "metadata not found")
+	}
+	namespace := md.Get("namespace")[0]
 	// Create a new namespace object
 	ns := &v1.Namespace{
 		ObjectMeta: meta.ObjectMeta{
@@ -70,7 +76,11 @@ func (s *provisionPodServer) UpdatePod(ctx context.Context, request *pb.UpdatePo
 		return transformError(err)
 	}
 
-	namespace := "tpod-" + strings.ToLower(common.BytesToAddress(request.Credentials.PublisherAddress).String())
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, status.Errorf(codes.Unauthenticated, "metadata not found")
+	}
+	namespace := md.Get("namespace")[0]
 	response := &pb.ProvisionPodResponse{}
 	err = tpk8s.ApplyPodRequest(ctx, s.k8cl, namespace, true, request.Pod, images, secrets, response)
 
@@ -80,8 +90,14 @@ func (s *provisionPodServer) UpdatePod(ctx context.Context, request *pb.UpdatePo
 func (s *provisionPodServer) GetPodLogs(request *pb.PodLogRequest, srv pb.ProvisionPodService_GetPodLogsServer) error {
 	log.Println("Received Log request")
 
-	namespace := "tpod-" + strings.ToLower(common.BytesToAddress(request.Credentials.PublisherAddress).String())
-	deploymentName := "tpod-dep-" + namespace
+	md, ok := metadata.FromIncomingContext(srv.Context())
+	if !ok {
+		return status.Errorf(codes.Unauthenticated, "metadata not found")
+	}
+
+	namespace := md.Get("namespace")[0]
+	podId := strings.Split(namespace, "-")[2]
+	deploymentName := "tpod-dep-" + podId
 	deployment := appsv1.Deployment{}
 	key := client.ObjectKey{Namespace: namespace, Name: deploymentName}
 	err := s.k8cl.Get(context.Background(), key, &deployment)
@@ -143,6 +159,7 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.Provi
 func NewTPodServer(ipfsApi *rpc.HttpApi, dryRun bool, k8cl client.Client, localOciRegistry string, validator *ethereum.PaymentChannelValidator, lokiHost string) (*grpc.Server, error) {
 	server := grpc.NewServer(
 		grpc.ChainStreamInterceptor(pb.NoCrashStreamServerInterceptor),
+		grpc.ChainStreamInterceptor(pb.NoCrashStreamServerInterceptor, pb.AuthStreamServerInterceptor(k8cl)),
 		grpc.ChainUnaryInterceptor(pb.NoCrashUnaryServerInterceptor, pb.AuthUnaryServerInterceptor(k8cl)),
 	)
 
