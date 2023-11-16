@@ -141,13 +141,16 @@ func authenticate(md metadata.MD, c client.Client) error {
 		return err
 	}
 
-	// verify publisherAddress in namespace is same one signed in token
-	namespace := md.Get("namespace")[0]
-	publisherAddress := strings.Split(namespace, "-")[1]
+	// verify publisherAddress & podId in namespace are same ones signed in token
+	ns := md.Get("namespace")[0]
+	namespace := strings.Split(ns, "-")
+	publisherAddress := namespace[1]
+	podId := namespace[2]
 	tokenAddress := strings.ToLower(common.BytesToAddress(token.Publisher).String())
-	if publisherAddress != tokenAddress {
+	if publisherAddress != tokenAddress || podId != token.PodId {
 		return status.Errorf(codes.Unauthenticated, "Inavlid namespace")
 	}
+
 	if !valid {
 		return status.Errorf(codes.Unauthenticated, "Invalid signature")
 	}
