@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/comrade-coop/trusted-pods/pkg/crypto"
 	tpipdr "github.com/comrade-coop/trusted-pods/pkg/ipdr"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
+	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	imageCopy "github.com/containers/image/v5/copy"
 	"github.com/containers/image/v5/signature"
 	"github.com/containers/image/v5/transports"
@@ -39,6 +41,37 @@ func mainErr() error {
 		return err
 	}
 
+	copyOptions := &imageCopy.Options{
+		DestinationCtx: &types.SystemContext{},
+		SourceCtx:      &types.SystemContext{},
+	}
+
+	if len(os.Args) > 3 {
+		key := &pb.Key{}
+		err := pb.UnmarshalFile(os.Args[3], "", key)
+		if err != nil || len(key.Data) == 0 {
+			key, err = crypto.NewKey(crypto.KeyTypeOcicrypt)
+			if err != nil {
+				return err
+			}
+			err = pb.MarshalFile(os.Args[3], "", key)
+			if err != nil {
+				return err
+			}
+		}
+
+		cryptoConfig, err := crypto.GetCryptoConfigKey(key)
+		if err != nil {
+			return err
+		}
+
+		copyOptions.OciEncryptConfig = cryptoConfig.EncryptConfig
+		copyOptions.OciDecryptConfig = cryptoConfig.DecryptConfig
+		if dstImageReference.Transport().Name() == "ipdr" {
+			copyOptions.OciEncryptLayers = &[]int{}
+		}
+	}
+
 	policy, err := signature.DefaultPolicy(nil)
 	if err != nil {
 		return err
@@ -47,10 +80,7 @@ func mainErr() error {
 	pc, _ := signature.NewPolicyContext(policy)
 	defer pc.Destroy()
 
-	_, err = imageCopy.Image(context.Background(), pc, dstImageReference, srcImageReference, &imageCopy.Options{
-		DestinationCtx: &types.SystemContext{},
-		SourceCtx:      &types.SystemContext{},
-	})
+	_, err = imageCopy.Image(context.Background(), pc, dstImageReference, srcImageReference, copyOptions)
 	if err != nil {
 		return err
 	}

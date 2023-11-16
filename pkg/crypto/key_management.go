@@ -5,6 +5,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
 	"errors"
 
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
@@ -18,7 +19,7 @@ const (
 	KeyTypeAESGCM256 = "AESGCM256"
 )
 
-var KeyTypeOcicrypt = KeyTypeRsa4096 // NOTE: ocicrypt JWE keywrap does not allow us to use any JWK key algorithms other than RSA_OAEP
+var KeyTypeOcicrypt = KeyTypeEcdsaP256
 var KeyTypeEncrypt = KeyTypeAESGCM256
 
 func NewKey(keyType string) (*pb.Key, error) {
@@ -109,11 +110,11 @@ func GetCryptoConfigKey(key *pb.Key) (encconfig.CryptoConfig, error) {
 	if err != nil {
 		return encconfig.CryptoConfig{}, err
 	}
-	jwkPub, err := jwkUnmarshalled.Public().MarshalJSON()
+	keyPub, err := x509.MarshalPKIXPublicKey(jwkUnmarshalled.Public().Key) // TODO: https://github.com/containers/ocicrypt/pull/99 - jwkUnmarshalled.Public().MarshalJSON()
 	if err != nil {
 		return encconfig.CryptoConfig{}, err
 	}
-	encryptConfig, err := encconfig.EncryptWithJwe([][]byte{jwkPub})
+	encryptConfig, err := encconfig.EncryptWithJwe([][]byte{keyPub})
 	if err != nil {
 		return encconfig.CryptoConfig{}, err
 	}
