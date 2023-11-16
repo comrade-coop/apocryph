@@ -1,0 +1,22 @@
+{
+  "name": "trusted-pods",
+  "version": "0.1.0",
+  "description": "Trusted Pods is a decentralized compute marketplace where developers can run container pods securely and confidentially through small and medium cloud providers.",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/comrade-coop/trusted-pods.git"
+  },
+  "author": "",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/comrade-coop/trusted-pods/issues"
+  },
+  "homepage": "https://github.com/comrade-coop/trusted-pods#readme"
+}
