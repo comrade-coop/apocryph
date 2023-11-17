@@ -1,5 +1,8 @@
 import './style.css'
 import { setupCounter } from './counter.ts'
+import * as X from './connection.ts'
+
+window.X = X
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div>
