@@ -6,18 +6,17 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"strings"
 
+	"connectrpc.com/connect"
 	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
 	"github.com/comrade-coop/trusted-pods/pkg/loki"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
-	"github.com/gogo/status"
+	pbcon "github.com/comrade-coop/trusted-pods/pkg/proto/protoconnect"
 	"github.com/ipfs/kubo/client/rpc"
 	"golang.org/x/exp/slices"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,7 +24,7 @@ import (
 )
 
 type provisionPodServer struct {
-	pb.UnimplementedProvisionPodServiceServer
+	pbcon.UnimplementedProvisionPodServiceHandler
 	ipfs             *rpc.HttpApi
 	k8cl             client.Client
 	loki             loki.LokiConfig
@@ -34,20 +33,16 @@ type provisionPodServer struct {
 	dryRun           bool
 }
 
-func transformError(err error) (*pb.ProvisionPodResponse, error) {
-	return &pb.ProvisionPodResponse{
+func transformError(err error) (*connect.Response[pb.ProvisionPodResponse], error) {
+	return connect.NewResponse(&pb.ProvisionPodResponse{
 		Error: err.Error(),
-	}, nil
+	}), nil
 }
 
-func (s *provisionPodServer) DeletePod(ctx context.Context, request *pb.DeletePodRequest) (*pb.DeletePodResponse, error) {
+func (s *provisionPodServer) DeletePod(ctx context.Context, request *connect.Request[pb.DeletePodRequest]) (*connect.Response[pb.DeletePodResponse], error) {
 	log.Println("Received request for pod deletion")
 
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return nil, status.Errorf(codes.Unauthenticated, "metadata not found")
-	}
-	namespace := md.Get("namespace")[0]
+	namespace := request.Header().Get("namespace")
 	// Create a new namespace object
 	ns := &v1.Namespace{
 		ObjectMeta: meta.ObjectMeta{
@@ -62,40 +57,31 @@ func (s *provisionPodServer) DeletePod(ctx context.Context, request *pb.DeletePo
 		return nil, err
 	}
 	response := &pb.DeletePodResponse{Success: true}
-	return response, nil
+	return connect.NewResponse(response), nil
 }
 
-func (s *provisionPodServer) UpdatePod(ctx context.Context, request *pb.UpdatePodRequest) (*pb.ProvisionPodResponse, error) {
+func (s *provisionPodServer) UpdatePod(ctx context.Context, request *connect.Request[pb.UpdatePodRequest]) (*connect.Response[pb.ProvisionPodResponse], error) {
 	log.Println("Received request for updating pod")
-	secrets, err := DownloadSecrets(ctx, s.ipfs, request.Pod)
+	secrets, err := DownloadSecrets(ctx, s.ipfs, request.Msg.Pod)
 	if err != nil {
 		return transformError(err)
 	}
-	images, err := DownloadImages(ctx, s.ipfs, s.localOciRegistry, request.Pod)
+	images, err := DownloadImages(ctx, s.ipfs, s.localOciRegistry, request.Msg.Pod)
 	if err != nil {
 		return transformError(err)
 	}
 
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return nil, status.Errorf(codes.Unauthenticated, "metadata not found")
-	}
-	namespace := md.Get("namespace")[0]
+	namespace := request.Header().Get("namespace")
 	response := &pb.ProvisionPodResponse{}
-	err = tpk8s.ApplyPodRequest(ctx, s.k8cl, namespace, true, request.Pod, images, secrets, response)
+	err = tpk8s.ApplyPodRequest(ctx, s.k8cl, namespace, true, request.Msg.Pod, images, secrets, response)
 
-	return response, err
+	return connect.NewResponse(response), nil
 }
 
-func (s *provisionPodServer) GetPodLogs(request *pb.PodLogRequest, srv pb.ProvisionPodService_GetPodLogsServer) error {
+func (s *provisionPodServer) GetPodLogs(ctx context.Context, request *connect.Request[pb.PodLogRequest], srv *connect.ServerStream[pb.PodLogResponse]) error {
 	log.Println("Received Log request")
 
-	md, ok := metadata.FromIncomingContext(srv.Context())
-	if !ok {
-		return status.Errorf(codes.Unauthenticated, "metadata not found")
-	}
-
-	namespace := md.Get("namespace")[0]
+	namespace := request.Header().Get("namespace")
 	podId := strings.Split(namespace, "-")[1]
 	deploymentName := "tpod-dep-" + podId
 	deployment := appsv1.Deployment{}
@@ -107,13 +93,13 @@ func (s *provisionPodServer) GetPodLogs(request *pb.PodLogRequest, srv pb.Provis
 	for key, value := range deployment.GetLabels() {
 		if key == "containers" {
 			containers := strings.Split(value, "_")
-			if !slices.Contains(containers, request.ContainerName) {
+			if !slices.Contains(containers, request.Msg.ContainerName) {
 				return errors.New("Container Does not exist")
 			}
 		}
 	}
 
-	err = loki.GetStreamedEntries(namespace, request.ContainerName, srv, s.loki.Host)
+	err = loki.GetStreamedEntries(namespace, request.Msg.ContainerName, srv, s.loki.Host)
 	if err != nil {
 		return err
 	}
@@ -121,35 +107,31 @@ func (s *provisionPodServer) GetPodLogs(request *pb.PodLogRequest, srv pb.Provis
 	return nil
 }
 
-func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.ProvisionPodRequest) (*pb.ProvisionPodResponse, error) {
+func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *connect.Request[pb.ProvisionPodRequest]) (*connect.Response[pb.ProvisionPodResponse], error) {
 	fmt.Println("Received request for pod deployment")
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return nil, status.Errorf(codes.Unauthenticated, "metadata not found")
-	}
-	namespace := md.Get("namespace")[0]
+	namespace := request.Header().Get("namespace")
 
 	// TODO should return error (just usefull for now in testing lifecycle without payment)
 	if s.paymentValidator != nil {
-		_, err := s.paymentValidator.Parse(request.Payment)
+		_, err := s.paymentValidator.Parse(request.Msg.Payment)
 		if err != nil {
 			return transformError(err)
 		}
 	}
 
-	secrets, err := DownloadSecrets(ctx, s.ipfs, request.Pod)
+	secrets, err := DownloadSecrets(ctx, s.ipfs, request.Msg.Pod)
 	if err != nil {
 		return transformError(err)
 	}
-	images, err := DownloadImages(ctx, s.ipfs, s.localOciRegistry, request.Pod)
+	images, err := DownloadImages(ctx, s.ipfs, s.localOciRegistry, request.Msg.Pod)
 	if err != nil {
 		return transformError(err)
 	}
 
 	response := &pb.ProvisionPodResponse{}
-	ns := tpk8s.NewTrustedPodsNamespace(namespace, request.Payment)
+	ns := tpk8s.NewTrustedPodsNamespace(namespace, request.Msg.Payment)
 	err = tpk8s.RunInNamespaceOrRevert(ctx, s.k8cl, ns, s.dryRun, func(cl client.Client) error {
-		return tpk8s.ApplyPodRequest(ctx, cl, ns.ObjectMeta.Name, false, request.Pod, images, secrets, response)
+		return tpk8s.ApplyPodRequest(ctx, cl, ns.ObjectMeta.Name, false, request.Msg.Pod, images, secrets, response)
 	})
 	if err != nil {
 		return transformError(err)
@@ -158,25 +140,24 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *pb.Provi
 
 	fmt.Println("Request processed successfully")
 
-	return response, nil
+	return connect.NewResponse(response), nil
 }
 
-func NewTPodServer(ipfsApi *rpc.HttpApi, dryRun bool, k8cl client.Client, localOciRegistry string, validator *ethereum.PaymentChannelValidator, lokiHost string) (*grpc.Server, error) {
-	server := grpc.NewServer(
+func NewTPodServerHandler(ipfsApi *rpc.HttpApi, dryRun bool, k8cl client.Client, localOciRegistry string, validator *ethereum.PaymentChannelValidator, lokiHost string) (string, http.Handler) {
+	/*server := grpc.NewServer(
 		grpc.ChainStreamInterceptor(pb.NoCrashStreamServerInterceptor),
 		grpc.ChainStreamInterceptor(pb.NoCrashStreamServerInterceptor, pb.AuthStreamServerInterceptor(k8cl)),
 		grpc.ChainUnaryInterceptor(pb.NoCrashUnaryServerInterceptor, pb.AuthUnaryServerInterceptor(k8cl)),
-	)
+	)*/
 
-	pb.RegisterProvisionPodServiceServer(server, &provisionPodServer{
+	return pbcon.NewProvisionPodServiceHandler(&provisionPodServer{
 		ipfs:             ipfsApi,
 		k8cl:             k8cl,
 		loki:             loki.LokiConfig{Host: lokiHost, Limit: "100"},
 		paymentValidator: validator,
 		localOciRegistry: localOciRegistry,
 		dryRun:           dryRun,
-	})
-	return server, nil
+	}, connect.WithInterceptors())
 }
 
 func GetListener(serveAddress string) (net.Listener, error) {

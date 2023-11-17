@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -31,12 +33,11 @@ func main() {
 		log.Printf("Failed to configure k8s client: %v", err)
 		return
 	}
+
+	mux := http.NewServeMux()
+	mux.Handle(provider.NewTPodServerHandler(ipfsApi, false, k8cl, "host.minikube.internal:5000", nil, "loki.loki.svc.cluster.local:3100"))
+	s := &http.Server{Handler: mux}
 	// skip kubeConfig
-	s, err := provider.NewTPodServer(ipfsApi, false, k8cl, "host.minikube.internal:5000", nil, "loki.loki.svc.cluster.local:3100")
-	if err != nil {
-		log.Printf("Failed to create grpc server: %v", err)
-		return
-	}
 
 	// listen on regular address instead of p2p
 	listener, err := provider.GetListener(serverAddress)
@@ -50,7 +51,7 @@ func main() {
 
 	go func() {
 		<-interruptChan
-		s.GracefulStop()
+		s.Shutdown(context.TODO())
 		os.Exit(0)
 	}()
 

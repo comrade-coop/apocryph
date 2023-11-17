@@ -1,4 +1,4 @@
-package proto
+package protoconnect
 
 import (
 	context "context"
@@ -7,27 +7,20 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
+	"net/http"
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"connectrpc.com/connect"
+	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
-	status "google.golang.org/grpc/status"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
 	tpPrefix      = "tpod"
-	CreatePod     = "/apocryph.proto.v0.provisionPod.ProvisionPodService/ProvisionPod"
-	UpdatePod     = "/apocryph.proto.v0.provisionPod.ProvisionPodService/UpdatePod"
-	DeletePod     = "/apocryph.proto.v0.provisionPod.ProvisionPodService/DeletePod"
-	GetPodLogs    = "/apocryph.proto.v0.provisionPod.ProvisionPodService/GetPodLogs"
 	authorization = "Authorization"
 )
 
@@ -37,6 +30,7 @@ type HasPubAddress interface{ GetPublisherAddress() []byte }
 
 // func (p *PodLogRequest) GetCredentials() *Credentials { return p.Credentials }
 
+/*
 func NoCrashUnaryServerInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (res any, err error) {
 	defer func() {
 		if errRecover := recover(); errRecover != nil {
@@ -57,49 +51,30 @@ func NoCrashStreamServerInterceptor(srv any, ss grpc.ServerStream, info *grpc.St
 	}()
 	err = handler(srv, ss)
 	return
+}*/
+
+type authInterceptor struct {
+	k8Client client.Client
 }
 
-func AuthStreamServerInterceptor(c client.Client) grpc.StreamServerInterceptor {
-	return func(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-		fmt.Printf("Authenticating gRPC call: %v \n", info.FullMethod)
-
-		// Extract metadata from the incoming context
-		md, ok := metadata.FromIncomingContext(stream.Context())
-		if !ok {
-			return status.Errorf(codes.Unauthenticated, "metadata not found")
-		}
-
-		err := authenticate(&md, c)
-		if err != nil {
-			return err
-		}
-
-		// Call the handler function
-		err = handler(srv, stream)
-		if err != nil {
-			log.Printf("Error handling stream: %v\n", err)
-		}
-		return err
-	}
+func NewAuthInterceptor(c client.Client) connect.Interceptor {
+	return authInterceptor{k8Client: c}
 }
-func AuthUnaryServerInterceptor(c client.Client) grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-		fmt.Printf("Authenticating gRPC call: %v \n", info.FullMethod)
-		md, ok := metadata.FromIncomingContext(ctx)
-		if !ok {
-			return nil, status.Errorf(codes.Unauthenticated, "metadata not found")
-		}
 
-		err := authenticate(&md, c)
+func (i authInterceptor) WrapUnary(handler connect.UnaryFunc) connect.UnaryFunc {
+	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+		fmt.Printf("Authenticating gRPC call: %v \n", req.Spec())
+
+		err := i.authenticate(req.Header())
 		if err != nil {
 			return nil, err
 		}
 
 		// verify that pod exists for the rest of the methods
-		if info.FullMethod != CreatePod {
+		if req.Spec().Procedure != ProvisionPodServiceProvisionPodProcedure {
 			p := &v1.Namespace{}
-			namespace := md.Get("namespace")[0]
-			err = c.Get(context.Background(), client.ObjectKey{Namespace: namespace, Name: namespace}, p)
+			namespace := req.Header().Get("namespace")
+			err = i.k8Client.Get(context.Background(), client.ObjectKey{Namespace: namespace, Name: namespace}, p)
 			if err != nil {
 				return nil, err
 			}
@@ -110,16 +85,33 @@ func AuthUnaryServerInterceptor(c client.Client) grpc.UnaryServerInterceptor {
 	}
 }
 
-func authenticate(md *metadata.MD, c client.Client) error {
-	auth := md.Get(authorization)
-	if len(auth) == 0 {
-		return status.Errorf(codes.Unauthenticated, "Empty Authentication field")
+func (i authInterceptor) WrapStreamingClient(handler connect.StreamingClientFunc) connect.StreamingClientFunc {
+	return handler
+}
+
+func (i authInterceptor) WrapStreamingHandler(handler connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
+	return func(ctx context.Context, stream connect.StreamingHandlerConn) error {
+		fmt.Printf("Authenticating gRPC call: %v \n", stream.Spec())
+
+		err := i.authenticate(stream.RequestHeader())
+		if err != nil {
+			return err
+		}
+
+		return handler(ctx, stream)
 	}
-	signature, err := base64.StdEncoding.DecodeString(auth[0])
+}
+
+func (a authInterceptor) authenticate(header http.Header) error {
+	auth := header.Get(authorization)
+	if len(auth) == 0 {
+		return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Empty Authentication field"))
+	}
+	signature, err := base64.StdEncoding.DecodeString(auth)
 	if err != nil {
 		return err
 	}
-	tokenMd := md.Get("token")[0]
+	tokenMd := header.Get("token")
 	jsonData, err := base64.StdEncoding.DecodeString(tokenMd)
 	if err != nil {
 		return err
@@ -129,29 +121,28 @@ func authenticate(md *metadata.MD, c client.Client) error {
 	token := &Token{}
 	err = json.Unmarshal(jsonData, token)
 	if err != nil {
-		return status.Errorf(codes.DataLoss, "Failed Unmarshalling token")
+		return connect.NewError(connect.CodeDataLoss, fmt.Errorf("Failed Unmarshalling token"))
 	}
 	if time.Now().After(token.ExpirationTime) {
-		return status.Errorf(codes.DeadlineExceeded, "Token Expired")
+		return connect.NewError(connect.CodeDeadlineExceeded, fmt.Errorf("Token Expired"))
 	}
 
 	// Verify Signature
 	valid, err := VerifyPayload(token.Publisher, jsonData, signature)
 	if err != nil {
-		log.Printf("Error verifying payload: %v\n", err)
-		return err
+		return fmt.Errorf("Error verifying payload: %w", err)
 	}
 
-	// verify publisherAddress & podId in namespace are same ones signed in token
-	ns := md.Get("namespace")[0]
+	// verify publisherAddress in namespace is same one signed in token
+	ns := header.Get("namespace")
 	nsExpected := namespaceFromTokenParts(token.Publisher, token.PodId)
 	if ns != nsExpected {
-		return status.Errorf(codes.Unauthenticated, "Invalid namespace")
+		return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Inavlid namespace"))
 	}
-	// md.Set("namespace", nsExpected)?
+	// header.Set("namespace", nsExpected)?
 
 	if !valid {
-		return status.Errorf(codes.Unauthenticated, "Invalid signature")
+		return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Inavlid signature"))
 	}
 
 	return nil
@@ -162,11 +153,10 @@ type AuthInterceptorClient struct {
 	Signature        string
 	Sign             SignFunc
 	ExpirationOffset time.Duration
-	Keystore         *keystore.KeyStore
 }
 
-func NewAuthInterceptor(deployment *Deployment, operation string, expirationOffset int64, sign SignFunc) AuthInterceptorClient {
-	return AuthInterceptorClient{
+func NewAuthInterceptorClient(deployment *pb.Deployment, operation string, expirationOffset int64, sign SignFunc) *AuthInterceptorClient {
+	return &AuthInterceptorClient{
 		Token:            newToken(deployment, operation, expirationOffset),
 		Sign:             sign,
 		ExpirationOffset: time.Duration(expirationOffset) * time.Second,
@@ -188,7 +178,7 @@ func namespaceFromTokenParts(publisher common.Address, podId common.Hash) string
 	return "tpod-" + strings.TrimRight(strings.ToLower(base32.StdEncoding.EncodeToString(namespacePartsHash)), "=")
 }
 
-func newToken(deployment *Deployment, operation string, expirationTime int64) Token {
+func newToken(deployment *pb.Deployment, operation string, expirationTime int64) Token {
 
 	return Token{
 		PodId:          common.BytesToHash(deployment.Payment.PodID),
@@ -198,24 +188,24 @@ func newToken(deployment *Deployment, operation string, expirationTime int64) To
 	}
 }
 
-func (a *AuthInterceptorClient) UnaryClientInterceptor() grpc.UnaryClientInterceptor {
-	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		a.updateContext(&ctx)
-		return invoker(ctx, method, req, reply, cc, opts...)
+func (a *AuthInterceptorClient) WrapUnary(handler connect.UnaryFunc) connect.UnaryFunc {
+	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+		a.updateContext(req.Header())
+		return handler(ctx, req)
 	}
 }
 
-func (a *AuthInterceptorClient) StreamClientInterceptor() grpc.StreamClientInterceptor {
-	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
-		a.updateContext(&ctx)
-		// Call the streamer function to obtain a client stream
-		clientStream, err := streamer(ctx, desc, cc, method, opts...)
-		if err != nil {
-			return nil, err
-		}
+func (a *AuthInterceptorClient) WrapStreamingClient(handler connect.StreamingClientFunc) connect.StreamingClientFunc {
+	return func(ctx context.Context, spec connect.Spec) connect.StreamingClientConn {
+		conn := handler(ctx, spec)
+		a.updateContext(conn.RequestHeader())
 
-		return clientStream, nil
+		return conn
 	}
+}
+
+func (a *AuthInterceptorClient) WrapStreamingHandler(handler connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
+	return handler
 }
 
 func (a *AuthInterceptorClient) token() []byte {
@@ -226,7 +216,7 @@ func (a *AuthInterceptorClient) token() []byte {
 	return jsonData
 }
 
-func (a *AuthInterceptorClient) updateContext(ctx *context.Context) error {
+func (a *AuthInterceptorClient) updateContext(header http.Header) error {
 
 	// check if reached expiring date or first call to create a new signature
 	if time.Now().After(a.Token.ExpirationTime) || a.Signature == "" {
@@ -243,9 +233,9 @@ func (a *AuthInterceptorClient) updateContext(ctx *context.Context) error {
 	ns := namespaceFromTokenParts(a.Token.Publisher, a.Token.PodId)
 
 	// Append custom metadata to the outgoing context
-	*ctx = metadata.AppendToOutgoingContext(*ctx, authorization, a.Signature)
-	*ctx = metadata.AppendToOutgoingContext(*ctx, "token", token)
-	*ctx = metadata.AppendToOutgoingContext(*ctx, "namespace", ns)
+	header.Add(authorization, a.Signature)
+	header.Add("token", token)
+	header.Add("namespace", ns)
 	return nil
 }
 

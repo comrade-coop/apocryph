@@ -4,19 +4,20 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"io"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 
+	"connectrpc.com/connect"
 	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	tpeth "github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	pbcon "github.com/comrade-coop/trusted-pods/pkg/proto/protoconnect"
 	"github.com/comrade-coop/trusted-pods/pkg/publisher"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ipfs/kubo/client/rpc"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 var ipfs *rpc.HttpApi
@@ -48,25 +49,17 @@ func main() {
 	}
 
 	deployment := &pb.Deployment{Payment: &pb.PaymentChannelConfig{}}
-	deployment.Payment.PodID = []byte("123456")
+	deployment.Payment.PodID = common.BytesToHash([]byte("123456")).Bytes()
 	deployment.Payment.PublisherAddress = publisherAddress
 
-	interceptor := pb.NewAuthInterceptor(deployment, pb.CreatePod, 10, sign)
+	interceptor := pbcon.NewAuthInterceptorClient(deployment, pbcon.ProvisionPodServiceProvisionPodProcedure, 10, sign)
 
-	conn, err := grpc.Dial(
+	client := pbcon.NewProvisionPodServiceClient(
+		http.DefaultClient,
 		serverAddress,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithUnaryInterceptor(interceptor.UnaryClientInterceptor()),
-		grpc.WithStreamInterceptor(interceptor.StreamClientInterceptor()),
+		connect.WithInterceptors(interceptor),
 	)
 
-	if err != nil {
-		log.Fatalf("Could not dial server: %v", serverAddress)
-	}
-
-	defer conn.Close()
-
-	client := pb.NewProvisionPodServiceClient(conn)
 	reader := bufio.NewReader(os.Stdin)
 
 	// Create Pod
@@ -89,7 +82,7 @@ func main() {
 	DeletePod(client, &pb.DeletePodRequest{PublisherAddress: publisherAddress})
 }
 
-func ProvisionPod(client pb.ProvisionPodServiceClient, publisherAddress []byte, podPath string) string {
+func ProvisionPod(client pbcon.ProvisionPodServiceClient, publisherAddress []byte, podPath string) string {
 
 	podFile, _, pod, deployment, err := publisher.ReadPodAndDeployment([]string{"./logger-manifest.json"}, "", "")
 
@@ -105,16 +98,16 @@ func ProvisionPod(client pb.ProvisionPodServiceClient, publisherAddress []byte, 
 	request.Pod = publisher.LinkUploadsFromDeployment(pod, deployment)
 	request.Payment = &pb.PaymentChannel{PublisherAddress: publisherAddress, PodID: []byte("123456")}
 
-	response, err := client.ProvisionPod(context.Background(), request)
+	response, err := client.ProvisionPod(context.Background(), connect.NewRequest(request))
 	if err != nil {
 		log.Fatalf("Provision Pod failed: %v", err)
 	}
 	log.Printf("pod provision response: %v", response)
-	return response.Addresses[0].ContainerName
+	return response.Msg.Addresses[0].ContainerName
 }
 
-func DeletePod(client pb.ProvisionPodServiceClient, request *pb.DeletePodRequest) {
-	response, err := client.DeletePod(context.Background(), request)
+func DeletePod(client pbcon.ProvisionPodServiceClient, request *pb.DeletePodRequest) {
+	response, err := client.DeletePod(context.Background(), connect.NewRequest(request))
 	if err != nil {
 		log.Printf("rpc delete method failed: %v", err)
 		return
@@ -122,7 +115,7 @@ func DeletePod(client pb.ProvisionPodServiceClient, request *pb.DeletePodRequest
 	log.Printf("Pod Deletion response: %v", response)
 }
 
-func UpdatePod(client pb.ProvisionPodServiceClient, publisherAddress []byte) string {
+func UpdatePod(client pbcon.ProvisionPodServiceClient, publisherAddress []byte) string {
 
 	podFile, _, pod, deployment, err := publisher.ReadPodAndDeployment([]string{"./updated-logger.json"}, "", "")
 
@@ -136,35 +129,31 @@ func UpdatePod(client pb.ProvisionPodServiceClient, publisherAddress []byte) str
 	}
 	request := &pb.UpdatePodRequest{PublisherAddress: publisherAddress}
 	request.Pod = publisher.LinkUploadsFromDeployment(pod, deployment)
-	response, err := client.UpdatePod(context.Background(), request)
+	response, err := client.UpdatePod(context.Background(), connect.NewRequest(request))
 	if err != nil {
 		log.Printf("rpc update method failed: %v", err)
 		return ""
 	}
 	log.Printf("Pod Update response: %v", response)
-	return response.Addresses[0].ContainerName
+	return response.Msg.Addresses[0].ContainerName
 }
 
-func GetPodLogs(client pb.ProvisionPodServiceClient, request *pb.PodLogRequest) {
-	stream, err := client.GetPodLogs(context.Background(), request)
+func GetPodLogs(client pbcon.ProvisionPodServiceClient, request *pb.PodLogRequest) {
+	stream, err := client.GetPodLogs(context.Background(), connect.NewRequest(request))
 	if err != nil {
 		log.Printf("Could not get logs stream: %v", err)
 		return
 	}
-	for {
-		resp, err := stream.Recv()
-		if err == io.EOF {
-			log.Println("Log Stream Ended")
-			return
-		} else if err == nil {
-			valStr := fmt.Sprintf("%s:%s", resp.LogEntry.Time, resp.LogEntry.Log)
-			log.Println(valStr)
-		}
-
-		if err != nil {
-			log.Printf("Failed reading Stream: %v", err)
-			return
-		}
-
+	for stream.Receive() {
+		resp := stream.Msg()
+		valStr := fmt.Sprintf("%s:%s", resp.LogEntry.Time, resp.LogEntry.Log)
+		log.Println(valStr)
 	}
+	err = stream.Err()
+	if err != nil {
+		log.Printf("Failed reading Stream: %v", err)
+		return
+	}
+	log.Println("Log Stream Ended")
+	return
 }

@@ -3,12 +3,12 @@ module github.com/comrade-coop/trusted-pods
 go 1.21.1
 
 require (
+	connectrpc.com/connect v1.12.0
 	github.com/bufbuild/protoyaml-go v0.1.4
 	github.com/containers/image/v5 v5.28.0
 	github.com/containers/ocicrypt v1.1.8
 	github.com/ethereum/go-ethereum v1.13.3
 	github.com/go-jose/go-jose/v3 v3.0.0
-	github.com/gogo/status v1.1.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/ipfs/boxo v0.13.1
 	github.com/ipfs/go-cid v0.4.1
@@ -24,7 +24,6 @@ require (
 	github.com/spf13/viper v1.16.0
 	golang.org/x/crypto v0.14.0
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
-	google.golang.org/grpc v1.58.3
 	google.golang.org/protobuf v1.31.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.28.3
@@ -103,7 +102,6 @@ require (
 	github.com/go-openapi/validate v0.22.1 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/gofrs/flock v0.8.1 // indirect
-	github.com/gogo/googleapis v0.0.0-20180223154316-0cd9801be74a // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -261,6 +259,7 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231009173412-8bfb1ae86b6c // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231009173412-8bfb1ae86b6c // indirect
+	google.golang.org/grpc v1.58.3 // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect

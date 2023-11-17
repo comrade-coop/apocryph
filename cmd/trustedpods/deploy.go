@@ -7,7 +7,7 @@ import (
 
 	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	pbcon "github.com/comrade-coop/trusted-pods/pkg/proto/protoconnect"
 	"github.com/comrade-coop/trusted-pods/pkg/publisher"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
@@ -95,9 +95,9 @@ var deployPodCmd = &cobra.Command{
 			}
 			return nil
 		}
-		interceptor := pb.NewAuthInterceptor(deployment, pb.CreatePod, expirationOffset, sign)
+		interceptor := pbcon.NewAuthInterceptorClient(deployment, pbcon.ProvisionPodServiceProvisionPodProcedure, expirationOffset, sign)
 
-		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), pod, deployment, &interceptor, availableProviders, fundPaymentChannelFunc)
+		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), pod, deployment, interceptor, availableProviders, fundPaymentChannelFunc)
 		if err != nil {
 			return err
 		}
@@ -138,9 +138,9 @@ var deletePodCmd = &cobra.Command{
 			return fmt.Errorf("Could not get ethereum account: %w", err)
 		}
 
-		interceptor := pb.NewAuthInterceptor(deployment, pb.DeletePod, expirationOffset, sign)
+		interceptor := pbcon.NewAuthInterceptorClient(deployment, pbcon.ProvisionPodServiceDeletePodProcedure, expirationOffset, sign)
 
-		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), nil, deployment, &interceptor, nil, nil)
+		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), nil, deployment, interceptor, nil, nil)
 		if err != nil {
 			return err
 		}

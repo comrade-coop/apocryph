@@ -5,7 +5,7 @@ import (
 
 	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	pbcon "github.com/comrade-coop/trusted-pods/pkg/proto/protoconnect"
 	"github.com/comrade-coop/trusted-pods/pkg/publisher"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
@@ -43,9 +43,9 @@ var syncPodCmd = &cobra.Command{
 			return fmt.Errorf("Could not get ethereum account: %w", err)
 		}
 
-		interceptor := pb.NewAuthInterceptor(deployment, pb.UpdatePod, expirationOffset, sign)
+		interceptor := pbcon.NewAuthInterceptorClient(deployment, pbcon.ProvisionPodServiceUpdatePodProcedure, expirationOffset, sign)
 
-		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), pod, deployment, &interceptor, nil, nil)
+		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), pod, deployment, interceptor, nil, nil)
 		if err != nil {
 			return err
 		}

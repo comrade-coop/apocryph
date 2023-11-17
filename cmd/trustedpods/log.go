@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"io"
 
 	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
+	"connectrpc.com/connect"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	pbcon "github.com/comrade-coop/trusted-pods/pkg/proto/protoconnect"
 	"github.com/comrade-coop/trusted-pods/pkg/publisher"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
@@ -47,15 +48,13 @@ var logPodCmd = &cobra.Command{
 
 		publisherEthAddress := publisherAuth.From.Bytes()
 
-		interceptor := pb.NewAuthInterceptor(deployment, pb.GetPodLogs, expirationOffset, sign)
+		interceptor := pbcon.NewAuthInterceptorClient(deployment, pbcon.ProvisionPodServiceGetPodLogsProcedure, expirationOffset, sign)
 
-		conn, err := publisher.ConnectToProvider(tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), deployment, &interceptor, nil)
+		client, err := publisher.ConnectToProvider(tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), deployment, interceptor, nil)
 		if err != nil {
 			return err
 		}
-		defer conn.Close()
-
-		client := pb.NewProvisionPodServiceClient(conn)
+		defer client.Close()
 
 		if containerName == "" {
 			if len(pod.Containers) != 1 {
@@ -69,23 +68,21 @@ var logPodCmd = &cobra.Command{
 			PublisherAddress: publisherEthAddress,
 		}
 
-		stream, err := client.GetPodLogs(cmd.Context(), request)
+		stream, err := client.GetPodLogs(cmd.Context(), connect.NewRequest(request))
 		if err != nil {
 			return err
 		}
 
-		for {
-			response, err := stream.Recv()
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				return err
-			}
+		for stream.Receive() {
+			response := stream.Msg()
 			_, err = fmt.Fprintln(cmd.OutOrStdout(), protojson.Format(response))
 			if err != nil {
 				return err
 			}
+		}
+		err = stream.Err()
+		if err != nil {
+			return err
 		}
 
 		return nil

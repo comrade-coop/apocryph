@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"net"
+	"net/http"
 
 	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
@@ -56,18 +58,17 @@ var listenCmd = &cobra.Command{
 			return err
 		}
 
-		server, err := provider.NewTPodServer(ipfs, dryRun, k8cl, localOciRegistry, validator, "loki.loki.svc.cluster.local:3100")
-		if err != nil {
-			return err
-		}
+		mux := http.NewServeMux()
+		mux.Handle(provider.NewTPodServerHandler(ipfs, dryRun, k8cl, localOciRegistry, validator, "loki.loki.svc.cluster.local:3100"))
+		server := &http.Server{Handler: mux}
 
 		go server.Serve(listener)
 
-		defer server.Stop()
+		defer server.Close()
 
 		<-cmd.Context().Done()
 
-		server.GracefulStop()
+		server.Shutdown(context.TODO()) // cmd.Context() is already done.. :/
 
 		return nil
 	},

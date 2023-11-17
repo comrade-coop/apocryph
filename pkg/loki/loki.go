@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strconv"
 
+	"connectrpc.com/connect"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/gorilla/websocket"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -115,7 +116,7 @@ func parseEntries(lines [][]string) ([]*pb.LogEntry, error) {
 	return logEntries, nil
 }
 
-func GetStreamedEntries(namespace, containerName string, srv pb.ProvisionPodService_GetPodLogsServer, lokiHost string) error {
+func GetStreamedEntries(namespace, containerName string, srv *connect.ServerStream[pb.PodLogResponse], lokiHost string) error {
 
 	query := fmt.Sprintf("{container=\"%s\",namespace=\"%s\"}", containerName, namespace)
 	requestURL := fmt.Sprintf("ws://%s/loki/api/v1/tail?query=%s", lokiHost, query)

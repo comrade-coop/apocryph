@@ -4,16 +4,18 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"connectrpc.com/connect"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	pbcon "github.com/comrade-coop/trusted-pods/pkg/proto/protoconnect"
 	"github.com/ipfs/kubo/client/rpc"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
@@ -44,12 +46,12 @@ func main() {
 }
 
 type server struct {
-	pb.UnimplementedProvisionPodServiceServer
+	pbcon.UnimplementedProvisionPodServiceHandler
 	node *rpc.HttpApi
 }
 
-func (s *server) ProvisionPod(ctx context.Context, in *pb.ProvisionPodRequest) (*pb.ProvisionPodResponse, error) {
-	return &pb.ProvisionPodResponse{Error: fmt.Sprint(in.Pod.Replicas.Max)}, nil
+func (s *server) ProvisionPod(ctx context.Context, in *connect.Request[pb.ProvisionPodRequest]) (*connect.Response[pb.ProvisionPodResponse], error) {
+	return connect.NewResponse(&pb.ProvisionPodResponse{Error: fmt.Sprint(in.Msg.Pod.Replicas.Max)}), nil
 }
 
 func mainProvider() error {
@@ -65,10 +67,11 @@ func mainProvider() error {
 	defer lis.Close()
 	fmt.Printf("provider: server listening at %v\n", lis.Addr())
 
-	s := grpc.NewServer()
-	pb.RegisterProvisionPodServiceServer(s, &server{node: node})
+	mux := http.NewServeMux()
 
-	return s.Serve(lis)
+	mux.Handle(pbcon.NewProvisionPodServiceHandler(&server{node: node}))
+
+	return (&http.Server{Handler: mux}).Serve(lis)
 }
 
 func mainPublisher() error {
@@ -95,20 +98,14 @@ func mainPublisher() error {
 	defer addr.Close()
 
 	// Set up a connection to the server.
-	conn, err := grpc.Dial(addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	c := pbcon.NewProvisionPodServiceClient(http.DefaultClient, (&url.URL{Scheme: "http", Host: addr.String()}).String())
+
+	response, err := c.ProvisionPod(context.Background(), connect.NewRequest(request))
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
-
-	c := pb.NewProvisionPodServiceClient(conn)
-
-	response, err := c.ProvisionPod(context.Background(), request)
-	if err != nil {
-		return err
-	}
-	if fmt.Sprint(num) != response.Error {
-		return fmt.Errorf("publisher: TEST FAILED, expected %v, received %v", fmt.Sprint(num), response.Error)
+	if fmt.Sprint(num) != response.Msg.Error {
+		return fmt.Errorf("publisher: TEST FAILED, expected %v, received %v", fmt.Sprint(num), response.Msg.Error)
 	}
 	fmt.Printf("publisher: test passed successfully\n")
 	return nil

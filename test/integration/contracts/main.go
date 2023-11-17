@@ -38,12 +38,12 @@ func mainErr() error {
 		return fmt.Errorf("could not connect to local ethereum node: %w", err)
 	}
 
-	publisherAuth, err := ethereum.GetAccount(os.Args[1], ethClient)
+	publisherAuth, _, err := ethereum.GetAccountAndSigner(os.Args[1], ethClient)
 	if err != nil {
 		return err
 	}
 
-	providerAuth, err := ethereum.GetAccount(os.Args[2], ethClient)
+	providerAuth, _, err := ethereum.GetAccountAndSigner(os.Args[2], ethClient)
 	if err != nil {
 		return err
 	}
