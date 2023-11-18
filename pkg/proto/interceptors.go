@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -68,7 +67,7 @@ func AuthStreamServerInterceptor(c client.Client) grpc.StreamServerInterceptor {
 			return status.Errorf(codes.Unauthenticated, "metadata not found")
 		}
 
-		err := authenticate(md, c)
+		err := authenticate(&md, c)
 		if err != nil {
 			return err
 		}
@@ -89,7 +88,7 @@ func AuthUnaryServerInterceptor(c client.Client) grpc.UnaryServerInterceptor {
 			return nil, status.Errorf(codes.Unauthenticated, "metadata not found")
 		}
 
-		err := authenticate(md, c)
+		err := authenticate(&md, c)
 		if err != nil {
 			return nil, err
 		}
@@ -109,7 +108,7 @@ func AuthUnaryServerInterceptor(c client.Client) grpc.UnaryServerInterceptor {
 	}
 }
 
-func authenticate(md metadata.MD, c client.Client) error {
+func authenticate(md *metadata.MD, c client.Client) error {
 	auth := md.Get(authorization)
 	if len(auth) == 0 {
 		return status.Errorf(codes.Unauthenticated, "Empty Authentication field")
@@ -160,8 +159,8 @@ func authenticate(md metadata.MD, c client.Client) error {
 
 type AuthInterceptorClient struct {
 	Token            Token
-	Account          accounts.Account
 	Signature        string
+	Sign             func(data []byte) ([]byte, error)
 	ExpirationOffset time.Duration
 	Keystore         *keystore.KeyStore
 }
@@ -171,6 +170,13 @@ type Token struct {
 	Operation      string
 	ExpirationTime time.Time
 	Publisher      []byte
+}
+
+func NewToken(podId, operation string, expirationTime int64, publisher []byte) Token {
+	return Token{PodId: podId,
+		Operation:      operation,
+		ExpirationTime: time.Now().Add(time.Duration(expirationTime) * time.Second),
+		Publisher:      publisher}
 }
 
 func (a *AuthInterceptorClient) UnaryClientInterceptor() grpc.UnaryClientInterceptor {
@@ -207,29 +213,21 @@ func (a *AuthInterceptorClient) updateContext(ctx *context.Context) error {
 	if time.Now().After(a.Token.ExpirationTime) || a.Signature == "" {
 		fmt.Println("Token Expired, Signing a New one ...")
 		a.Token.ExpirationTime = time.Now().Add(a.ExpirationOffset)
-		signature, err := SignPayload(a.token(), a.Account, "123", a.Keystore)
+		signature, err := a.Sign(a.token())
 		if err != nil {
 			return err
 		}
 		a.Signature = base64.StdEncoding.EncodeToString(signature)
 	}
 	token := base64.StdEncoding.EncodeToString(a.token())
-	namespace := "tpod-" + strings.ToLower(a.Account.Address.String()+"-"+a.Token.PodId)
+	address := common.BytesToAddress(a.Token.Publisher).String()
+	ns := "tpod-" + strings.ToLower(address+"-"+a.Token.PodId)
 
 	// Append custom metadata to the outgoing context
 	*ctx = metadata.AppendToOutgoingContext(*ctx, authorization, a.Signature)
 	*ctx = metadata.AppendToOutgoingContext(*ctx, "token", token)
-	*ctx = metadata.AppendToOutgoingContext(*ctx, "namespace", namespace)
+	*ctx = metadata.AppendToOutgoingContext(*ctx, "namespace", ns)
 	return nil
-}
-
-func SignPayload(data []byte, acc accounts.Account, psw string, ks *keystore.KeyStore) ([]byte, error) {
-	hash := crypto.Keccak256(data)
-	signature, err := ks.SignHashWithPassphrase(acc, psw, hash)
-	if err != nil {
-		return nil, err
-	}
-	return signature, nil
 }
 
 func VerifyPayload(publisher, message []byte, signature []byte) (bool, error) {
@@ -250,7 +248,6 @@ func VerifyPayload(publisher, message []byte, signature []byte) (bool, error) {
 
 	pubKey := crypto.FromECDSAPub(pubKeyECDSA)
 	valid := crypto.VerifySignature(pubKey, crypto.Keccak256(message), signature[:len(signature)-1])
-
 	if valid {
 		return true, nil
 	}

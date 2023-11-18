@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"io"
+	"time"
 
+	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/comrade-coop/trusted-pods/pkg/publisher"
@@ -29,7 +31,22 @@ var logPodCmd = &cobra.Command{
 			return err
 		}
 
-		conn, err := publisher.ConnectToProvider(tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), deployment)
+		ethClient, err := ethereum.GetClient(ethereumRpc)
+		if err != nil {
+			return err
+		}
+
+		publisherAuth, sign, err := ethereum.GetAccountAndSigner(publisherKey, ethClient)
+		if err != nil {
+			return fmt.Errorf("Could not get ethereum account: %w", err)
+		}
+
+		publisherEthAddress := publisherAuth.From.Bytes()
+
+		token := pb.NewToken(string(deployment.Payment.PodID), pb.CreatePod, expirationOffset, publisherEthAddress)
+		interceptor := &pb.AuthInterceptorClient{Token: token, Sign: sign, ExpirationOffset: time.Duration(expirationOffset) * time.Second}
+
+		conn, err := publisher.ConnectToProvider(tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), deployment, interceptor)
 		if err != nil {
 			return err
 		}
@@ -45,8 +62,8 @@ var logPodCmd = &cobra.Command{
 		}
 
 		request := &pb.PodLogRequest{
-			ContainerName: containerName,
-			Credentials:   &pb.Credentials{},
+			ContainerName:    containerName,
+			PublisherAddress: publisherEthAddress,
 		}
 
 		stream, err := client.GetPodLogs(cmd.Context(), request)

@@ -29,23 +29,33 @@ const PrivateKeySize = 256 / 8
 
 var DefaultKeystore = "~/.ethereum/keystore"
 
-func GetAccount(accountString string, client *ethclient.Client) (*bind.TransactOpts, error) {
+func GetAccountAndSigner(accountString string, client *ethclient.Client) (*bind.TransactOpts, func(data []byte) ([]byte, error), error) {
 	chainID, err := client.ChainID(context.Background())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if privKey, ok := strings.CutPrefix(accountString, "0x"); ok && len(privKey) == PrivateKeySize*2 {
 		key, err := crypto.HexToECDSA(privKey)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		auth, err := bind.NewKeyedTransactorWithChainID(key, chainID)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		return auth, nil
+
+		signFn := func(data []byte) ([]byte, error) {
+			hash := crypto.Keccak256(data)
+			sig, err := crypto.Sign(hash, key)
+			if err != nil {
+				return nil, err
+			}
+			return sig, nil
+		}
+
+		return auth, signFn, nil
 	}
 
 	uri, accountAddress, ok := strings.Cut(accountString, "#")
@@ -55,22 +65,28 @@ func GetAccount(accountString string, client *ethclient.Client) (*bind.TransactO
 		var err error
 		uri, err = homedir.Expand(DefaultKeystore)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
 	if strings.Contains(uri, "://") {
 		signer, err := external.NewExternalSigner(uri)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		for _, account := range signer.Accounts() {
 			if account.Address.Hex() == accountAddress || account.URL.Path == accountAddress || accountAddress == "" {
-				return bind.NewClefTransactor(signer, account), nil
+				auth := bind.NewClefTransactor(signer, account)
+
+				signFn := func(data []byte) ([]byte, error) {
+					return signer.SignData(account, "data/plain", crypto.Keccak256(data))
+				}
+
+				return auth, signFn, nil
 			}
 		}
-		return nil, fmt.Errorf("Account %s not found in external signer %s", accountAddress, uri)
+		return nil, nil, fmt.Errorf("Account %s not found in external signer %s", accountAddress, uri)
 	}
 
 	{
@@ -82,11 +98,26 @@ func GetAccount(accountString string, client *ethclient.Client) (*bind.TransactO
 				if accountPassphrase == "" {
 					accountPassphrase = utils.GetPassPhrase("", false)
 				}
+
 				ks.Unlock(account, accountPassphrase)
-				return bind.NewKeyStoreTransactorWithChainID(ks, account, chainID)
+				auth, err := bind.NewKeyStoreTransactorWithChainID(ks, account, chainID)
+				if err != nil {
+					return nil, nil, err
+				}
+
+				signFn := func(data []byte) ([]byte, error) {
+					hash := crypto.Keccak256(data)
+					sig, err := ks.SignHash(account, hash)
+					if err != nil {
+						return nil, err
+					}
+					return sig, nil
+				}
+
+				return auth, signFn, nil
 			}
 		}
 
-		return nil, fmt.Errorf("Account %s not found in keystore %s", accountAddress, uri)
+		return nil, nil, fmt.Errorf("Account %s not found in keystore %s", accountAddress, uri)
 	}
 }

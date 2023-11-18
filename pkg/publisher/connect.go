@@ -15,24 +15,26 @@ import (
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 )
 
-func ConnectToProvider(ipfsP2p *ipfs.P2pApi, deployment *pb.Deployment) (*tpipfs.IpfsClientConn, error) {
+func ConnectToProvider(ipfsP2p *ipfs.P2pApi, deployment *pb.Deployment, interceptor *pb.AuthInterceptorClient) (*tpipfs.IpfsClientConn, error) {
 	providerPeerId, err := peer.Decode(deployment.GetProvider().GetLibp2PAddress())
 	if err != nil {
 		return nil, fmt.Errorf("Failed to parse provider address: %w", err)
 	}
 
-	conn, err := ipfsP2p.ConnectToGrpc(pb.ProvisionPod, providerPeerId, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := ipfsP2p.ConnectToGrpc(pb.ProvisionPod, providerPeerId, grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(interceptor.UnaryClientInterceptor()),
+		grpc.WithStreamInterceptor(interceptor.StreamClientInterceptor()))
 	if err != nil {
 		return nil, fmt.Errorf("Failed to dial provider: %w", err)
 	}
 	return conn, nil
 }
 
-func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, deployment *pb.Deployment) error {
+func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, deployment *pb.Deployment, interceptor *pb.AuthInterceptorClient) error {
 	// tpipfs.NewP2pApi(ipfs, ipfsMultiaddr)
 	pod = LinkUploadsFromDeployment(pod, deployment)
 
-	conn, err := ConnectToProvider(ipfsP2p, deployment)
+	conn, err := ConnectToProvider(ipfsP2p, deployment, interceptor)
 	if err != nil {
 		return err
 	}

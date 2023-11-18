@@ -14,6 +14,7 @@ var deploymentFlags = &pflag.FlagSet{}
 var deploymentFormat string
 var providerPeer string
 var providerEthAddress string
+var expirationOffset int64
 
 var uploadFlags = &pflag.FlagSet{}
 var ipfsApi string
@@ -39,6 +40,7 @@ var _ = func() error {
 	deploymentFlags.StringVar(&manifestFormat, "deployment-format", "", fmt.Sprintf("Deployment format. One of %v (leave empty to auto-detect)", pb.FormatNames))
 	deploymentFlags.StringVar(&providerPeer, "provider", "", "provider peer id")
 	deploymentFlags.StringVar(&providerEthAddress, "provider-eth", "", "provider public address")
+	deploymentFlags.Int64Var(&expirationOffset, "token-expiration", 10, "token expires after token-expiration seconds")
 
 	uploadFlags.StringVar(&ipfsApi, "ipfs", "", "multiaddr where the ipfs/kubo api can be accessed (leave blank to use the daemon running in IPFS_PATH)")
 	uploadFlags.BoolVar(&uploadImages, "upload-images", true, "upload images")

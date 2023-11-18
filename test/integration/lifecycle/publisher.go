@@ -10,10 +10,11 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
+	tpeth "github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/comrade-coop/trusted-pods/pkg/publisher"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ipfs/kubo/client/rpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -23,7 +24,7 @@ var ipfs *rpc.HttpApi
 
 func main() {
 	if len(os.Args) < 2 {
-		println("Usage: server <Server-Address>")
+		println("Usage: server <Minikube-IP> <GRPC-PORT> <IPFS-PORT>")
 		return
 	}
 	minikubeIp := os.Args[1]
@@ -32,25 +33,30 @@ func main() {
 	serverAddress := fmt.Sprintf("%v:%v", minikubeIp, grpcPort)
 	ipfsAddress := fmt.Sprintf("/ip4/%v/tcp/%v", minikubeIp, ipfsPort)
 
-	ks := keystore.NewKeyStore("./keystore", keystore.StandardScryptN, keystore.StandardScryptP)
-	acc, err := ks.NewAccount("123")
+	ethClient, err := ethereum.GetClient("http://127.0.0.1:8545")
 	if err != nil {
-		fmt.Printf("could not create account %v", err)
-		return
+		log.Fatalf("could not get eth client %v", err)
 	}
-	publisherAddress := acc.Address.Bytes()
+	auth, sign, err := tpeth.GetAccountAndSigner("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", ethClient)
+	if err != nil {
+		log.Fatalf("failed creating Account %v", err)
+	}
+	publisherAddress := auth.From.Bytes()
 
 	ipfs, _, err = tpipfs.GetIpfsClient(ipfsAddress)
-
 	if err != nil {
 		log.Fatalf("failed to retreived Ipfs Client: %v", err)
 	}
-	token := pb.Token{PodId: "123456", Operation: pb.CreatePod, ExpirationTime: time.Now().Add(10 * time.Second), Publisher: publisherAddress}
-	interceptor := &pb.AuthInterceptorClient{Token: token, Account: acc, Keystore: ks, ExpirationOffset: 2 * time.Second}
 
-	conn, err := grpc.Dial(serverAddress, grpc.WithTransportCredentials(insecure.NewCredentials()),
+	token := pb.NewToken("123456", pb.CreatePod, 10, publisherAddress)
+	interceptor := &pb.AuthInterceptorClient{Token: token, Sign: sign, ExpirationOffset: 2 * time.Second}
+
+	conn, err := grpc.Dial(
+		serverAddress,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithUnaryInterceptor(interceptor.UnaryClientInterceptor()),
-		grpc.WithStreamInterceptor(interceptor.StreamClientInterceptor()))
+		grpc.WithStreamInterceptor(interceptor.StreamClientInterceptor()),
+	)
 	if err != nil {
 		log.Fatalf("Could not dial server: %v", serverAddress)
 	}
