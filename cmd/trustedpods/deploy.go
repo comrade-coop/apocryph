@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/big"
 	"path/filepath"
-	"time"
 
 	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
@@ -86,9 +85,9 @@ var deployPodCmd = &cobra.Command{
 			return err
 		}
 
-		token := pb.NewToken(string(deployment.Payment.PodID), pb.CreatePod, expirationOffset, publisherAuth.From.Bytes())
-		interceptor := &pb.AuthInterceptorClient{Token: token, Sign: sign, ExpirationOffset: time.Duration(expirationOffset) * time.Second}
-		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), pod, deployment, interceptor)
+		interceptor := pb.NewAuthInterceptor(deployment, pb.CreatePod, expirationOffset, sign)
+
+		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), pod, deployment, &interceptor)
 		if err != nil {
 			return err
 		}
@@ -115,7 +114,23 @@ var deletePodCmd = &cobra.Command{
 			return fmt.Errorf("Failed connecting to IPFS: %w", err)
 		}
 
-		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), nil, deployment)
+		ethClient, err := ethereum.GetClient(ethereumRpc)
+		if err != nil {
+			return err
+		}
+
+		if publisherKey == "" {
+			publisherKey = common.BytesToAddress(deployment.Payment.PublisherAddress).String()
+		}
+
+		_, sign, err := ethereum.GetAccountAndSigner(publisherKey, ethClient)
+		if err != nil {
+			return fmt.Errorf("Could not get ethereum account: %w", err)
+		}
+
+		interceptor := pb.NewAuthInterceptor(deployment, pb.DeletePod, expirationOffset, sign)
+
+		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), nil, deployment, &interceptor)
 		if err != nil {
 			return err
 		}

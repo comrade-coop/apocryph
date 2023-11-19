@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	tpeth "github.com/comrade-coop/trusted-pods/pkg/ethereum"
@@ -48,8 +47,11 @@ func main() {
 		log.Fatalf("failed to retreived Ipfs Client: %v", err)
 	}
 
-	token := pb.NewToken("123456", pb.CreatePod, 10, publisherAddress)
-	interceptor := &pb.AuthInterceptorClient{Token: token, Sign: sign, ExpirationOffset: 2 * time.Second}
+	deployment := &pb.Deployment{Payment: &pb.PaymentChannelConfig{}}
+	deployment.Payment.PodID = []byte("123456")
+	deployment.Payment.PublisherAddress = publisherAddress
+
+	interceptor := pb.NewAuthInterceptor(deployment, pb.CreatePod, 10, sign)
 
 	conn, err := grpc.Dial(
 		serverAddress,
@@ -57,6 +59,7 @@ func main() {
 		grpc.WithUnaryInterceptor(interceptor.UnaryClientInterceptor()),
 		grpc.WithStreamInterceptor(interceptor.StreamClientInterceptor()),
 	)
+
 	if err != nil {
 		log.Fatalf("Could not dial server: %v", serverAddress)
 	}

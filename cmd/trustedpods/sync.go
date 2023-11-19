@@ -3,8 +3,11 @@ package main
 import (
 	"fmt"
 
+	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
+	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/comrade-coop/trusted-pods/pkg/publisher"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +29,23 @@ var syncPodCmd = &cobra.Command{
 			return fmt.Errorf("Failed connecting to IPFS: %w", err)
 		}
 
-		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), pod, deployment)
+		ethClient, err := ethereum.GetClient(ethereumRpc)
+		if err != nil {
+			return err
+		}
+
+		if publisherKey == "" {
+			publisherKey = common.BytesToAddress(deployment.Payment.PublisherAddress).String()
+		}
+
+		_, sign, err := ethereum.GetAccountAndSigner(publisherKey, ethClient)
+		if err != nil {
+			return fmt.Errorf("Could not get ethereum account: %w", err)
+		}
+
+		interceptor := pb.NewAuthInterceptor(deployment, pb.UpdatePod, expirationOffset, sign)
+
+		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), pod, deployment, &interceptor)
 		if err != nil {
 			return err
 		}

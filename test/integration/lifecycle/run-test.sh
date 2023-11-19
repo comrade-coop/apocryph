@@ -3,6 +3,8 @@
 
 # helmfile sync
 
+anvil > /dev/null &
+
 MINIKUBE_IP=$(minikube ip)
 
 SERVER_PORT=$(kubectl get svc devserver -n devspace -o jsonpath='{.spec.ports[0].nodePort}')
@@ -14,4 +16,6 @@ IPFS_PORT=$(kubectl get svc ipfs -n devspace -o jsonpath='{.spec.ports[0].nodePo
 
 # PROVIDER_IPFS=$(curl -X POST "http://$MINIKUBE_IP:$IPFS_PORT/api/v0/id" | jq '.ID' -r); echo $PROVIDER_IPFS
 
-go run publisher.go $MINIKUBE_IP $SERVER_PORT $IPFS_PORT
+go run . $MINIKUBE_IP $SERVER_PORT $IPFS_PORT
+
+pkill anvil

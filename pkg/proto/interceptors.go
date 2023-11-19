@@ -31,6 +31,8 @@ const (
 	authorization = "Authorization"
 )
 
+type SignFunc func(data []byte) ([]byte, error)
+
 type HasPubAddress interface{ GetPublisherAddress() []byte }
 
 // func (p *PodLogRequest) GetCredentials() *Credentials { return p.Credentials }
@@ -160,9 +162,17 @@ func authenticate(md *metadata.MD, c client.Client) error {
 type AuthInterceptorClient struct {
 	Token            Token
 	Signature        string
-	Sign             func(data []byte) ([]byte, error)
+	Sign             SignFunc
 	ExpirationOffset time.Duration
 	Keystore         *keystore.KeyStore
+}
+
+func NewAuthInterceptor(deployment *Deployment, operation string, expirationOffset int64, sign SignFunc) AuthInterceptorClient {
+	return AuthInterceptorClient{
+		Token:            newToken(deployment, operation, expirationOffset),
+		Sign:             sign,
+		ExpirationOffset: time.Duration(expirationOffset) * time.Second,
+	}
 }
 
 type Token struct {
@@ -172,11 +182,12 @@ type Token struct {
 	Publisher      []byte
 }
 
-func NewToken(podId, operation string, expirationTime int64, publisher []byte) Token {
-	return Token{PodId: podId,
+func newToken(deployment *Deployment, operation string, expirationTime int64) Token {
+
+	return Token{PodId: string(deployment.Payment.PodID),
 		Operation:      operation,
 		ExpirationTime: time.Now().Add(time.Duration(expirationTime) * time.Second),
-		Publisher:      publisher}
+		Publisher:      deployment.Payment.PublisherAddress}
 }
 
 func (a *AuthInterceptorClient) UnaryClientInterceptor() grpc.UnaryClientInterceptor {

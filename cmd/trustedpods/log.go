@@ -3,12 +3,12 @@ package main
 import (
 	"fmt"
 	"io"
-	"time"
 
 	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/comrade-coop/trusted-pods/pkg/publisher"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -36,6 +36,10 @@ var logPodCmd = &cobra.Command{
 			return err
 		}
 
+		if publisherKey == "" {
+			publisherKey = common.BytesToAddress(deployment.Payment.PublisherAddress).String()
+		}
+
 		publisherAuth, sign, err := ethereum.GetAccountAndSigner(publisherKey, ethClient)
 		if err != nil {
 			return fmt.Errorf("Could not get ethereum account: %w", err)
@@ -43,10 +47,9 @@ var logPodCmd = &cobra.Command{
 
 		publisherEthAddress := publisherAuth.From.Bytes()
 
-		token := pb.NewToken(string(deployment.Payment.PodID), pb.CreatePod, expirationOffset, publisherEthAddress)
-		interceptor := &pb.AuthInterceptorClient{Token: token, Sign: sign, ExpirationOffset: time.Duration(expirationOffset) * time.Second}
+		interceptor := pb.NewAuthInterceptor(deployment, pb.GetPodLogs, expirationOffset, sign)
 
-		conn, err := publisher.ConnectToProvider(tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), deployment, interceptor)
+		conn, err := publisher.ConnectToProvider(tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), deployment, &interceptor)
 		if err != nil {
 			return err
 		}

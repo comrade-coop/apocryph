@@ -38,7 +38,7 @@ var fundPodCmd = &cobra.Command{
 			publisherKey = common.BytesToAddress(deployment.Payment.PublisherAddress).String()
 		}
 
-		publisherAuth, err := ethereum.GetAccount(publisherKey, ethClient)
+		publisherAuth, _, err := ethereum.GetAccountAndSigner(publisherKey, ethClient)
 		if err != nil {
 			return fmt.Errorf("Could not get ethereum account: %w", err)
 		}

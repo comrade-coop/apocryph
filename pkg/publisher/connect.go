@@ -21,9 +21,14 @@ func ConnectToProvider(ipfsP2p *ipfs.P2pApi, deployment *pb.Deployment, intercep
 		return nil, fmt.Errorf("Failed to parse provider address: %w", err)
 	}
 
-	conn, err := ipfsP2p.ConnectToGrpc(pb.ProvisionPod, providerPeerId, grpc.WithTransportCredentials(insecure.NewCredentials()),
+	conn, err := ipfsP2p.ConnectToGrpc(
+		pb.ProvisionPod,
+		providerPeerId,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithUnaryInterceptor(interceptor.UnaryClientInterceptor()),
-		grpc.WithStreamInterceptor(interceptor.StreamClientInterceptor()))
+		grpc.WithStreamInterceptor(interceptor.StreamClientInterceptor()),
+	)
+
 	if err != nil {
 		return nil, fmt.Errorf("Failed to dial provider: %w", err)
 	}
