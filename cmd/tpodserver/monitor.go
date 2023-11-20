@@ -57,8 +57,8 @@ var monitorCmd = &cobra.Command{
 
 	Loop:
 		for {
-			namespaceMeasurements := resource.NamespaceConsumptions{}
-			err := pro.FetchResourceMetrics(namespaceMeasurements)
+			NamespaceConsumptions := resource.NamespaceConsumptions{}
+			err := pro.FetchResourceMetrics(NamespaceConsumptions)
 			if err != nil {
 				return err
 			}
@@ -70,7 +70,7 @@ var monitorCmd = &cobra.Command{
 			}
 
 			for _, n := range namespaces.Items {
-				if resourceConsumption, ok := namespaceMeasurements[n.Name]; ok {
+				if resourceConsumption, ok := NamespaceConsumptions[n.Name]; ok {
 					err := func() error {
 						paymentChannelProto, err := tpk8s.TrustedPodsNamespaceGetChannel(&n)
 						if err != nil {
