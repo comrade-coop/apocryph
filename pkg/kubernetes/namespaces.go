@@ -1,10 +1,7 @@
 package kubernetes
 
 import (
-	"strings"
-
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
-	"github.com/ethereum/go-ethereum/common"
 	"google.golang.org/protobuf/encoding/protojson"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,8 +17,7 @@ const (
 
 var TrustedPodsNamespaceFilter = client.HasLabels{LabelTrustedPodsNamespace}
 
-func NewTrustedPodsNamespace(paymentChannel *pb.PaymentChannel) *corev1.Namespace {
-	name := "tpod-" + strings.ToLower(common.BytesToAddress(paymentChannel.PublisherAddress).String()+"-"+string(paymentChannel.PodID))
+func NewTrustedPodsNamespace(name string, paymentChannel *pb.PaymentChannel) *corev1.Namespace {
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,

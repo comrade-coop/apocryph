@@ -173,7 +173,7 @@ func ApplyPodRequest(
 	depLabels := map[string]string{}
 	activeRessource := []string{}
 	startupReplicas := int32(0)
-	podId := strings.Split(namespace, "-")[2]
+	podId := strings.Split(namespace, "-")[1]
 	var deploymentName = fmt.Sprintf("tpod-dep-%v", podId)
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{

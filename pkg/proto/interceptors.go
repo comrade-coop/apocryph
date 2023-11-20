@@ -3,11 +3,11 @@ package proto
 import (
 	context "context"
 	"crypto/ecdsa"
+	"encoding/base32"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
-	reflect "reflect"
 	"strings"
 	"time"
 
@@ -144,13 +144,11 @@ func authenticate(md *metadata.MD, c client.Client) error {
 
 	// verify publisherAddress & podId in namespace are same ones signed in token
 	ns := md.Get("namespace")[0]
-	namespace := strings.Split(ns, "-")
-	publisherAddress := namespace[1]
-	podId := namespace[2]
-	tokenAddress := strings.ToLower(common.BytesToAddress(token.Publisher).String())
-	if publisherAddress != tokenAddress || podId != token.PodId {
-		return status.Errorf(codes.Unauthenticated, "Inavlid namespace")
+	nsExpected := namespaceFromTokenParts(token.Publisher, token.PodId)
+	if ns != nsExpected {
+		return status.Errorf(codes.Unauthenticated, "Invalid namespace")
 	}
+	// md.Set("namespace", nsExpected)?
 
 	if !valid {
 		return status.Errorf(codes.Unauthenticated, "Invalid signature")
@@ -176,18 +174,28 @@ func NewAuthInterceptor(deployment *Deployment, operation string, expirationOffs
 }
 
 type Token struct {
-	PodId          string
+	PodId          common.Hash
 	Operation      string
 	ExpirationTime time.Time
-	Publisher      []byte
+	Publisher      common.Address
+}
+
+func namespaceFromTokenParts(publisher common.Address, podId common.Hash) string {
+	namespaceParts := []byte{}
+	namespaceParts = append(namespaceParts, publisher[:]...)
+	namespaceParts = append(namespaceParts, podId[:]...)
+	namespacePartsHash := crypto.Keccak256(namespaceParts)
+	return "tpod-" + strings.TrimRight(strings.ToLower(base32.StdEncoding.EncodeToString(namespacePartsHash)), "=")
 }
 
 func newToken(deployment *Deployment, operation string, expirationTime int64) Token {
 
-	return Token{PodId: string(deployment.Payment.PodID),
+	return Token{
+		PodId:          common.BytesToHash(deployment.Payment.PodID),
 		Operation:      operation,
 		ExpirationTime: time.Now().Add(time.Duration(expirationTime) * time.Second),
-		Publisher:      deployment.Payment.PublisherAddress}
+		Publisher:      common.BytesToAddress(deployment.Payment.PublisherAddress),
+	}
 }
 
 func (a *AuthInterceptorClient) UnaryClientInterceptor() grpc.UnaryClientInterceptor {
@@ -230,9 +238,9 @@ func (a *AuthInterceptorClient) updateContext(ctx *context.Context) error {
 		}
 		a.Signature = base64.StdEncoding.EncodeToString(signature)
 	}
+
 	token := base64.StdEncoding.EncodeToString(a.token())
-	address := common.BytesToAddress(a.Token.Publisher).String()
-	ns := "tpod-" + strings.ToLower(address+"-"+a.Token.PodId)
+	ns := namespaceFromTokenParts(a.Token.Publisher, a.Token.PodId)
 
 	// Append custom metadata to the outgoing context
 	*ctx = metadata.AppendToOutgoingContext(*ctx, authorization, a.Signature)
@@ -241,7 +249,7 @@ func (a *AuthInterceptorClient) updateContext(ctx *context.Context) error {
 	return nil
 }
 
-func VerifyPayload(publisher, message []byte, signature []byte) (bool, error) {
+func VerifyPayload(publisher common.Address, message []byte, signature []byte) (bool, error) {
 
 	pubKeyECDSA, err := ExtractPubKey(message, signature)
 	if err != nil {
@@ -251,9 +259,9 @@ func VerifyPayload(publisher, message []byte, signature []byte) (bool, error) {
 	// Ensure the signed address corresponds to the public key's address in the signature.
 	// The signer should exclusively sign their own address;
 	// thus, only the pods associated with their address used as IDs will be affected.
-	address := crypto.PubkeyToAddress(*pubKeyECDSA).Bytes()
+	address := crypto.PubkeyToAddress(*pubKeyECDSA)
 
-	if !reflect.DeepEqual(publisher, address) {
+	if publisher != address {
 		return false, nil
 	}
 

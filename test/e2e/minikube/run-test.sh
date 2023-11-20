@@ -102,7 +102,7 @@ go run ../../../cmd/trustedpods/ pod deploy manifest-guestbook.yaml \
   --provider "$PROVIDER_IPFS" \
   --provider-eth "$PROVIDER_ETH" \
   --payment-contract "$PAYMENT_CONTRACT" \
-  --funds "$FUNDS"
+  --funds "$FUNDS" \
   --mint-funds
 
 set +x
@@ -111,7 +111,7 @@ set -v
 ## 3: Connect and measure balances ##
 
 WITHDRAW_ETH=0x90F79bf6EB2c4f870365E785982E1f101E93b906 # From trustedpods/tpodserver.yml
-TOKEN_CONTACT=0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 # TODO= result of forge create
+TOKEN_CONTACT=0x5FbDB2315678afecb367f032d93F642f64180aa3 # TODO= result of forge create
 INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true | head -n 1); echo $INGRESS_URL
 MANIFEST_HOST=guestbook.localhost # From manifest-guestbook.yaml
 
