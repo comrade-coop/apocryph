@@ -57,8 +57,8 @@ var monitorCmd = &cobra.Command{
 
 	Loop:
 		for {
-			resourceMeasurements := resource.ResourceMeasurementsMap{}
-			err := pro.FetchResourceMetrics(resourceMeasurements)
+			namespaceMeasurements := resource.NamespaceConsumptions{}
+			err := pro.FetchResourceMetrics(namespaceMeasurements)
 			if err != nil {
 				return err
 			}
@@ -70,7 +70,7 @@ var monitorCmd = &cobra.Command{
 			}
 
 			for _, n := range namespaces.Items {
-				if resourceMeasurement, ok := resourceMeasurements[n.Name]; ok {
+				if resourceConsumption, ok := namespaceMeasurements[n.Name]; ok {
 					err := func() error {
 						paymentChannelProto, err := tpk8s.TrustedPodsNamespaceGetChannel(&n)
 						if err != nil {
@@ -89,7 +89,7 @@ var monitorCmd = &cobra.Command{
 							return err
 						}
 
-						amountOwed := resourceMeasurement.Price(paymentChannel.PricingTable)
+						amountOwed := resourceConsumption.Price(paymentChannel.PricingTable)
 
 						tx, err := paymentChannel.WithdrawIfOverMargin(withdrawAddress, amountOwed, tolerance)
 						if err != nil {

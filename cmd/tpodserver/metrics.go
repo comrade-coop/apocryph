@@ -27,9 +27,9 @@ var getMetricsCmd = &cobra.Command{
 	Short: "Get the metrics stored in prometheus",
 	Args:  cobra.RangeArgs(0, 1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		resourceMeasurements := resource.ResourceMeasurementsMap{}
+		namespaceConsumptions := resource.NamespaceConsumptions{}
 
-		err := prometheus.GetPrometheusClient(prometheusUrl).FetchResourceMetrics(resourceMeasurements)
+		err := prometheus.GetPrometheusClient(prometheusUrl).FetchResourceMetrics(namespaceConsumptions)
 		if err != nil {
 			return err
 		}
@@ -41,11 +41,11 @@ var getMetricsCmd = &cobra.Command{
 
 		if len(pricingTables) > 0 {
 			for _, ptm := range pricingTables {
-				resourceMeasurements.Display(cmd.OutOrStdout(), ptm)
-				fmt.Fprintf(cmd.OutOrStdout(), "totals: %v\n", resourceMeasurements.Price(ptm))
+				namespaceConsumptions.Display(cmd.OutOrStdout(), ptm)
+				fmt.Fprintf(cmd.OutOrStdout(), "totals: %v\n", namespaceConsumptions.Price(ptm))
 			}
 		} else {
-			resourceMeasurements.Display(cmd.OutOrStdout(), nil)
+			namespaceConsumptions.Display(cmd.OutOrStdout(), nil)
 		}
 
 		return err

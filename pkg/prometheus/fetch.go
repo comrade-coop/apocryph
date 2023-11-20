@@ -36,7 +36,7 @@ type QueryResult struct {
 
 var sixty = big.NewFloat(60.0)
 
-func (api *PrometheusAPI) FetchResourceMetrics(resourceMeasurements resource.ResourceMeasurementsMap) error {
+func (api *PrometheusAPI) FetchResourceMetrics(namespaceConsumptions resource.NamespaceConsumptions) error {
 	queryUrl, err := url.JoinPath(api.baseUrl, "/api/v1/query")
 	if err != nil {
 		return err
@@ -68,7 +68,7 @@ func (api *PrometheusAPI) FetchResourceMetrics(resourceMeasurements resource.Res
 		}
 		value = value.Mul(value, sixty)
 
-		resourceMeasurements.Add(namespace, resource.GetResource(resourceName, resource.ResourceKindReservation), value)
+		namespaceConsumptions.Add(namespace, resource.GetResource(resourceName, resource.ResourceKindReservation), value)
 	}
 
 	return nil
