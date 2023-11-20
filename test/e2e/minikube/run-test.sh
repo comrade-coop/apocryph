@@ -28,7 +28,7 @@ set -v
 
 ## 1: Set up the Kubernetes environment ##
 
-[ "$(minikube status -f'{{.Host}}')" = "Running" ] || minikube start --insecure-registry='host.minikube.internal:5000'
+[ "$(minikube status -f'{{.Kubelet}}')" = "Running" ] || minikube start --insecure-registry='host.minikube.internal:5000'
 
 ## 1.1: Apply Helm configurations ##
 
