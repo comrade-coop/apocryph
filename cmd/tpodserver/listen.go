@@ -29,7 +29,7 @@ var listenCmd = &cobra.Command{
 			return err
 		}
 
-		providerAuth, err := ethereum.GetAccount(providerKey, ethClient)
+		providerAuth, _, err := ethereum.GetAccountAndSigner(providerKey, ethClient)
 		if err != nil {
 			return err
 		}
