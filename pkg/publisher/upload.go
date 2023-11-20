@@ -32,6 +32,12 @@ func UploadSecrets(ctx context.Context, ipfs iface.CoreAPI, basepath string, pod
 			secretSha256 := sha256.Sum256(secretBytes)
 			uploadedSecret, ok := oldUploadedSecrets[volume.Name]
 			if !ok || !slices.Equal(uploadedSecret.Sha256Sum, secretSha256[:]) {
+				if ok {
+					err = tpipfs.RemoveSecret(ctx, ipfs, uploadedSecret.Cid)
+					if err != nil {
+						fmt.Printf("Failed unpinning old secret from IPFS: %v", err)
+					}
+				}
 				// Have to reupload...
 				key, secretContents, err := tpipfs.EncryptSecret(secretBytes)
 				if err != nil {

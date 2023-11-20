@@ -71,7 +71,20 @@ func UploadSecret(ctx context.Context, ipfs iface.CoreAPI, contents []byte) (cid
 	if err != nil {
 		return nil, err
 	}
+	err = ipfs.Pin().Add(ctx, secretPath)
+	if err != nil {
+		return nil, err
+	}
 	return secretPath.Cid().Bytes(), nil
+}
+
+func RemoveSecret(ctx context.Context, ipfs iface.CoreAPI, cidBytes []byte) error {
+	secretCid, err := cid.Cast(cidBytes)
+	err = ipfs.Pin().Rm(ctx, ifacepath.IpfsPath(secretCid))
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func DownloadSecret(ctx context.Context, ipfs iface.CoreAPI, secret *pb.Volume_SecretConfig) ([]byte, error) {

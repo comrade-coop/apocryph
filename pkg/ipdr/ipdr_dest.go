@@ -147,7 +147,10 @@ func (d *ipdrImageDestination) Commit(ctx context.Context, unparsedToplevel type
 		}
 	} else {
 		d.reference.path = path
-		// TODO: Pin?
+		err = d.ipfs.Pin().Add(ctx, path)
+		if err != nil {
+			return err
+		}
 	}
 	d.cidsToRemove = []cid.Cid{}
 	return nil

@@ -2,7 +2,6 @@ package ipdr
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -130,6 +129,6 @@ func (r *ipdrImageReference) NewImageDestination(ctx context.Context, sys *types
 	}, nil
 }
 
-func (*ipdrImageReference) DeleteImage(ctx context.Context, sys *types.SystemContext) error {
-	return errors.ErrUnsupported
+func (r *ipdrImageReference) DeleteImage(ctx context.Context, sys *types.SystemContext) error {
+	return r.transport.ipfs.Pin().Rm(ctx, r.path)
 }
