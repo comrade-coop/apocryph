@@ -34,5 +34,7 @@ The Registry protocol connects publishers and providers in a decentralized envir
     * Choose the Region(s) in which the pod will be hosted.
     * Optionally, you can specify the amount of funds you are prepared to allocate to your pod or the desired duration for its execution. The client application will then automatically propose a pricing table(s) tailored to your preference.
 * If automatic selection is enabled, it will select a provider filtered by the configuration
+* the publisher pings the provider and checks its availability
+  * In the event that the provider is offline, the publisher iterates through the provider list associated with the pricing table until it identifies an available provider.
 * The publisher creates a payment channel configured with the selected pricing planand and intiates the pod execution request protocol 
 

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "../lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
 using SafeERC20 for IERC20;
 
@@ -17,17 +17,10 @@ contract Payment {
         address indexed publisher, address indexed provider, bytes32 indexed podId, uint256 unlockedAt
     );
     event ChannelCreated(address indexed publisher, address indexed provider, bytes32 indexed podId);
-    event Deposited(
-        address indexed publisher, address indexed provider, bytes32 indexed podId, uint256 depositAmount
-    );
-    event Unlocked(
-        address indexed publisher, address indexed provider, bytes32 indexed podId, uint256 unlockedAmount
-    );
+    event Deposited(address indexed publisher, address indexed provider, bytes32 indexed podId, uint256 depositAmount);
+    event Unlocked(address indexed publisher, address indexed provider, bytes32 indexed podId, uint256 unlockedAmount);
     event Withdrawn(
-        address indexed publisher,
-        address indexed provider,
-        bytes32 indexed podId,
-        uint256 withdrawnAmount
+        address indexed publisher, address indexed provider, bytes32 indexed podId, uint256 withdrawnAmount
     );
     event ChannelClosed(address indexed publisher, address indexed provider, bytes32 indexed podId);
 
@@ -48,9 +41,7 @@ contract Payment {
     }
 
     // called by publisher to create a new payment channel; must approve a withdraw by this contract's address
-    function createChannel(address provider, bytes32 podId, uint256 unlockTime, uint256 initialAmount)
-        public
-    {
+    function createChannel(address provider, bytes32 podId, uint256 unlockTime, uint256 initialAmount) public {
         if (initialAmount == 0) revert AmountRequired();
         address publisher = msg.sender;
         Channel storage channel = channels[publisher][provider][podId];
@@ -123,12 +114,9 @@ contract Payment {
     }
 
     // allows the provider to withdraw as many tokens as would be needed to reach totalWithdrawlAmount since the opening of the channel
-    function withdrawUpTo(
-        address publisher,
-        bytes32 podId,
-        uint256 totalWithdrawlAmount,
-        address transferAddress
-    ) public {
+    function withdrawUpTo(address publisher, bytes32 podId, uint256 totalWithdrawlAmount, address transferAddress)
+        public
+    {
         if (transferAddress == address(0)) {
             transferAddress = msg.sender;
         }
@@ -153,29 +141,18 @@ contract Payment {
     // allows the provider to withdraw amount more tokens
     function withdraw(address publisher, bytes32 podId, uint256 amount, address transferAddress) public {
         withdrawUpTo(
-            publisher,
-            podId,
-            channels[publisher][msg.sender][podId].withdrawnByProvider + amount,
-            transferAddress
+            publisher, podId, channels[publisher][msg.sender][podId].withdrawnByProvider + amount, transferAddress
         );
     }
 
     // allows one to check the amount of as-of-yet unclaimed tokens
-    function available(address publisher, address provider, bytes32 podId)
-        public
-        view
-        returns (uint256)
-    {
+    function available(address publisher, address provider, bytes32 podId) public view returns (uint256) {
         Channel storage channel = channels[publisher][provider][podId];
         return channel.investedByPublisher - channel.withdrawnByProvider;
     }
 
     // allows one to check the amount of so-far claimed tokens
-    function withdrawn(address publisher, address provider, bytes32 podId)
-        public
-        view
-        returns (uint256)
-    {
+    function withdrawn(address publisher, address provider, bytes32 podId) public view returns (uint256) {
         Channel storage channel = channels[publisher][provider][podId];
         return channel.withdrawnByProvider;
     }
