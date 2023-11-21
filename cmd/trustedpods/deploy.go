@@ -149,6 +149,6 @@ func init() {
 	deployPodCmd.Flags().AddFlagSet(syncFlags)
 
 	deletePodCmd.Flags().AddFlagSet(deploymentFlags)
-	deployPodCmd.Flags().AddFlagSet(syncFlags)
+	deletePodCmd.Flags().AddFlagSet(syncFlags)
 
 }
