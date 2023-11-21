@@ -4,12 +4,18 @@ name: Create and publish Docker images
 on:
   push:
     branches: ['master']
+    paths:
+    - 'pkg/**.go'
+    - 'cmd/tpodserver/**.go'
+    - 'cmd/ipfs-p2p-helper/**.go'
+    - 'Dockerfile'
+    - '.github/workflows/publish-docker-image.yml'
   release:
     types: [published]
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME_PREFIX: comradecoop/trusted-pods
+  IMAGE_NAME_PREFIX: ${{ github.repository }}
 
 jobs:
   build-and-push-image:
