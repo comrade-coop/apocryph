@@ -174,6 +174,7 @@ func ApplyPodRequest(
 	activeRessource := []string{}
 	startupReplicas := int32(0)
 	podId := strings.Split(namespace, "-")[1]
+	// NOTE: podId is 52 characters long. Most names are 63 characters max. Thus: don't make any constant string longer than 10 characters. "tpod-dep-" is 9.
 	var deploymentName = fmt.Sprintf("tpod-dep-%v", podId)
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -193,7 +194,7 @@ func ApplyPodRequest(
 
 	podTemplate := &deployment.Spec.Template
 
-	httpSoName := fmt.Sprintf("tpod-httpso-%v", podId)
+	httpSoName := fmt.Sprintf("tpod-hso-%v", podId)
 	httpSO := NewHttpSo(namespace, httpSoName)
 
 	localhostAliases := corev1.HostAlias{IP: "127.0.0.1"}

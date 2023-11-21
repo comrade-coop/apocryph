@@ -80,7 +80,7 @@ func GetAccountAndSigner(accountString string, client *ethclient.Client) (*bind.
 				auth := bind.NewClefTransactor(signer, account)
 
 				signFn := func(data []byte) ([]byte, error) {
-					return signer.SignData(account, "data/plain", crypto.Keccak256(data))
+					return signer.SignData(account, "data/plain", data)
 				}
 
 				return auth, signFn, nil
