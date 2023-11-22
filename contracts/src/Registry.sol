@@ -1,30 +1,25 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.22;
 
 import {ERC20} from "../lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 
 contract Registry {
     // for searching pricing tables by prices offchain
     event NewPricingTable(
+        address indexed token,
         uint256 indexed Id,
-        uint256 indexed CpuPrice,
-        uint256 indexed RamPrice,
+        uint256 CpuPrice,
+        uint256 RamPrice,
         uint256 StoragePrice,
         uint256 BandwidthEgressPrice,
-        uint256 BandwidthIngressPrice
+        uint256 BandwidthIngressPrice,
+        string Cpumodel,
+        string TeeType
     );
     event Subscribed(uint256 indexed id, address indexed provider);
-    event UnSubscribed(uint256 indexed id, address indexed provider);
 
-    mapping(address => mapping(uint256 => PricingTable)) public pricingTables; // IERC20Token => PricingTableId => PricingTable
-    mapping(address => Provider) providers; // providerAddress => providerInfo
-
-    struct Provider {
-        string name;
-        string[] multiAddresses;
-        string[] regions;
-    }
-    // TODO string[] attestationDetails;
+    mapping(address => string) providers; // providerAddress => provider profile cid
+    mapping(address => mapping(uint256 => bool)) public subscription; // provider => tableId => subscribed/unsubscribed
 
     uint256 public pricingTableId;
 
@@ -38,44 +33,17 @@ contract Registry {
 
     uint8 constant NUM_RESOURCES = 5;
 
-    struct PricingTable {
-        mapping(ResourceKind => uint256) resources; // RessourceKind => price
-        mapping(address => bool) subscriptions; // providerAddress => providerInfo
-        address[] providers;
-        string Cpumodel; // intel, amd, arm, ...etc
-        string TeeType; // Secure Enclaves, CVM, ...etc
-		// string GpuModel;
-    }
-
     modifier registered() {
-        Provider storage provider = providers[msg.sender];
-        require(bytes(provider.name).length > 0, "Provider Must be registered");
+        string memory cid = providers[msg.sender];
+        require(bytes(cid).length > 0, "Provider Must be registered");
         _;
     }
 
-    modifier subscription(address token, uint256 tableId, bool condition) {
-        PricingTable storage pricingTable = pricingTables[token][tableId];
-        string memory errorMsg;
-        if (condition) {
-            errorMsg = "Provider Already UnSubscribed";
-        } else {
-            errorMsg = "Provider Already Subscribed";
-        }
-        require(pricingTable.subscriptions[msg.sender] == condition, errorMsg);
-        _;
-    }
-
-    function registerProvider(string memory name, string[] memory regions, string[] memory multiAddresses) public {
-        require(regions.length > 0, "Regions array cannot be empty");
-        require(multiAddresses.length > 0, "MultiAddresses array cannot be empty");
-        require(bytes(name).length > 0, "Name cannot be empty");
-
+    // could also be used to update the cid
+    function registerProvider(string calldata cid) public {
+        require(bytes(cid).length > 0, "cid must not be empty");
         // TODO verify provider attestation
-
-        Provider storage provider = providers[msg.sender];
-        provider.name = name;
-        provider.multiAddresses = multiAddresses;
-        provider.regions = regions;
+        providers[msg.sender] = cid;
     }
 
     function registerPricingTable(
@@ -90,92 +58,33 @@ contract Registry {
         uint256 BandwidthEgressPrice = Prices[uint256(ResourceKind.BANDWIDTH_EGRESS)];
         uint256 BandwidthIngressPrice = Prices[uint256(ResourceKind.BANDWIDTH_INGRESS)];
 
-        PricingTable storage pricingTable = pricingTables[token][pricingTableId + 1];
-        pricingTable.resources[ResourceKind.CPU] = CpuPrice;
-        pricingTable.resources[ResourceKind.RAM] = RamPrice;
-        pricingTable.resources[ResourceKind.STORAGE] = StoragePrice;
-        pricingTable.resources[ResourceKind.BANDWIDTH_EGRESS] = BandwidthEgressPrice;
-        pricingTable.resources[ResourceKind.BANDWIDTH_INGRESS] = BandwidthIngressPrice;
-        pricingTable.Cpumodel = cpumodel;
-        pricingTable.TeeType = teeType;
-
-        pricingTable.providers.push(msg.sender);
-        pricingTable.subscriptions[msg.sender] = true;
-
         pricingTableId++;
 
-        emit NewPricingTable(pricingTableId, CpuPrice, RamPrice, StoragePrice, BandwidthEgressPrice, BandwidthIngressPrice);
+        emit NewPricingTable(
+            token,
+            pricingTableId,
+            CpuPrice,
+            RamPrice,
+            StoragePrice,
+            BandwidthEgressPrice,
+            BandwidthIngressPrice,
+            cpumodel,
+            teeType
+        );
+        subscription[msg.sender][pricingTableId] = true;
+        emit Subscribed(pricingTableId, msg.sender);
     }
 
-    function subscribe(address token, uint256 tableId)
-        public
-        subscription(token, tableId, false)
-        registered
-        subscription(token, tableId, false)
-    {
-        PricingTable storage pricingTable = pricingTables[token][tableId];
-        pricingTable.providers.push(msg.sender);
-        pricingTable.subscriptions[msg.sender] = true;
+    function subscribe(uint256 tableId) public registered {
+        subscription[msg.sender][tableId] = true;
         emit Subscribed(tableId, msg.sender);
     }
 
-    function unsubscribe(address token, uint256 tableId) public registered subscription(token, tableId, true) {
-        PricingTable storage pricingTable = pricingTables[token][tableId];
-        for (uint256 index = 0; index < pricingTable.providers.length; index++) {
-            if (pricingTable.providers[index] == msg.sender) {
-                pricingTable.providers[index] = pricingTable.providers[pricingTable.providers.length - 1];
-                pricingTable.providers.pop();
-                emit UnSubscribed(tableId, msg.sender);
-            }
-        }
-        pricingTable.subscriptions[msg.sender] = false;
+    function unsubscribe(uint256 tableId) public registered {
+        subscription[msg.sender][tableId] = false;
     }
 
-    function updateRegion(string[] memory regions) public registered {
-        require(regions.length > 0, "Region cannot be empty");
-        Provider storage provider = providers[msg.sender];
-        provider.regions = regions;
-    }
-
-    function updateMultiAddr(string[] memory addresses) public registered {
-        require(addresses.length > 0, "Addresses array cannot be empty");
-        Provider storage provider = providers[msg.sender];
-        provider.multiAddresses = addresses;
-    }
-
-    function getCpuPrice(address token, uint256 id) external view returns (uint256 price) {
-        return pricingTables[token][id].resources[ResourceKind.CPU];
-    }
-
-    function getRamPrice(address token, uint256 id) external view returns (uint256 price) {
-        return pricingTables[token][id].resources[ResourceKind.RAM];
-    }
-
-    function getStoragePrice(address token, uint256 id) external view returns (uint256 price) {
-        return pricingTables[token][id].resources[ResourceKind.STORAGE];
-    }
-
-    function getBandwidthEgressPrice(address token, uint256 id) external view returns (uint256 price) {
-        return pricingTables[token][id].resources[ResourceKind.BANDWIDTH_EGRESS];
-    }
-
-    function getBandwidthIngressPrice(address token, uint256 id) external view returns (uint256 price) {
-        return pricingTables[token][id].resources[ResourceKind.BANDWIDTH_INGRESS];
-    }
-
-    function getCpuModel(address token, uint256 id) external view returns (string memory model) {
-        return pricingTables[token][id].Cpumodel;
-    }
-
-    function getTeeType(address token, uint256 id) external view returns (string memory tee) {
-        return pricingTables[token][id].TeeType;
-    }
-
-    function getProviders(address token, uint256 id) external view returns (address[] memory) {
-        return pricingTables[token][id].providers;
-    }
-
-    function isSubscribed(address token, uint256 id) external view returns (bool) {
-        return pricingTables[token][id].subscriptions[msg.sender];
+    function isSubscribed(uint256 tableId) external view registered returns (bool) {
+        return subscription[msg.sender][tableId];
     }
 }
