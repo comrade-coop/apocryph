@@ -19,5 +19,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["ui/src"]
+  "include": ["pkg", "test/e2e/webui/src"]
 }

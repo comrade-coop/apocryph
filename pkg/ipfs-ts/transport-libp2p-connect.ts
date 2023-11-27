@@ -35,7 +35,7 @@ export function createLibp2pConnectTransport (options: Libp2pTransportOptions): 
       })
       requestHeadersBuffer.append(eol)
 
-      let signalEnd: () => Promise<void>
+      let signalEnd!: () => Promise<void>
       const bodyPromise = stream.sink(writeBody(
         new Uint8ArrayList(requestHeadersBuffer),
         req.body,

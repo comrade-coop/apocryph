@@ -7,8 +7,7 @@
     "test": "test"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "fmt": "eslint --fix ui/src/**.\\{ts,js\\}"
+    "fmt": "eslint --fix pkg/*-ts/**.\\{ts,js\\} test/*/*-ts/**.\\{ts,js\\}"
   },
   "repository": {
     "type": "git",
@@ -28,5 +27,16 @@
     "eslint-plugin-n": "^16.3.1",
     "eslint-plugin-promise": "^6.1.1",
     "typescript": "^5.2.2"
-  }
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^1.4.2",
+    "@bufbuild/protoc-gen-es": "^1.4.2",
+    "@connectrpc/connect": "^1.1.3",
+    "@connectrpc/protoc-gen-connect-es": "^1.1.3"
+  },
+  "workspaces": [
+    "test/e2e/webui",
+    "pkg/ipfs-ts",
+    "pkg/proto-ts"
+  ]
 }

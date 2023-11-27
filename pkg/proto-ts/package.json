@@ -1,0 +1,18 @@
+{
+  "name": "trusted-pods-proto-ts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "gen-proto": "protoc -I=../../proto --es_out=target=ts:. --connect-es_out=target=ts:. ../../proto/provision-pod.proto ../../proto/pod.proto",
+    "generate": "npm run gen-proto"
+  },
+  "license": "GPL-3.0",
+  "devDependencies": {
+    "@bufbuild/protoc-gen-es": "^1.4.2",
+    "@connectrpc/protoc-gen-connect-es": "^1.1.3"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^1.4.2",
+    "@connectrpc/connect": "^1.1.3"
+  }
+}
