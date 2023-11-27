@@ -1,0 +1,39 @@
+pricing:
+  table:
+    format: yaml
+    # filename: pricing.yaml
+    contents: |
+      tables:
+        - paymentContractAddress: "5/FyXnc0ziiPg2fhuxQ+kLs/BRI="
+          resources:
+            - resource: "cpu"
+              priceForReservation: 200000000000
+            - resource: "ram"
+              priceForReservation: 500
+            - resource: "storage"
+              priceForUsage: 500
+            - resource: "bandwidth_ingress"
+              priceForUsage: 800
+            - resource: "bandwidth_egress"
+              priceForUsage: 800
+cpu_model: "AMD EPYC™ 7003 Series Processors"
+tee_type:  "Confidential Virtual Machine (SEV-SNP)"
+withdraw:
+  address: "0x90F79bf6EB2c4f870365E785982E1f101E93b906"
+  time: 15
+info: |
+  id: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+  regions:
+    - name: "us"
+      zone: "west"
+      num: 8
+    - name: "mad"
+      zone: "south"
+      num: 0
+  multiAddresses:
+    - kind:  "IPFS"
+      value: "/p2p/12D3KooWPcMp99mZkfdk8qfHrfjFzQbZcjxSf14egDQtq5zWFhWp"
+    - kind:  "P2P"
+      value: "/ip4/127.0.0.1/tcp/4001/p2p/QmWjoiG9mSxprZ18eKam9SsMrxehNNRXeBz6ehYj3wy74y"
+    - kind: "DNS"
+      value: "https://buko.business/"

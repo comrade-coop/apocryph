@@ -18,7 +18,7 @@ contract Registry {
     );
     event Subscribed(uint256 indexed id, address indexed provider);
 
-    mapping(address => string) providers; // providerAddress => provider profile cid
+    mapping(address => string) public providers; // providerAddress => provider profile cid
     mapping(address => mapping(uint256 => bool)) public subscription; // provider => tableId => subscribed/unsubscribed
 
     uint256 public pricingTableId;
@@ -84,7 +84,7 @@ contract Registry {
         subscription[msg.sender][tableId] = false;
     }
 
-    function isSubscribed(uint256 tableId) external view registered returns (bool) {
-        return subscription[msg.sender][tableId];
+    function isSubscribed(address provider ,uint256 tableId) external view returns (bool) {
+        return subscription[provider][tableId];
     }
 }

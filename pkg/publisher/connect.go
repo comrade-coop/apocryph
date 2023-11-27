@@ -8,6 +8,7 @@ import (
 
 	"github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	"github.com/comrade-coop/trusted-pods/pkg/provider"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -15,31 +16,33 @@ import (
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 )
 
-func ConnectToProvider(ipfsP2p *ipfs.P2pApi, deployment *pb.Deployment, interceptor *pb.AuthInterceptorClient) (*tpipfs.IpfsClientConn, error) {
-	providerPeerId, err := peer.Decode(deployment.GetProvider().GetLibp2PAddress())
-	if err != nil {
-		return nil, fmt.Errorf("Failed to parse provider address: %w", err)
+func ConnectToProvider(ipfsP2p *ipfs.P2pApi, deployment *pb.Deployment, interceptor *pb.AuthInterceptorClient, availableProviders []*provider.HostInfo) (*tpipfs.IpfsClientConn, error) {
+	for _, provider := range availableProviders {
+		deployment.Provider.Libp2PAddress = provider.Id
+		providerPeerId, err := peer.Decode(deployment.GetProvider().GetLibp2PAddress())
+		if err != nil {
+			return nil, fmt.Errorf("Failed to parse provider address: %w", err)
+		}
+		conn, err := ipfsP2p.ConnectToGrpc(
+			pb.ProvisionPod,
+			providerPeerId,
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithUnaryInterceptor(interceptor.UnaryClientInterceptor()),
+			grpc.WithStreamInterceptor(interceptor.StreamClientInterceptor()),
+		)
+		if err != nil {
+			continue
+		}
+		return conn, nil
 	}
-
-	conn, err := ipfsP2p.ConnectToGrpc(
-		pb.ProvisionPod,
-		providerPeerId,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithUnaryInterceptor(interceptor.UnaryClientInterceptor()),
-		grpc.WithStreamInterceptor(interceptor.StreamClientInterceptor()),
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("Failed to dial provider: %w", err)
-	}
-	return conn, nil
+	return nil, fmt.Errorf("Failed to dial provider(s)")
 }
 
-func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, deployment *pb.Deployment, interceptor *pb.AuthInterceptorClient) error {
+func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, deployment *pb.Deployment, interceptor *pb.AuthInterceptorClient, availableProviders []*provider.HostInfo) error {
 	// tpipfs.NewP2pApi(ipfs, ipfsMultiaddr)
 	pod = LinkUploadsFromDeployment(pod, deployment)
 
-	conn, err := ConnectToProvider(ipfsP2p, deployment, interceptor)
+	conn, err := ConnectToProvider(ipfsP2p, deployment, interceptor, availableProviders)
 	if err != nil {
 		return err
 	}

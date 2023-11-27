@@ -14,6 +14,8 @@ var deploymentFlags = &pflag.FlagSet{}
 var deploymentFormat string
 var providerPeer string
 var providerEthAddress string
+var registryContractAddress string
+var tokenContractAddress string
 var expirationOffset int64
 
 var uploadFlags = &pflag.FlagSet{}
@@ -32,6 +34,17 @@ var debugMintFunds bool
 
 var syncFlags = &pflag.FlagSet{}
 
+var registryFlags = &pflag.FlagSet{}
+var cpuPrice string
+var ramPrice string
+var storagePrice string
+var bandwidthEPrice string
+var bandwidthInPrice string
+var cpuModel string
+var teeType string
+var tableId string
+var region string
+
 var _ = func() error {
 	podFlags := podCmd.PersistentFlags()
 
@@ -40,7 +53,7 @@ var _ = func() error {
 	deploymentFlags.StringVar(&manifestFormat, "deployment-format", "", fmt.Sprintf("Deployment format. One of %v (leave empty to auto-detect)", pb.FormatNames))
 	deploymentFlags.StringVar(&providerPeer, "provider", "", "provider peer id")
 	deploymentFlags.StringVar(&providerEthAddress, "provider-eth", "", "provider public address")
-	deploymentFlags.Int64Var(&expirationOffset, "token-expiration", 10, "token expires after token-expiration seconds")
+	deploymentFlags.Int64Var(&expirationOffset, "token-expiration", 10, "authentication token expires after token-expiration seconds")
 
 	uploadFlags.StringVar(&ipfsApi, "ipfs", "", "multiaddr where the ipfs/kubo api can be accessed (leave blank to use the daemon running in IPFS_PATH)")
 	uploadFlags.BoolVar(&uploadImages, "upload-images", true, "upload images")
@@ -55,6 +68,19 @@ var _ = func() error {
 	fundFlags.Int64Var(&unlockTime, "unlock-time", 5*60, "time for unlocking tokens (in seconds)")
 
 	syncFlags.AddFlag(uploadFlags.Lookup("ipfs"))
+
+	registryFlags.StringVar(&registryContractAddress, "registry-contract", "", "registry contract address")
+	registryFlags.StringVar(&tokenContractAddress, "token-contract", "", "token contract address")
+	registryFlags.StringVar(&cpuPrice, "cpu-price", "", "CPU price")
+	registryFlags.StringVar(&ramPrice, "ram-price", "", "RAM price")
+	registryFlags.StringVar(&storagePrice, "storage-price", "", "Storage price")
+	registryFlags.StringVar(&bandwidthEPrice, "bandwidthE-price", "", "Egress Bandiwdth price")
+	registryFlags.StringVar(&bandwidthInPrice, "bandwidthIn-price", "", "Ingress Bandiwdth price")
+	registryFlags.StringVar(&cpuModel, "cpu-Model", "", "cpu Model")
+	registryFlags.StringVar(&teeType, "tee-Type", "", "tee Type")
+	registryFlags.StringVar(&tableId, "id", "", "table id")
+	registryFlags.StringVar(&region, "region", "", "filter providers by region, Ex: us-east-8")
+	registryFlags.AddFlag(fundFlags.Lookup("ethereum-key"))
 
 	return nil
 }()

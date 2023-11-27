@@ -25,6 +25,12 @@ var deployPodCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+
+		availableProviders, err := fetchAndFilterProviders()
+		if err != nil {
+			return err
+		}
+
 		configureDeployment(deployment)
 
 		fundsInt, _ := (&big.Int{}).SetString(funds, 10)
@@ -87,7 +93,7 @@ var deployPodCmd = &cobra.Command{
 
 		interceptor := pb.NewAuthInterceptor(deployment, pb.CreatePod, expirationOffset, sign)
 
-		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), pod, deployment, &interceptor)
+		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), pod, deployment, &interceptor, availableProviders)
 		if err != nil {
 			return err
 		}
@@ -130,7 +136,7 @@ var deletePodCmd = &cobra.Command{
 
 		interceptor := pb.NewAuthInterceptor(deployment, pb.DeletePod, expirationOffset, sign)
 
-		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), nil, deployment, &interceptor)
+		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), nil, deployment, &interceptor, nil)
 		if err != nil {
 			return err
 		}
@@ -147,7 +153,7 @@ func init() {
 	deployPodCmd.Flags().AddFlagSet(uploadFlags)
 	deployPodCmd.Flags().AddFlagSet(fundFlags)
 	deployPodCmd.Flags().AddFlagSet(syncFlags)
-
+	deployPodCmd.Flags().AddFlagSet(registryFlags)
 	deletePodCmd.Flags().AddFlagSet(deploymentFlags)
 	deletePodCmd.Flags().AddFlagSet(syncFlags)
 

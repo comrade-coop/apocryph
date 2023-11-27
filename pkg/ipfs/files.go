@@ -49,6 +49,29 @@ func AddProtobufFile(node *rpc.HttpApi, msg proto.Message) (cid.Cid, error) {
 	return path.Cid(), nil
 }
 
+func AddBytes(node *rpc.HttpApi, msg []byte) (cid.Cid, error) {
+	path, err := node.Unixfs().Add(context.Background(), files.NewBytesFile(msg))
+	if err != nil {
+		return cid.Cid{}, err
+	}
+	return path.Cid(), nil
+}
+func GetBytes(node *rpc.HttpApi, cid cid.Cid) ([]byte, error) {
+	fileNode, err := node.Unixfs().Get(context.Background(), path.IpfsPath(cid))
+	if err != nil {
+		return nil, err
+	}
+	file, ok := fileNode.(files.File)
+	if !ok {
+		return nil, fmt.Errorf("Supplied CID (%s) not a file", cid.String())
+	}
+	bytes, err := io.ReadAll(file)
+	if err != nil {
+		return nil, err
+	}
+	return bytes, nil
+}
+
 // Adds a file from a protobuf slice to IPFS
 func GetProtobufFile(node *rpc.HttpApi, cid cid.Cid, msg proto.Message) error {
 	fileNode, err := node.Unixfs().Get(context.Background(), path.IpfsPath(cid))

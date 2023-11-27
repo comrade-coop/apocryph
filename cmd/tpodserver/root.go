@@ -56,4 +56,5 @@ func init() {
 	rootCmd.AddCommand(metricsCmd)
 	rootCmd.AddCommand(listenCmd)
 	rootCmd.AddCommand(monitorCmd)
+	rootCmd.AddCommand(registryCmd)
 }
