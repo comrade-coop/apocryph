@@ -2,7 +2,7 @@
 
 set -e
 
-trap 'kill $(jobs -p) &>/dev/null' EXIT
+trap 'pkill -f "kubectl port-forward" && kill $(jobs -p) &>/dev/null' EXIT
 
 if [ "$1" = "teardown" ]; then
    minikube delete
@@ -29,10 +29,9 @@ set -v
 ## 1: Set up the Kubernetes environment ##
 
 [ "$(minikube status -f'{{.Kubelet}}')" = "Running" ] || minikube start --insecure-registry='host.minikube.internal:5000'
-
 ## 1.1: Apply Helm configurations ##
 
-helmfile sync || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile sync; }
+# helmfile sync || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile sync; }
 
 ## 1.2: Configure provider/in-cluster IPFS and publisher IPFS ##
 
@@ -41,7 +40,7 @@ helmfile sync || { while ! kubectl get -n keda endpoints ingress-nginx-controlle
 O_IPFS_PATH=$IPFS_PATH
 export IPFS_PATH=$(mktemp ipfs.XXXX --tmpdir -d)
 
-[ -n "$PORT_5004" ] || { PORT_5004=yes && kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
+[ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
 echo /ip4/127.0.0.1/tcp/5004 > $IPFS_PATH/api
 
 SWARM_ADDRESSES=$(minikube service  -n ipfs ipfs-swarm --url | head -n 1 | sed -E 's|http://(.+):(.+)|["/ip4/\1/tcp/\2", "/ip4/\1/udp/\2/quic", "/ip4/\1/udp/\2/quic-v1", "/ip4/\1/udp/\2/quic-v1/webtransport"]|')
@@ -72,14 +71,18 @@ sleep 1
 
 { while ! kubectl get -n eth endpoints eth-rpc -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; }
 
-[ -n "$PORT_8545" ] || { PORT_8545=yes && kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
+[ "$PORT_8545" == "" ]  && { PORT_8545="yes" ; kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
+sleep 2
 
-DEPLOYER_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 #TODO= anvil.accounts[0]
+DEPLOYER_ADDRESS=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 #TODO= anvil.accounts[0] pubkey
+DEPLOYER_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 #TODO= anvil.accounts[0] private key
 
-forge create --root ../../../contracts MockToken --private-key $DEPLOYER_KEY --nonce 0 --silent || true
+DEPLOYER_NONCE=$(cast nonce $DEPLOYER_ADDRESS)
+
+forge create --root ../../../contracts MockToken --private-key $DEPLOYER_KEY --nonce $DEPLOYER_NONCE --silent || true
 TOKEN_CONTACT=0x5FbDB2315678afecb367f032d93F642f64180aa3 # TODO= result of forge create
 
-forge create --root ../../../contracts Payment --private-key $DEPLOYER_KEY --nonce 1 --silent --constructor-args "$TOKEN_CONTACT" || true
+forge create --root ../../../contracts Payment --private-key $DEPLOYER_KEY --nonce $(($DEPLOYER_NONCE +1)) --silent --constructor-args "$TOKEN_CONTACT" || true
 
 ## 2: Deploy example manifest to cluster ##
 
@@ -89,8 +92,8 @@ PROVIDER_ETH=0x70997970C51812dc3A010C7d01b50e0d17dc79C8 #TODO= anvil.accounts[1]
 PUBLISHER_KEY=0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a #TODO= anvil.accounts[2]
 FUNDS=10000000000000000000000
 
-[ -n "$PORT_8545" ] || { PORT_8545=yes && kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
-[ -n "$PORT_5004" ] || { PORT_5004=yes && kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
+[ "$PORT_8545" == "" ] && { PORT_8545="yes" ; kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
+[ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
 [ -n "$PROVIDER_IPFS" ] || { PROVIDER_IPFS=$(curl -X POST "http://127.0.0.1:5004/api/v0/id" -s | jq '.ID' -r); echo $PROVIDER_IPFS; }
 [ -n "$IPFS_DAEMON" ] || { IPFS_DAEMON=yes; ipfs daemon & { while ! [ -f ${IPFS_PATH:-~/.ipfs}/api ]; do sleep 0.1; done; } 2>/dev/null; }
 
@@ -115,7 +118,7 @@ TOKEN_CONTACT=0x5FbDB2315678afecb367f032d93F642f64180aa3 # TODO= result of forge
 INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true | head -n 1); echo $INGRESS_URL
 MANIFEST_HOST=guestbook.localhost # From manifest-guestbook.yaml
 
-[ -n "$PORT_8545" ] || { PORT_8545=yes && kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
+[ "$PORT_8545" == "" ] && { PORT_8545="yes" ; kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
 
 echo "Provider balance before:" $(cast call "$TOKEN_CONTACT" "balanceOf(address)" "$WITHDRAW_ETH" | cast to-fixed-point 18)
 
