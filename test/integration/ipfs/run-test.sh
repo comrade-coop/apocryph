@@ -36,4 +36,6 @@ as publisher
 sleep 3
 go run . publisher "$PROVIDER_ID"
 
+# npx tsx index.ts # TODO
+
 kill $(jobs -p) &>/dev/null

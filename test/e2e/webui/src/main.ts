@@ -1,39 +1,29 @@
 import './style.css'
-import { setupCounter } from './counter.ts'
-import { connectTo, createClient } from 'trusted-pods-ipfs-ts'
-import { createPromiseClient } from '@connectrpc/connect'
-import { ProvisionPodService } from 'trusted-pods-proto-ts'
-import { multiaddr, type MultiaddrInput } from '@multiformats/multiaddr'
+import { template } from './template'
+import { toElement, toJSON } from './field'
+import { ProviderConfig, Pod } from 'trusted-pods-proto-ts'
 
-var helia = await createClient({testMode: true})
+let appRoot = document.querySelector<HTMLDivElement>('#app')
 
-export async function test (peerAddr: MultiaddrInput): Promise<string> {
-  const client = createPromiseClient(ProvisionPodService, connectTo(helia, multiaddr(peerAddr), '/x/trusted-pods/provision-pod/0.0.1'))
+let podTemplate = template()
 
-  const result = await client.provisionPod({
-    pod: {
-      replicas: {
-        max: 3
-      }
-    }
+let form = document.createElement('form')
+
+form.appendChild(toElement(podTemplate, {}))
+
+let submit = document.createElement('button')
+submit.type = 'submit'
+submit.innerText = 'Send request'
+form.appendChild(submit)
+
+form.addEventListener('submit', ev => {
+  ev.preventDefault()
+  let partialMessage = toJSON(podTemplate)
+  console.log(partialMessage)
+  console.log({
+    pod: new Pod(partialMessage.pod),
+    provider: new ProviderConfig(partialMessage.provider)
   })
+})
 
-  if (result.error !== '3') {
-    throw new Error('assertion failed')
-    // return "WRONG RESULT?!"
-  }
-  return 'SUCCESSS'
-}
-
-window.Xtest = test
-
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-  <div>
-    <h1>Vite + TypeScript</h1>
-    <div class="card">
-      <button id="counter" type="button"></button>
-    </div>
-  </div>
-`
-
-setupCounter(document.querySelector<HTMLButtonElement>('#counter')!)
+appRoot?.appendChild(form)

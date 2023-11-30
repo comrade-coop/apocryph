@@ -110,7 +110,8 @@ set +v
 set -x
 # wait until job gets completed and pricing tables are registered
 sleep 5
-go run ../../../cmd/trustedpods/ pod deploy manifest-guestbook.yaml \
+
+go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-guestbook.yaml \
   --ethereum-key "$PUBLISHER_KEY" \
   --provider-eth "$PROVIDER_ETH" \
   --payment-contract "$PAYMENT_CONTRACT" \

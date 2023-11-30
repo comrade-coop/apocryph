@@ -9,5 +9,8 @@
   },
   "devDependencies": {
     "vite": "^4.4.5"
+  },
+  "dependencies": {
+    "viem": "^1.19.9"
   }
 }

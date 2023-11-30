@@ -15,7 +15,7 @@ which helmfile >/dev/null; which helm >/dev/null; which kustomize >/dev/null; wh
 which constellation >/dev/null || echo "Install Constellation, https://docs.edgeless.systems/constellation/getting-started/first-steps-local#software-installation-on-ubuntu"
 
 CONSTELLATION_PATH=${CONSTELLATION_PATH:-~/.constellation-root}
-mkdir -p CONSTELLATION_PATH
+mkdir -p $CONSTELLATION_PATH
 
 if [ "$1" = "teardown" ]; then
    ( cd $CONSTELLATION_PATH; constellation mini down )
