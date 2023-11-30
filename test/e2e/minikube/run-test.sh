@@ -74,15 +74,12 @@ sleep 1
 [ "$PORT_8545" == "" ]  && { PORT_8545="yes" ; kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
 sleep 2
 
-DEPLOYER_ADDRESS=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 #TODO= anvil.accounts[0] pubkey
 DEPLOYER_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 #TODO= anvil.accounts[0] private key
 
-DEPLOYER_NONCE=$(cast nonce $DEPLOYER_ADDRESS)
-
-forge create --root ../../../contracts MockToken --private-key $DEPLOYER_KEY --nonce $DEPLOYER_NONCE --silent || true
+forge create --root ../../../contracts MockToken --private-key $DEPLOYER_KEY --nonce 0 --silent 2>/dev/null|| true
 TOKEN_CONTACT=0x5FbDB2315678afecb367f032d93F642f64180aa3 # TODO= result of forge create
 
-forge create --root ../../../contracts Payment --private-key $DEPLOYER_KEY --nonce $(($DEPLOYER_NONCE +1)) --silent --constructor-args "$TOKEN_CONTACT" || true
+forge create --root ../../../contracts Payment --private-key $DEPLOYER_KEY --nonce 1 --silent --constructor-args "$TOKEN_CONTACT" 2>/dev/null|| true
 
 ## 2: Deploy example manifest to cluster ##
 

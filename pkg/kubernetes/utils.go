@@ -6,6 +6,7 @@ import (
 
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -54,4 +55,20 @@ func NewHttpSo(namespace, name string) *kedahttpv1alpha1.HTTPScaledObject {
 		},
 		Spec: kedahttpv1alpha1.HTTPScaledObjectSpec{},
 	}
+}
+
+func GetRessource(kind string) interface{} {
+	switch kind {
+	case "Service":
+		return &corev1.Service{}
+	case "Volume":
+		return &corev1.PersistentVolumeClaim{}
+	case "Secret":
+		return &corev1.Secret{}
+	case "Deployment":
+		return &appsv1.Deployment{}
+	case "HttpSo":
+		return &kedahttpv1alpha1.HTTPScaledObject{}
+	}
+	return nil
 }

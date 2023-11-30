@@ -7,7 +7,6 @@ import (
 
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
-	"golang.org/x/exp/slices"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -17,24 +16,8 @@ import (
 
 type FetchSecret func(cid []byte) (map[string][]byte, error)
 
-func GetRessource(kind string) interface{} {
-	switch kind {
-	case "Service":
-		return &corev1.Service{}
-	case "Volume":
-		return &corev1.PersistentVolumeClaim{}
-	case "Secret":
-		return &corev1.Secret{}
-	case "Deployment":
-		return &appsv1.Deployment{}
-	case "HttpSo":
-		return &kedahttpv1alpha1.HTTPScaledObject{}
-	}
-	return nil
-}
-
-func updateOrCreate(ctx context.Context, ressourceName, kind, namespace string, ressource interface{}, client k8cl.Client, patch bool) error {
-	if patch == true {
+func updateOrCreate(ctx context.Context, ressourceName, kind, namespace string, ressource interface{}, client k8cl.Client, update bool) error {
+	if update {
 		key := &k8cl.ObjectKey{
 			Namespace: namespace,
 			Name:      ressourceName,
@@ -68,98 +51,11 @@ func updateOrCreate(ctx context.Context, ressourceName, kind, namespace string, 
 	return nil
 }
 
-func cleanNamespace(ctx context.Context, namespace string, activeRessources []string, client k8cl.Client) error {
-	kindList := []string{"Service", "Volume", "Secret", "Deployment", "HttpSo"}
-	fmt.Printf("Active Ressources: %v \n", activeRessources)
-	for _, kind := range kindList {
-		switch kind {
-		case "Service":
-			list := &corev1.ServiceList{}
-			err := client.List(ctx, list, &k8cl.ListOptions{Namespace: namespace})
-			if err != nil {
-				return err
-			}
-			for i, rsrc := range list.Items {
-				if !slices.Contains(activeRessources, rsrc.GetName()) {
-					fmt.Printf("Deleting Service %v:%v \n", i, rsrc.GetName())
-					err := client.Delete(ctx, &rsrc)
-					if err != nil {
-						fmt.Printf("Could not delete Service: %v \n", err)
-					}
-				}
-			}
-		case "Volume":
-			list := &corev1.PersistentVolumeClaimList{}
-			err := client.List(ctx, list, &k8cl.ListOptions{Namespace: namespace})
-			if err != nil {
-				return err
-			}
-			for i, rsrc := range list.Items {
-				if !slices.Contains(activeRessources, rsrc.GetName()) {
-					fmt.Printf("Deleting PVC %v: %v \n", i, rsrc.GetName())
-					err := client.Delete(ctx, &rsrc)
-					if err != nil {
-						fmt.Printf("Could not delete PVC: %v \n", err)
-					}
-				}
-			}
-		case "Secret":
-			list := &corev1.SecretList{}
-			err := client.List(ctx, list, &k8cl.ListOptions{Namespace: namespace})
-			if err != nil {
-				return err
-			}
-			for i, rsrc := range list.Items {
-				if !slices.Contains(activeRessources, rsrc.GetName()) {
-					fmt.Printf("Deleting Secret %v: %v \n", i, rsrc.GetName())
-					err := client.Delete(ctx, &rsrc)
-					if err != nil {
-						fmt.Printf("Could not delete Secret: %v \n", err)
-					}
-				}
-			}
-		case "Deployment":
-			list := &appsv1.DeploymentList{}
-			err := client.List(ctx, list, &k8cl.ListOptions{Namespace: namespace})
-			if err != nil {
-				return err
-			}
-			for i, rsrc := range list.Items {
-				if !slices.Contains(activeRessources, rsrc.GetName()) {
-					fmt.Printf("Deleting Deployment %v: %v \n", i, rsrc.GetName())
-					err := client.Delete(ctx, &rsrc)
-					if err != nil {
-						fmt.Printf("Could not delete Deployment: %v \n", err)
-					}
-				}
-			}
-		case "HttpSo":
-			list := &kedahttpv1alpha1.HTTPScaledObjectList{}
-			err := client.List(ctx, list, &k8cl.ListOptions{Namespace: namespace})
-			if err != nil {
-				return err
-			}
-			for i, rsrc := range list.Items {
-				if !slices.Contains(activeRessources, rsrc.GetName()) {
-					fmt.Printf("Deleting HttpSo %v: %v \n", i, rsrc.GetName())
-					err := client.Delete(ctx, &rsrc)
-					if err != nil {
-						fmt.Printf("Could not delete HttpSo: %v \n", err)
-					}
-				}
-			}
-		}
-
-	}
-	return nil
-
-}
-
 func ApplyPodRequest(
 	ctx context.Context,
 	client k8cl.Client,
 	namespace string,
-	patch bool,
+	update bool,
 	podManifest *pb.Pod,
 	images map[string]string,
 	secrets map[string][]byte,
@@ -194,7 +90,7 @@ func ApplyPodRequest(
 
 	podTemplate := &deployment.Spec.Template
 
-	httpSoName := fmt.Sprintf("tpod-hso-%v", podId)
+	httpSoName := fmt.Sprintf("tpod-hso")
 	httpSO := NewHttpSo(namespace, httpSoName)
 
 	localhostAliases := corev1.HostAlias{IP: "127.0.0.1"}
@@ -221,7 +117,7 @@ func ApplyPodRequest(
 				return err
 			}
 
-			err = updateOrCreate(ctx, service.GetName(), "Service", namespace, service, client, patch)
+			err = updateOrCreate(ctx, service.GetName(), "Service", namespace, service, client, update)
 			if err != nil {
 				return err
 			}
@@ -295,9 +191,13 @@ func ApplyPodRequest(
 				persistentVolumeClaim.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany}
 			}
 
-			err := updateOrCreate(ctx, volumeName, "Volume", namespace, persistentVolumeClaim, client, patch)
-			if err != nil {
-				return err
+			// pvcs couldn't and shouldn't be updated
+			if !update {
+				err := updateOrCreate(ctx, volumeName, "Volume", namespace, persistentVolumeClaim, client, update)
+				if err != nil {
+					return err
+				}
+
 			}
 			activeRessource = append(activeRessource, volumeName)
 
@@ -316,7 +216,7 @@ func ApplyPodRequest(
 				},
 			}
 
-			err := updateOrCreate(ctx, secretName, "Secret", namespace, secret, client, patch)
+			err := updateOrCreate(ctx, secretName, "Secret", namespace, secret, client, update)
 			if err != nil {
 				return err
 			}
@@ -328,7 +228,7 @@ func ApplyPodRequest(
 		}
 		podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, volumeSpec)
 	}
-	err := updateOrCreate(ctx, deploymentName, "Deployment", namespace, deployment, client, patch)
+	err := updateOrCreate(ctx, deploymentName, "Deployment", namespace, deployment, client, update)
 	if err != nil {
 		return err
 	}
@@ -349,14 +249,14 @@ func ApplyPodRequest(
 			httpSO.Spec.TargetPendingRequests = &targetPendingRequests
 		}
 
-		err := updateOrCreate(ctx, httpSoName, "HttpSo", namespace, httpSO, client, patch)
+		err := updateOrCreate(ctx, httpSoName, "HttpSo", namespace, httpSO, client, update)
 		if err != nil {
 			return err
 		}
 		activeRessource = append(activeRessource, httpSoName)
 
 	}
-	if patch == true {
+	if update == true {
 		err := cleanNamespace(ctx, namespace, activeRessource, client)
 		if err != nil {
 			return err

@@ -1,11 +1,18 @@
 package kubernetes
 
 import (
+	"context"
+	"fmt"
+
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
+	"golang.org/x/exp/slices"
 	"google.golang.org/protobuf/encoding/protojson"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	k8cl "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -45,4 +52,89 @@ func TrustedPodsNamespaceGetChannel(namespace *corev1.Namespace) (*pb.PaymentCha
 		return nil, err
 	}
 	return paymentChannel, nil
+}
+
+func cleanNamespace(ctx context.Context, namespace string, activeRessources []string, client k8cl.Client) error {
+	kindList := []string{"Service", "Volume", "Secret", "Deployment", "HttpSo"}
+	fmt.Printf("Active Ressources: %v \n", activeRessources)
+	for _, kind := range kindList {
+		switch kind {
+		case "Service":
+			list := &corev1.ServiceList{}
+			err := client.List(ctx, list, &k8cl.ListOptions{Namespace: namespace})
+			if err != nil {
+				return err
+			}
+			for i, rsrc := range list.Items {
+				if !slices.Contains(activeRessources, rsrc.GetName()) {
+					fmt.Printf("Deleting Service %v:%v \n", i, rsrc.GetName())
+					err := client.Delete(ctx, &rsrc)
+					if err != nil {
+						fmt.Printf("Could not delete Service: %v \n", err)
+					}
+				}
+			}
+		case "Volume":
+			list := &corev1.PersistentVolumeClaimList{}
+			err := client.List(ctx, list, &k8cl.ListOptions{Namespace: namespace})
+			if err != nil {
+				return err
+			}
+			for i, rsrc := range list.Items {
+				if !slices.Contains(activeRessources, rsrc.GetName()) {
+					fmt.Printf("Deleting PVC %v: %v \n", i, rsrc.GetName())
+					err := client.Delete(ctx, &rsrc)
+					if err != nil {
+						fmt.Printf("Could not delete PVC: %v \n", err)
+					}
+				}
+			}
+		case "Secret":
+			list := &corev1.SecretList{}
+			err := client.List(ctx, list, &k8cl.ListOptions{Namespace: namespace})
+			if err != nil {
+				return err
+			}
+			for i, rsrc := range list.Items {
+				if !slices.Contains(activeRessources, rsrc.GetName()) {
+					fmt.Printf("Deleting Secret %v: %v \n", i, rsrc.GetName())
+					err := client.Delete(ctx, &rsrc)
+					if err != nil {
+						fmt.Printf("Could not delete Secret: %v \n", err)
+					}
+				}
+			}
+		case "Deployment":
+			list := &appsv1.DeploymentList{}
+			err := client.List(ctx, list, &k8cl.ListOptions{Namespace: namespace})
+			if err != nil {
+				return err
+			}
+			for i, rsrc := range list.Items {
+				if !slices.Contains(activeRessources, rsrc.GetName()) {
+					fmt.Printf("Deleting Deployment %v: %v \n", i, rsrc.GetName())
+					err := client.Delete(ctx, &rsrc)
+					if err != nil {
+						fmt.Printf("Could not delete Deployment: %v \n", err)
+					}
+				}
+			}
+		case "HttpSo":
+			list := &kedahttpv1alpha1.HTTPScaledObjectList{}
+			err := client.List(ctx, list, &k8cl.ListOptions{Namespace: namespace})
+			if err != nil {
+				return err
+			}
+			for i, rsrc := range list.Items {
+				if !slices.Contains(activeRessources, rsrc.GetName()) {
+					fmt.Printf("Deleting HttpSo %v: %v \n", i, rsrc.GetName())
+					err := client.Delete(ctx, &rsrc)
+					if err != nil {
+						fmt.Printf("Could not delete HttpSo: %v \n", err)
+					}
+				}
+			}
+		}
+	}
+	return nil
 }
