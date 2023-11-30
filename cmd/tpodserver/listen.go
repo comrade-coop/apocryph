@@ -79,7 +79,7 @@ func init() {
 	listenCmd.Flags().BoolVarP(&dryRun, "dry-run", "z", false, "Dry run mode; modify nothing.")
 	listenCmd.Flags().StringVar(&kubeConfig, "kubeconfig", "", "absolute path to the kubeconfig file (leave blank for the first of in-cluster config and ~/.kube/config)")
 	listenCmd.Flags().StringVar(&ipfsApi, "ipfs", "", "multiaddr where the ipfs/kubo api can be accessed (leave blank to use the daemon running in IPFS_PATH)")
-	listenCmd.Flags().StringVar(&localOciRegistry, "registry", "", "OCI registry used to resolve IPDR images")
+	listenCmd.Flags().StringVar(&localOciRegistry, "oci-registry", "", "OCI registry used to resolve IPDR images")
 	listenCmd.Flags().StringVar(&ethereumRpc, "ethereum-rpc", "http://127.0.0.1:8545", "client public address")
 	listenCmd.Flags().StringVar(&providerKey, "ethereum-key", "", "provider account string (private key | http[s]://clef#account | /keystore#account | account (in default keystore))")
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/comrade-coop/trusted-pods/pkg/provider"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -17,12 +18,15 @@ import (
 )
 
 func ConnectToProvider(ipfsP2p *ipfs.P2pApi, deployment *pb.Deployment, interceptor *pb.AuthInterceptorClient, availableProviders []*provider.HostInfo) (*tpipfs.IpfsClientConn, error) {
+	deployment.Provider = &pb.ProviderConfig{}
 	for _, provider := range availableProviders {
-		deployment.Provider.Libp2PAddress = provider.Id
+		deployment.Provider.Libp2PAddress = provider.MultiAddresses[0].Value
+		deployment.Provider.EthereumAddress = common.HexToAddress(provider.Id).Bytes()
 		providerPeerId, err := peer.Decode(deployment.GetProvider().GetLibp2PAddress())
 		if err != nil {
 			return nil, fmt.Errorf("Failed to parse provider address: %w", err)
 		}
+		// TODO add ping protocol to test connection before deployment
 		conn, err := ipfsP2p.ConnectToGrpc(
 			pb.ProvisionPod,
 			providerPeerId,
@@ -38,13 +42,21 @@ func ConnectToProvider(ipfsP2p *ipfs.P2pApi, deployment *pb.Deployment, intercep
 	return nil, fmt.Errorf("Failed to dial provider(s)")
 }
 
-func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, deployment *pb.Deployment, interceptor *pb.AuthInterceptorClient, availableProviders []*provider.HostInfo) error {
+func SendToProvider(ctx context.Context,
+	ipfsP2p *ipfs.P2pApi, pod *pb.Pod, deployment *pb.Deployment, interceptor *pb.AuthInterceptorClient,
+	availableProviders []*provider.HostInfo, fundPaymentChannelFunc func() error) error {
 	// tpipfs.NewP2pApi(ipfs, ipfsMultiaddr)
 	pod = LinkUploadsFromDeployment(pod, deployment)
 
 	conn, err := ConnectToProvider(ipfsP2p, deployment, interceptor, availableProviders)
 	if err != nil {
 		return err
+	}
+	if fundPaymentChannelFunc != nil {
+		err = fundPaymentChannelFunc()
+		if err != nil {
+			return err
+		}
 	}
 	defer conn.Close()
 

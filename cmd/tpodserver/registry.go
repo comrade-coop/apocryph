@@ -178,7 +178,6 @@ var registerCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-
 		for i := 0; i < len(prices); i++ {
 			// register pricing tables in the contract
 			tx, err = registry.RegisterPricingTable(providerAuth, common.HexToAddress(tokenContractAddress), prices[i], cpuModel, teeType)

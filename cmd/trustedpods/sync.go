@@ -45,7 +45,7 @@ var syncPodCmd = &cobra.Command{
 
 		interceptor := pb.NewAuthInterceptor(deployment, pb.UpdatePod, expirationOffset, sign)
 
-		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), pod, deployment, &interceptor, nil)
+		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), pod, deployment, &interceptor, nil, nil)
 		if err != nil {
 			return err
 		}

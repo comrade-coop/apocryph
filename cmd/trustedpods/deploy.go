@@ -85,15 +85,19 @@ var deployPodCmd = &cobra.Command{
 		}
 		deployment.Payment.ChainID = chainId.Bytes()
 		deployment.Payment.PublisherAddress = publisherAuth.From.Bytes()
-
-		err = publisher.FundPaymentChannel(ethClient, publisherAuth, deployment, fundsInt, unlockTimeInt, debugMintFunds)
-		if err != nil {
-			return err
+		if !(len(availableProviders) > 0) {
+			return fmt.Errorf("no available providers found or provided")
 		}
-
+		fundPaymentChannelFunc := func() error {
+			err := publisher.FundPaymentChannel(ethClient, publisherAuth, deployment, fundsInt, unlockTimeInt, debugMintFunds)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
 		interceptor := pb.NewAuthInterceptor(deployment, pb.CreatePod, expirationOffset, sign)
 
-		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), pod, deployment, &interceptor, availableProviders)
+		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), pod, deployment, &interceptor, availableProviders, fundPaymentChannelFunc)
 		if err != nil {
 			return err
 		}
@@ -136,7 +140,7 @@ var deletePodCmd = &cobra.Command{
 
 		interceptor := pb.NewAuthInterceptor(deployment, pb.DeletePod, expirationOffset, sign)
 
-		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), nil, deployment, &interceptor, nil)
+		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), nil, deployment, &interceptor, nil, nil)
 		if err != nil {
 			return err
 		}

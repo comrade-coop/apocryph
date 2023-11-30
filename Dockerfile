@@ -15,7 +15,7 @@ COPY pkg ./pkg
 
 FROM docker.io/debian:bookworm-slim as run-common
 
-RUN apt-get update && apt-get install -y libgpgme11 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y libgpgme11 curl jq && rm -rf /var/lib/apt/lists/*
 
 ## p2p-helper: ##
 

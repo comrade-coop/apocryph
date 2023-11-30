@@ -71,20 +71,32 @@ sleep 1
 
 { while ! kubectl get -n eth endpoints eth-rpc -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; }
 
-[ "$PORT_8545" == "" ]  && { PORT_8545="yes" ; kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
-sleep 2
 
 DEPLOYER_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 #TODO= anvil.accounts[0] private key
 
-forge create --root ../../../contracts MockToken --private-key $DEPLOYER_KEY --nonce 0 --silent 2>/dev/null|| true
-TOKEN_CONTACT=0x5FbDB2315678afecb367f032d93F642f64180aa3 # TODO= result of forge create
+# clean anvil
 
-forge create --root ../../../contracts Payment --private-key $DEPLOYER_KEY --nonce 1 --silent --constructor-args "$TOKEN_CONTACT" 2>/dev/null|| true
+kubectl delete namespace eth 2>/dev/null || true
+helmfile --selector name=eth apply --skip-deps
+
+[ "$PORT_8545" == "" ]  && { PORT_8545="yes" ; sleep 5; kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
+
+TOKEN_CONTRACT=0x5FbDB2315678afecb367f032d93F642f64180aa3 # TODO= result of forge create
+
+forge create --root ../../../contracts MockToken --private-key $DEPLOYER_KEY --nonce 0 --silent 2>/dev/null|| true
+forge create --root ../../../contracts Payment --private-key $DEPLOYER_KEY --nonce 1 --silent --constructor-args "$TOKEN_CONTRACT" || true
+forge create --root ../../../contracts Registry --private-key $DEPLOYER_KEY --nonce 2 --silent|| true
+
+# re-run the tpodserver so the job finds the registry contract
+
+kubectl delete namespace trustedpods 2>/dev/null || true
+helmfile --selector name=trustedpods apply --skip-deps
 
 ## 2: Deploy example manifest to cluster ##
 
-TOKEN_CONTACT=0x5FbDB2315678afecb367f032d93F642f64180aa3 # TODO= result of forge create
+TOKEN_CONTRACT=0x5FbDB2315678afecb367f032d93F642f64180aa3 # TODO= result of forge create
 PAYMENT_CONTRACT=0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 # TODO= result of forge create
+REGISTRY_CONTRACT=0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 # TODO= result of forge create
 PROVIDER_ETH=0x70997970C51812dc3A010C7d01b50e0d17dc79C8 #TODO= anvil.accounts[1]
 PUBLISHER_KEY=0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a #TODO= anvil.accounts[2]
 FUNDS=10000000000000000000000
@@ -96,12 +108,14 @@ FUNDS=10000000000000000000000
 
 set +v
 set -x
-
+# wait until job gets completed and pricing tables are registered
+sleep 5
 go run ../../../cmd/trustedpods/ pod deploy manifest-guestbook.yaml \
   --ethereum-key "$PUBLISHER_KEY" \
-  --provider "$PROVIDER_IPFS" \
   --provider-eth "$PROVIDER_ETH" \
   --payment-contract "$PAYMENT_CONTRACT" \
+  --registry-contract "$REGISTRY_CONTRACT" \
+  --token-contract "$TOKEN_CONTRACT" \
   --funds "$FUNDS" \
   --mint-funds
 
@@ -111,13 +125,13 @@ set -v
 ## 3: Connect and measure balances ##
 
 WITHDRAW_ETH=0x90F79bf6EB2c4f870365E785982E1f101E93b906 # From trustedpods/tpodserver.yml
-TOKEN_CONTACT=0x5FbDB2315678afecb367f032d93F642f64180aa3 # TODO= result of forge create
+TOKEN_CONTRACT=0x5FbDB2315678afecb367f032d93F642f64180aa3 # TODO= result of forge create
 INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true | head -n 1); echo $INGRESS_URL
 MANIFEST_HOST=guestbook.localhost # From manifest-guestbook.yaml
 
 [ "$PORT_8545" == "" ] && { PORT_8545="yes" ; kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
 
-echo "Provider balance before:" $(cast call "$TOKEN_CONTACT" "balanceOf(address)" "$WITHDRAW_ETH" | cast to-fixed-point 18)
+echo "Provider balance before:" $(cast call "$TOKEN_CONTRACT" "balanceOf(address)" "$WITHDRAW_ETH" | cast to-fixed-point 18)
 
 set -x
 
@@ -128,7 +142,7 @@ set +x
 
 sleep 45
 
-echo "Provider balance after:" $(cast call "$TOKEN_CONTACT" "balanceOf(address)" "$WITHDRAW_ETH" | cast to-fixed-point 18)
+echo "Provider balance after:" $(cast call "$TOKEN_CONTRACT" "balanceOf(address)" "$WITHDRAW_ETH" | cast to-fixed-point 18)
 
 # NOTE: you can run the following to interact with the guestbook
 # kubectl port-forward --namespace keda ingress-nginx-controller 1234:80 &
