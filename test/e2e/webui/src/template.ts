@@ -18,7 +18,7 @@ export function template (): FieldOrRaw<{
     },
     provider: {
       ethereumAddress: field(hexToBytes('0x70997970C51812dc3A010C7d01b50e0d17dc79C8'), { encoding: 'eth-address' }), // TODO= anvil.accounts[1]
-      libp2pAddress: field('/ip4/192.168.49.2/udp/32532/quic-v1/webtransport/certhash/uEiDCdsCH-GpjdxtH6q1uyORWNCEEFNo6G4OgYIfsU93GvQ/certhash/uEiAwpTf9CnEOqk-MVOzDzWixkqr9pRKP6wsHQLeU_YMiUg/p2p/12D3KooWKpeDEBbYRSQq5ZL7naz4LNs98w2s8wThoG7KFyY2gTUn') // TODO TODO - fetch from registry!
+      libp2pAddress: field(import.meta.env.VITE_PROVIDER_MULTIADDR ?? '') // TODO TODO - fetch from registry!
     },
     pod: {
       containers: [
