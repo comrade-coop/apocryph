@@ -4,22 +4,22 @@ import type { Multiaddr } from '@multiformats/multiaddr'
 import type { ConnectionGater } from '@libp2p/interface/connection-gater'
 
 export class AllowConnectionGater implements ConnectionGater {
-  public allowed: Set<string>;
-  public onlyAllowed: boolean;
+  public allowed: Set<string>
+  public onlyAllowed: boolean
 
-  constructor({onlyAllowed = false, allowed = []}) {
+  constructor ({ onlyAllowed = false, allowed = [] }) {
     this.onlyAllowed = onlyAllowed
     this.allowed = new Set<string>(allowed)
   }
 
-  allow(peer: PeerId | Multiaddr | Multiaddr[]) {
+  allow (peer: PeerId | Multiaddr | Multiaddr[]): void {
     if (isPeerId(peer)) {
       console.log(peer.toString())
       this.allowed.add(peer.toString())
     } else {
-      let addrs = Array.isArray(peer) ? peer : [peer];
-      for (let ma of addrs) {
-        let peerId = ma.getPeerId()
+      const addrs = Array.isArray(peer) ? peer : [peer]
+      for (const ma of addrs) {
+        const peerId = ma.getPeerId()
         if (peerId != null) {
           this.allowed.add(peerId)
         }
@@ -28,11 +28,11 @@ export class AllowConnectionGater implements ConnectionGater {
     }
   }
 
-  async denyDialMultiaddr(ma: Multiaddr): Promise<boolean> {
+  async denyDialMultiaddr (ma: Multiaddr): Promise<boolean> {
     if (this.allowed.has(ma.toString())) {
       return false
     }
-    let peerId = ma.getPeerId()
+    const peerId = ma.getPeerId()
     if (peerId != null && this.allowed.has(peerId)) {
       return false
     }
@@ -48,4 +48,3 @@ export class AllowConnectionGater implements ConnectionGater {
     return false
   }
 }
-

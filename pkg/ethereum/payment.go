@@ -100,7 +100,7 @@ func (p *PaymentChannel) WithdrawIfOverMargin(transferAddress common.Address, am
 	if claimableAmount.Cmp(tolerance) < 0 {
 		return nil, nil
 	}
-	return p.WithdrawUpTo(transferAddress, amount)
+	return p.WithdrawUpTo(transferAddress, amount) // TODO: Handle running out of funds!!
 }
 
 func (p *PaymentChannel) WithdrawUpTo(transferAddress common.Address, amount *big.Int) (*types.Transaction, error) {

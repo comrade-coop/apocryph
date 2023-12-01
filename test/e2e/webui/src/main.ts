@@ -1,29 +1,84 @@
 import './style.css'
 import { template } from './template'
 import { toElement, toJSON } from './field'
-import { ProviderConfig, Pod } from 'trusted-pods-proto-ts'
+import { ProviderConfig, Pod, PaymentChannelConfig } from 'trusted-pods-proto-ts'
+import { fundPaymentChannel } from './fund'
+import { provisionPod } from './provision'
+import { bytesToHex, hexToBytes } from 'viem'
 
-let appRoot = document.querySelector<HTMLDivElement>('#app')
+const appRoot = document.querySelector<HTMLDivElement>('#app')
 
-let podTemplate = template()
+const podTemplate = template()
 
-let form = document.createElement('form')
+const form = document.createElement('form')
 
 form.appendChild(toElement(podTemplate, {}))
 
-let submit = document.createElement('button')
+const error = document.createElement('div')
+error.className = 'error-text'
+form.appendChild(error)
+
+const submit = document.createElement('button')
 submit.type = 'submit'
 submit.innerText = 'Send request'
 form.appendChild(submit)
 
+const results = document.createElement('div')
+form.appendChild(results)
+
+let submitPromise: Promise | undefined
+
 form.addEventListener('submit', ev => {
   ev.preventDefault()
-  let partialMessage = toJSON(podTemplate)
-  console.log(partialMessage)
-  console.log({
-    pod: new Pod(partialMessage.pod),
-    provider: new ProviderConfig(partialMessage.provider)
-  })
+  if (submitPromise === undefined) {
+    submit.classList.add('loading')
+    error.innerText = ''
+    results.innerHTML = ''
+    submitPromise = (async () => {
+      const values = toJSON(podTemplate)
+      const deployment = {
+        pod: new Pod(values.pod),
+        payment: new PaymentChannelConfig(values.payment),
+        provider: new ProviderConfig(values.provider)
+      }
+      deployment.payment.podID = hexToBytes('0x' + crypto.randomUUID().replace(/-/g, ''), { size: 32 })
+
+      {
+        const row = document.createElement('div')
+        const name = document.createElement('span')
+        name.className = 'key'
+        name.innerText = 'Pod id: '
+        row.appendChild(name)
+        const id = document.createElement('span')
+        id.innerText = bytesToHex(deployment.payment.podID)
+        row.appendChild(id)
+        results.appendChild(row)
+      }
+
+      await fundPaymentChannel(deployment, values.funds, { unlockTime: values.unlockTime, mintFunds: true })
+      const response = await provisionPod(deployment)
+
+      for (const address of response.addresses) {
+        const row = document.createElement('div')
+        const name = document.createElement('span')
+        name.className = 'key'
+        name.innerText = `Container ${address.containerName}: -> `
+        row.appendChild(name)
+        const addr = document.createElement('a')
+        addr.href = `http://${address.multiaddr.split('/').slice(-1)[0]}:1234` // TODO: fix when we have actual addresses
+        addr.innerText = address.multiaddr
+        row.appendChild(addr)
+        results.appendChild(row)
+      }
+    })()
+    submitPromise.catch((err) => {
+      error.innerText = err.toString().split('\n')[0]
+      console.error(err)
+    }).then(() => {
+      submitPromise = undefined
+      submit.classList.remove('loading')
+    })
+  }
 })
 
 appRoot?.appendChild(form)

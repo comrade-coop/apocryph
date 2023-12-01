@@ -19,20 +19,20 @@ export function connectTo (node: Helia, peerAddr: PeerId | Multiaddr | Multiaddr
   })
 }
 
-export async function createClient ({testMode = false}): Promise<Helia> {
-  let connectionGater = new AllowConnectionGater({
-    onlyAllowed: testMode,
+export async function createClient ({ testMode = false }): Promise<Helia> {
+  const connectionGater = new AllowConnectionGater({
+    onlyAllowed: testMode
   })
-  let helia = await createHelia({
+  const helia = await createHelia({
     libp2p: {
       connectionGater: {
-        denyDialMultiaddr: connectionGater.denyDialMultiaddr.bind(connectionGater),
+        denyDialMultiaddr: connectionGater.denyDialMultiaddr.bind(connectionGater)
       },
       start: !testMode,
-      peerDiscovery: testMode ? [] : undefined,
+      peerDiscovery: testMode ? [] : undefined
     }
   })
-  let superDial = helia.libp2p.dial.bind(helia.libp2p)
+  const superDial = helia.libp2p.dial.bind(helia.libp2p)
   helia.libp2p.dial = async (peer: PeerId | Multiaddr | Multiaddr[], options?: AbortOptions): Promise<Connection> => {
     connectionGater.allow(peer)
     return await superDial(peer, options)

@@ -7,7 +7,8 @@
     "test": "test"
   },
   "scripts": {
-    "fmt": "eslint --fix pkg/*-ts/**.\\{ts,js\\} test/*/*-ts/**.\\{ts,js\\}"
+    "lint": "eslint pkg/**/*.\\{ts,js\\} test/**/*.\\{ts,js\\} --ignore-pattern **/*.config.ts",
+    "fmt": "eslint --fix pkg/**/*.\\{ts,js\\} test/**/*.\\{ts,js\\} --ignore-pattern **/*.config.ts"
   },
   "repository": {
     "type": "git",
@@ -23,6 +24,7 @@
     "@rollup/plugin-run": "^3.0.2",
     "@rollup/plugin-typescript": "^11.1.5",
     "@typescript-eslint/eslint-plugin": "^6.11.0",
+    "esbuild": "^0.16.17",
     "eslint": "^8.53.0",
     "eslint-config-standard-with-typescript": "^39.1.1",
     "eslint-plugin-import": "^2.29.0",
@@ -41,6 +43,7 @@
     "test/e2e/webui",
     "test/integration/ipfs",
     "pkg/ipfs-ts",
-    "pkg/proto-ts"
+    "pkg/proto-ts",
+    "pkg/abi-ts"
   ]
 }

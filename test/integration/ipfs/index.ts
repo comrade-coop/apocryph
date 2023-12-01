@@ -3,9 +3,9 @@ import { createPromiseClient } from '@connectrpc/connect'
 import { ProvisionPodService } from 'trusted-pods-proto-ts'
 import { multiaddr, type MultiaddrInput } from '@multiformats/multiaddr'
 
-var helia = await createClient({testMode: true})
+const helia = await createClient({ testMode: true })
 
-var peerAddr: MultiaddrInput = process.argv[1]
+const peerAddr: MultiaddrInput = process.argv[1]
 
 const client = createPromiseClient(ProvisionPodService, connectTo(helia, multiaddr(peerAddr), '/x/trusted-pods/provision-pod/0.0.1'))
 
@@ -23,4 +23,3 @@ if (result.error !== '3') {
 }
 
 console.log('Sucessfully connected from javascript!')
-
