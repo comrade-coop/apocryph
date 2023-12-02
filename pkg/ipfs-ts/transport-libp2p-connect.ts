@@ -1,8 +1,11 @@
-import { type Transport } from '@connectrpc/connect'
-import { type UniversalClientRequest, type UniversalClientResponse } from '@connectrpc/connect/protocol'
+import { Transport } from '@connectrpc/connect'
+import {
+  UniversalClientRequest,
+  UniversalClientResponse
+} from '@connectrpc/connect/protocol'
 import { createTransport } from '@connectrpc/connect/protocol-connect'
 import { Uint8ArrayList } from 'uint8arraylist'
-import { type Stream } from '@libp2p/interface/connection'
+import { Stream } from '@libp2p/interface/connection'
 
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
@@ -16,9 +19,13 @@ export interface Libp2pTransportOptions {
   writeMaxBytes: 10000
 }
 
-export function createLibp2pConnectTransport (options: Libp2pTransportOptions): Transport {
+export function createLibp2pConnectTransport(
+  options: Libp2pTransportOptions
+): Transport {
   return createTransport({
-    async httpClient (req: UniversalClientRequest): Promise<UniversalClientResponse> {
+    async httpClient(
+      req: UniversalClientRequest
+    ): Promise<UniversalClientResponse> {
       const stream = await options.dialStream() // NOTE: keepalive could be nice here?
 
       let requestIsChunked = false
@@ -29,24 +36,29 @@ export function createLibp2pConnectTransport (options: Libp2pTransportOptions): 
       req.header.append('Host', '127.0.0.1')
 
       const requestHeadersBuffer = new Uint8ArrayList()
-      requestHeadersBuffer.append(encoder.encode(`${req.method} ${req.url} HTTP/1.2`), eol)
+      requestHeadersBuffer.append(
+        encoder.encode(`${req.method} ${req.url} HTTP/1.2`),
+        eol
+      )
       req.header.forEach((value: string, key: string): void => {
         requestHeadersBuffer.append(encoder.encode(`${key}: ${value}`), eol)
       })
       requestHeadersBuffer.append(eol)
 
       let signalEnd!: () => Promise<void>
-      const bodyPromise = stream.sink(writeBody(
-        new Uint8ArrayList(requestHeadersBuffer),
-        req.body,
-        requestIsChunked,
-        new Promise((resolve) => {
-          signalEnd = async () => {
-            resolve()
-            await bodyPromise
-          }
-        })
-      ))
+      const bodyPromise = stream.sink(
+        writeBody(
+          new Uint8ArrayList(requestHeadersBuffer),
+          req.body,
+          requestIsChunked,
+          new Promise((resolve) => {
+            signalEnd = async () => {
+              resolve()
+              await bodyPromise
+            }
+          })
+        )
+      )
 
       let isStatusLine = true
       let isBody = false
@@ -98,7 +110,9 @@ export function createLibp2pConnectTransport (options: Libp2pTransportOptions): 
       if ((transferEncoding?.indexOf('chunked') ?? -1) !== -1) {
         responseContentLength = -1
       } else {
-        responseContentLength = parseInt(responseHeader.get('Content-Length') ?? '-1')
+        responseContentLength = parseInt(
+          responseHeader.get('Content-Length') ?? '-1'
+        )
         if (responseContentLength < 0) {
           throw new Error('Invalid HTTP response (content length line)')
         }
@@ -109,7 +123,13 @@ export function createLibp2pConnectTransport (options: Libp2pTransportOptions): 
         status: responseStatus,
         header: responseHeader,
         trailer: responseTrailer,
-        body: readBody(buffer, stream.source, responseContentLength, responseTrailer, signalEnd)
+        body: readBody(
+          buffer,
+          stream.source,
+          responseContentLength,
+          responseTrailer,
+          signalEnd
+        )
       }
     },
     baseUrl: '',
@@ -123,14 +143,24 @@ export function createLibp2pConnectTransport (options: Libp2pTransportOptions): 
   })
 }
 
-async function * writeBody (buffer: Uint8ArrayList, body?: AsyncIterable<Uint8Array>, isChunked: boolean = false, endPromise?: Promise<void>): AsyncGenerator<Uint8ArrayList, void, undefined> {
+async function* writeBody(
+  buffer: Uint8ArrayList,
+  body?: AsyncIterable<Uint8Array>,
+  isChunked: boolean = false,
+  endPromise?: Promise<void>
+): AsyncGenerator<Uint8ArrayList, void, undefined> {
   yield buffer
 
   if (body !== undefined) {
     if (isChunked) {
       for await (const chunk of body) {
         if (chunk.length > 0) {
-          yield new Uint8ArrayList(encoder.encode(chunk.byteLength.toString(16)), eol, chunk, eol)
+          yield new Uint8ArrayList(
+            encoder.encode(chunk.byteLength.toString(16)),
+            eol,
+            chunk,
+            eol
+          )
         }
       }
       yield new Uint8ArrayList(encoder.encode('0\r\n\r\n\r\n'))
@@ -146,14 +176,21 @@ async function * writeBody (buffer: Uint8ArrayList, body?: AsyncIterable<Uint8Ar
   }
 }
 
-async function * readBody (buffer: Uint8ArrayList, source: AsyncGenerator<Uint8ArrayList>, contentLength: number, trailers: Headers, signalEnd?: () => Promise<void>): AsyncGenerator<Uint8Array, void, undefined> {
+async function* readBody(
+  buffer: Uint8ArrayList,
+  source: AsyncGenerator<Uint8ArrayList>,
+  contentLength: number,
+  trailers: Headers,
+  signalEnd?: () => Promise<void>
+): AsyncGenerator<Uint8Array, void, undefined> {
   let remainingChunkBytes = 0
   let remainingChunkEolBytes = 0
   let isTrailers = false
 
   while (true) {
     if (contentLength === -1) {
-      while (!isTrailers) { // Best of luck to whoever might end up having to debug this.. I am sorry :/
+      while (!isTrailers) {
+        // Best of luck to whoever might end up having to debug this.. I am sorry :/
         if (remainingChunkEolBytes === 0) {
           if (remainingChunkBytes === 0) {
             const eolIndex = buffer.indexOf(eol)
@@ -170,7 +207,8 @@ async function * readBody (buffer: Uint8ArrayList, source: AsyncGenerator<Uint8A
             } else {
               break
             }
-          } else { // (remainingChunkBytes !== 0)
+          } else {
+            // (remainingChunkBytes !== 0)
             if (buffer.byteLength >= remainingChunkBytes) {
               yield buffer.subarray(0, remainingChunkBytes)
               buffer.consume(remainingChunkBytes)
@@ -185,7 +223,8 @@ async function * readBody (buffer: Uint8ArrayList, source: AsyncGenerator<Uint8A
               break
             }
           }
-        } else { // (remainingChunkEolBytes !== 0)
+        } else {
+          // (remainingChunkEolBytes !== 0)
           if (buffer.byteLength < eol.byteLength) {
             break
           }
@@ -198,7 +237,8 @@ async function * readBody (buffer: Uint8ArrayList, source: AsyncGenerator<Uint8A
           buffer.consume(eol.byteLength)
         }
       }
-      if (isTrailers) { // Lack of else is important (so we parse the trailers in the buffer right away)
+      if (isTrailers) {
+        // Lack of else is important (so we parse the trailers in the buffer right away)
         let eolIndex: number
         while ((eolIndex = buffer.indexOf(eol)) !== -1) {
           const line = decoder.decode(buffer.subarray(0, eolIndex))
