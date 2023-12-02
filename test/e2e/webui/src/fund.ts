@@ -4,7 +4,7 @@ import { bytesToHex } from 'viem'
 import { publicClient, walletClient } from './connections'
 
 // Copied and adapted from pkg/publisher/fund.go
-export async function fundPaymentChannel (
+export async function fundPaymentChannel(
   config: {
     payment: {
       paymentContractAddress: Uint8Array
@@ -15,12 +15,15 @@ export async function fundPaymentChannel (
     }
   },
   funds: bigint,
-  {
-    unlockTime = 5n * 60n,
-    mintFunds = false
-  }): Promise<void> {
-  const paymentContractAddress = bytesToHex(config.payment.paymentContractAddress, { size: 20 })
-  const providerAddress = bytesToHex(config.provider.ethereumAddress, { size: 20 })
+  { unlockTime = 5n * 60n, mintFunds = false }
+): Promise<void> {
+  const paymentContractAddress = bytesToHex(
+    config.payment.paymentContractAddress,
+    { size: 20 }
+  )
+  const providerAddress = bytesToHex(config.provider.ethereumAddress, {
+    size: 20
+  })
   const podId = bytesToHex(config.payment.podID, { size: 32 })
   if (funds > 0n) {
     const tokenAddress = await publicClient.readContract({
@@ -35,9 +38,7 @@ export async function fundPaymentChannel (
         address: tokenAddress,
         account: walletClient.account.address,
         functionName: 'mint',
-        args: [
-          funds
-        ]
+        args: [funds]
       })
       await walletClient.writeContract(request)
     }
@@ -46,10 +47,7 @@ export async function fundPaymentChannel (
       abi: ierc20ABI,
       address: tokenAddress,
       functionName: 'allowance',
-      args: [
-        walletClient.account.address,
-        paymentContractAddress
-      ]
+      args: [walletClient.account.address, paymentContractAddress]
     })
 
     if (approved < funds) {
@@ -58,10 +56,7 @@ export async function fundPaymentChannel (
         address: tokenAddress,
         functionName: 'approve',
         account: walletClient.account.address,
-        args: [
-          paymentContractAddress,
-          funds
-        ]
+        args: [paymentContractAddress, funds]
       })
       await walletClient.writeContract(request)
     }
@@ -71,12 +66,7 @@ export async function fundPaymentChannel (
       address: paymentContractAddress,
       functionName: 'createChannel',
       account: walletClient.account.address,
-      args: [
-        providerAddress,
-        podId,
-        unlockTime,
-        funds
-      ]
+      args: [providerAddress, podId, unlockTime, funds]
     })
     await walletClient.writeContract(request)
   }

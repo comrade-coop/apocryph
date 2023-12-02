@@ -1,7 +1,11 @@
 import './style.css'
 import { template } from './template'
 import { toElement, toJSON } from './field'
-import { ProviderConfig, Pod, PaymentChannelConfig } from 'trusted-pods-proto-ts'
+import {
+  ProviderConfig,
+  Pod,
+  PaymentChannelConfig
+} from 'trusted-pods-proto-ts'
 import { fundPaymentChannel } from './fund'
 import { provisionPod } from './provision'
 import { bytesToHex, hexToBytes } from 'viem'
@@ -26,11 +30,11 @@ form.appendChild(submit)
 const results = document.createElement('div')
 form.appendChild(results)
 
-let submitPromise: Promise | undefined
+let submitPromise: Promise<any> | null = null
 
-form.addEventListener('submit', ev => {
+form.addEventListener('submit', (ev) => {
   ev.preventDefault()
-  if (submitPromise === undefined) {
+  if (submitPromise === null) {
     submit.classList.add('loading')
     error.innerText = ''
     results.innerHTML = ''
@@ -41,8 +45,10 @@ form.addEventListener('submit', ev => {
         payment: new PaymentChannelConfig(values.payment),
         provider: new ProviderConfig(values.provider)
       }
-      deployment.payment.podID = hexToBytes('0x' + crypto.randomUUID().replace(/-/g, ''), { size: 32 })
-
+      deployment.payment.podID = hexToBytes(
+        `0x${crypto.randomUUID().replace(/-/g, '')}`,
+        { size: 32 }
+      )
       {
         const row = document.createElement('div')
         const name = document.createElement('span')
@@ -55,7 +61,10 @@ form.addEventListener('submit', ev => {
         results.appendChild(row)
       }
 
-      await fundPaymentChannel(deployment, values.funds, { unlockTime: values.unlockTime, mintFunds: true })
+      await fundPaymentChannel(deployment, values.funds, {
+        unlockTime: values.unlockTime,
+        mintFunds: true
+      })
       const response = await provisionPod(deployment)
 
       for (const address of response.addresses) {
@@ -71,13 +80,14 @@ form.addEventListener('submit', ev => {
         results.appendChild(row)
       }
     })()
-    submitPromise.catch((err) => {
-      error.innerText = err.toString().split('\n')[0]
-      console.error(err)
-    }).then(() => {
-      submitPromise = undefined
-      submit.classList.remove('loading')
-    })
+      .catch((err) => {
+        error.innerText = err.toString().split('\n')[0]
+        console.error(err)
+      })
+      .then(() => {
+        submitPromise = null
+        submit.classList.remove('loading')
+      })
   }
 })
 

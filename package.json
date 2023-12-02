@@ -23,15 +23,17 @@
   "devDependencies": {
     "@rollup/plugin-run": "^3.0.2",
     "@rollup/plugin-typescript": "^11.1.5",
-    "@typescript-eslint/eslint-plugin": "^6.11.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.1",
+    "@typescript-eslint/parser": "^6.13.1",
+    "base32": "^0.0.7",
     "esbuild": "^0.16.17",
-    "eslint": "^8.53.0",
+    "eslint": "^8.55.0",
     "eslint-config-standard-with-typescript": "^39.1.1",
     "eslint-plugin-import": "^2.29.0",
     "eslint-plugin-n": "^16.3.1",
     "eslint-plugin-promise": "^6.1.1",
     "rollup": "^4.6.0",
-    "typescript": "^5.2.2"
+    "typescript": "^5.3.2"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^1.4.2",
