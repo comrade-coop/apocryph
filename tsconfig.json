@@ -19,11 +19,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": [
-    "pkg",
-    "typings/**/*.d.ts",
-    "test/e2e/webui/src",
-    "test/integration/ipfs",
-    ".eslintrc.cjs"
-  ]
+  "include": ["pkg", "typings/**/*.d.ts", "test/e2e/webui/src", ".eslintrc.cjs"]
 }

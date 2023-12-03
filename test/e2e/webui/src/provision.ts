@@ -54,17 +54,14 @@ export async function provisionPod(config: {
     Publisher: walletClient.account.address
   })
 
-  const signature = walletClient.account.signTransaction(
+  const signature = (await walletClient.account.signTransaction(
     {},
     {
-      serializer(tx: TransactionSerializable, signature?: Signature) {
-        if (signature != null) {
-          return signature
-        }
+      serializer(_: TransactionSerializable, __?: Signature) {
         return stringToHex(token)
       }
     }
-  ) as Hex // FIXME: HACK: We should just use EIP typed data signatures and be done with it...
+  )) as Hex // FIXME: HACK: We should just use EIP typed data signatures and be done with it...
 
   const namespacePartsHash = keccak256(
     concatBytes([

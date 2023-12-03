@@ -23,4 +23,4 @@ set -v
 
 export VITE_PROVIDER_MULTIADDR=$(curl -X POST "http://127.0.0.1:5004/api/v0/id" -s | jq '.Addresses[] | select(test("192.168.+webtransport"))' -r); echo $VITE_PROVIDER_MULTIADDR
 
-npm run dev
+vite --clearScreen false

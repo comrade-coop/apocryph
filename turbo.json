@@ -1,0 +1,15 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "pipeline": {
+    "build": {
+      "dependsOn": ["^build", "gen-abi", "gen-proto"]
+    },
+    "lint": {},
+    "gen-proto": {},
+    "gen-abi": {},
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

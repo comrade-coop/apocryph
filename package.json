@@ -41,11 +41,5 @@
     "@connectrpc/connect": "^1.1.3",
     "@connectrpc/protoc-gen-connect-es": "^1.1.3"
   },
-  "workspaces": [
-    "test/e2e/webui",
-    "test/integration/ipfs",
-    "pkg/ipfs-ts",
-    "pkg/proto-ts",
-    "pkg/abi-ts"
-  ]
+  "workspaces": ["test/e2e/webui", "pkg/ipfs-ts", "pkg/proto-ts", "pkg/abi-ts"]
 }

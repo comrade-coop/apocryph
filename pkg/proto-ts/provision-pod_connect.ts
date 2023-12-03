@@ -3,58 +3,51 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import {
-  DeletePodRequest,
-  DeletePodResponse,
-  PodLogRequest,
-  PodLogResponse,
-  ProvisionPodRequest,
-  ProvisionPodResponse,
-  UpdatePodRequest
-} from './provision-pod_pb.js'
-import { MethodKind } from '@bufbuild/protobuf'
+import { DeletePodRequest, DeletePodResponse, PodLogRequest, PodLogResponse, ProvisionPodRequest, ProvisionPodResponse, UpdatePodRequest } from "./provision-pod_pb.js";
+import { MethodKind } from "@bufbuild/protobuf";
 
 /**
  * @generated from service apocryph.proto.v0.provisionPod.ProvisionPodService
  */
 export const ProvisionPodService = {
-  typeName: 'apocryph.proto.v0.provisionPod.ProvisionPodService',
+  typeName: "apocryph.proto.v0.provisionPod.ProvisionPodService",
   methods: {
     /**
      * @generated from rpc apocryph.proto.v0.provisionPod.ProvisionPodService.ProvisionPod
      */
     provisionPod: {
-      name: 'ProvisionPod',
+      name: "ProvisionPod",
       I: ProvisionPodRequest,
       O: ProvisionPodResponse,
-      kind: MethodKind.Unary
+      kind: MethodKind.Unary,
     },
     /**
      * @generated from rpc apocryph.proto.v0.provisionPod.ProvisionPodService.UpdatePod
      */
     updatePod: {
-      name: 'UpdatePod',
+      name: "UpdatePod",
       I: UpdatePodRequest,
       O: ProvisionPodResponse,
-      kind: MethodKind.Unary
+      kind: MethodKind.Unary,
     },
     /**
      * @generated from rpc apocryph.proto.v0.provisionPod.ProvisionPodService.DeletePod
      */
     deletePod: {
-      name: 'DeletePod',
+      name: "DeletePod",
       I: DeletePodRequest,
       O: DeletePodResponse,
-      kind: MethodKind.Unary
+      kind: MethodKind.Unary,
     },
     /**
      * @generated from rpc apocryph.proto.v0.provisionPod.ProvisionPodService.GetPodLogs
      */
     getPodLogs: {
-      name: 'GetPodLogs',
+      name: "GetPodLogs",
       I: PodLogRequest,
       O: PodLogResponse,
-      kind: MethodKind.ServerStreaming
-    }
+      kind: MethodKind.ServerStreaming,
+    },
   }
-} as const
+} as const;
+
