@@ -5,8 +5,14 @@ set -e
 trap 'pkill -f "kubectl port-forward" && kill $(jobs -p) &>/dev/null' EXIT
 
 if [ "$1" = "teardown" ]; then
-   minikube delete
-   exit 0
+  minikube delete
+
+  if [ "$2" = "full" ]; then
+    docker rm --force registry
+    docker rm --force anvil
+    exit 0
+  fi
+  exit 0
 fi
 
 cd "$(dirname "$0")"
@@ -17,6 +23,7 @@ which ipfs >/dev/null
 which forge &>/dev/null || export PATH=$PATH:~/.bin/foundry
 which forge >/dev/null; which cast >/dev/null
 which minikube >/dev/null; which helmfile >/dev/null; which helm >/dev/null; which kustomize >/dev/null; which kubectl >/dev/null
+which docker >/dev/null
 
 # based on https://stackoverflow.com/a/31269848 / https://bobcopeland.com/blog/2012/10/goto-in-bash/
 if [ -n "$1" ]; then
@@ -24,7 +31,48 @@ if [ -n "$1" ]; then
   eval "set -v; $(sed -n "/## $STEP: /{:a;n;p;ba};" $0)"
   exit
 fi
+
+echo -e "\e[1;32m---"
+echo "Note: To skip steps, use '$0 <number>'"
+echo "  e.g. to skip ahead to configuring IPFS, run '$0 1.2'"
+echo -e "---\e[0m"
+
 set -v
+
+## 0: Set up the external environment
+
+## 0.1: Set up a local ethereum node and deploy contracts to it
+
+# (NOTE: Unfortunatelly, we cannot use a port other than 8545, or otherwise the eth-rpc service will break)
+docker run -d -p 8545:8545 --restart=always --name=anvil \
+  ghcr.io/foundry-rs/foundry:nightly-619f3c56302b5a665164002cb98263cd9812e4d5 \
+  -- 'anvil --host 0.0.0.0 --state /anvil-state.json' 2>/dev/null || {
+    docker exec anvil ash -c 'kill 1 && rm -f /anvil-state.json' # Reset anvil state
+}
+sleep 5
+
+DEPLOYER_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 #TODO= anvil.accounts[0] private key
+TOKEN_CONTRACT=$(cast compute-address "$(cast wallet address $DEPLOYER_KEY)" --nonce 0 | sed -E 's/.+0x/0x/')
+
+forge create --root ../../../contracts MockToken --private-key $DEPLOYER_KEY --nonce 0
+forge create --root ../../../contracts Payment --private-key $DEPLOYER_KEY --nonce 1 --constructor-args "$TOKEN_CONTRACT"
+forge create --root ../../../contracts Registry --private-key $DEPLOYER_KEY --nonce 2
+
+## 0.2: Build/tag server and p2p-helper images
+
+docker build -t comradecoop/trusted-pods/server:latest ../../.. --target server
+
+docker build -t comradecoop/trusted-pods/p2p-helper:latest ../../.. --target p2p-helper
+
+## 0.3: Create local registry and push server and p2p-helper images
+
+docker run -d -p 5000:5000 --restart=always --name registry registry:2 || echo "Docker registry already running"
+
+docker tag comradecoop/trusted-pods/server:latest localhost:5000/comradecoop/trusted-pods/server:latest
+docker push localhost:5000/comradecoop/trusted-pods/server:latest
+
+docker tag comradecoop/trusted-pods/p2p-helper:latest localhost:5000/comradecoop/trusted-pods/p2p-helper:latest
+docker push localhost:5000/comradecoop/trusted-pods/p2p-helper:latest
 
 ## 1: Set up the Kubernetes environment ##
 
@@ -32,7 +80,7 @@ set -v
 
 ## 1.1: Apply Helm configurations ##
 
-helmfile sync || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile sync; }
+helmfile apply || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile apply; }
 
 ## 1.2: Configure provider/in-cluster IPFS and publisher IPFS ##
 
@@ -68,51 +116,22 @@ echo "$SWARM_ADDRESSES" | jq -r '.[] + "/p2p/'"$PROVIDER_IPFS"'"' | xargs -n 1 i
 
 sleep 1
 
-## 1.3: Deploy contracts to anvil ##
-
-# clean anvil
-
-kubectl delete namespace eth 2>/dev/null || true
-helmfile --selector name=eth apply --skip-deps
-
-{ while ! kubectl get -n eth endpoints eth-rpc -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; }
-
-## 1.3.2: Deploy contracts to anvil ##
-
-DEPLOYER_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 #TODO= anvil.accounts[0] private key
-
-
-[ "$PORT_8545" == "" ]  && { PORT_8545="yes" ; sleep 5; kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
-
-TOKEN_CONTRACT=0x5FbDB2315678afecb367f032d93F642f64180aa3 # TODO= result of forge create
-
-forge create --root ../../../contracts MockToken --private-key $DEPLOYER_KEY --nonce 0 --silent 2>/dev/null|| true
-forge create --root ../../../contracts Payment --private-key $DEPLOYER_KEY --nonce 1 --silent --constructor-args "$TOKEN_CONTRACT" || true
-forge create --root ../../../contracts Registry --private-key $DEPLOYER_KEY --nonce 2 --silent|| true
-
-# re-run the tpodserver so the job finds the registry contract
-
-kubectl delete namespace trustedpods 2>/dev/null || true
-helmfile --selector name=trustedpods apply --skip-deps
-
 ## 2: Deploy example manifest to cluster ##
 
-TOKEN_CONTRACT=0x5FbDB2315678afecb367f032d93F642f64180aa3 # TODO= result of forge create
-PAYMENT_CONTRACT=0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 # TODO= result of forge create
-REGISTRY_CONTRACT=0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 # TODO= result of forge create
+DEPLOYER_ETH=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 #TODO= anvil.accounts[0]
 PROVIDER_ETH=0x70997970C51812dc3A010C7d01b50e0d17dc79C8 #TODO= anvil.accounts[1]
 PUBLISHER_KEY=0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a #TODO= anvil.accounts[2]
+TOKEN_CONTRACT=$(cast compute-address $DEPLOYER_ETH --nonce 0 | sed -E 's/.+0x/0x/')
+PAYMENT_CONTRACT=$(cast compute-address $DEPLOYER_ETH --nonce 1 | sed -E 's/.+0x/0x/')
+REGISTRY_CONTRACT=$(cast compute-address $DEPLOYER_ETH --nonce 2 | sed -E 's/.+0x/0x/')
 FUNDS=10000000000000000000000
 
-[ "$PORT_8545" == "" ] && { PORT_8545="yes" ; kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
 [ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
 [ -n "$PROVIDER_IPFS" ] || { PROVIDER_IPFS=$(curl -X POST "http://127.0.0.1:5004/api/v0/id" -s | jq '.ID' -r); echo $PROVIDER_IPFS; }
 [ -n "$IPFS_DAEMON" ] || { IPFS_DAEMON=yes; ipfs daemon & { while ! [ -f ${IPFS_PATH:-~/.ipfs}/api ]; do sleep 0.1; done; } 2>/dev/null; }
 
 set +v
 set -x
-# wait until job gets completed and pricing tables are registered
-sleep 5
 
 go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-guestbook.yaml \
   --ethereum-key "$PUBLISHER_KEY" \
@@ -133,8 +152,6 @@ TOKEN_CONTRACT=0x5FbDB2315678afecb367f032d93F642f64180aa3 # TODO= result of forg
 INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true | head -n 1); echo $INGRESS_URL
 MANIFEST_HOST=guestbook.localhost # From manifest-guestbook.yaml
 
-[ "$PORT_8545" == "" ] && { PORT_8545="yes" ; kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
-
 echo "Provider balance before:" $(cast call "$TOKEN_CONTRACT" "balanceOf(address)" "$WITHDRAW_ETH" | cast to-fixed-point 18)
 
 set -x
@@ -148,6 +165,15 @@ sleep 45
 
 echo "Provider balance after:" $(cast call "$TOKEN_CONTRACT" "balanceOf(address)" "$WITHDRAW_ETH" | cast to-fixed-point 18)
 
-# NOTE: you can run the following to interact with the guestbook
-# kubectl port-forward --namespace keda ingress-nginx-controller 1234:80 &
-# xdg-open http://guestbook.localhost:1234/
+## 4: In conclusion..
+
+set +v
+
+echo -e "\e[1;32m---"
+echo "Note: To interact with the deployed guestbook, run the following"
+echo "  kubectl port-forward --namespace keda svc/ingress-nginx-controller 1234:80 &"
+echo "  xdg-open http://guestbook.localhost:1234/"
+echo "Note: To stop the minikube cluster/provider, use '$0 teardown'"
+echo "  and to clean-up everything the script does, use '$0 teardown full'"
+echo -e "---\e[0m"
+

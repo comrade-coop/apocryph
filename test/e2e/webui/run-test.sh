@@ -18,7 +18,6 @@ echo ""
 set -v
 
 [ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
-[ "$PORT_8545" == "" ]  && { PORT_8545="yes" ; kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
 [ "$PORT_1234" == "" ]  && { PORT_1234="yes" ; kubectl port-forward --namespace keda svc/ingress-nginx-controller 1234:80 & }
 
 export VITE_PROVIDER_MULTIADDR=$(curl -X POST "http://127.0.0.1:5004/api/v0/id" -s | jq '.Addresses[] | select(test("192.168.+webtransport"))' -r); echo $VITE_PROVIDER_MULTIADDR

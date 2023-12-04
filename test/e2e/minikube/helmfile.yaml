@@ -21,6 +21,8 @@ releases:
   set:
   - name: interceptor.replicas.min
     value: 1
+  - name: interceptor.waitTimeout
+    value: 40s
   needs:
   - keda
 - name: prometheus
