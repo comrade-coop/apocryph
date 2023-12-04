@@ -110,7 +110,7 @@ func SendToProvider(ctx context.Context,
 		}
 
 		deployment.Deployed = response.Msg
-		fmt.Fprintf(os.Stderr, "Successfully deployed! %v\n", response)
+		fmt.Fprintf(os.Stderr, "Successfully deployed! %v\n", response.Msg)
 	} else {
 		request := &pb.DeletePodRequest{
 			PublisherAddress: deployment.Payment.PublisherAddress,

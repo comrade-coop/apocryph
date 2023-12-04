@@ -74,6 +74,9 @@ func (s *provisionPodServer) UpdatePod(ctx context.Context, request *connect.Req
 	namespace := request.Header().Get("namespace")
 	response := &pb.ProvisionPodResponse{}
 	err = tpk8s.ApplyPodRequest(ctx, s.k8cl, namespace, true, request.Msg.Pod, images, secrets, response)
+	if err != nil {
+		return transformError(err)
+	}
 
 	return connect.NewResponse(response), nil
 }

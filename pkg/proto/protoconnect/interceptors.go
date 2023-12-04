@@ -76,7 +76,7 @@ func (i authInterceptor) WrapUnary(handler connect.UnaryFunc) connect.UnaryFunc 
 			namespace := req.Header().Get("namespace")
 			err = i.k8Client.Get(context.Background(), client.ObjectKey{Namespace: namespace, Name: namespace}, p)
 			if err != nil {
-				return nil, err
+				return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("Namespace not found: %w", err))
 			}
 		}
 
@@ -132,18 +132,17 @@ func (a authInterceptor) authenticate(header http.Header) error {
 	if err != nil {
 		return fmt.Errorf("Error verifying payload: %w", err)
 	}
-
+	if !valid {
+		return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Invalid signature"))
+	}
+	
 	// verify publisherAddress in namespace is same one signed in token
 	ns := header.Get("namespace")
 	nsExpected := namespaceFromTokenParts(token.Publisher, token.PodId)
 	if ns != nsExpected {
-		return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Inavlid namespace"))
+		return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Invalid namespace"))
 	}
 	// header.Set("namespace", nsExpected)?
-
-	if !valid {
-		return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Inavlid signature"))
-	}
 
 	return nil
 }

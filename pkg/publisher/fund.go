@@ -70,7 +70,7 @@ func FundPaymentChannel(ethClient *ethclient.Client, publisherAuth *bind.Transac
 			if err != nil {
 				return fmt.Errorf("Failed creating payment contract: %w", err)
 			}
-			fmt.Fprintf(os.Stderr, "Payment channel created with %d initial funds and %d seconds unlock time! %v\n", unlockTimeInt, funds, tx.Hash())
+			fmt.Fprintf(os.Stderr, "Payment channel created with %d initial funds and %d seconds unlock time! %v\n", funds, unlockTimeInt, tx.Hash())
 		}
 	}
 	return nil
