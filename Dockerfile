@@ -1,6 +1,7 @@
 ## common: ##
 
-FROM docker.io/golang:1.21-bookworm as build-common
+FROM docker.io/library/golang@sha256:52362e252f452df17c24131b021bf2ebf1c9869f65c28f88ddb326191defea9c as build-common
+# 1.21-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y protobuf-compiler libgpgme-dev && rm -rf /var/lib/apt/lists/*
@@ -13,7 +14,8 @@ RUN go mod download && go mod verify
 
 COPY pkg ./pkg
 
-FROM docker.io/debian:bookworm-slim as run-common
+FROM docker.io/debian@sha256:2bc5c236e9b262645a323e9088dfa3bb1ecb16cc75811daf40a23a824d665be9 as run-common
+# bookworm-slim, bookworm-20231120-slim matching golang:1.21-bookworm
 
 RUN apt-get update && apt-get install -y libgpgme11 curl jq && rm -rf /var/lib/apt/lists/*
 
@@ -42,4 +44,3 @@ FROM run-common as server
 COPY --from=build-server /usr/local/bin/tpodserver /usr/local/bin/tpodserver
 
 ENTRYPOINT ["tpodserver"]
-
