@@ -29,9 +29,10 @@ set -v
 ## 1: Set up the Kubernetes environment ##
 
 [ "$(minikube status -f'{{.Kubelet}}')" = "Running" ] || minikube start --insecure-registry='host.minikube.internal:5000'
+
 ## 1.1: Apply Helm configurations ##
 
-# helmfile sync || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile sync; }
+helmfile sync || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile sync; }
 
 ## 1.2: Configure provider/in-cluster IPFS and publisher IPFS ##
 
@@ -69,15 +70,17 @@ sleep 1
 
 ## 1.3: Deploy contracts to anvil ##
 
-{ while ! kubectl get -n eth endpoints eth-rpc -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; }
-
-
-DEPLOYER_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 #TODO= anvil.accounts[0] private key
-
 # clean anvil
 
 kubectl delete namespace eth 2>/dev/null || true
 helmfile --selector name=eth apply --skip-deps
+
+{ while ! kubectl get -n eth endpoints eth-rpc -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; }
+
+## 1.3.2: Deploy contracts to anvil ##
+
+DEPLOYER_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 #TODO= anvil.accounts[0] private key
+
 
 [ "$PORT_8545" == "" ]  && { PORT_8545="yes" ; sleep 5; kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
 
