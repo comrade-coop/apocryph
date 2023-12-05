@@ -9,6 +9,7 @@ import (
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	pbcon "github.com/comrade-coop/trusted-pods/pkg/proto/protoconnect"
 	"github.com/comrade-coop/trusted-pods/pkg/publisher"
+	"github.com/comrade-coop/trusted-pods/pkg/registry"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 )
@@ -88,16 +89,22 @@ var deployPodCmd = &cobra.Command{
 		if !(len(availableProviders) > 0) {
 			return fmt.Errorf("no available providers found or provided")
 		}
-		fundPaymentChannelFunc := func() error {
-			err := publisher.FundPaymentChannel(ethClient, publisherAuth, deployment, fundsInt, unlockTimeInt, debugMintFunds)
-			if err != nil {
-				return err
-			}
-			return nil
-		}
+
 		interceptor := pbcon.NewAuthInterceptorClient(deployment, pbcon.ProvisionPodServiceProvisionPodProcedure, expirationOffset, sign)
 
-		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), pod, deployment, interceptor, availableProviders, fundPaymentChannelFunc)
+		ipfsp2p := tpipfs.NewP2pApi(ipfs, ipfsMultiaddr)
+
+		client, err := registry.SetFirstConnectingProvider(ipfsp2p, availableProviders, deployment, interceptor)
+		if err != nil {
+			return err
+		}
+
+		err = publisher.FundPaymentChannel(ethClient, publisherAuth, deployment, fundsInt, unlockTimeInt, debugMintFunds)
+		if err != nil {
+			return err
+		}
+
+		err = publisher.SendToProvider(cmd.Context(), ipfsp2p, pod, deployment, client)
 		if err != nil {
 			return err
 		}
@@ -140,7 +147,14 @@ var deletePodCmd = &cobra.Command{
 
 		interceptor := pbcon.NewAuthInterceptorClient(deployment, pbcon.ProvisionPodServiceDeletePodProcedure, expirationOffset, sign)
 
-		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), nil, deployment, interceptor, nil, nil)
+		ipfsp2p := tpipfs.NewP2pApi(ipfs, ipfsMultiaddr)
+
+		client, err := publisher.ConnectToProvider(ipfsp2p, deployment, interceptor)
+		if err != nil {
+			return err
+		}
+
+		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), nil, deployment, client)
 		if err != nil {
 			return err
 		}

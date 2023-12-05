@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	"connectrpc.com/connect"
+	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	pbcon "github.com/comrade-coop/trusted-pods/pkg/proto/protoconnect"
@@ -50,7 +50,7 @@ var logPodCmd = &cobra.Command{
 
 		interceptor := pbcon.NewAuthInterceptorClient(deployment, pbcon.ProvisionPodServiceGetPodLogsProcedure, expirationOffset, sign)
 
-		client, err := publisher.ConnectToProvider(tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), deployment, interceptor, nil)
+		client, err := publisher.ConnectToProvider(tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), deployment, interceptor)
 		if err != nil {
 			return err
 		}

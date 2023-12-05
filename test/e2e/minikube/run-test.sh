@@ -10,6 +10,7 @@ if [ "$1" = "teardown" ]; then
   if [ "$2" = "full" ]; then
     docker rm --force registry
     docker rm --force anvil
+    rm -r /home/ezio/.trustedpods/deployment/
     exit 0
   fi
   exit 0
@@ -79,6 +80,8 @@ docker push localhost:5000/comradecoop/trusted-pods/p2p-helper:latest
 [ "$(minikube status -f'{{.Kubelet}}')" = "Running" ] || minikube start --insecure-registry='host.minikube.internal:5000'
 
 ## 1.1: Apply Helm configurations ##
+
+kubectl delete namespace trustedpods 2>/dev/null || true
 
 helmfile apply || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile apply; }
 

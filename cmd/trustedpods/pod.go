@@ -6,7 +6,7 @@ import (
 
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/comrade-coop/trusted-pods/pkg/provider"
-	"github.com/comrade-coop/trusted-pods/pkg/publisher"
+	"github.com/comrade-coop/trusted-pods/pkg/registry"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 )
@@ -25,26 +25,26 @@ func fetchAndFilterProviders() ([]*provider.HostInfo, error) {
 
 	var availableProviders []*provider.HostInfo
 	// Get pricing table filtered by registryFlags
-	tables, registry, ipfsApi, ethClient, err := publisher.GetRegistryComponents(ipfsApi, ethereumRpc, registryContractAddress, tokenContractAddress)
+	tables, registryContract, ipfsApi, ethClient, err := registry.GetRegistryComponents(ipfsApi, ethereumRpc, registryContractAddress, tokenContractAddress)
 	if err != nil {
 		return nil, err
 	}
 
 	//filter tables
-	filteredTables := publisher.FilterTables(tables, getFilter())
+	filteredTables := registry.FilterTables(tables, getFilter())
 
 	// Get available providers
 	if len(filteredTables) == 0 {
 		return nil, fmt.Errorf("no table found by filter")
 	}
 
-	availableProviders, err = publisher.GetProvidersHostingInfo(ipfsApi, ethClient, registry, filteredTables)
+	availableProviders, err = registry.GetProvidersHostingInfo(ipfsApi, ethClient, registryContract, filteredTables)
 	if err != nil {
 		return nil, err
 	}
 
 	// filter Providers
-	availableProviders, err = publisher.FilterProviders(region, providerPeer, availableProviders)
+	availableProviders, err = registry.FilterProviders(region, providerPeer, availableProviders)
 	if err != nil {
 		return nil, err
 	}

@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/comrade-coop/trusted-pods/pkg/abi"
-	"github.com/comrade-coop/trusted-pods/pkg/publisher"
+	"github.com/comrade-coop/trusted-pods/pkg/registry"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -43,18 +43,18 @@ var getTablesCmd = &cobra.Command{
 	Short: "Get Pricing tables filtered by the provided prices and provider regions",
 	RunE: func(cmd *cobra.Command, args []string) error {
 
-		tables, registry, ipfs, ethClient, err := publisher.GetRegistryComponents(ipfsApi, ethereumRpc, registryContractAddress, tokenContractAddress)
+		tables, registryContract, ipfs, ethClient, err := registry.GetRegistryComponents(ipfsApi, ethereumRpc, registryContractAddress, tokenContractAddress)
 		if err != nil {
 			return err
 		}
 
-		filteredTables := publisher.FilterTables(tables, getFilter())
+		filteredTables := registry.FilterTables(tables, getFilter())
 		table := tablewriter.NewWriter(os.Stdout)
 		var allSubscribers []common.Address
 
 		table.SetHeader([]string{"Id", "CPU", "RAM", "STORAGE", "BANDWIDTH EGRESS", "BANDWIDTH INGRESS", "CPU MODEL", "TEE TECHNOLOGY", "Providers"})
 		for _, t := range filteredTables {
-			subscribers, err := publisher.GetTableSubscribers(ethClient, registry, t.Id)
+			subscribers, err := registry.GetTableSubscribers(ethClient, registryContract, t.Id)
 			if err != nil {
 				return err
 			}
@@ -80,11 +80,11 @@ var getTablesCmd = &cobra.Command{
 
 		infoTable := tablewriter.NewWriter(os.Stdout)
 		infoTable.SetHeader([]string{"Id", "Regions", "Addresses"})
-		allProviders, err := publisher.GetProvidersHostingInfo(ipfs, ethClient, registry, filteredTables)
+		allProviders, err := registry.GetProvidersHostingInfo(ipfs, ethClient, registryContract, filteredTables)
 		if err != nil {
 			return err
 		}
-		filteredInfos, err := publisher.FilterProviders(region, "", allProviders)
+		filteredInfos, err := registry.FilterProviders(region, "", allProviders)
 		if err != nil {
 			return err
 		}

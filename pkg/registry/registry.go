@@ -1,4 +1,4 @@
-package publisher
+package registry
 
 import (
 	"fmt"
@@ -9,7 +9,10 @@ import (
 	"github.com/comrade-coop/trusted-pods/pkg/abi"
 	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
+	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	"github.com/comrade-coop/trusted-pods/pkg/proto/protoconnect"
 	"github.com/comrade-coop/trusted-pods/pkg/provider"
+	"github.com/comrade-coop/trusted-pods/pkg/publisher"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -215,4 +218,19 @@ func GetProvidersHostingInfo(ipfs *rpc.HttpApi, ethClient *ethclient.Client, reg
 		}
 	}
 	return hostingInfoTables, nil
+}
+
+func SetFirstConnectingProvider(ipfsp2p *tpipfs.P2pApi, availableProviders []*provider.HostInfo, deployment *pb.Deployment, interceptor *protoconnect.AuthInterceptorClient) (*publisher.P2pProvisionPodServiceClient, error) {
+	deployment.Provider = &pb.ProviderConfig{}
+	for _, provider := range availableProviders {
+		deployment.Provider.Libp2PAddress = provider.MultiAddresses[0].Value
+		deployment.Provider.EthereumAddress = common.HexToAddress(provider.Id).Bytes()
+		client, err := publisher.ConnectToProvider(ipfsp2p, deployment, interceptor)
+		if err != nil {
+			fmt.Printf("%v", err)
+			continue
+		}
+		return client, nil
+	}
+	return nil, fmt.Errorf("No provider is reachable")
 }
