@@ -73,9 +73,7 @@ spec:
         command: ["sh", "-c", "PROVIDER_IPFS=$(curl -X POST 'http://ipfs-rpc.ipfs.svc.cluster.local:5001/api/v0/id' | jq '.ID' -r); echo $PROVIDER_IPFS;
                     cp /config.yaml /tmp/config.yaml; \
                     sed -i \"s|value: .*|value: $PROVIDER_IPFS|\" /tmp/config.yaml; \
-                    tpodserver
-                    registry
-                    register
+                    tpodserver registry register
                     --config /tmp/config.yaml
                     --ipfs /dns4/ipfs-rpc.ipfs.svc.cluster.local/tcp/5001
                     --ethereum-rpc http://eth-rpc.eth.svc.cluster.local:8545

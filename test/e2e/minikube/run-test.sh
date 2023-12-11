@@ -143,6 +143,7 @@ go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-guestbook.yaml \
   --registry-contract "$REGISTRY_CONTRACT" \
   --token-contract "$TOKEN_CONTRACT" \
   --funds "$FUNDS" \
+  --upload-images=false \
   --mint-funds
 
 set +x
@@ -150,8 +151,9 @@ set -v
 
 ## 3: Connect and measure balances ##
 
+DEPLOYER_ETH=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 #TODO= anvil.accounts[0]
 WITHDRAW_ETH=0x90F79bf6EB2c4f870365E785982E1f101E93b906 # From trustedpods/tpodserver.yml
-TOKEN_CONTRACT=0x5FbDB2315678afecb367f032d93F642f64180aa3 # TODO= result of forge create
+TOKEN_CONTRACT=$(cast compute-address $DEPLOYER_ETH --nonce 0 | sed -E 's/.+0x/0x/')
 INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true | head -n 1); echo $INGRESS_URL
 MANIFEST_HOST=guestbook.localhost # From manifest-guestbook.yaml
 
@@ -159,8 +161,8 @@ echo "Provider balance before:" $(cast call "$TOKEN_CONTRACT" "balanceOf(address
 
 set -x
 
-curl --connect-timeout 40 -H "Host: $MANIFEST_HOST" $INGRESS_URL
-curl -H "Host: $MANIFEST_HOST" $INGRESS_URL/test.html
+while ! curl --connect-timeout 40 -H "Host: $MANIFEST_HOST" $INGRESS_URL --fail-with-body; do sleep 10; done
+curl -H "Host: $MANIFEST_HOST" $INGRESS_URL/test.html --fail-with-body
 
 set +x
 
