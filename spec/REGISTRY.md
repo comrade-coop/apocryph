@@ -1,7 +1,6 @@
 # Registry Protocol
 The Registry protocol connects publishers and providers in a decentralized environment, promoting service discovery, competitive and transparent pricing.
 
-
 ## Smart contract
 
 * Holds a list of providers
@@ -37,4 +36,3 @@ The Registry protocol connects publishers and providers in a decentralized envir
 * the publisher pings the provider and checks its availability
   * In the event that the provider is offline, the publisher iterates through the provider list associated with the pricing table until it identifies an available provider.
 * The publisher creates a payment channel configured with the selected pricing planand and intiates the pod execution request protocol 
-

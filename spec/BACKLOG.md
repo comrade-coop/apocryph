@@ -54,9 +54,27 @@ Status: Correct as needed, upstream available but needs bugfixing
 
 Currently, the [code (see `ReuploadImagesFromIpdr`)](../pkg/ipfs/images.go) dealing with transforming images that have been uploaded as IPDR takes those same images and uploads them to a local registry. Ideally, what would happen instead is that IPDR images would instead be treated as first-class citizens and downloaded on-demand (probably with some prefetching to reduce first-boot time).
 
-There are a couple ways to implement that. One would be to run an IPDR registry in the cluster and fetch images from it. Unfortunatelly, as the [relevant issue in ipdr/ipdr notes](https://github.com/ipdr/ipdr/issues/18), the IPDR's code currently (flawedly) assumes CIDv1 multihashes are CIDv0 -- and as a whole, the `ipdr/ipdr` repository is outdated (checked 2023-10-27) and full of code which is not making use of the Go IPFS libraries nor of the OCI image-handling libraries -- making depeding on that library an overall increase of tech debt.
+There are a couple ways to implement that. One would be to run an IPDR registry in the cluster and fetch images from it. Unfortunately, as the [relevant issue in ipdr/ipdr notes](https://github.com/ipdr/ipdr/issues/18), the IPDR's code currently (flawedly) assumes CIDv1 multihashes are CIDv0 -- and as a whole, the `ipdr/ipdr` repository is outdated (checked 2023-10-27) and full of code which is not making use of the Go IPFS libraries nor of the OCI image-handling libraries -- making depending on that library an overall increase of tech debt.
 
 Another way to implement first-class IPDR images would be to develop a `containerd` [plugin](https://github.com/containerd/containerd/blob/main/docs/PLUGINS.md) which handles image downloads using our (surprisingly functional, considering the code size) [IPDR transport](../pkg/ipdr) -- or better yet, getting IPDR support merged into mainline `containerd`. A potential hurdle to actually doing that is that Constellation has hardcoded their [`containerd` config](https://github.com/edgelesssys/constellation/blob/main/image/base/mkosi.skeleton/usr/etc/containerd/config.toml) as part of the base layer that is later attested to.
+
+### Constellation cluster recovery not handled
+
+Status: Solutions outlined
+
+Constellation, the confidential Kubernetes solution we have opted to use, works by bootstrapping additional nodes on top of an existing cluster through their JoinService -- whereby a new node asks the old node's Join service for the keys used for encrypting Kubernetes state, while the old node confirms the new node's attestation through aTLS. This makes it excellent for autoscaling scenarios; however, in the case a full-cluster power outage occurs, it leaves the cluster in an hung state, as there is no initial node to bootstrap off of, and requires manually re-attesting the cluster and inputting the key that was backed up when provisioning the cluster initially -- as documented in [the recovery procedure documentation](https://docs.edgeless.systems/constellation/workflows/recovery)
+
+For Trusted Pods, however, we cannot trust the provider with a key that decrypts the whole state of the cluster - as that will destroy the confidentiality of the pods running within Trusted Pods. Hence, when recovering an existing cluster, or when initially provisioning a cluster, we would need a securely-stored key that can only be accessed from an attested TEE that is part of the cluster.
+
+There are multiple ways to do so. A simple one would be to generate and store the key within a TPM, and making sure the TPM only reveals the key to the attested TEE; this still leaves attesting that the key is generated there as an open task. Another one would be to modify Constellation to allow for the master secret to be stored encrypted with the TEE's own key (inasmuch as one exists) - so that the same machine, when rebooted, can be bootstrapped on its own. And finally, a more involved solution would be to use [Integretee](https://www.integritee.network/) or an equivalent thereof to generate and store cluster keys in a cloud of working attested enclaves.
+
+### Trusted pods cluster attestation
+
+Status: Solution outlined
+
+Constellation allows [attesting a cluster](https://docs.edgeless.systems/constellation/workflows/verify-cluster).. however, upon closer inspection, the attestation features provided only allow attesting that the whole machine is running a real Constellation cluster in a real TEE enclave... and say nothing about the containers running inside that cluster. This is only fair, perhaps, given that the containers can be configured in ways that could allow them to escape the confines of their sandboxes; however, it does mean that attestation, if implemented, will not be sufficient to convince the publisher the peer they are talking to is a Trusted Pods node.
+
+The main solution to this, other than switching away from Constellation (to, e.g. Confidential Containers, despite them not being fully ready yet), would be to modify the base Constellation image so that it includes an additional API, either running within or without a container, whose hash is verified in the boot process, and which allows querying, and hence, attesting the rest of the Kubernetes state. Alternatively, the image could be modified to attest the Trusted Pods server container as part of the boot process; however, this feels like too much hardcoding.
 
 ### Secret encryption done with AESGCM directly
 
@@ -70,27 +88,16 @@ Some ways to improve the situation would be to contribute `BSON` functionallity 
 
 ### Storage reliability
 
-Status: Barebones design done
-
-For Trusted Pods to be a viable platform for deploying mission-critical software to, it needs to provide some guarantees about the longevity of data stored on it. This is still up to be designed and incorporated into the overall design and architecture.
-
-The best solution for this we have found is establishing contracts and a protocol for Providers to stake that they will keep specific stored data available. In theory, to identify the data, a version identifier similar to ZFS's root checksum/version should be sufficient, with the in-TEE encryption of the volume providing the confidentiality of the data - at which point a container running with the same volume attached can run a full filesystem check and confirm the root checksum/version. If the Provider fails to execute the filesystem check within some (generous) time limit in response to a challenge by the Publisher, the storage can not be shown to still exist, and therefore the stake is lost and can be transferred to the Publisher.
+See [the respective document](STORAGE.md) for an in-depth storage reliability design proposal.
 
 ### Uptime reliability
 
-Status: Needs more design work
-
-A closely-related concept to storage reliability is that of uptime reliability. While scale-down-to-zero pods might never have great first response latency, even for them Publishers should be able to ask for reliable uptime, a guarantee that the system will remain up an running.
-
-Here again, the best system seems to be staking -- and is similar to what the cloud industry is already doing with [SLAs](https://en.wikipedia.org/wiki/Service-level_agreement). It is, however, a bit trickier to prove that the application was down due to a fault of the Provider, and there are different kinds of downtime, such as network outages and power outages that we might or might not want to handle differently.
+See [the respective document](UPTIME.md) for a more in-depth uptime reliability design proposal.
 
 ### Software licensing
 
-Status: Needs more design work
+See [the respective document](B2B2X.md) for a more in-depth software licensing design proposal.
 
-A useful feature would be to allow publishers to upload application code that other parties can then deploy to a provider -- this would enable usecases such as providing a pay-for-usage subscription to a service where the publisher does not have to take on the risk and responsibility of running a master instance of that service.
-
-This should already be achievable in theory by having a master service which confirms the attestation and licensing status of deployed pods and only then provides them with a decryption key for the rest of the application. However, if it is integrated with the rest of the Trusted Pods platform, we should be able to achieve faster scale-up-from-zero performance, as well as lower some of the counter-party risk of the master service going down.
 
 ### Individual TEEs
 
@@ -102,4 +109,4 @@ Currently, the architecture of Constellation uses a single TEE encompassing all 
 
 Status: Conceptualized
 
-It would be great if we didn't just rely on KEDA's built-in scaling down after a certain time, but also allowed Pods to request their own scaling down.
+It would be great if we didn't just rely on KEDA's built-in scaling down after a certain time, but also allowed Pods to request their own scaling down. See also [this issue](https://github.com/kedacore/http-add-on/issues/840).

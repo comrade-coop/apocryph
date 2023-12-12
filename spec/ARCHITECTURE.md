@@ -11,7 +11,7 @@ The planned version of Trusted Pods takes care of matching the two and provision
 ```mermaid
 flowchart
   classDef Go stroke:#0ff
-  classDef Ink stroke:#f0f
+  classDef Chain stroke:#f0f
   classDef Lib stroke:#000
   classDef User stroke:#ff0
 
@@ -29,8 +29,8 @@ flowchart
     App[Application Pod]:::User
   end
   subgraph On-chain
-    RegistryC[Registry Contract]:::Ink
-    PaymentC[Payment Contract]:::Ink
+    RegistryC[Registry Contract]:::Chain
+    PaymentC[Payment Contract]:::Chain
   end
 
   %% KubeCtl -- Execute --> ProCl
