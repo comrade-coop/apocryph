@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0
+
 // Dependencies:
 // - github.com/ethereum/go-ethereum/cmd/abigen@v1.13.3
 // - forge build ran in ../../contracts

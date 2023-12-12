@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0
+
 import { defineConfig } from '@wagmi/cli'
 import { foundry } from '@wagmi/cli/plugins'
 

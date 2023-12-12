@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0
+
 import isPrivate from 'private-ip'
 import { PeerId, isPeerId } from '@libp2p/interface/peer-id'
 import type { Multiaddr } from '@multiformats/multiaddr'

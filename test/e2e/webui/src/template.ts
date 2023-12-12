@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0
+
 import { field, FieldOrRaw } from './field'
 import type {
   ProviderConfig,

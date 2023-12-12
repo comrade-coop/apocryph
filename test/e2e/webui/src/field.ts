@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0
+
 import { bytesToHex, checksumAddress, hexToBytes, isHex } from 'viem'
 
 export interface Field<T> {

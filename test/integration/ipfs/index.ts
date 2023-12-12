@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0
+
 import { connectTo, createClient } from 'trusted-pods-ipfs-ts'
 import { createPromiseClient } from '@connectrpc/connect'
 import { ProvisionPodService } from 'trusted-pods-proto-ts'

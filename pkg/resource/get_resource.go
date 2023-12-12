@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0
+
 package resource
 
 var units = map[string]string{

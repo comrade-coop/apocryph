@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0
+
 // Dependencies:
 // - protoc
 // - google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0

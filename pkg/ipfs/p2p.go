@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0
+
 // this package contains ipfs helper functions
 package ipfs
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0
+
 // Package podmanagement provides functionality for managing pods (create pods, upload package to ipfs).
 package podmanagement
 

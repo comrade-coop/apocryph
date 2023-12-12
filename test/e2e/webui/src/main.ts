@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0
+
 import './style.css'
 import { template } from './template'
 import { toElement, toJSON } from './field'

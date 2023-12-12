@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0
+
 import { createHelia, Helia } from 'helia'
 import type { Multiaddr } from '@multiformats/multiaddr'
 import type { PeerId } from '@libp2p/interface/peer-id'

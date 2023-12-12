@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0
+
 cd "$(dirname "$0")"
 
 anvil > anvil_output.txt &

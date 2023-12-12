@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0
+
 package proto
 
 var ProvisionPod string = "/x/trusted-pods/provision-pod/0.0.1"

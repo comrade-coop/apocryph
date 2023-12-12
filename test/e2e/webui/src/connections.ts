@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0
+
 import { createPublicClient, createWalletClient, http } from 'viem'
 import { foundry } from 'viem/chains'
 import { privateKeyToAccount } from 'viem/accounts'
