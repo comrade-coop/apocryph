@@ -7,16 +7,67 @@ import (
 	"math/big"
 	"path/filepath"
 
+	"github.com/comrade-coop/trusted-pods/pkg/abi"
 	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
 	pbcon "github.com/comrade-coop/trusted-pods/pkg/proto/protoconnect"
 	"github.com/comrade-coop/trusted-pods/pkg/publisher"
-	"github.com/comrade-coop/trusted-pods/pkg/registry"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ipfs/kubo/client/rpc"
 	"github.com/spf13/cobra"
 )
 
-// FIXME: Massive code duplication with upload, fund, and sync commands.
+// if no provider is selected, Fetches providers based on registry args
+func fetchAndFilterProviders(ipfs *rpc.HttpApi, ethClient *ethclient.Client) (publisher.ProviderHostInfoList, error) {
+	registryContract := common.HexToAddress(registryContractAddress)
+	var tokenContract common.Address
+	if tokenContractAddress != "" {
+		tokenContract = common.HexToAddress(tokenContractAddress)
+	} else if paymentContractAddress != "" {
+		paymentContract := common.HexToAddress(paymentContractAddress)
+		payment, err := abi.NewPayment(paymentContract, ethClient)
+		if err != nil {
+			return nil, fmt.Errorf("Failed instanciating payment contract: %w", err)
+		}
+		tokenContract, err = payment.Token(&bind.CallOpts{})
+		if err != nil {
+			return nil, fmt.Errorf("Failed getting payment contract token: %w", err)
+		}
+	} else {
+		return nil, fmt.Errorf("Either a token contract or a payment contract must be set")
+	}
+
+	tables, err := publisher.GetPricingTables(ethClient, registryContract, tokenContract)
+	if err != nil {
+		return nil, err
+	}
+
+	filter, err := getRegistryTableFilter()
+	if err != nil {
+		return nil, err
+	}
+
+	filteredTables := publisher.FilterPricingTables(tables, filter)
+	if len(filteredTables) == 0 {
+		return nil, fmt.Errorf("no table found by filter")
+	}
+
+	availableProviders, err := publisher.GetProviderHostInfos(ipfs, ethClient, registryContract, filteredTables)
+	if err != nil {
+		return nil, err
+	}
+
+	availableProviders, err = publisher.FilterProviderHostInfos(region, providerPeer, availableProviders)
+	if err != nil {
+		return nil, err
+	}
+
+	return availableProviders, nil
+}
+
+// FIXME: Massive code duplication with registry get, upload, fund, and sync commands.
 var deployPodCmd = &cobra.Command{
 	Use:     fmt.Sprintf("deploy [%s] [deployment.yaml]", publisher.DefaultPodFile),
 	Aliases: []string{"update"},
@@ -28,12 +79,6 @@ var deployPodCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-
-		availableProviders, err := fetchAndFilterProviders()
-		if err != nil {
-			return err
-		}
-
 		configureDeployment(deployment)
 
 		fundsInt, _ := (&big.Int{}).SetString(funds, 10)
@@ -46,6 +91,51 @@ var deployPodCmd = &cobra.Command{
 		ipfs, ipfsMultiaddr, err := tpipfs.GetIpfsClient(ipfsApi)
 		if err != nil {
 			return fmt.Errorf("Failed connecting to IPFS: %w", err)
+		}
+
+		ipfsp2p := tpipfs.NewP2pApi(ipfs, ipfsMultiaddr)
+
+		ethClient, err := ethereum.GetClient(ethereumRpc)
+		if err != nil {
+			return err
+		}
+		if publisherKey == "" {
+			publisherKey = common.BytesToAddress(deployment.Payment.PublisherAddress).String()
+		}
+
+		publisherAuth, sign, err := ethereum.GetAccountAndSigner(publisherKey, ethClient)
+		if err != nil {
+			return fmt.Errorf("Could not get ethereum account: %w", err)
+		}
+
+		// FIXME: move to configureDeployment?
+		chainId, err := ethClient.ChainID(cmd.Context())
+		if err != nil {
+			return err
+		}
+		deployment.Payment.ChainID = chainId.Bytes()
+		deployment.Payment.PublisherAddress = publisherAuth.From.Bytes()
+
+		interceptor := pbcon.NewAuthInterceptorClient(deployment, pbcon.ProvisionPodServiceProvisionPodProcedure, expirationOffset, sign)
+
+		var client *publisher.P2pProvisionPodServiceClient
+		if len(deployment.GetProvider().GetEthereumAddress()) == 0 || deployment.GetProvider().GetLibp2PAddress() == "" {
+			availableProviders, err := fetchAndFilterProviders(ipfs, ethClient)
+			if err != nil {
+				return fmt.Errorf("Failed finding a provider: %w", err)
+			}
+			if len(availableProviders) == 0 {
+				return fmt.Errorf("Failed finding a provider: no available providers found matching filter")
+			}
+			client, err = publisher.SetFirstConnectingProvider(ipfsp2p, availableProviders, deployment, interceptor)
+			if err != nil {
+				return fmt.Errorf("Failed setting a provider: %w", err)
+			}
+		} else {
+			client, err = publisher.ConnectToProvider(ipfsp2p, deployment, interceptor)
+			if err != nil {
+				return err
+			}
 		}
 
 		if uploadSecrets {
@@ -65,40 +155,6 @@ var deployPodCmd = &cobra.Command{
 		err = publisher.SaveDeployment(deploymentFile, deploymentFormat, deployment) // Checkpoint uploads and keys so far
 		if err != nil {
 			fmt.Fprintf(cmd.ErrOrStderr(), "warning: %v\n", err)
-		}
-
-		ethClient, err := ethereum.GetClient(ethereumRpc)
-		if err != nil {
-			return err
-		}
-
-		if publisherKey == "" {
-			publisherKey = common.BytesToAddress(deployment.Payment.PublisherAddress).String()
-		}
-
-		publisherAuth, sign, err := ethereum.GetAccountAndSigner(publisherKey, ethClient)
-		if err != nil {
-			return fmt.Errorf("Could not get ethereum account: %w", err)
-		}
-
-		// FIXME: move to configureDeployment?
-		chainId, err := ethClient.ChainID(cmd.Context())
-		if err != nil {
-			return err
-		}
-		deployment.Payment.ChainID = chainId.Bytes()
-		deployment.Payment.PublisherAddress = publisherAuth.From.Bytes()
-		if !(len(availableProviders) > 0) {
-			return fmt.Errorf("no available providers found or provided")
-		}
-
-		interceptor := pbcon.NewAuthInterceptorClient(deployment, pbcon.ProvisionPodServiceProvisionPodProcedure, expirationOffset, sign)
-
-		ipfsp2p := tpipfs.NewP2pApi(ipfs, ipfsMultiaddr)
-
-		client, err := registry.SetFirstConnectingProvider(ipfsp2p, availableProviders, deployment, interceptor)
-		if err != nil {
-			return err
 		}
 
 		err = publisher.FundPaymentChannel(ethClient, publisherAuth, deployment, fundsInt, unlockTimeInt, debugMintFunds)

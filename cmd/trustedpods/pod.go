@@ -4,11 +4,7 @@ package main
 
 import (
 	"crypto/sha256"
-	"fmt"
-
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
-	"github.com/comrade-coop/trusted-pods/pkg/provider"
-	"github.com/comrade-coop/trusted-pods/pkg/registry"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 )
@@ -16,42 +12,6 @@ import (
 var podCmd = &cobra.Command{
 	Use:   "pod",
 	Short: "Operations related to with raw pod manifests",
-}
-
-// if no provider is selected, Fetches providers based on registry args
-func fetchAndFilterProviders() ([]*provider.HostInfo, error) {
-
-	if providerPeer != "" {
-		return []*provider.HostInfo{{Id: providerPeer}}, nil
-	}
-
-	var availableProviders []*provider.HostInfo
-	// Get pricing table filtered by registryFlags
-	tables, registryContract, ipfsApi, ethClient, err := registry.GetRegistryComponents(ipfsApi, ethereumRpc, registryContractAddress, tokenContractAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	//filter tables
-	filteredTables := registry.FilterTables(tables, getFilter())
-
-	// Get available providers
-	if len(filteredTables) == 0 {
-		return nil, fmt.Errorf("no table found by filter")
-	}
-
-	availableProviders, err = registry.GetProvidersHostingInfo(ipfsApi, ethClient, registryContract, filteredTables)
-	if err != nil {
-		return nil, err
-	}
-
-	// filter Providers
-	availableProviders, err = registry.FilterProviders(region, providerPeer, availableProviders)
-	if err != nil {
-		return nil, err
-	}
-
-	return availableProviders, nil
 }
 
 func configureDeployment(deployment *pb.Deployment) error {

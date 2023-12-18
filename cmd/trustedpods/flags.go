@@ -4,7 +4,9 @@ package main
 
 import (
 	"fmt"
+	"math/big"
 
+	"github.com/comrade-coop/trusted-pods/pkg/abi"
 	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/spf13/pflag"
 )
@@ -73,6 +75,7 @@ var _ = func() error {
 
 	registryFlags.StringVar(&registryContractAddress, "registry-contract", "", "registry contract address")
 	registryFlags.StringVar(&tokenContractAddress, "token-contract", "", "token contract address")
+	registryFlags.AddFlag(fundFlags.Lookup("payment-contract"))
 	registryFlags.StringVar(&cpuPrice, "cpu-price", "", "CPU price")
 	registryFlags.StringVar(&ramPrice, "ram-price", "", "RAM price")
 	registryFlags.StringVar(&storagePrice, "storage-price", "", "Storage price")
@@ -86,3 +89,33 @@ var _ = func() error {
 
 	return nil
 }()
+
+func getRegistryTableFilter() (*abi.RegistryNewPricingTable, error) {
+	result := &abi.RegistryNewPricingTable{}
+	ok := true
+	if cpuPrice != "" && ok {
+		result.CpuPrice, ok = (&big.Int{}).SetString(cpuPrice, 10)
+	}
+	if ramPrice != "" && ok {
+		result.RamPrice, ok = (&big.Int{}).SetString(ramPrice, 10)
+	}
+	if storagePrice != "" && ok {
+		result.StoragePrice, ok = (&big.Int{}).SetString(storagePrice, 10)
+	}
+	if bandwidthEPrice != "" && ok {
+		result.BandwidthEgressPrice, ok = (&big.Int{}).SetString(bandwidthEPrice, 10)
+	}
+	if bandwidthInPrice != "" && ok {
+		result.BandwidthIngressPrice, ok = (&big.Int{}).SetString(bandwidthInPrice, 10)
+	}
+	if tableId != "" && ok {
+		result.Id, ok = (&big.Int{}).SetString(tableId, 10)
+	}
+	if !ok {
+		return nil, fmt.Errorf("Badly-formatted integer flag") // -- it'd be nice to give more feedback as to which one
+	}
+	result.Cpumodel = cpuModel
+	result.TeeType = teeType
+
+	return result, nil
+}

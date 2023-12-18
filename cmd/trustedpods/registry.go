@@ -4,15 +4,18 @@ package main
 
 import (
 	"fmt"
-	"math/big"
 	"os"
+	"strings"
 
 	"github.com/comrade-coop/trusted-pods/pkg/abi"
-	"github.com/comrade-coop/trusted-pods/pkg/registry"
+	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
+	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
+	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	"github.com/comrade-coop/trusted-pods/pkg/publisher"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/slices"
 )
 
 var registryCmd = &cobra.Command{
@@ -20,81 +23,91 @@ var registryCmd = &cobra.Command{
 	Short: "Operations related to registry",
 }
 
-func getFilter() *abi.RegistryNewPricingTable {
-	var id, cPrice, rPrice, sPrice, bePrice, biPrice *big.Int
-	cPrice, _ = (&big.Int{}).SetString(cpuPrice, 10)
-	rPrice, _ = (&big.Int{}).SetString(ramPrice, 10)
-	sPrice, _ = (&big.Int{}).SetString(storagePrice, 10)
-	bePrice, _ = (&big.Int{}).SetString(bandwidthEPrice, 10)
-	biPrice, _ = (&big.Int{}).SetString(bandwidthInPrice, 10)
-	id, _ = (&big.Int{}).SetString(tableId, 10)
-
-	filter := abi.RegistryNewPricingTable{Token: common.HexToAddress(tokenContractAddress), Id: id,
-		CpuPrice:              cPrice,
-		RamPrice:              rPrice,
-		StoragePrice:          sPrice,
-		BandwidthEgressPrice:  bePrice,
-		BandwidthIngressPrice: biPrice,
-		Cpumodel:              cpuModel,
-		TeeType:               teeType}
-	return &filter
-}
-
 var getTablesCmd = &cobra.Command{
 	Use:   "get",
 	Short: "Get Pricing tables filtered by the provided prices and provider regions",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ipfs, _, err := tpipfs.GetIpfsClient(ipfsApi)
+		if err != nil {
+			return fmt.Errorf("Failed connecting to IPFS: %w", err)
+		}
 
-		tables, registryContract, ipfs, ethClient, err := registry.GetRegistryComponents(ipfsApi, ethereumRpc, registryContractAddress, tokenContractAddress)
+		ethClient, err := ethereum.GetClient(ethereumRpc)
 		if err != nil {
 			return err
 		}
 
-		filteredTables := registry.FilterTables(tables, getFilter())
+		registryContract := common.HexToAddress(registryContractAddress)
+		var tokenContract common.Address
+		if tokenContractAddress != "" {
+			tokenContract = common.HexToAddress(tokenContractAddress)
+		} else if paymentContractAddress != "" {
+			paymentContract := common.HexToAddress(paymentContractAddress)
+			payment, err := abi.NewPayment(paymentContract, ethClient)
+			if err != nil {
+				return fmt.Errorf("Failed instanciating payment contract: %w", err)
+			}
+			tokenContract, err = payment.Token(&bind.CallOpts{})
+			if err != nil {
+				return fmt.Errorf("Failed getting payment contract token: %w", err)
+			}
+		} else {
+			return fmt.Errorf("Either a token contract or a payment contract must be set")
+		}
+
+		tables, err := publisher.GetPricingTables(ethClient, registryContract, tokenContract)
+		if err != nil {
+			return err
+		}
+		
+		filter, err := getRegistryTableFilter()
+		if err != nil {
+			return err
+		}
+
+		filteredTables := publisher.FilterPricingTables(tables, filter)
 		table := tablewriter.NewWriter(os.Stdout)
-		var allSubscribers []common.Address
 
 		table.SetHeader([]string{"Id", "CPU", "RAM", "STORAGE", "BANDWIDTH EGRESS", "BANDWIDTH INGRESS", "CPU MODEL", "TEE TECHNOLOGY", "Providers"})
 		for _, t := range filteredTables {
-			subscribers, err := registry.GetTableSubscribers(ethClient, registryContract, t.Id)
+			subscribers, err := publisher.GetPricingTableSubscribers(ethClient, registryContract, t.Id)
 			if err != nil {
 				return err
+			}
+			// if table has no subscribers skip printing it
+			if len(subscribers) == 0 {
+				continue
 			}
 			var subs string = ""
 			for _, subscriber := range subscribers {
 				subs = subs + subscriber.String() + "\n"
-				if !slices.Contains(allSubscribers, subscriber) {
-					allSubscribers = append(allSubscribers, subscriber)
-				}
 			}
-			// if table has no subscribers skip printing it
-			if len(subscribers) != 0 {
-				row := []string{t.Id.String(), t.CpuPrice.String(), t.RamPrice.String(),
-					t.StoragePrice.String(), t.BandwidthEgressPrice.String(),
-					t.BandwidthIngressPrice.String(), t.Cpumodel, t.TeeType, subs}
-				table.Append(row)
-			}
+			row := []string{t.Id.String(), t.CpuPrice.String(), t.RamPrice.String(),
+				t.StoragePrice.String(), t.BandwidthEgressPrice.String(),
+				t.BandwidthIngressPrice.String(), t.Cpumodel, t.TeeType, subs}
+			table.Append(row)
 		}
 		if len(filteredTables) == 0 {
 			return fmt.Errorf("no table found by given filter")
 		}
 		table.Render()
 
-		infoTable := tablewriter.NewWriter(os.Stdout)
-		infoTable.SetHeader([]string{"Id", "Regions", "Addresses"})
-		allProviders, err := registry.GetProvidersHostingInfo(ipfs, ethClient, registryContract, filteredTables)
+		allProviders, err := publisher.GetProviderHostInfos(ipfs, ethClient, registryContract, filteredTables)
 		if err != nil {
 			return err
 		}
-		filteredInfos, err := registry.FilterProviders(region, "", allProviders)
+		filteredInfos, err := publisher.FilterProviderHostInfos(region, "", allProviders)
 		if err != nil {
 			return err
 		}
 		if len(filteredInfos) == 0 {
 			return fmt.Errorf("could not find providers with the given filter")
 		}
-		for _, info := range filteredInfos {
-			row := []string{info.Id, info.FormatRegions(), info.FormatAddresses()}
+
+		infoTable := tablewriter.NewWriter(os.Stdout)
+		infoTable.SetHeader([]string{"Id", "Regions", "Addresses"})
+		for id, info := range filteredInfos {
+			row := []string{id.Hex(), formatRegions(info.Regions), strings.Join(info.Multiaddrs, "\n")}
 			infoTable.Append(row)
 		}
 		infoTable.SetRowLine(true)
@@ -103,6 +116,14 @@ var getTablesCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func formatRegions(regions []*pb.HostInfo_Region) string {
+	result := ""
+	for _, region := range regions {
+		result += fmt.Sprintf("%s-%s-%d\n", region.Name, region.Zone, region.Num)
+	}
+	return result
 }
 
 func init() {

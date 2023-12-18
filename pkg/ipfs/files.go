@@ -9,15 +9,15 @@ import (
 	"io"
 	"os"
 
+	iface "github.com/ipfs/boxo/coreiface"
 	"github.com/ipfs/boxo/coreiface/path"
 	"github.com/ipfs/boxo/files"
 	"github.com/ipfs/go-cid"
-	"github.com/ipfs/kubo/client/rpc"
 	"google.golang.org/protobuf/proto"
 )
 
 // Adds a file (or a directory) from the local filesystem to IPFS
-func AddFsFile(node *rpc.HttpApi, path string) (path.Resolved, error) {
+func AddFsFile(node iface.CoreAPI, path string) (path.Resolved, error) {
 	stats, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -30,7 +30,7 @@ func AddFsFile(node *rpc.HttpApi, path string) (path.Resolved, error) {
 }
 
 // Saves an IPFS file or directory represented by the given files.Node to the specified local file system path.
-func GetFsFile(node *rpc.HttpApi, file files.Node, path path.Path, savePath string) error {
+func GetFsFile(node iface.CoreAPI, file files.Node, path path.Path, savePath string) error {
 	file, err := node.Unixfs().Get(context.Background(), path)
 	if err != nil {
 		return err
@@ -39,7 +39,7 @@ func GetFsFile(node *rpc.HttpApi, file files.Node, path path.Path, savePath stri
 }
 
 // Adds a file from a protobuf slice to IPFS
-func AddProtobufFile(node *rpc.HttpApi, msg proto.Message) (cid.Cid, error) {
+func AddProtobufFile(node iface.CoreAPI, msg proto.Message) (cid.Cid, error) {
 	bytes, err := proto.Marshal(msg)
 	if err != nil {
 		return cid.Cid{}, err
@@ -51,14 +51,15 @@ func AddProtobufFile(node *rpc.HttpApi, msg proto.Message) (cid.Cid, error) {
 	return path.Cid(), nil
 }
 
-func AddBytes(node *rpc.HttpApi, msg []byte) (cid.Cid, error) {
+func AddBytes(node iface.CoreAPI, msg []byte) (cid.Cid, error) {
 	path, err := node.Unixfs().Add(context.Background(), files.NewBytesFile(msg))
 	if err != nil {
 		return cid.Cid{}, err
 	}
 	return path.Cid(), nil
 }
-func GetBytes(node *rpc.HttpApi, cid cid.Cid) ([]byte, error) {
+
+func GetBytes(node iface.CoreAPI, cid cid.Cid) ([]byte, error) {
 	fileNode, err := node.Unixfs().Get(context.Background(), path.IpfsPath(cid))
 	if err != nil {
 		return nil, err
@@ -74,17 +75,8 @@ func GetBytes(node *rpc.HttpApi, cid cid.Cid) ([]byte, error) {
 	return bytes, nil
 }
 
-// Adds a file from a protobuf slice to IPFS
-func GetProtobufFile(node *rpc.HttpApi, cid cid.Cid, msg proto.Message) error {
-	fileNode, err := node.Unixfs().Get(context.Background(), path.IpfsPath(cid))
-	if err != nil {
-		return err
-	}
-	file, ok := fileNode.(files.File)
-	if !ok {
-		return fmt.Errorf("Supplied CID (%s) not a file", cid.String())
-	}
-	bytes, err := io.ReadAll(file)
+func GetProtobufFile(node iface.CoreAPI, cid cid.Cid, msg proto.Message) error {
+	bytes, err := GetBytes(node, cid)
 	if err != nil {
 		return err
 	}

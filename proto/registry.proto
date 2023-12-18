@@ -1,0 +1,18 @@
+// SPDX-License-Identifier: GPL-3.0
+
+syntax = "proto3";
+package apocryph.proto.v0.pod;
+
+option go_package = "github.com/comrade-coop/trusted-pods/pkg/proto";
+
+message HostInfo {
+  repeated string multiaddrs = 1;
+  repeated Region regions = 2;
+  
+  message Region {
+    string name = 1;
+    string zone = 2;
+    uint32 num = 3;
+  }
+}
+

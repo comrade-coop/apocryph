@@ -84,7 +84,7 @@ docker push localhost:5000/comradecoop/trusted-pods/p2p-helper:latest
 
 kubectl delete namespace trustedpods 2>/dev/null || true
 
-helmfile apply || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile apply; }
+helmfile sync || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile apply; }
 
 ## 1.2: Configure provider/in-cluster IPFS and publisher IPFS ##
 
@@ -139,10 +139,8 @@ set -x
 
 go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-guestbook.yaml \
   --ethereum-key "$PUBLISHER_KEY" \
-  --provider-eth "$PROVIDER_ETH" \
   --payment-contract "$PAYMENT_CONTRACT" \
   --registry-contract "$REGISTRY_CONTRACT" \
-  --token-contract "$TOKEN_CONTRACT" \
   --funds "$FUNDS" \
   --upload-images=false \
   --mint-funds
@@ -183,3 +181,12 @@ echo "Note: To stop the minikube cluster/provider, use '$0 teardown'"
 echo "  and to clean-up everything the script does, use '$0 teardown full'"
 echo -e "---\e[0m"
 
+exit 0;
+
+## Env: (debug stuff)
+
+[ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
+[ -n "$PROVIDER_IPFS" ] || { PROVIDER_IPFS=$(curl -X POST "http://127.0.0.1:5004/api/v0/id" -s | jq '.ID' -r); echo $PROVIDER_IPFS; }
+[ -n "$IPFS_DAEMON" ] || { IPFS_DAEMON=yes; ipfs daemon & { while ! [ -f ${IPFS_PATH:-~/.ipfs}/api ]; do sleep 0.1; done; } 2>/dev/null; }
+
+bash

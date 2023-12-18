@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/big"
@@ -10,15 +11,18 @@ import (
 	"github.com/comrade-coop/trusted-pods/pkg/abi"
 	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
 	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
+	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
 	"github.com/comrade-coop/trusted-pods/pkg/resource"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ipfs/kubo/client/rpc"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
 
 var registryContractAddress string
 var tokenContractAddress string
-var hostInfo string
+var hostInfoContents string
+var hostInfoFormat string
 var cpuModel string
 var teeType string
 
@@ -51,11 +55,12 @@ var registerSelfCmd = &cobra.Command{
 			return err
 		}
 
-		if hostInfo == "" {
-			return fmt.Errorf("Empty host info")
+		hostInfo, err := getHostInfo(cmd.Context(), ipfs)
+		if err != nil {
+			return err
 		}
 
-		cid, err := tpipfs.AddBytes(ipfs, []byte(hostInfo))
+		cid, err := tpipfs.AddProtobufFile(ipfs, hostInfo)
 		if err != nil {
 			return err
 		}
@@ -162,11 +167,12 @@ var registerCmd = &cobra.Command{
 			return err
 		}
 
-		if hostInfo == "" {
-			return fmt.Errorf("Empty host info")
+		hostInfo, err := getHostInfo(cmd.Context(), ipfs)
+		if err != nil {
+			return err
 		}
 
-		cid, err := tpipfs.AddBytes(ipfs, []byte(hostInfo))
+		cid, err := tpipfs.AddProtobufFile(ipfs, hostInfo)
 		if err != nil {
 			return err
 		}
@@ -193,6 +199,24 @@ var registerCmd = &cobra.Command{
 	},
 }
 
+func getHostInfo(ctx context.Context, ipfs *rpc.HttpApi) (*pb.HostInfo, error) {
+	if hostInfoContents == "" {
+		return nil, fmt.Errorf("Empty host info")
+	}
+	hostInfo := &pb.HostInfo{}
+	err := pb.Unmarshal(hostInfoFormat, []byte(hostInfoContents), hostInfo)
+	if err != nil {
+		return nil, err
+	}
+	key, err := ipfs.Key().Self(ctx)
+	if err != nil {
+		return nil, err
+	}
+	peerId := key.ID()
+	hostInfo.Multiaddrs = append(hostInfo.Multiaddrs, fmt.Sprintf("/p2p/%s", peerId.String()))
+	return hostInfo, nil
+}
+
 func init() {
 	registryFlags := &pflag.FlagSet{}
 
@@ -207,7 +231,8 @@ func init() {
 	subscribeCmd.Flags().AddFlagSet(registryFlags)
 	unsubscribeCmd.Flags().AddFlagSet(registryFlags)
 
-	AddConfig("info", &hostInfo, "", "info section from config file")
+	AddConfig("info.contents", &hostInfoContents, "", "host info section from config file")
+	AddConfig("info.format", &hostInfoFormat, "", "host info format")
 	AddConfig("cpu_model", &cpuModel, "", "provider CPU model ")
 	AddConfig("tee_type", &teeType, "", "type of tee technology that is used (Secure Enclaes/CVMs/...etc)")
 

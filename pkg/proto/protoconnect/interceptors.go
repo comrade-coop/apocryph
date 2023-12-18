@@ -137,7 +137,7 @@ func (a authInterceptor) authenticate(header http.Header) error {
 	if !valid {
 		return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Invalid signature"))
 	}
-	
+
 	// verify publisherAddress in namespace is same one signed in token
 	ns := header.Get("namespace")
 	nsExpected := namespaceFromTokenParts(token.Publisher, token.PodId)

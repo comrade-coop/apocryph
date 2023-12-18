@@ -10,6 +10,7 @@ import (
 	"net/rpc"
 	"net/url"
 	"os"
+	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/comrade-coop/trusted-pods/pkg/ipfs"
@@ -26,7 +27,7 @@ type P2pProvisionPodServiceClient struct {
 }
 
 func ConnectToProvider(ipfsP2p *ipfs.P2pApi, deployment *pb.Deployment, interceptor *pbcon.AuthInterceptorClient) (*P2pProvisionPodServiceClient, error) {
-	providerPeerId, err := peer.Decode(deployment.GetProvider().GetLibp2PAddress())
+	providerPeerId, err := peer.Decode(strings.TrimPrefix(deployment.GetProvider().GetLibp2PAddress(), "/p2p/"))
 	if err != nil {
 		return nil, fmt.Errorf("Failed to parse provider address: %w", err)
 	}
@@ -38,10 +39,11 @@ func ConnectToProvider(ipfsP2p *ipfs.P2pApi, deployment *pb.Deployment, intercep
 	url := &url.URL{Scheme: "http", Host: addr.String()}
 
 	// ping the provider
-	_, err = rpc.Dial("tcp", url.Host)
+	pingClient, err := rpc.Dial("tcp", url.Host)
 	if err != nil {
 		return nil, fmt.Errorf("Error pinging %s: %s\n", url, err)
 	}
+	pingClient.Close()
 
 	client := pbcon.NewProvisionPodServiceClient(
 		http.DefaultClient,
