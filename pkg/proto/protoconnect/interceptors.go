@@ -36,32 +36,9 @@ type Token struct {
 
 type SignFunc func(data []byte) ([]byte, error)
 
-type HasPubAddress interface{ GetPublisherAddress() []byte }
+type HasPaymentChannel interface{ GetPayment() *pb.PaymentChannel }
 
 // func (p *PodLogRequest) GetCredentials() *Credentials { return p.Credentials }
-
-/*
-func NoCrashUnaryServerInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (res any, err error) {
-	defer func() {
-		if errRecover := recover(); errRecover != nil {
-			fmt.Printf("Caught panic while processing GRPC call! %v %v\n", info, errRecover)
-			err = fmt.Errorf("panic: %v", errRecover)
-		}
-	}()
-	res, err = handler(ctx, req)
-	return
-}
-
-func NoCrashStreamServerInterceptor(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
-	defer func() {
-		if errRecover := recover(); errRecover != nil {
-			fmt.Printf("Caught panic while processing GRPC call! %v %v\n", info, errRecover)
-			err = fmt.Errorf("panic: %v", errRecover)
-		}
-	}()
-	err = handler(srv, ss)
-	return
-}*/
 
 type authInterceptor struct {
 	k8Client client.Client
@@ -75,9 +52,16 @@ func (i authInterceptor) WrapUnary(handler connect.UnaryFunc) connect.UnaryFunc 
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 		fmt.Printf("Authenticating gRPC call: %v \n", req.Spec())
 
-		err := i.authenticate(req.Header())
+		expectedPublisher, err := i.authenticate(req.Header())
 		if err != nil {
 			return nil, err
+		}
+		
+		if hasPayment, ok := req.Any().(HasPaymentChannel); ok {
+			publisherAddress := common.BytesToAddress(hasPayment.GetPayment().GetPublisherAddress())
+			if expectedPublisher != publisherAddress {
+				return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Payment channel created for unauthorized address: (expected: %v, found: %v)", expectedPublisher, publisherAddress))
+			}
 		}
 
 		// verify that pod exists for the rest of the methods
@@ -103,7 +87,7 @@ func (i authInterceptor) WrapStreamingHandler(handler connect.StreamingHandlerFu
 	return func(ctx context.Context, stream connect.StreamingHandlerConn) error {
 		fmt.Printf("Authenticating gRPC call: %v \n", stream.Spec())
 
-		err := i.authenticate(stream.RequestHeader())
+		_, err := i.authenticate(stream.RequestHeader())
 		if err != nil {
 			return err
 		}
@@ -112,46 +96,46 @@ func (i authInterceptor) WrapStreamingHandler(handler connect.StreamingHandlerFu
 	}
 }
 
-func (a authInterceptor) authenticate(header http.Header) error {
+func (a authInterceptor) authenticate(header http.Header) (common.Address, error) {
 	auth := header.Get(authorizationHeader)
 	if len(auth) == 0 {
-		return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Empty Authentication field"))
+		return common.Address{}, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Empty Authentication field"))
 	}
 	tokenString, ok := strings.CutPrefix(auth, "Bearer ")
 	if !ok {
-		return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Expected Bearer Authentication"))
+		return common.Address{}, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Expected Bearer Authentication"))
 	}
 	tokenParts := strings.Split(tokenString, ".")
 	if len(tokenParts) != 2 {
-		return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Invalid token (wrong number of parts)"))
+		return common.Address{}, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Invalid token (wrong number of parts)"))
 	}
 	
 	tokenData, err := base64.StdEncoding.DecodeString(tokenParts[0])
 	if err != nil {
-		return err
+		return common.Address{}, err
 	}
 	tokenSignature, err := base64.StdEncoding.DecodeString(tokenParts[1])
 	if err != nil {
-		return err
+		return common.Address{}, err
 	}
 
 	// verify if token has exired or not
 	token := &Token{}
 	err = json.Unmarshal(tokenData, token)
 	if err != nil {
-		return connect.NewError(connect.CodeDataLoss, fmt.Errorf("Failed Unmarshalling token"))
+		return common.Address{}, connect.NewError(connect.CodeDataLoss, fmt.Errorf("Failed Unmarshalling token"))
 	}
 	if time.Now().After(token.ExpirationTime) {
-		return connect.NewError(connect.CodeDeadlineExceeded, fmt.Errorf("Token Expired"))
+		return common.Address{}, connect.NewError(connect.CodeDeadlineExceeded, fmt.Errorf("Token Expired"))
 	}
 
 	// Verify Signature
 	valid, err := VerifyPayload(token.Publisher, tokenData, tokenSignature)
 	if err != nil {
-		return fmt.Errorf("Error verifying payload: %w", err)
+		return common.Address{}, fmt.Errorf("Error verifying payload: %w", err)
 	}
 	if !valid {
-		return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Invalid signature"))
+		return common.Address{}, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Invalid signature"))
 	}
 
 	// verify publisherAddress in namespace is same one signed in token
@@ -160,11 +144,10 @@ func (a authInterceptor) authenticate(header http.Header) error {
 	if ns == "" {
 		header.Set(NamespaceHeader, nsExpected)
 	} else if ns != nsExpected {
-		return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Invalid namespace"))
+		return common.Address{}, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Invalid namespace"))
 	}
-	return nil
-}
 
+	return token.Publisher, nil
 }
 
 func namespaceFromTokenParts(publisher common.Address, podId common.Hash) string {
