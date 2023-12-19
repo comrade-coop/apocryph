@@ -7,7 +7,7 @@ on:
     - '.github/workflows/check-go.yml'
 
 jobs:
-  build-and-push-image:
+  build-and-fmt:
     runs-on: ubuntu-latest
     permissions:
       contents: read
