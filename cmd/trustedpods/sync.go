@@ -45,7 +45,7 @@ var syncPodCmd = &cobra.Command{
 			return fmt.Errorf("Could not get ethereum account: %w", err)
 		}
 
-		interceptor := pbcon.NewAuthInterceptorClient(deployment, pbcon.ProvisionPodServiceUpdatePodProcedure, expirationOffset, sign)
+		interceptor := pbcon.NewAuthInterceptorClient(deployment, expirationOffset, sign)
 
 		ipfsp2p := tpipfs.NewP2pApi(ipfs, ipfsMultiaddr)
 

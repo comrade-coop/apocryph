@@ -54,7 +54,7 @@ func main() {
 	deployment.Payment.PodID = common.BytesToHash([]byte("123456")).Bytes()
 	deployment.Payment.PublisherAddress = publisherAddress
 
-	interceptor := pbcon.NewAuthInterceptorClient(deployment, pbcon.ProvisionPodServiceProvisionPodProcedure, 10, sign)
+	interceptor := pbcon.NewAuthInterceptorClient(deployment, 10, sign)
 
 	client := pbcon.NewProvisionPodServiceClient(
 		http.DefaultClient,

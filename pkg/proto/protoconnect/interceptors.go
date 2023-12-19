@@ -165,26 +165,6 @@ func (a authInterceptor) authenticate(header http.Header) error {
 	return nil
 }
 
-type AuthInterceptorClient struct {
-	Token            Token
-	Signature        string
-	Sign             SignFunc
-	ExpirationOffset time.Duration
-}
-
-func NewAuthInterceptorClient(deployment *pb.Deployment, operation string, expirationOffset int64, sign SignFunc) *AuthInterceptorClient {
-	return &AuthInterceptorClient{
-		Token:            newToken(deployment, operation, expirationOffset),
-		Sign:             sign,
-		ExpirationOffset: time.Duration(expirationOffset) * time.Second,
-	}
-}
-
-type Token struct {
-	PodId          common.Hash
-	Operation      string
-	ExpirationTime time.Time
-	Publisher      common.Address
 }
 
 func namespaceFromTokenParts(publisher common.Address, podId common.Hash) string {
@@ -198,20 +178,33 @@ func namespaceFromTokenParts(publisher common.Address, podId common.Hash) string
 func GetNamespace(req connect.AnyRequest) string {
 	return req.Header().Get(NamespaceHeader)
 }
- 
-func newToken(deployment *pb.Deployment, operation string, expirationTime int64) Token {
 
-	return Token{
-		PodId:          common.BytesToHash(deployment.Payment.PodID),
-		Operation:      operation,
-		ExpirationTime: time.Now().Add(time.Duration(expirationTime) * time.Second),
-		Publisher:      common.BytesToAddress(deployment.Payment.PublisherAddress),
+type AuthInterceptorClient struct {
+	tokens           map[string]serializedToken
+	podId            common.Hash
+	publisher        common.Address
+	sign             SignFunc
+	expirationOffset time.Duration
+}
+
+type serializedToken struct{
+	expirationTime time.Time
+	bearer         string
+}
+
+func NewAuthInterceptorClient(deployment *pb.Deployment, expirationOffset int64, sign SignFunc) *AuthInterceptorClient {
+	return &AuthInterceptorClient{
+		tokens:           make(map[string]serializedToken),
+		sign:             sign,
+		expirationOffset: time.Duration(expirationOffset) * time.Second,
+		podId:            common.BytesToHash(deployment.Payment.PodID),
+		publisher:        common.BytesToAddress(deployment.Payment.PublisherAddress),
 	}
 }
 
 func (a *AuthInterceptorClient) WrapUnary(handler connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-		a.updateContext(req.Header())
+		a.authorize(req.Spec().Procedure, req.Header())
 		return handler(ctx, req)
 	}
 }
@@ -219,7 +212,7 @@ func (a *AuthInterceptorClient) WrapUnary(handler connect.UnaryFunc) connect.Una
 func (a *AuthInterceptorClient) WrapStreamingClient(handler connect.StreamingClientFunc) connect.StreamingClientFunc {
 	return func(ctx context.Context, spec connect.Spec) connect.StreamingClientConn {
 		conn := handler(ctx, spec)
-		a.updateContext(conn.RequestHeader())
+		a.authorize(spec.Procedure, conn.RequestHeader())
 
 		return conn
 	}
@@ -229,33 +222,41 @@ func (a *AuthInterceptorClient) WrapStreamingHandler(handler connect.StreamingHa
 	return handler
 }
 
-func (a *AuthInterceptorClient) token() []byte {
-	jsonData, err := json.Marshal(a.Token)
-	if err != nil {
-		return nil
+func (a *AuthInterceptorClient) getOrCreateToken(operation string) (serializedToken, error) {
+	token := a.tokens[operation]
+	// check if reached expiring date or first call to create a new signature
+	if time.Now().After(token.expirationTime) || token.bearer == "" {
+		fmt.Println("Token Expired, Signing a New one ...")
+		tokenData := Token{
+			PodId:          a.podId,
+			Operation:      operation,
+			ExpirationTime: time.Now().Add(a.expirationOffset),
+			Publisher:      a.publisher,
+		}
+		tokenDataBytes, err := json.Marshal(tokenData)
+		if err != nil {
+			return serializedToken{}, err
+		}
+		signature, err := a.sign(tokenDataBytes)
+		tokenDataEncoded := base64.StdEncoding.EncodeToString(tokenDataBytes)
+		signatureEncoded := base64.StdEncoding.EncodeToString(signature)
+		token = serializedToken{
+			expirationTime: tokenData.ExpirationTime,
+			bearer: fmt.Sprintf("%s.%s", tokenDataEncoded, signatureEncoded),
+		}
+		a.tokens[operation] = token
 	}
-	return jsonData
+	return token, nil
 }
 
-func (a *AuthInterceptorClient) updateContext(header http.Header) error {
-
-	// check if reached expiring date or first call to create a new signature
-	if time.Now().After(a.Token.ExpirationTime) || a.Signature == "" {
-		fmt.Println("Token Expired, Signing a New one ...")
-		a.Token.ExpirationTime = time.Now().Add(a.ExpirationOffset)
-		signature, err := a.Sign(a.token())
-		if err != nil {
-			return err
-		}
-		a.Signature = base64.StdEncoding.EncodeToString(signature)
+func (a *AuthInterceptorClient) authorize(operation string, header http.Header) error {
+	token, err := a.getOrCreateToken(operation)
+	if err != nil {
+		return err
 	}
 
-	token := base64.StdEncoding.EncodeToString(a.token())
-	ns := namespaceFromTokenParts(a.Token.Publisher, a.Token.PodId)
-
 	// Append custom metadata to the outgoing context
-	header.Add(authorizationHeader, fmt.Sprintf("Bearer %s.%s", token, a.Signature))
-	header.Add("namespace", ns)
+	header.Add(authorizationHeader, fmt.Sprintf("Bearer %s", token.bearer))
 	return nil
 }
 

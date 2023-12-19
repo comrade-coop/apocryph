@@ -116,7 +116,7 @@ var deployPodCmd = &cobra.Command{
 		deployment.Payment.ChainID = chainId.Bytes()
 		deployment.Payment.PublisherAddress = publisherAuth.From.Bytes()
 
-		interceptor := pbcon.NewAuthInterceptorClient(deployment, pbcon.ProvisionPodServiceProvisionPodProcedure, expirationOffset, sign)
+		interceptor := pbcon.NewAuthInterceptorClient(deployment, expirationOffset, sign)
 
 		var client *publisher.P2pProvisionPodServiceClient
 		if len(deployment.GetProvider().GetEthereumAddress()) == 0 || deployment.GetProvider().GetLibp2PAddress() == "" {
@@ -203,7 +203,7 @@ var deletePodCmd = &cobra.Command{
 			return fmt.Errorf("Could not get ethereum account: %w", err)
 		}
 
-		interceptor := pbcon.NewAuthInterceptorClient(deployment, pbcon.ProvisionPodServiceDeletePodProcedure, expirationOffset, sign)
+		interceptor := pbcon.NewAuthInterceptorClient(deployment, expirationOffset, sign)
 
 		ipfsp2p := tpipfs.NewP2pApi(ipfs, ipfsMultiaddr)
 

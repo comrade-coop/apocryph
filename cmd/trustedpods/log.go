@@ -50,7 +50,7 @@ var logPodCmd = &cobra.Command{
 
 		publisherEthAddress := publisherAuth.From.Bytes()
 
-		interceptor := pbcon.NewAuthInterceptorClient(deployment, pbcon.ProvisionPodServiceGetPodLogsProcedure, expirationOffset, sign)
+		interceptor := pbcon.NewAuthInterceptorClient(deployment, expirationOffset, sign)
 
 		client, err := publisher.ConnectToProvider(tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), deployment, interceptor)
 		if err != nil {
