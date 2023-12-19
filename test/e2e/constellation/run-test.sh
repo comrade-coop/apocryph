@@ -52,13 +52,8 @@ helmfile apply -l name=eth
 [ "$PORT_8545" == "" ] && { PORT_8545="yes" ; kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
 
 DEPLOYER_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 #TODO= anvil.accounts[0]
-TOKEN_CONTRACT=$(cast compute-address "$(cast wallet address $DEPLOYER_KEY)" --nonce 0 | sed -E 's/.+0x/0x/')
 
-forge create --root ../../../contracts MockToken --private-key $DEPLOYER_KEY --nonce 0
-forge create --root ../../../contracts Payment --private-key $DEPLOYER_KEY --nonce 1 --constructor-args "$TOKEN_CONTRACT"
-forge create --root ../../../contracts Registry --private-key $DEPLOYER_KEY --nonce 2
-
-forge create --root ../../../contracts Payment --private-key $DEPLOYER_KEY --nonce 1 --silent --constructor-args "$TOKEN_CONTRACT" || true
+( cd ../../../contracts; forge script script/Deploy.s.sol --private-key "$DEPLOYER_KEY" --rpc-url http://localhost:8545 --broadcast)
 
 ## 1.1: Apply the rest of the Helm configuration ##
 
@@ -104,9 +99,8 @@ sleep 1
 DEPLOYER_ETH=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 #TODO= anvil.accounts[0]
 PROVIDER_ETH=0x70997970C51812dc3A010C7d01b50e0d17dc79C8 #TODO= anvil.accounts[1]
 PUBLISHER_KEY=0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a #TODO= anvil.accounts[2]
-TOKEN_CONTRACT=$(cast compute-address $DEPLOYER_ETH --nonce 0 | sed -E 's/.+0x/0x/')
-PAYMENT_CONTRACT=$(cast compute-address $DEPLOYER_ETH --nonce 1 | sed -E 's/.+0x/0x/')
-REGISTRY_CONTRACT=$(cast compute-address $DEPLOYER_ETH --nonce 2 | sed -E 's/.+0x/0x/')
+PAYMENT_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.payment.value')
+REGISTRY_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.registry.value')
 FUNDS=10000000000000000000000
 
 [ "$PORT_8545" == "" ] && { PORT_8545="yes" ; kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
@@ -119,10 +113,8 @@ set -x
 
 go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-guestbook-nostorage.yaml \
   --ethereum-key "$PUBLISHER_KEY" \
-  --provider-eth "$PROVIDER_ETH" \
   --payment-contract "$PAYMENT_CONTRACT" \
   --registry-contract "$REGISTRY_CONTRACT" \
-  --token-contract "$TOKEN_CONTRACT" \
   --funds "$FUNDS" \
   --upload-images=false \
   --mint-funds
@@ -134,7 +126,7 @@ set -v
 
 DEPLOYER_ETH=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 #TODO= anvil.accounts[0]
 WITHDRAW_ETH=0x90F79bf6EB2c4f870365E785982E1f101E93b906 # From trustedpods/tpodserver.yml
-TOKEN_CONTRACT=$(cast compute-address $DEPLOYER_ETH --nonce 0 | sed -E 's/.+0x/0x/')
+TOKEN_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.token.value')
 NODE_ADDRESS=$(kubectl get no -o json | jq -r '.items[].status.addresses[] | select(.type == "InternalIP") | .address' | head -n 1)
 INGRESS_PORT=$(kubectl get svc -n keda ingress-nginx-controller -o json | jq -r '.spec.ports[] | select(.name == "http") | .nodePort' | head -n 1)
 INGRESS_URL="http://$NODE_ADDRESS:$INGRESS_PORT"; echo $INGRESS_URL

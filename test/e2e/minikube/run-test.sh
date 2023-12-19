@@ -43,7 +43,23 @@ set -v
 
 ## 0: Set up the external environment
 
-## 0.1: Set up a local ethereum node and deploy contracts to it
+## 0.1: Build/tag server and p2p-helper images
+
+docker build -t comradecoop/trusted-pods/server:latest ../../.. --target server
+
+docker build -t comradecoop/trusted-pods/p2p-helper:latest ../../.. --target p2p-helper
+
+## 0.2: Create local registry and push server and p2p-helper images
+
+docker run -d -p 5000:5000 --restart=always --name registry registry:2 || echo "Docker registry already running"
+
+docker tag comradecoop/trusted-pods/server:latest localhost:5000/comradecoop/trusted-pods/server:latest
+docker push localhost:5000/comradecoop/trusted-pods/server:latest
+
+docker tag comradecoop/trusted-pods/p2p-helper:latest localhost:5000/comradecoop/trusted-pods/p2p-helper:latest
+docker push localhost:5000/comradecoop/trusted-pods/p2p-helper:latest
+
+## 0.3: Set up a local ethereum node and deploy contracts to it
 
 # (NOTE: Unfortunatelly, we cannot use a port other than 8545, or otherwise the eth-rpc service will break)
 docker run -d -p 8545:8545 --restart=always --name=anvil \
@@ -53,28 +69,9 @@ docker run -d -p 8545:8545 --restart=always --name=anvil \
 }
 sleep 5
 
-DEPLOYER_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 #TODO= anvil.accounts[0] private key
-TOKEN_CONTRACT=$(cast compute-address "$(cast wallet address $DEPLOYER_KEY)" --nonce 0 | sed -E 's/.+0x/0x/')
+DEPLOYER_KEY=$(docker logs anvil | awk '/Private Keys/ {flag=1; next} flag && /^\(0\)/ {print $2; exit}') # anvil.accounts[0]
 
-forge create --root ../../../contracts MockToken --private-key $DEPLOYER_KEY --nonce 0
-forge create --root ../../../contracts Payment --private-key $DEPLOYER_KEY --nonce 1 --constructor-args "$TOKEN_CONTRACT"
-forge create --root ../../../contracts Registry --private-key $DEPLOYER_KEY --nonce 2
-
-## 0.2: Build/tag server and p2p-helper images
-
-docker build -t comradecoop/trusted-pods/server:latest ../../.. --target server
-
-docker build -t comradecoop/trusted-pods/p2p-helper:latest ../../.. --target p2p-helper
-
-## 0.3: Create local registry and push server and p2p-helper images
-
-docker run -d -p 5000:5000 --restart=always --name registry registry:2 || echo "Docker registry already running"
-
-docker tag comradecoop/trusted-pods/server:latest localhost:5000/comradecoop/trusted-pods/server:latest
-docker push localhost:5000/comradecoop/trusted-pods/server:latest
-
-docker tag comradecoop/trusted-pods/p2p-helper:latest localhost:5000/comradecoop/trusted-pods/p2p-helper:latest
-docker push localhost:5000/comradecoop/trusted-pods/p2p-helper:latest
+( cd ../../../contracts; forge script script/Deploy.s.sol --private-key "$DEPLOYER_KEY" --rpc-url http://localhost:8545 --broadcast)
 
 ## 1: Set up the Kubernetes environment ##
 
@@ -122,12 +119,10 @@ sleep 1
 
 ## 2: Deploy example manifest to cluster ##
 
-DEPLOYER_ETH=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 #TODO= anvil.accounts[0]
 PROVIDER_ETH=0x70997970C51812dc3A010C7d01b50e0d17dc79C8 #TODO= anvil.accounts[1]
-PUBLISHER_KEY=0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a #TODO= anvil.accounts[2]
-TOKEN_CONTRACT=$(cast compute-address $DEPLOYER_ETH --nonce 0 | sed -E 's/.+0x/0x/')
-PAYMENT_CONTRACT=$(cast compute-address $DEPLOYER_ETH --nonce 1 | sed -E 's/.+0x/0x/')
-REGISTRY_CONTRACT=$(cast compute-address $DEPLOYER_ETH --nonce 2 | sed -E 's/.+0x/0x/')
+PUBLISHER_KEY=$(docker logs anvil | awk '/Private Keys/ {flag=1; next} flag && /^\(2\)/ {print $2; exit}')
+PAYMENT_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.payment.value')
+REGISTRY_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.registry.value')
 FUNDS=10000000000000000000000
 
 [ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
@@ -150,9 +145,8 @@ set -v
 
 ## 3: Connect and measure balances ##
 
-DEPLOYER_ETH=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 #TODO= anvil.accounts[0]
-WITHDRAW_ETH=0x90F79bf6EB2c4f870365E785982E1f101E93b906 # From trustedpods/tpodserver.yml
-TOKEN_CONTRACT=$(cast compute-address $DEPLOYER_ETH --nonce 0 | sed -E 's/.+0x/0x/')
+WITHDRAW_ETH=0x90F79bf6EB2c4f870365E785982E1f101E93b906 #TODO copied from trustedpods/tpodserver.yml
+TOKEN_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.token.value')
 INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true | head -n 1); echo $INGRESS_URL
 MANIFEST_HOST=guestbook.localhost # From manifest-guestbook.yaml
 
@@ -185,6 +179,14 @@ exit 0;
 
 ## Env: (debug stuff)
 
+export PROVIDER_ETH=0x70997970C51812dc3A010C7d01b50e0d17dc79C8 #TODO= anvil.accounts[1]
+export PUBLISHER_KEY=$(docker logs anvil | awk '/Private Keys/ {flag=1; next} flag && /^\(2\)/ {print $2; exit}')
+export TOKEN_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.token.value')
+export PAYMENT_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.payment.value')
+export REGISTRY_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.registry.value')
+export FUNDS=10000000000000000000000
+export INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true | head -n 1); echo $INGRESS_URL
+export MANIFEST_HOST=guestbook.localhost # From manifest-guestbook.yaml
 [ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
 [ -n "$PROVIDER_IPFS" ] || { PROVIDER_IPFS=$(curl -X POST "http://127.0.0.1:5004/api/v0/id" -s | jq '.ID' -r); echo $PROVIDER_IPFS; }
 [ -n "$IPFS_DAEMON" ] || { IPFS_DAEMON=yes; ipfs daemon & { while ! [ -f ${IPFS_PATH:-~/.ipfs}/api ]; do sleep 0.1; done; } 2>/dev/null; }

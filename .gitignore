@@ -4,6 +4,7 @@ bin/
 contracts/out/
 contracts/cache/
 contracts/build/
+contracts/broadcast/
 
 node_modules/
 

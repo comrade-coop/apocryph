@@ -31,8 +31,8 @@ func main() {
 	}
 }
 func mainErr() error {
-	if len(os.Args) != 3 {
-		return fmt.Errorf("Usage: run-test <PublisherAccountString> <ProviderAccountString>")
+	if len(os.Args) != 4 {
+		return fmt.Errorf("Usage: run-test <PublisherAccountString> <ProviderAccountString> <PaymentContractAddress>")
 	}
 
 	ethClient, err := ethereum.GetClient("")
@@ -49,12 +49,19 @@ func mainErr() error {
 	if err != nil {
 		return err
 	}
-	tokenAddress, _, token, err := abi.DeployMockToken(publisherAuth, ethClient)
+	paymentAddress := common.HexToAddress(os.Args[3])
+	
+	payment, err := abi.NewPayment(paymentAddress, ethClient)
 	if err != nil {
 		return err
 	}
-
-	paymentAddress, _, payment, err := abi.DeployPayment(publisherAuth, ethClient, tokenAddress)
+	
+	tokenAddress, err := payment.Token(&bind.CallOpts{})
+	if err != nil {
+		return err
+	}
+	
+	token, err := abi.NewMockToken(tokenAddress, ethClient)
 	if err != nil {
 		return err
 	}
