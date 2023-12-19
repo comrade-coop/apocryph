@@ -1,0 +1,28 @@
+name: Check Typescript code
+
+on:
+  push:
+    paths:
+    - '**.ts'
+    - '**/package.json'
+    - '**/package-lock.json'
+    - '.github/workflows/check-ts.yml'
+
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+          - name: Set up Go
+      - name: Checkout repository
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+      - name: Dependencies
+        run: npm ci
+      - name: Format/Lint
+        run: npm run fmt && git diff --exit-code

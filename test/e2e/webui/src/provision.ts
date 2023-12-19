@@ -6,8 +6,6 @@ import {
   hexToBytes,
   numberToBytes,
   stringToHex,
-  Signature,
-  TransactionSerializable,
   Hex
 } from 'viem'
 import { heliaNodePromise, walletClient } from './connections'
@@ -56,7 +54,7 @@ export async function provisionPod(config: {
   const signature = (await walletClient.account.signTransaction(
     {},
     {
-      serializer(_: TransactionSerializable, __?: Signature) {
+      serializer() {
         return stringToHex(tokenData)
       }
     }

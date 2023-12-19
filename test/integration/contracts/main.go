@@ -50,17 +50,17 @@ func mainErr() error {
 		return err
 	}
 	paymentAddress := common.HexToAddress(os.Args[3])
-	
+
 	payment, err := abi.NewPayment(paymentAddress, ethClient)
 	if err != nil {
 		return err
 	}
-	
+
 	tokenAddress, err := payment.Token(&bind.CallOpts{})
 	if err != nil {
 		return err
 	}
-	
+
 	token, err := abi.NewMockToken(tokenAddress, ethClient)
 	if err != nil {
 		return err
