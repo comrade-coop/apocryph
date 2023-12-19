@@ -15,12 +15,10 @@ service ProvisionPodService {
 
 message ProvisionPodRequest {
   pod.Pod pod = 1;
-  bytes publisherAddress = 2;
   PaymentChannel payment = 3;
 }
 
 message DeletePodRequest {
-  bytes publisherAddress = 2;
 }
 
 message DeletePodResponse {
@@ -30,7 +28,6 @@ message DeletePodResponse {
 
 message UpdatePodRequest {
   pod.Pod pod = 1;
-  bytes publisherAddress = 2;
 }
 message UpdatePodResponse {
   bool success = 1;
