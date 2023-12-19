@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Install packages
+        run: sudo apt-get update && sudo apt-get install libgpgme-dev
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
@@ -22,7 +24,7 @@ jobs:
       - name: Dependencies
         run: go mod verify
       - name: Build
-        run: go build --tags exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper -o bin/ -v $(find -name main.go | xargs -n 1 dirname)
+        run: go build --tags exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper -o bin/ $(find -name main.go | xargs -n 1 dirname)
         shell: bash
       - name: Format
         run: go fmt $(find -name main.go | xargs -n 1 dirname) && git diff --exit-code
