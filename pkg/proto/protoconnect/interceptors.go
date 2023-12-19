@@ -22,9 +22,17 @@ import (
 )
 
 const (
-	tpPrefix      = "tpod"
-	authorization = "Authorization"
+	tpPrefix            = "tpod"
+	authorizationHeader = "Authorization"
+	NamespaceHeader     = "X-Namespace"
 )
+
+type Token struct {
+	PodId          common.Hash
+	Operation      string
+	ExpirationTime time.Time
+	Publisher      common.Address
+}
 
 type SignFunc func(data []byte) ([]byte, error)
 
@@ -75,7 +83,7 @@ func (i authInterceptor) WrapUnary(handler connect.UnaryFunc) connect.UnaryFunc 
 		// verify that pod exists for the rest of the methods
 		if req.Spec().Procedure != ProvisionPodServiceProvisionPodProcedure {
 			p := &v1.Namespace{}
-			namespace := req.Header().Get("namespace")
+			namespace := GetNamespace(req)
 			err = i.k8Client.Get(context.Background(), client.ObjectKey{Namespace: namespace, Name: namespace}, p)
 			if err != nil {
 				return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("Namespace not found: %w", err))
@@ -105,23 +113,31 @@ func (i authInterceptor) WrapStreamingHandler(handler connect.StreamingHandlerFu
 }
 
 func (a authInterceptor) authenticate(header http.Header) error {
-	auth := header.Get(authorization)
+	auth := header.Get(authorizationHeader)
 	if len(auth) == 0 {
 		return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Empty Authentication field"))
 	}
-	signature, err := base64.StdEncoding.DecodeString(auth)
+	tokenString, ok := strings.CutPrefix(auth, "Bearer ")
+	if !ok {
+		return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Expected Bearer Authentication"))
+	}
+	tokenParts := strings.Split(tokenString, ".")
+	if len(tokenParts) != 2 {
+		return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Invalid token (wrong number of parts)"))
+	}
+	
+	tokenData, err := base64.StdEncoding.DecodeString(tokenParts[0])
 	if err != nil {
 		return err
 	}
-	tokenMd := header.Get("token")
-	jsonData, err := base64.StdEncoding.DecodeString(tokenMd)
+	tokenSignature, err := base64.StdEncoding.DecodeString(tokenParts[1])
 	if err != nil {
 		return err
 	}
 
 	// verify if token has exired or not
 	token := &Token{}
-	err = json.Unmarshal(jsonData, token)
+	err = json.Unmarshal(tokenData, token)
 	if err != nil {
 		return connect.NewError(connect.CodeDataLoss, fmt.Errorf("Failed Unmarshalling token"))
 	}
@@ -130,7 +146,7 @@ func (a authInterceptor) authenticate(header http.Header) error {
 	}
 
 	// Verify Signature
-	valid, err := VerifyPayload(token.Publisher, jsonData, signature)
+	valid, err := VerifyPayload(token.Publisher, tokenData, tokenSignature)
 	if err != nil {
 		return fmt.Errorf("Error verifying payload: %w", err)
 	}
@@ -139,13 +155,13 @@ func (a authInterceptor) authenticate(header http.Header) error {
 	}
 
 	// verify publisherAddress in namespace is same one signed in token
-	ns := header.Get("namespace")
+	ns := header.Get(NamespaceHeader)
 	nsExpected := namespaceFromTokenParts(token.Publisher, token.PodId)
-	if ns != nsExpected {
+	if ns == "" {
+		header.Set(NamespaceHeader, nsExpected)
+	} else if ns != nsExpected {
 		return connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Invalid namespace"))
 	}
-	// header.Set("namespace", nsExpected)?
-
 	return nil
 }
 
@@ -179,6 +195,10 @@ func namespaceFromTokenParts(publisher common.Address, podId common.Hash) string
 	return "tpod-" + strings.TrimRight(strings.ToLower(base32.StdEncoding.EncodeToString(namespacePartsHash)), "=")
 }
 
+func GetNamespace(req connect.AnyRequest) string {
+	return req.Header().Get(NamespaceHeader)
+}
+ 
 func newToken(deployment *pb.Deployment, operation string, expirationTime int64) Token {
 
 	return Token{
@@ -234,8 +254,7 @@ func (a *AuthInterceptorClient) updateContext(header http.Header) error {
 	ns := namespaceFromTokenParts(a.Token.Publisher, a.Token.PodId)
 
 	// Append custom metadata to the outgoing context
-	header.Add(authorization, a.Signature)
-	header.Add("token", token)
+	header.Add(authorizationHeader, fmt.Sprintf("Bearer %s.%s", token, a.Signature))
 	header.Add("namespace", ns)
 	return nil
 }

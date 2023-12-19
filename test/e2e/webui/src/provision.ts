@@ -8,15 +8,12 @@ import {
   stringToHex,
   Signature,
   TransactionSerializable,
-  Hex,
-  keccak256,
-  concatBytes
+  Hex
 } from 'viem'
 import { heliaNodePromise, walletClient } from './connections'
 import { connectTo } from 'trusted-pods-ipfs-ts'
 import { multiaddr } from '@multiformats/multiaddr'
 import { createPromiseClient } from '@connectrpc/connect'
-import base32 from 'base32'
 import {
   Pod,
   ProvisionPodResponse,
@@ -45,7 +42,7 @@ export async function provisionPod(config: {
   )
   const client = createPromiseClient(ProvisionPodService, connection)
 
-  const token = JSON.stringify({
+  const tokenData = JSON.stringify({
     PodId: bytesToHex(config.payment.podID),
     Operation:
       '/' +
@@ -60,23 +57,14 @@ export async function provisionPod(config: {
     {},
     {
       serializer(_: TransactionSerializable, __?: Signature) {
-        return stringToHex(token)
+        return stringToHex(tokenData)
       }
     }
   )) as Hex // FIXME: HACK: We should just use EIP typed data signatures and be done with it...
 
-  const namespacePartsHash = keccak256(
-    concatBytes([
-      hexToBytes(walletClient.account.address),
-      config.payment.podID
-    ]),
-    'bytes'
-  )
-  const ns =
-    'tpod-' +
-    (base32.encode(namespacePartsHash) as string)
-      .toLowerCase()
-      .replace(/=+$/, '') // Why, oh why..
+  const tokenDataEncoded = btoa(tokenData)
+  const signatureEncoded = btoa(String.fromCodePoint(...hexToBytes(signature)))
+  const bearerToken = tokenDataEncoded + "." + signatureEncoded
 
   const result = await client.provisionPod(
     {
@@ -91,9 +79,7 @@ export async function provisionPod(config: {
     },
     {
       headers: {
-        token,
-        authorization: signature,
-        namespace: ns
+        authorization: "Bearer " + bearerToken,
       }
     }
   )

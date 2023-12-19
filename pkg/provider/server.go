@@ -44,7 +44,7 @@ func transformError(err error) (*connect.Response[pb.ProvisionPodResponse], erro
 func (s *provisionPodServer) DeletePod(ctx context.Context, request *connect.Request[pb.DeletePodRequest]) (*connect.Response[pb.DeletePodResponse], error) {
 	log.Println("Received request for pod deletion")
 
-	namespace := request.Header().Get("namespace")
+	namespace := pbcon.GetNamespace(request)
 	// Create a new namespace object
 	ns := &v1.Namespace{
 		ObjectMeta: meta.ObjectMeta{
@@ -73,7 +73,7 @@ func (s *provisionPodServer) UpdatePod(ctx context.Context, request *connect.Req
 		return transformError(err)
 	}
 
-	namespace := request.Header().Get("namespace")
+	namespace := pbcon.GetNamespace(request)
 	response := &pb.ProvisionPodResponse{}
 	err = tpk8s.ApplyPodRequest(ctx, s.k8cl, namespace, true, request.Msg.Pod, images, secrets, response)
 	if err != nil {
@@ -86,7 +86,7 @@ func (s *provisionPodServer) UpdatePod(ctx context.Context, request *connect.Req
 func (s *provisionPodServer) GetPodLogs(ctx context.Context, request *connect.Request[pb.PodLogRequest], srv *connect.ServerStream[pb.PodLogResponse]) error {
 	log.Println("Received Log request")
 
-	namespace := request.Header().Get("namespace")
+	namespace := pbcon.GetNamespace(request)
 	podId := strings.Split(namespace, "-")[1]
 	deploymentName := "tpod-dep-" + podId
 	deployment := appsv1.Deployment{}
@@ -114,7 +114,7 @@ func (s *provisionPodServer) GetPodLogs(ctx context.Context, request *connect.Re
 
 func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *connect.Request[pb.ProvisionPodRequest]) (*connect.Response[pb.ProvisionPodResponse], error) {
 	fmt.Println("Received request for pod deployment")
-	namespace := request.Header().Get("namespace")
+	namespace := pbcon.GetNamespace(request)
 
 	// TODO should return error (just usefull for now in testing lifecycle without payment)
 	if s.paymentValidator != nil {
@@ -149,12 +149,6 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *connect.
 }
 
 func NewTPodServerHandler(ipfsApi *rpc.HttpApi, dryRun bool, k8cl client.Client, localOciRegistry string, validator *ethereum.PaymentChannelValidator, lokiHost string) (string, http.Handler) {
-	/*server := grpc.NewServer(
-		grpc.ChainStreamInterceptor(pb.NoCrashStreamServerInterceptor),
-		grpc.ChainStreamInterceptor(pb.NoCrashStreamServerInterceptor, pb.AuthStreamServerInterceptor(k8cl)),
-		grpc.ChainUnaryInterceptor(pb.NoCrashUnaryServerInterceptor, pb.AuthUnaryServerInterceptor(k8cl)),
-	)*/
-
 	return pbcon.NewProvisionPodServiceHandler(&provisionPodServer{
 		ipfs:             ipfsApi,
 		k8cl:             k8cl,
@@ -162,7 +156,9 @@ func NewTPodServerHandler(ipfsApi *rpc.HttpApi, dryRun bool, k8cl client.Client,
 		paymentValidator: validator,
 		localOciRegistry: localOciRegistry,
 		dryRun:           dryRun,
-	}, connect.WithInterceptors())
+	}, connect.WithInterceptors(
+		pbcon.NewAuthInterceptor(k8cl),
+	))
 }
 
 func GetListener(serveAddress string) (net.Listener, error) {
