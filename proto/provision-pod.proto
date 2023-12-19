@@ -55,7 +55,6 @@ message ProvisionPodResponse {
 
 message PodLogRequest{
   string containerName = 1;
-  bytes publisherAddress = 2;
 }
 
 message PodLogResponse{

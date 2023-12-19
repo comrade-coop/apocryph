@@ -34,7 +34,7 @@ func main() {
 		}
 		return sig, nil
 	}
-	
+
 	interruptChan := make(chan os.Signal, 1)
 	signal.Notify(interruptChan, os.Interrupt, syscall.SIGTERM)
 
@@ -42,9 +42,9 @@ func main() {
 		<-interruptChan
 		os.Exit(0)
 	}()
-	
+
 	lisChan := make(chan net.Listener, 1)
-	
+
 	go func() {
 		lis, err := net.Listen("tcp", "localhost:0")
 		if err != nil {
@@ -53,7 +53,7 @@ func main() {
 			return
 		}
 
-		lisChan<-lis
+		lisChan <- lis
 
 		mux := http.NewServeMux()
 		mux.Handle(pbcon.NewProvisionPodServiceHandler(&server{}, connect.WithInterceptors(
@@ -69,20 +69,20 @@ func main() {
 	}()
 
 	addr := (<-lisChan).Addr()
-	
+
 	request := &pb.ProvisionPodRequest{
 		Payment: &pb.PaymentChannel{
 			PublisherAddress: ethAddr.Bytes(),
 		},
 	}
-	
+
 	client := pbcon.NewProvisionPodServiceClient(
 		http.DefaultClient,
 		(&url.URL{Scheme: "http", Host: addr.String()}).String(),
 		connect.WithInterceptors(pbcon.NewAuthInterceptorClient(
 			&pb.Deployment{
 				Payment: &pb.PaymentChannelConfig{
-					PodID: []byte{0, 1, 2, 3},
+					PodID:            []byte{0, 1, 2, 3},
 					PublisherAddress: ethAddr.Bytes(),
 				},
 			},
@@ -90,7 +90,7 @@ func main() {
 			sign,
 		)),
 	)
-	
+
 	response, err := client.ProvisionPod(context.Background(), connect.NewRequest(request))
 	if err != nil {
 		fmt.Println(err)

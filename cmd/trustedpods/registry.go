@@ -59,7 +59,7 @@ var getTablesCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		
+
 		filter, err := getRegistryTableFilter()
 		if err != nil {
 			return err

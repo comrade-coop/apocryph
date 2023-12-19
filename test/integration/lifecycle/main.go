@@ -65,26 +65,26 @@ func main() {
 	reader := bufio.NewReader(os.Stdin)
 
 	// Create Pod
-	containerName := ProvisionPod(client, publisherAddress, "./manifest-guestbook.json")
+	containerName := ProvisionPod(client, "./manifest-guestbook.json")
 
 	// Get Pod logs
-	go GetPodLogs(client, &pb.PodLogRequest{ContainerName: containerName, PublisherAddress: publisherAddress})
+	go GetPodLogs(client, &pb.PodLogRequest{ContainerName: containerName})
 	// Update Pod
 	log.Printf("Press Enter to Update Pod \n\n")
 	_, _ = reader.ReadString('\n')
 	// containerName = UpdatePod(client, Credentials)
-	UpdatePod(client, publisherAddress)
+	UpdatePod(client)
 
 	// retreived logs for the updated container
-	go GetPodLogs(client, &pb.PodLogRequest{ContainerName: containerName, PublisherAddress: publisherAddress})
+	go GetPodLogs(client, &pb.PodLogRequest{ContainerName: containerName})
 
 	// Delete Pod
 	log.Printf("Press Enter to Delete Namespace\n\n")
 	_, _ = reader.ReadString('\n')
-	DeletePod(client, &pb.DeletePodRequest{PublisherAddress: publisherAddress})
+	DeletePod(client, &pb.DeletePodRequest{})
 }
 
-func ProvisionPod(client pbcon.ProvisionPodServiceClient, publisherAddress []byte, podPath string) string {
+func ProvisionPod(client pbcon.ProvisionPodServiceClient, podPath string) string {
 
 	podFile, _, pod, deployment, err := publisher.ReadPodAndDeployment([]string{"./logger-manifest.json"}, "", "")
 
@@ -96,9 +96,9 @@ func ProvisionPod(client pbcon.ProvisionPodServiceClient, publisherAddress []byt
 	if err != nil {
 		log.Fatalf("failed uploading Manifest: %v", err)
 	}
-	request := &pb.ProvisionPodRequest{PublisherAddress: publisherAddress}
+	request := &pb.ProvisionPodRequest{}
 	request.Pod = publisher.LinkUploadsFromDeployment(pod, deployment)
-	request.Payment = &pb.PaymentChannel{PublisherAddress: publisherAddress, PodID: []byte("123456")}
+	request.Payment = &pb.PaymentChannel{PodID: []byte("123456")}
 
 	response, err := client.ProvisionPod(context.Background(), connect.NewRequest(request))
 	if err != nil {
@@ -117,7 +117,7 @@ func DeletePod(client pbcon.ProvisionPodServiceClient, request *pb.DeletePodRequ
 	log.Printf("Pod Deletion response: %v", response)
 }
 
-func UpdatePod(client pbcon.ProvisionPodServiceClient, publisherAddress []byte) string {
+func UpdatePod(client pbcon.ProvisionPodServiceClient) string {
 
 	podFile, _, pod, deployment, err := publisher.ReadPodAndDeployment([]string{"./updated-logger.json"}, "", "")
 
@@ -129,7 +129,7 @@ func UpdatePod(client pbcon.ProvisionPodServiceClient, publisherAddress []byte) 
 	if err != nil {
 		log.Fatalf("failed uploading Manifest: %v", err)
 	}
-	request := &pb.UpdatePodRequest{PublisherAddress: publisherAddress}
+	request := &pb.UpdatePodRequest{}
 	request.Pod = publisher.LinkUploadsFromDeployment(pod, deployment)
 	response, err := client.UpdatePod(context.Background(), connect.NewRequest(request))
 	if err != nil {

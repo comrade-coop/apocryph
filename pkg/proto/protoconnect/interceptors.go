@@ -56,7 +56,7 @@ func (i authInterceptor) WrapUnary(handler connect.UnaryFunc) connect.UnaryFunc 
 		if err != nil {
 			return nil, err
 		}
-		
+
 		if hasPayment, ok := req.Any().(HasPaymentChannel); ok {
 			publisherAddress := common.BytesToAddress(hasPayment.GetPayment().GetPublisherAddress())
 			if expectedPublisher != publisherAddress {
@@ -109,7 +109,7 @@ func (a authInterceptor) authenticate(header http.Header) (common.Address, error
 	if len(tokenParts) != 2 {
 		return common.Address{}, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Invalid token (wrong number of parts)"))
 	}
-	
+
 	tokenData, err := base64.StdEncoding.DecodeString(tokenParts[0])
 	if err != nil {
 		return common.Address{}, err
@@ -170,7 +170,7 @@ type AuthInterceptorClient struct {
 	expirationOffset time.Duration
 }
 
-type serializedToken struct{
+type serializedToken struct {
 	expirationTime time.Time
 	bearer         string
 }
@@ -225,7 +225,7 @@ func (a *AuthInterceptorClient) getOrCreateToken(operation string) (serializedTo
 		signatureEncoded := base64.StdEncoding.EncodeToString(signature)
 		token = serializedToken{
 			expirationTime: tokenData.ExpirationTime,
-			bearer: fmt.Sprintf("%s.%s", tokenDataEncoded, signatureEncoded),
+			bearer:         fmt.Sprintf("%s.%s", tokenDataEncoded, signatureEncoded),
 		}
 		a.tokens[operation] = token
 	}

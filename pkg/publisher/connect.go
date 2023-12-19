@@ -83,8 +83,7 @@ func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, depl
 			}
 		} else {
 			request := &pb.UpdatePodRequest{
-				Pod:              pod,
-				PublisherAddress: deployment.Payment.PublisherAddress,
+				Pod: pod,
 			}
 			response, err = client.UpdatePod(ctx, connect.NewRequest(request))
 			if err != nil {
@@ -99,9 +98,7 @@ func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, depl
 		deployment.Deployed = response.Msg
 		fmt.Fprintf(os.Stderr, "Successfully deployed! %v\n", response)
 	} else {
-		request := &pb.DeletePodRequest{
-			PublisherAddress: deployment.Payment.PublisherAddress,
-		}
+		request := &pb.DeletePodRequest{}
 		response, err := client.DeletePod(ctx, connect.NewRequest(request))
 		if err != nil {
 			return fmt.Errorf("Failed executing update pod request: %w", err)

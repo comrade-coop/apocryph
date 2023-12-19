@@ -43,12 +43,10 @@ var logPodCmd = &cobra.Command{
 			publisherKey = common.BytesToAddress(deployment.Payment.PublisherAddress).String()
 		}
 
-		publisherAuth, sign, err := ethereum.GetAccountAndSigner(publisherKey, ethClient)
+		_, sign, err := ethereum.GetAccountAndSigner(publisherKey, ethClient)
 		if err != nil {
 			return fmt.Errorf("Could not get ethereum account: %w", err)
 		}
-
-		publisherEthAddress := publisherAuth.From.Bytes()
 
 		interceptor := pbcon.NewAuthInterceptorClient(deployment, expirationOffset, sign)
 
@@ -66,8 +64,7 @@ var logPodCmd = &cobra.Command{
 		}
 
 		request := &pb.PodLogRequest{
-			ContainerName:    containerName,
-			PublisherAddress: publisherEthAddress,
+			ContainerName: containerName,
 		}
 
 		stream, err := client.GetPodLogs(cmd.Context(), connect.NewRequest(request))
