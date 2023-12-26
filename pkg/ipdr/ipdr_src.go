@@ -38,10 +38,14 @@ func (s *ipdrImageSource) Close() error {
 
 func (s *ipdrImageSource) GetManifest(ctx context.Context, instanceDigest *digest.Digest) ([]byte, string, error) {
 	var p path.Path
+	var err error
 	if instanceDigest == nil {
-		p = path.Join(s.reference.path, "manifests", s.reference.tag)
+		p, err = path.Join(s.reference.path, "manifests", s.reference.tag)
 	} else {
-		p = path.Join(s.reference.path, "manifests", instanceDigest.String())
+		p, err = path.Join(s.reference.path, "manifests", instanceDigest.String())
+	}
+	if err != nil {
+		return nil, "", err
 	}
 	manifestNode, err := s.ipfs.Unixfs().Get(ctx, p)
 	if err != nil {
@@ -59,7 +63,10 @@ func (s *ipdrImageSource) GetManifest(ctx context.Context, instanceDigest *diges
 }
 
 func (s *ipdrImageSource) GetBlob(ctx context.Context, blobInfo types.BlobInfo, _ types.BlobInfoCache) (io.ReadCloser, int64, error) {
-	p := path.Join(s.reference.path, "blobs", blobInfo.Digest.String())
+	p, err := path.Join(s.reference.path, "blobs", blobInfo.Digest.String())
+	if err != nil {
+		return nil, 0, err
+	}
 	blobNode, err := s.ipfs.Unixfs().Get(ctx, p)
 	if err != nil {
 		return nil, 0, err

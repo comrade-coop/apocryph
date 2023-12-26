@@ -17,14 +17,14 @@ import (
 )
 
 // Adds a file (or a directory) from the local filesystem to IPFS
-func AddFsFile(node iface.CoreAPI, path string) (path.Resolved, error) {
-	stats, err := os.Stat(path)
+func AddFsFile(node iface.CoreAPI, pth string) (path.ImmutablePath, error) {
+	stats, err := os.Stat(pth)
 	if err != nil {
-		return nil, err
+		return path.ImmutablePath{}, err
 	}
-	serialFile, err := files.NewSerialFile(path, false, stats)
+	serialFile, err := files.NewSerialFile(pth, false, stats)
 	if err != nil {
-		return nil, err
+		return path.ImmutablePath{}, err
 	}
 	return node.Unixfs().Add(context.Background(), serialFile)
 }
@@ -48,7 +48,7 @@ func AddProtobufFile(node iface.CoreAPI, msg proto.Message) (cid.Cid, error) {
 	if err != nil {
 		return cid.Cid{}, err
 	}
-	return path.Cid(), nil
+	return path.RootCid(), nil
 }
 
 func AddBytes(node iface.CoreAPI, msg []byte) (cid.Cid, error) {
@@ -56,11 +56,11 @@ func AddBytes(node iface.CoreAPI, msg []byte) (cid.Cid, error) {
 	if err != nil {
 		return cid.Cid{}, err
 	}
-	return path.Cid(), nil
+	return path.RootCid(), nil
 }
 
 func GetBytes(node iface.CoreAPI, cid cid.Cid) ([]byte, error) {
-	fileNode, err := node.Unixfs().Get(context.Background(), path.IpfsPath(cid))
+	fileNode, err := node.Unixfs().Get(context.Background(), path.FromCid(cid))
 	if err != nil {
 		return nil, err
 	}

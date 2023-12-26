@@ -70,10 +70,10 @@ func (d *ipdrImageDestination) PutBlob(ctx context.Context, stream io.Reader, in
 	if err != nil {
 		return inputInfo, err
 	}
-	inputInfo.URLs = append(inputInfo.URLs, fmt.Sprintf("ipfs://%s", path.Cid().String()))
-	inputInfo.URLs = append(inputInfo.URLs, fmt.Sprintf("https://ipfs.io/ipfs/%s", path.Cid().String()))
+	inputInfo.URLs = append(inputInfo.URLs, fmt.Sprintf("ipfs://%s", path.RootCid().String()))
+	inputInfo.URLs = append(inputInfo.URLs, fmt.Sprintf("https://ipfs.io/ipfs/%s", path.RootCid().String()))
 
-	d.cidsToRemove = append(d.cidsToRemove, path.Cid())
+	d.cidsToRemove = append(d.cidsToRemove, path.RootCid())
 
 	node, err := d.ipfs.Unixfs().Get(ctx, path)
 	if err != nil {
@@ -100,9 +100,8 @@ func (d *ipdrImageDestination) TryReusingBlob(ctx context.Context, info types.Bl
 	for _, v := range info.URLs {
 		u, err := url.Parse(v)
 		if err == nil && (u.Scheme == "ipfs" || u.Host == "ipfs.io") {
-			p := path.New(u.Path)
-			if p.IsValid() == nil {
-				var err error
+			p, err := path.NewPath(u.Path)
+			if err == nil {
 				node, err = d.ipfs.Unixfs().Get(ctx, p)
 				if err != nil {
 					return false, info, err

@@ -40,9 +40,9 @@ func (t *ipdrTransport) ParseReference(reference string) (types.ImageReference, 
 	if tag == "" {
 		tag = "latest"
 	}
-	path := path.New(base)
-	if path.IsValid() != nil && base != "" {
-		return nil, path.IsValid()
+	path, err := path.NewPath(base)
+	if err != nil && base != "" {
+		return nil, err
 	}
 	return &ipdrImageReference{transport: t, path: path, tag: tag}, nil
 }
@@ -51,7 +51,7 @@ func (t *ipdrTransport) NewDestinationReference(tag string) IpdrImageReference {
 	if tag == "" {
 		tag = "latest"
 	}
-	return &ipdrImageReference{transport: t, path: path.New(""), tag: tag}
+	return &ipdrImageReference{transport: t, path: nil, tag: tag}
 }
 
 func (t *ipdrTransport) NewReference(p path.Path, tag string) IpdrImageReference {

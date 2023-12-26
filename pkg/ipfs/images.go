@@ -100,13 +100,13 @@ func UploadImageToIpdr(ctx context.Context, ipfs iface.CoreAPI, sys *types.Syste
 		return
 	}
 
-	resolved, ok := destinationRef.Path().(path.Resolved)
+	resolved, ok := destinationRef.Path().(path.ImmutablePath)
 	if !ok {
 		err = errors.New("Destination path not resolved") // Shouldn't get here
 		return
 	}
 
-	imageCid = resolved.Cid().Bytes()
+	imageCid = resolved.RootCid().Bytes()
 
 	return
 }
@@ -147,7 +147,7 @@ func ReuploadImageFromIpdr(ctx context.Context, ipfs iface.CoreAPI, localRegistr
 		if err != nil {
 			return nil, err
 		}
-		sourceRef := ipdrTransport.NewReference(path.IpfsPath(c), "")
+		sourceRef := ipdrTransport.NewReference(path.FromCid(c), "")
 
 		url := localRegistryUrl + "/" + c.Hash().HexString()
 		destinationRef, err := registryTransport.ParseReference("//" + url)
