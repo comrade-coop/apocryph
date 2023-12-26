@@ -45,6 +45,9 @@ contract PaymentTest is Test {
         token.mint(1000);
 
         token.approve(address(payment), 500);
+        vm.expectRevert(Payment.DoesNotExist.selector);
+        payment.deposit(provider, podId, 500);
+
         payment.createChannel(provider, podId, 1, 500);
 
         token.approve(address(payment), 500);

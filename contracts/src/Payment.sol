@@ -62,6 +62,8 @@ contract Payment {
         address publisher = msg.sender;
         Channel storage channel = channels[publisher][provider][podId];
 
+        if (channel.investedByPublisher == 0) revert DoesNotExist();
+
         channel.investedByPublisher = channel.investedByPublisher + amount;
         channel.unlockedAt = 0;
 
