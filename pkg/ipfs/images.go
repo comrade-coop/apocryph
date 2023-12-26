@@ -17,8 +17,8 @@ import (
 	"github.com/containers/image/v5/signature"
 	"github.com/containers/image/v5/types"
 	encconfig "github.com/containers/ocicrypt/config"
-	iface "github.com/ipfs/boxo/coreiface"
-	"github.com/ipfs/boxo/coreiface/path"
+	iface "github.com/ipfs/kubo/core/coreiface"
+	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/go-cid"
 )
 

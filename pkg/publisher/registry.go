@@ -15,7 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	iface "github.com/ipfs/boxo/coreiface"
+	iface "github.com/ipfs/kubo/core/coreiface"
 	"github.com/ipfs/go-cid"
 	"github.com/multiformats/go-multiaddr"
 	"google.golang.org/protobuf/proto"

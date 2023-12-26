@@ -10,9 +10,9 @@ import (
 	"net/url"
 
 	"github.com/containers/image/v5/types"
-	iface "github.com/ipfs/boxo/coreiface"
-	"github.com/ipfs/boxo/coreiface/options"
-	"github.com/ipfs/boxo/coreiface/path"
+	iface "github.com/ipfs/kubo/core/coreiface"
+	"github.com/ipfs/kubo/core/coreiface/options"
+	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/boxo/files"
 	"github.com/ipfs/go-cid"
 	"github.com/opencontainers/go-digest"

@@ -11,8 +11,8 @@ import (
 
 	tpcrypto "github.com/comrade-coop/apocryph/pkg/crypto"
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
-	iface "github.com/ipfs/boxo/coreiface"
-	ifacepath "github.com/ipfs/boxo/coreiface/path"
+	iface "github.com/ipfs/kubo/core/coreiface"
+	ifacepath "github.com/ipfs/boxo/path"
 	"github.com/ipfs/boxo/files"
 	"github.com/ipfs/go-cid"
 )

@@ -9,8 +9,8 @@ import (
 
 	"github.com/containers/image/v5/manifest"
 	"github.com/containers/image/v5/types"
-	iface "github.com/ipfs/boxo/coreiface"
-	"github.com/ipfs/boxo/coreiface/path"
+	iface "github.com/ipfs/kubo/core/coreiface"
+	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/boxo/files"
 	"github.com/opencontainers/go-digest"
 )

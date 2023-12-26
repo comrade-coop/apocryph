@@ -9,7 +9,7 @@ import (
 	"os"
 
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
-	iface "github.com/ipfs/boxo/coreiface"
+	iface "github.com/ipfs/kubo/core/coreiface"
 	"golang.org/x/exp/slices"
 
 	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"

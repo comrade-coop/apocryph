@@ -7,7 +7,7 @@ import (
 
 	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
-	iface "github.com/ipfs/boxo/coreiface"
+	iface "github.com/ipfs/kubo/core/coreiface"
 )
 
 func DownloadSecrets(ctx context.Context, ipfs iface.CoreAPI, pod *pb.Pod) (map[string][]byte, error) {

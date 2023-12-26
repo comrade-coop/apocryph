@@ -9,8 +9,8 @@ import (
 	"io"
 	"os"
 
-	iface "github.com/ipfs/boxo/coreiface"
-	"github.com/ipfs/boxo/coreiface/path"
+	iface "github.com/ipfs/kubo/core/coreiface"
+	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/boxo/files"
 	"github.com/ipfs/go-cid"
 	"google.golang.org/protobuf/proto"
