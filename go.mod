@@ -1,4 +1,4 @@
-module github.com/comrade-coop/trusted-pods
+module github.com/comrade-coop/apocryph
 
 go 1.21.1
 

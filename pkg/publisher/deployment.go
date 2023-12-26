@@ -11,7 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	"github.com/mitchellh/go-homedir"
 )
 

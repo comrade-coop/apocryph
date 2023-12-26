@@ -14,8 +14,8 @@ import (
 	"syscall"
 
 	"connectrpc.com/connect"
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
-	pbcon "github.com/comrade-coop/trusted-pods/pkg/proto/protoconnect"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
+	pbcon "github.com/comrade-coop/apocryph/pkg/proto/protoconnect"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
@@ -26,7 +26,7 @@ func main() {
 		return
 	}
 	ethAddr := crypto.PubkeyToAddress(key.PublicKey)
-	sign := func(data []byte) ([]byte, error) { // Copied from "github.com/comrade-coop/trusted-pods/pkg/ethereum".GetAccountAndSigner
+	sign := func(data []byte) ([]byte, error) { // Copied from "github.com/comrade-coop/apocryph/pkg/ethereum".GetAccountAndSigner
 		hash := crypto.Keccak256(data)
 		sig, err := crypto.Sign(hash, key)
 		if err != nil {

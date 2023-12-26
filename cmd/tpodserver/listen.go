@@ -7,11 +7,11 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
-	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
-	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
-	"github.com/comrade-coop/trusted-pods/pkg/provider"
+	"github.com/comrade-coop/apocryph/pkg/ethereum"
+	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"
+	tpk8s "github.com/comrade-coop/apocryph/pkg/kubernetes"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
+	"github.com/comrade-coop/apocryph/pkg/provider"
 	"github.com/spf13/cobra"
 )
 

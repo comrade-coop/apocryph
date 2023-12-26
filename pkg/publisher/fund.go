@@ -7,8 +7,8 @@ import (
 	"math/big"
 	"os"
 
-	"github.com/comrade-coop/trusted-pods/pkg/abi"
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	"github.com/comrade-coop/apocryph/pkg/abi"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"

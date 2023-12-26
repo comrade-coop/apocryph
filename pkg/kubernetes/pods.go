@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

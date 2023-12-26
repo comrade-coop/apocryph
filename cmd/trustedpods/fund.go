@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
-	"github.com/comrade-coop/trusted-pods/pkg/publisher"
+	"github.com/comrade-coop/apocryph/pkg/ethereum"
+	"github.com/comrade-coop/apocryph/pkg/publisher"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 )

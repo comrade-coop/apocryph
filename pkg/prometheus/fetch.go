@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/comrade-coop/trusted-pods/pkg/resource"
+	"github.com/comrade-coop/apocryph/pkg/resource"
 )
 
 const resourceQuotaSecondsQuery = "sum by (namespace, resource)(sum_over_time(kube_pod_container_resource_requests[250000m]))" // TODO: 250000m might be too short?

@@ -11,9 +11,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
-	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
-	"github.com/comrade-coop/trusted-pods/pkg/provider"
+	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"
+	tpk8s "github.com/comrade-coop/apocryph/pkg/kubernetes"
+	"github.com/comrade-coop/apocryph/pkg/provider"
 )
 
 func main() {

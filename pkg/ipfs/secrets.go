@@ -9,8 +9,8 @@ import (
 	"os"
 	"path"
 
-	tpcrypto "github.com/comrade-coop/trusted-pods/pkg/crypto"
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	tpcrypto "github.com/comrade-coop/apocryph/pkg/crypto"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	iface "github.com/ipfs/boxo/coreiface"
 	ifacepath "github.com/ipfs/boxo/coreiface/path"
 	"github.com/ipfs/boxo/files"

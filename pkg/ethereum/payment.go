@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/comrade-coop/trusted-pods/pkg/abi"
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
-	"github.com/comrade-coop/trusted-pods/pkg/resource"
+	"github.com/comrade-coop/apocryph/pkg/abi"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
+	"github.com/comrade-coop/apocryph/pkg/resource"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/comrade-coop/trusted-pods/pkg/abi"
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	"github.com/comrade-coop/apocryph/pkg/abi"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	"github.com/spf13/pflag"
 )
 

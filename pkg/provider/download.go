@@ -5,8 +5,8 @@ package provider
 import (
 	"context"
 
-	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	iface "github.com/ipfs/boxo/coreiface"
 )
 

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
-	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
+	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"
+	tpk8s "github.com/comrade-coop/apocryph/pkg/kubernetes"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"

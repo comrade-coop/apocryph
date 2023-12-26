@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"path/filepath"
 
-	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
-	"github.com/comrade-coop/trusted-pods/pkg/publisher"
+	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"
+	"github.com/comrade-coop/apocryph/pkg/publisher"
 	"github.com/spf13/cobra"
 )
 

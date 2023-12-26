@@ -13,9 +13,9 @@ import (
 	"syscall"
 
 	"connectrpc.com/connect"
-	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
-	pbcon "github.com/comrade-coop/trusted-pods/pkg/proto/protoconnect"
+	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
+	pbcon "github.com/comrade-coop/apocryph/pkg/proto/protoconnect"
 	"github.com/ipfs/kubo/client/rpc"
 	"github.com/libp2p/go-libp2p/core/peer"
 )

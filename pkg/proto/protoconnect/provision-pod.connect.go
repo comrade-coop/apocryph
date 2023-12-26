@@ -10,7 +10,7 @@ import (
 	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	proto "github.com/comrade-coop/trusted-pods/pkg/proto"
+	proto "github.com/comrade-coop/apocryph/pkg/proto"
 	http "net/http"
 	strings "strings"
 )

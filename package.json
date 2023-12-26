@@ -12,14 +12,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/comrade-coop/trusted-pods.git"
+    "url": "git+https://github.com/comrade-coop/apocryph.git"
   },
   "author": "",
   "license": "GPL-3.0",
   "bugs": {
-    "url": "https://github.com/comrade-coop/trusted-pods/issues"
+    "url": "https://github.com/comrade-coop/apocryph/issues"
   },
-  "homepage": "https://github.com/comrade-coop/trusted-pods#readme",
+  "homepage": "https://github.com/comrade-coop/apocryph#readme",
   "devDependencies": {
     "@rollup/plugin-run": "^3.0.2",
     "@rollup/plugin-typescript": "^11.1.5",

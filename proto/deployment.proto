@@ -2,7 +2,7 @@
 
 syntax = "proto3";
 package apocryph.proto.v0.deployment;
-option go_package = "github.com/comrade-coop/trusted-pods/pkg/proto";
+option go_package = "github.com/comrade-coop/apocryph/pkg/proto";
 
 import "provision-pod.proto";
 import "pod.proto";

@@ -13,12 +13,12 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
-	"github.com/comrade-coop/trusted-pods/pkg/ipfs"
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
-	pbcon "github.com/comrade-coop/trusted-pods/pkg/proto/protoconnect"
+	"github.com/comrade-coop/apocryph/pkg/ipfs"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
+	pbcon "github.com/comrade-coop/apocryph/pkg/proto/protoconnect"
 	"github.com/libp2p/go-libp2p/core/peer"
 
-	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
+	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"
 )
 
 type P2pProvisionPodServiceClient struct {

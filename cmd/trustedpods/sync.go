@@ -5,10 +5,10 @@ package main
 import (
 	"fmt"
 
-	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
-	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
-	pbcon "github.com/comrade-coop/trusted-pods/pkg/proto/protoconnect"
-	"github.com/comrade-coop/trusted-pods/pkg/publisher"
+	"github.com/comrade-coop/apocryph/pkg/ethereum"
+	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"
+	pbcon "github.com/comrade-coop/apocryph/pkg/proto/protoconnect"
+	"github.com/comrade-coop/apocryph/pkg/publisher"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 )

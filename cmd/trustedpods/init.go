@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
-	"github.com/comrade-coop/trusted-pods/pkg/publisher"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
+	"github.com/comrade-coop/apocryph/pkg/publisher"
 	"github.com/spf13/cobra"
 )
 

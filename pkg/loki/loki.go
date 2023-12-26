@@ -12,7 +12,7 @@ import (
 	"strconv"
 
 	"connectrpc.com/connect"
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	"github.com/gorilla/websocket"
 	"google.golang.org/protobuf/encoding/protojson"
 )

@@ -5,7 +5,7 @@ package main
 import (
 	"fmt"
 
-	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
+	tpk8s "github.com/comrade-coop/apocryph/pkg/kubernetes"
 	"github.com/spf13/cobra"
 )
 

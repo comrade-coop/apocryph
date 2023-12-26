@@ -8,9 +8,9 @@ import (
 	"os"
 	"strings"
 
-	tpcrypto "github.com/comrade-coop/trusted-pods/pkg/crypto"
-	"github.com/comrade-coop/trusted-pods/pkg/ipdr"
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	tpcrypto "github.com/comrade-coop/apocryph/pkg/crypto"
+	"github.com/comrade-coop/apocryph/pkg/ipdr"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	imageCopy "github.com/containers/image/v5/copy"
 	"github.com/containers/image/v5/docker"
 	"github.com/containers/image/v5/docker/daemon"

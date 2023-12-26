@@ -18,7 +18,7 @@ Status: Alternative prototyped
 
 Prometheus's [documentation](https://prometheus.io/docs/introduction/overview/#when-does-it-not-fit) explicitly states that Prometheus metrics are not suitable for billing since Prometheus is designed for availability (an AP system by the [CAP theorem](https://en.wikipedia.org/wiki/CAP_theorem)) and not for consistency / reliability of results (which is what a CP system would be).
 
-Despite that, the current [implementation](../pkg/prometheus/) uses Prometheus and `kube-state-metrics` to fetch the list of metrics that billing is based on. A prototype was created in the [`metrics-monitor`](https://github.com/comrade-coop/trusted-pods/tree/metrics-monitor) branch to showcases an alternative way to fetch the same data from Kubernetes directly and avoid any possible inconsistencies in the result, yet it was decided that it's better to iterate quickly with Prometheus first instead and come back to this idea later.
+Despite that, the current [implementation](../pkg/prometheus/) uses Prometheus and `kube-state-metrics` to fetch the list of metrics that billing is based on. A prototype was created in the [`metrics-monitor`](github.com/comrade-coop/apocryph/tree/metrics-monitor) branch to showcases an alternative way to fetch the same data from Kubernetes directly and avoid any possible inconsistencies in the result, yet it was decided that it's better to iterate quickly with Prometheus first instead and come back to this idea later.
 
 ### A single monolithic `tpodserver` service
 
@@ -30,7 +30,7 @@ Currently, the whole of the Trusted Pods' Provider client/node is implemented as
 
 Status: Still evaluating, alternative prototyped
 
-The [payment contract](../contracts/src/Payment.sol) currently takes care of absolutely all payments that pass through Trusted Pods. However, it might be worth splitting it into a factory/library contract and small "flyweight" contracts instead. Currently, that is prototyped in the [`contract-factory`](https://github.com/comrade-coop/trusted-pods/tree/contract-factory) branch, but it ended up using more way more gas for deployment, so it was temporarily scrapped.
+The [payment contract](../contracts/src/Payment.sol) currently takes care of absolutely all payments that pass through Trusted Pods. However, it might be worth splitting it into a factory/library contract and small "flyweight" contracts instead. Currently, that is prototyped in the [`contract-factory`](github.com/comrade-coop/apocryph/tree/contract-factory) branch, but it ended up using more way more gas for deployment, so it was temporarily scrapped.
 
 ### Using Kubo/IPFS p2p feature marked experimental
 

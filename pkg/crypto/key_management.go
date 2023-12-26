@@ -10,7 +10,7 @@ import (
 	"crypto/x509"
 	"errors"
 
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	encconfig "github.com/containers/ocicrypt/config"
 	"github.com/go-jose/go-jose/v3"
 )

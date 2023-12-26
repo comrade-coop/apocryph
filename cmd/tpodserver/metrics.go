@@ -7,9 +7,9 @@ import (
 	"io"
 	"os"
 
-	"github.com/comrade-coop/trusted-pods/pkg/prometheus"
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
-	"github.com/comrade-coop/trusted-pods/pkg/resource"
+	"github.com/comrade-coop/apocryph/pkg/prometheus"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
+	"github.com/comrade-coop/apocryph/pkg/resource"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 )

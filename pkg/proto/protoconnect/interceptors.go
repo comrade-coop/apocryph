@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	v1 "k8s.io/api/core/v1"

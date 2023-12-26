@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"os"
 
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	iface "github.com/ipfs/boxo/coreiface"
 	"golang.org/x/exp/slices"
 
-	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
+	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"
 )
 
 func UploadSecrets(ctx context.Context, ipfs iface.CoreAPI, basepath string, pod *pb.Pod, deployment *pb.Deployment) error {

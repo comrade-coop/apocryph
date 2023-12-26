@@ -7,10 +7,10 @@ import (
 	"math/big"
 	"os"
 
-	"github.com/comrade-coop/trusted-pods/pkg/abi"
-	"github.com/comrade-coop/trusted-pods/pkg/ethereum"
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
-	"github.com/comrade-coop/trusted-pods/pkg/resource"
+	"github.com/comrade-coop/apocryph/pkg/abi"
+	"github.com/comrade-coop/apocryph/pkg/ethereum"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
+	"github.com/comrade-coop/apocryph/pkg/resource"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 )

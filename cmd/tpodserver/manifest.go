@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"path/filepath"
 
-	tpipfs "github.com/comrade-coop/trusted-pods/pkg/ipfs"
-	tpk8s "github.com/comrade-coop/trusted-pods/pkg/kubernetes"
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"
+	tpk8s "github.com/comrade-coop/apocryph/pkg/kubernetes"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
 	"sigs.k8s.io/controller-runtime/pkg/client"

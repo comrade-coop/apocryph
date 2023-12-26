@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 
-	pb "github.com/comrade-coop/trusted-pods/pkg/proto"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
 	"golang.org/x/exp/slices"
 	"google.golang.org/protobuf/encoding/protojson"
