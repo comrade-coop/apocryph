@@ -6,9 +6,9 @@ Rationale for not shoving all of this in GitHub Issues: while Issues are a great
 
 ## Features yet to be implemented
 
-* Write and integrate a Registry contract
-* Run the Provider in Constellation instead of Minikube, to allow for attestation
-* Implement a way for the Publisher to monitor, manage, and edit the deployed pod (other than shutting down the payment channel)
+* Integrate attestation
+* Support private docker registries (in parallel to IPDR support)
+* Registry support in web frontend
 
 ## Technical debt accumulated
 
@@ -58,6 +58,14 @@ There are a couple ways to implement that. One would be to run an IPDR registry 
 
 Another way to implement first-class IPDR images would be to develop a `containerd` [plugin](https://github.com/containerd/containerd/blob/main/docs/PLUGINS.md) which handles image downloads using our (surprisingly functional, considering the code size) [IPDR transport](../pkg/ipdr) -- or better yet, getting IPDR support merged into mainline `containerd`. A potential hurdle to actually doing that is that Constellation has hardcoded their [`containerd` config](https://github.com/edgelesssys/constellation/blob/main/image/base/mkosi.skeleton/usr/etc/containerd/config.toml) as part of the base layer that is later attested to.
 
+### Custom HTTP client implementation in web frontend
+
+Status: Correct as needed
+
+Currently, the [Libp2p Connect transport](../pkg/ipfs-ts/transport-libp2p-connect.ts) implemented in the repo ends up reimplementing a whole HTTP client, just for the sake of sending [ConnectRPC](https://github.com/connectrpc/connect-es) messages over a [libp2p connection](https://libp2p.github.io/js-libp2p/interfaces/_libp2p_interface.connection.Stream.html). This is not ideal, as HTTP clients are notoriously complicated to implement right, and while it's unlikely that ours is rifle with vulnerabilities, it's also unlikely that implementing one ourselves is the best way forward.
+
+The two main options here would be to either drop ConnectRPC completely and implement framing ourselves (and thus reimplementing ConnectRPC/GRPC while still using Protobufs for the message serialization itself) or to use an existing implementation of the HTTP client, such as node's HTTP package. Alternatively, if we use the Kubo/IPFS p2p feature instead of importing libp2p into the browser, we might be able to directly use ConnectRPC with the correct port numbers, at the cost of losing encryption and (currently) authenticity of the requests, unless the user is running their own Kubo node.
+
 ### Constellation cluster recovery not handled
 
 Status: Solutions outlined
@@ -76,13 +84,21 @@ Constellation allows [attesting a cluster](https://docs.edgeless.systems/constel
 
 The main solution to this, other than switching away from Constellation (to, e.g. Confidential Containers, despite them not being fully ready yet), would be to modify the base Constellation image so that it includes an additional API, either running within or without a container, whose hash is verified in the boot process, and which allows querying, and hence, attesting the rest of the Kubernetes state. Alternatively, the image could be modified to attest the Trusted Pods server container as part of the boot process; however, this feels like too much hardcoding.
 
+### Trusted pods cluster hardening
+
+Status: Known issue
+
+In line with the two notes about Constellation's cluster recovery and attestation features, a third departure of a Trusted Pods cluster from what Constellation provides out of the box is the fact that Constellation issues an admin-level Kubectl access token upon installation; however, we would like to keep parts of the Trusted Pods cluster inaccessible even to the administrator.
+
+For that, we would likely need to issue a Kubectl access token with lesser priviledges, allowing for only partial configuration of the Trusted Pods cluster. The customizable features should be selected carefully to align with Provider needs, to allow for things like configuring backups and some kinds of dashboards and monitoring, while minimizing the leaking of user privacy.
+
 ### Secret encryption done with AESGCM directly
 
 Status: Correct as needed
 
 Currently, we encrypt secrets' data ([(see `EncryptWith`/`DecryptWith`)](../pkg/crypto/key_management.go)) with AESGCM directly, forgoing using any libraries that could do this for us and give us a more generic encrypted package. Ideally, given that the rest of the code uses `go-jose` we would use `go-jose`'s encryption facilities directly -- however, JWE objects base64-encode the whole ciphertext... making them ~33% less efficient in terms of space on-wire! Hence, we opt to directly write the bytes ourselves and save on some space.
 
-Some ways to improve the situation would be to contribute `BSON` functionallity to `go-jose` (unfortunatelly, such functionallity would not be standards-compliant, unless someone goes the whole way to suggest `BSON` (or other binary) serialization for [RFC7516](https://www.rfc-editor.org/rfc/rfc7516.html)), to switch to using PKCS11 instead of JSON Web Keys, or implementing our own key provider for `ocicrypt` (which was the reason to start using JSON Web Keys in the first place), perhaps one based on [ERC-5630](https://eips.ethereum.org/EIPS/eip-5630).
+Some ways to improve the situation would be to contribute `BSON` functionallity to `go-jose` (unfortunatelly, such functionallity would not be standards-compliant, unless someone goes the whole way to suggest `BSON` (or other binary) serialization for [RFC7516](https://www.rfc-editor.org/rfc/rfc7516.html)), to switch to using PKCS11 instead of JSON Web Keys, or implementing our own key provider for `ocicrypt` (which was the reason to start using JSON Web Keys in the first place), perhaps one based on [ERC-5630](https://eips.ethereum.org/EIPS/eip-5630). Alternatively, we could look into other standards for storing encrypted secrets, such as [IPFS/Ceramic's dag-jose](https://github.com/ceramicnetwork/js-dag-jose/) or [WNFS](https://github.com/wnfs-wg/) or any of the [other nascent IPFS encryption standards](https://discuss.ipfs.tech/t/encryption-private-data-and-private-swarms-with-ipfs/15363).
 
 ## Missing features
 
@@ -97,7 +113,6 @@ See [the respective document](UPTIME.md) for a more in-depth uptime reliability 
 ### Software licensing
 
 See [the respective document](B2B2X.md) for a more in-depth software licensing design proposal.
-
 
 ### Individual TEEs
 

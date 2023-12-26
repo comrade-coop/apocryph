@@ -4,9 +4,10 @@
 
 ## Manifest file
 
-The manifest file, tentatively `trustedpods.yml`, is read by the Publisher Client and used to assemble the on-wire manifest that is then sent to the Provider Client.
+The manifest file, tentatively `trustedpods.yml`, is read by the Publisher Client and used to assemble the on-wire manifest that is then sent to the Provider Client. What follows is an example manifest file as it was initially conceptualized; the current implementation simply reads off a yaml-encoded protobuf object using the on-wire manifest format and does not follow the format below. (Use `trustedpods init` to get a sample file generated.)
 
 ```yaml
+# WARNING: Psuedo-code
 type: "trustedpods"
 version: "1.0"
 containers:

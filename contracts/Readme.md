@@ -18,3 +18,7 @@ forge test
 ```
 forge build -o build
 ```
+
+## Deployment
+
+To deploy on testnet/mainnet, you can use the `scripts/Deploy.s.sol` script -- see [forge documentation](https://book.getfoundry.sh/tutorials/solidity-scripting) for details on using scripts. Afterwards, hardcode the contract addresses as defaults for the Publisher client (and/or provider client), or, better yet commit the `./broadcast` folder and take the contract addresses from there -- or, potentially even better, use ENS to resolve the payment/registry contracts.

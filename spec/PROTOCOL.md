@@ -2,7 +2,7 @@
 
 (Document status: barebones)
 
-When the Publisher Client connects to the Provider Client, it makes use of a libp2p connection; likely through the IPFS DHT, unless the Provider has advertised a stable IP earlier. These connections use the protocols `/trusted-pods/attest/0.0.1`, `/trusted-pods/provisioning-capacity/0.0.1`, and `/trusted-pods/provision-pod/0.0.1`, which is based on a Protobufs protocol defined in (..).
+When the Publisher Client connects to the Provider Client, it makes use of a libp2p connection; likely through the IPFS DHT, unless the Provider has advertised a stable IP earlier. These connections use the protocols `/trusted-pods/attest/0.0.1`, `/trusted-pods/provisioning-capacity/0.0.1`, and `/trusted-pods/provision-pod/0.0.1`, which is based on a Protobufs protocol defined in the [`:/proto/`](../proto) folder.
 
 The basic structure of this protocol is the following:
 
@@ -23,6 +23,6 @@ Main changes:
 * There are no longer multiple ways to define volumes; all volumes must be in an array at the end.
 * There are no longer multiple ways to define ports; all ports use the `(port, targetPort, protocol, hostIP)` fields.
 * Likewise for the `command` and `args` fields.
-* The wire format includes fields for pricing copied from the [registry data](REGISTRY.md).
+<!--* The wire format includes fields for pricing copied from the [registry data](REGISTRY.md).-->
 
-Finally, the `image` field is converted to an IPFS hash and key, containing respectively the output of [`imgcrypt`](https://github.com/containerd/imgcrypt) (possibly uploaded with [`ipdr`](https://github.com/ipdr/ipdr)) and the private key that can be used to decrypt it.
+Finally, the `image` field is possibly converted to an IPFS hash and key, containing respectively the output of [`imgcrypt`](https://github.com/containerd/imgcrypt) uploaded with [`ipdr`](https://github.com/ipdr/ipdr) and the private key that can be used to decrypt it.
