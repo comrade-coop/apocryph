@@ -66,6 +66,24 @@ Currently, the [Libp2p Connect transport](../pkg/ipfs-ts/transport-libp2p-connec
 
 The two main options here would be to either drop ConnectRPC completely and implement framing ourselves (and thus reimplementing ConnectRPC/GRPC while still using Protobufs for the message serialization itself) or to use an existing implementation of the HTTP client, such as node's HTTP package. Alternatively, if we use the Kubo/IPFS p2p feature instead of importing libp2p into the browser, we might be able to directly use ConnectRPC with the correct port numbers, at the cost of losing encryption and (currently) authenticity of the requests, unless the user is running their own Kubo node.
 
+### Secret encryption done with AESGCM directly
+
+Status: Correct as needed
+
+Currently, we encrypt secrets' data ([(see `EncryptWith`/`DecryptWith`)](../pkg/crypto/key_management.go)) with AESGCM directly, forgoing using any libraries that could do this for us and give us a more generic encrypted package. Ideally, given that the rest of the code uses `go-jose` we would use `go-jose`'s encryption facilities directly -- however, JWE objects base64-encode the whole ciphertext... making them ~33% less efficient in terms of space on-wire! Hence, we opt to directly write the bytes ourselves and save on some space.
+
+Some ways to improve the situation would be to contribute `BSON` functionality to `go-jose` (unfortunately, such functionality would not be standards-compliant, unless someone goes the whole way to suggest `BSON` (or other binary) serialization for [RFC7516](https://www.rfc-editor.org/rfc/rfc7516.html)), to switch to using PKCS11 instead of JSON Web Keys, or implementing our own key provider for `ocicrypt` (which was the reason to start using JSON Web Keys in the first place), perhaps one based on [ERC-5630](https://eips.ethereum.org/EIPS/eip-5630). Alternatively, we could look into other standards for storing encrypted secrets, such as [IPFS/Ceramic's dag-jose](https://github.com/ceramicnetwork/js-dag-jose/) or [WNFS](https://github.com/wnfs-wg/) or any of the [other nascent IPFS encryption standards](https://discuss.ipfs.tech/t/encryption-private-data-and-private-swarms-with-ipfs/15363).
+
+### Code duplication in cmd/trustedpods
+
+Status: Correct as needed
+
+A lot of the code in [`cmd/trustedpods`](../cmd/trustedpods) has to do with setting up the environment for things like Ethereum connections, IPFS connections, deployment files, provider addresses, etc., and even IPFS uploads are in a sense a dependency of sending requests to the provider. It would be nice if we could express everything as a pipeline of dependencies that each inserts its own flags into the command parser and then gets processed in turn so as to create the whole desired environment in the end.
+
+This has been attempted in the past (outside of Git history), but the result was even less managable. Perhaps, this is something `cobra` is not particularly well suited for, and an additional (homegrown?) dependency management system would help. Either way, the code duplication is not horrible, and the repo will survive as-is for a long time before it becomes problematic.
+
+## Missing features
+
 ### Constellation cluster recovery not handled
 
 Status: Solutions outlined
@@ -91,16 +109,6 @@ Status: Known issue
 In line with the two notes about Constellation's cluster recovery and attestation features, a third departure of a Trusted Pods cluster from what Constellation provides out of the box is the fact that Constellation issues an admin-level Kubectl access token upon installation; however, we would like to keep parts of the Trusted Pods cluster inaccessible even to the administrator.
 
 For that, we would likely need to issue a Kubectl access token with lesser privileges, allowing for only partial configuration of the Trusted Pods cluster. The customizable features should be selected carefully to align with Provider needs, to allow for things like configuring backups and some kinds of dashboards and monitoring, while minimizing the leaking of user privacy.
-
-### Secret encryption done with AESGCM directly
-
-Status: Correct as needed
-
-Currently, we encrypt secrets' data ([(see `EncryptWith`/`DecryptWith`)](../pkg/crypto/key_management.go)) with AESGCM directly, forgoing using any libraries that could do this for us and give us a more generic encrypted package. Ideally, given that the rest of the code uses `go-jose` we would use `go-jose`'s encryption facilities directly -- however, JWE objects base64-encode the whole ciphertext... making them ~33% less efficient in terms of space on-wire! Hence, we opt to directly write the bytes ourselves and save on some space.
-
-Some ways to improve the situation would be to contribute `BSON` functionality to `go-jose` (unfortunately, such functionality would not be standards-compliant, unless someone goes the whole way to suggest `BSON` (or other binary) serialization for [RFC7516](https://www.rfc-editor.org/rfc/rfc7516.html)), to switch to using PKCS11 instead of JSON Web Keys, or implementing our own key provider for `ocicrypt` (which was the reason to start using JSON Web Keys in the first place), perhaps one based on [ERC-5630](https://eips.ethereum.org/EIPS/eip-5630). Alternatively, we could look into other standards for storing encrypted secrets, such as [IPFS/Ceramic's dag-jose](https://github.com/ceramicnetwork/js-dag-jose/) or [WNFS](https://github.com/wnfs-wg/) or any of the [other nascent IPFS encryption standards](https://discuss.ipfs.tech/t/encryption-private-data-and-private-swarms-with-ipfs/15363).
-
-## Missing features
 
 ### Storage reliability
 

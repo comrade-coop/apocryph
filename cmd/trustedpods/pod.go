@@ -11,7 +11,7 @@ import (
 
 var podCmd = &cobra.Command{
 	Use:   "pod",
-	Short: "Operations related to with raw pod manifests",
+	Short: "Operations related to pod management",
 }
 
 func configureDeployment(deployment *pb.Deployment) error {
