@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 import './style.css'
-import { paymentABI, ierc20ABI, mockTokenABI } from 'trusted-pods-abi-ts'
+import { paymentABI, ierc20ABI, mockTokenABI } from 'apocryph-abi-ts'
 import { bytesToHex } from 'viem'
 import { publicClient, walletClient } from './connections'
 

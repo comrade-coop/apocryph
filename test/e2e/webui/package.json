@@ -1,5 +1,5 @@
 {
-  "name": "trusted-pods-webui",
+  "name": "apocryph-webui",
   "private": true,
   "type": "module",
   "scripts": {

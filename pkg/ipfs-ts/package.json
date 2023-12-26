@@ -1,5 +1,5 @@
 {
-  "name": "trusted-pods-ipfs-ts",
+  "name": "apocryph-ipfs-ts",
   "private": true,
   "type": "module",
   "dependencies": {

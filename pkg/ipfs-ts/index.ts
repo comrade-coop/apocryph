@@ -14,7 +14,7 @@ export { createLibp2pConnectTransport, AllowConnectionGater }
 export function connectTo(
   node: Helia,
   peerAddr: PeerId | Multiaddr | Multiaddr[],
-  protocol: string = '/x/trusted-pods/provision-pod/0.0.1'
+  protocol: string
 ): Transport {
   return createLibp2pConnectTransport({
     dialStream: async () => await node.libp2p.dialProtocol(peerAddr, protocol),

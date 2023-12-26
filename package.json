@@ -1,7 +1,7 @@
 {
-  "name": "trusted-pods",
+  "name": "apocryph",
   "version": "0.1.0",
-  "description": "Trusted Pods is a decentralized compute marketplace where developers can run container pods securely and confidentially through small and medium cloud providers.",
+  "description": "Apocryph / Trusted Pods is a decentralized compute marketplace where developers can run container pods securely and confidentially through small and medium cloud providers.",
   "main": "index.js",
   "directories": {
     "test": "test"

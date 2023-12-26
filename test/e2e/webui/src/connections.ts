@@ -3,7 +3,7 @@
 import { createPublicClient, createWalletClient, http } from 'viem'
 import { foundry } from 'viem/chains'
 import { privateKeyToAccount } from 'viem/accounts'
-import { createClient } from 'trusted-pods-ipfs-ts'
+import { createClient } from 'apocryph-ipfs-ts'
 
 export const publicClient = createPublicClient({
   chain: foundry,

@@ -87,7 +87,7 @@ spec:
         - name: IPFS_PROFILE
           value:
       - name: p2p-helper
-        image: host.minikube.internal:5000/comradecoop/trusted-pods/p2p-helper
+        image: host.minikube.internal:5000/comradecoop/apocryph/p2p-helper
         command: ["ipfs-p2p-helper", "run", "--ipfs", "/ip4/127.0.0.1/tcp/5001"]
       volumes:
       - name: init-scripts
@@ -124,6 +124,6 @@ spec:
 #     spec:
 #       containers:
 #       - name: p2p-helper
-#         image: host.minikube.internal:5000/comradecoop/trusted-pods/p2p-helper
+#         image: host.minikube.internal:5000/comradecoop/apocryph/p2p-helper
 #         command: ["ipfs-p2p-helper", "run", "--ipfs", "/dns4/ipfs-rpc.ipfs.svc.cluster.local/tcp/5001"]
 #       serviceAccountName: ipfs-p2p-serviceaccount

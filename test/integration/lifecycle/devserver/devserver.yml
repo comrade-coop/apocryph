@@ -55,7 +55,7 @@ spec:
     spec:
       containers:
       - name: devserver
-        image: host.minikube.internal:5000/comradecoop/trusted-pods/devserver
+        image: host.minikube.internal:5000/comradecoop/apocryph/devserver
         env:
           - name: SERVER_PORT
             value: "8090"

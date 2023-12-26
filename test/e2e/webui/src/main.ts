@@ -7,7 +7,7 @@ import {
   ProviderConfig,
   Pod,
   PaymentChannelConfig
-} from 'trusted-pods-proto-ts'
+} from 'apocryph-proto-ts'
 import { fundPaymentChannel } from './fund'
 import { provisionPod } from './provision'
 import { bytesToHex, hexToBytes } from 'viem'

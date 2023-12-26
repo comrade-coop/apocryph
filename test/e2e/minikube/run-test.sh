@@ -45,19 +45,19 @@ set -v
 
 ## 0.1: Build/tag server and p2p-helper images
 
-docker build -t comradecoop/trusted-pods/server:latest ../../.. --target server
+docker build -t comradecoop/apocryph/server:latest ../../.. --target server
 
-docker build -t comradecoop/trusted-pods/p2p-helper:latest ../../.. --target p2p-helper
+docker build -t comradecoop/apocryph/p2p-helper:latest ../../.. --target p2p-helper
 
 ## 0.2: Create local registry and push server and p2p-helper images
 
 docker run -d -p 5000:5000 --restart=always --name registry registry:2 || echo "Docker registry already running"
 
-docker tag comradecoop/trusted-pods/server:latest localhost:5000/comradecoop/trusted-pods/server:latest
-docker push localhost:5000/comradecoop/trusted-pods/server:latest
+docker tag comradecoop/apocryph/server:latest localhost:5000/comradecoop/apocryph/server:latest
+docker push localhost:5000/comradecoop/apocryph/server:latest
 
-docker tag comradecoop/trusted-pods/p2p-helper:latest localhost:5000/comradecoop/trusted-pods/p2p-helper:latest
-docker push localhost:5000/comradecoop/trusted-pods/p2p-helper:latest
+docker tag comradecoop/apocryph/p2p-helper:latest localhost:5000/comradecoop/apocryph/p2p-helper:latest
+docker push localhost:5000/comradecoop/apocryph/p2p-helper:latest
 
 ## 0.3: Set up a local ethereum node and deploy contracts to it
 

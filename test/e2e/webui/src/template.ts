@@ -5,7 +5,7 @@ import type {
   ProviderConfig,
   Pod,
   PaymentChannelConfig
-} from 'trusted-pods-proto-ts'
+} from 'apocryph-proto-ts'
 import type { PartialMessage } from '@bufbuild/protobuf'
 import { hexToBytes } from 'viem'
 

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0
 
-import { connectTo, createClient } from 'trusted-pods-ipfs-ts'
+import { connectTo, createClient } from 'tapocryph-ipfs-ts'
 import { createPromiseClient } from '@connectrpc/connect'
-import { ProvisionPodService } from 'trusted-pods-proto-ts'
+import { ProvisionPodService } from 'apocryph-proto-ts'
 import { multiaddr, type MultiaddrInput } from '@multiformats/multiaddr'
 
 const helia = await createClient({ testMode: true })
 
 const peerAddr: MultiaddrInput = process.argv[1]
 
-const client = createPromiseClient(ProvisionPodService, connectTo(helia, multiaddr(peerAddr), '/x/trusted-pods/provision-pod/0.0.1'))
+const client = createPromiseClient(ProvisionPodService, connectTo(helia, multiaddr(peerAddr), '/x/apocryph/provision-pod/0.0.1'))
 
 const result = await client.provisionPod({
   pod: {

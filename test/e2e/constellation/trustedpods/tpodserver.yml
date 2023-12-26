@@ -5,9 +5,9 @@ metadata:
   namespace: trustedpods
   labels:
     app: tpodserver
-    coop.comrade/trusted-pods-p2p-helper: "true"
+    coop.comrade/apocryph-p2p-helper: "true"
   annotations:
-    coop.comrade/trusted-pods-p2p-helper: "/x/trusted-pods/provision-pod/0.0.1"
+    coop.comrade/apocryph-p2p-helper: "/x/apocryph/provision-pod/0.0.1"
 
 spec:
   ports:
@@ -65,7 +65,7 @@ spec:
     spec:
       containers:
       - name: register
-        image: ghcr.io/comrade-coop/trusted-pods/server:master
+        image: ghcr.io/comrade-coop/apocryph/server:master
         command: [
           "tpodserver", "registry", "register",
           "--config", "config.yaml",
@@ -106,7 +106,7 @@ spec:
     spec:
       containers:
       - name: tpodserver
-        image: ghcr.io/comrade-coop/trusted-pods/server:master
+        image: ghcr.io/comrade-coop/apocryph/server:master
         command: [
           "tpodserver", "listen",
           "--address", "0.0.0.0:8080",
@@ -124,7 +124,7 @@ spec:
           subPath: config.yaml
           readOnly: true
       - name: tpodmonitor
-        image: ghcr.io/comrade-coop/trusted-pods/server:master
+        image: ghcr.io/comrade-coop/apocryph/server:master
         command: [
           "tpodserver", "monitor",
           "--config", "config.yaml",

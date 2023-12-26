@@ -18,10 +18,10 @@ import (
 )
 
 const (
-	LabelTrustedPodsNamespace            string = "coop.comrade/trusted-pods-namespace"
-	AnnotationsTrustedPodsPaymentChannel string = "coop.comrade/trusted-pods-payment-contract"
-	LabelIpfsP2P                         string = "coop.comrade/trusted-pods-p2p-helper"
-	AnnotationsIpfsP2P                   string = "coop.comrade/trusted-pods-p2p-helper"
+	LabelTrustedPodsNamespace            string = "coop.comrade/apocryph-namespace"
+	AnnotationsTrustedPodsPaymentChannel string = "coop.comrade/apocryph-payment-contract"
+	LabelIpfsP2P                         string = "coop.comrade/apocryph-p2p-helper"
+	AnnotationsIpfsP2P                   string = "coop.comrade/apocryph-p2p-helper"
 )
 
 var TrustedPodsNamespaceFilter = client.HasLabels{LabelTrustedPodsNamespace}

@@ -9,7 +9,7 @@ import {
   Hex
 } from 'viem'
 import { heliaNodePromise, walletClient } from './connections'
-import { connectTo } from 'trusted-pods-ipfs-ts'
+import { connectTo } from 'apocryph-ipfs-ts'
 import { multiaddr } from '@multiformats/multiaddr'
 import { createPromiseClient } from '@connectrpc/connect'
 import {
@@ -17,7 +17,7 @@ import {
   ProvisionPodResponse,
   ProvisionPodService,
   provisionPodProtocolName
-} from 'trusted-pods-proto-ts'
+} from 'apocryph-proto-ts'
 import { PartialMessage } from '@bufbuild/protobuf'
 
 // Copied and adapted from pkg/publisher/connect.go
