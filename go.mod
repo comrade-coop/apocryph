@@ -8,7 +8,7 @@ require (
 	github.com/containers/image/v5 v5.28.0
 	github.com/containers/ocicrypt v1.1.8
 	github.com/ethereum/go-ethereum v1.13.3
-	github.com/go-jose/go-jose/v3 v3.0.0
+	github.com/go-jose/go-jose/v3 v3.0.1
 	github.com/gorilla/websocket v1.5.0
 	github.com/ipfs/boxo v0.13.1
 	github.com/ipfs/go-cid v0.4.1
