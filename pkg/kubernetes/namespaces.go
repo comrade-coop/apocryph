@@ -56,9 +56,9 @@ func TrustedPodsNamespaceGetChannel(namespace *corev1.Namespace) (*pb.PaymentCha
 	return paymentChannel, nil
 }
 
-func cleanNamespace(ctx context.Context, namespace string, activeRessources []string, client k8cl.Client) error {
+func cleanNamespace(ctx context.Context, namespace string, activeResources []string, client k8cl.Client) error {
 	kindList := []string{"Service", "Volume", "Secret", "Deployment", "HttpSo"}
-	fmt.Printf("Active Ressources: %v \n", activeRessources)
+	fmt.Printf("Active Resources: %v \n", activeResources)
 	for _, kind := range kindList {
 		switch kind {
 		case "Service":
@@ -68,7 +68,7 @@ func cleanNamespace(ctx context.Context, namespace string, activeRessources []st
 				return err
 			}
 			for i, rsrc := range list.Items {
-				if !slices.Contains(activeRessources, rsrc.GetName()) {
+				if !slices.Contains(activeResources, rsrc.GetName()) {
 					fmt.Printf("Deleting Service %v:%v \n", i, rsrc.GetName())
 					err := client.Delete(ctx, &rsrc)
 					if err != nil {
@@ -83,7 +83,7 @@ func cleanNamespace(ctx context.Context, namespace string, activeRessources []st
 				return err
 			}
 			for i, rsrc := range list.Items {
-				if !slices.Contains(activeRessources, rsrc.GetName()) {
+				if !slices.Contains(activeResources, rsrc.GetName()) {
 					fmt.Printf("Deleting PVC %v: %v \n", i, rsrc.GetName())
 					err := client.Delete(ctx, &rsrc)
 					if err != nil {
@@ -98,7 +98,7 @@ func cleanNamespace(ctx context.Context, namespace string, activeRessources []st
 				return err
 			}
 			for i, rsrc := range list.Items {
-				if !slices.Contains(activeRessources, rsrc.GetName()) {
+				if !slices.Contains(activeResources, rsrc.GetName()) {
 					fmt.Printf("Deleting Secret %v: %v \n", i, rsrc.GetName())
 					err := client.Delete(ctx, &rsrc)
 					if err != nil {
@@ -113,7 +113,7 @@ func cleanNamespace(ctx context.Context, namespace string, activeRessources []st
 				return err
 			}
 			for i, rsrc := range list.Items {
-				if !slices.Contains(activeRessources, rsrc.GetName()) {
+				if !slices.Contains(activeResources, rsrc.GetName()) {
 					fmt.Printf("Deleting Deployment %v: %v \n", i, rsrc.GetName())
 					err := client.Delete(ctx, &rsrc)
 					if err != nil {
@@ -128,7 +128,7 @@ func cleanNamespace(ctx context.Context, namespace string, activeRessources []st
 				return err
 			}
 			for i, rsrc := range list.Items {
-				if !slices.Contains(activeRessources, rsrc.GetName()) {
+				if !slices.Contains(activeResources, rsrc.GetName()) {
 					fmt.Printf("Deleting HttpSo %v: %v \n", i, rsrc.GetName())
 					err := client.Delete(ctx, &rsrc)
 					if err != nil {

@@ -140,7 +140,7 @@ var subscribeCmd = &cobra.Command{
 
 var registerCmd = &cobra.Command{
 	Use:   "register",
-	Short: "uplods provider info to ipfs and register in the registry contract",
+	Short: "uploads provider info to ipfs and register in the registry contract",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ipfs, _, err := tpipfs.GetIpfsClient(ipfsApi)
 		if err != nil {

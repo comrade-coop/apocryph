@@ -37,7 +37,7 @@ Or it could be split into categories with more detailed information:
 
 - **Ram**
 
-    |Ressource|Description|Capacity| Price|
+    |Resource|Description|Capacity| Price|
     |-|-|-|-|
     | **RAM**   | Memory capacity | Capacity (ex: 1GB) | $0.00001         GB/(min/s/ms) 
 

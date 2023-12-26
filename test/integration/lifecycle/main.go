@@ -47,7 +47,7 @@ func main() {
 
 	ipfs, _, err = tpipfs.GetIpfsClient(ipfsAddress)
 	if err != nil {
-		log.Fatalf("failed to retreived Ipfs Client: %v", err)
+		log.Fatalf("failed to retrieve Ipfs Client: %v", err)
 	}
 
 	deployment := &pb.Deployment{Payment: &pb.PaymentChannelConfig{}}
@@ -75,7 +75,7 @@ func main() {
 	// containerName = UpdatePod(client, Credentials)
 	UpdatePod(client)
 
-	// retreived logs for the updated container
+	// retrieve logs for the updated container
 	go GetPodLogs(client, &pb.PodLogRequest{ContainerName: containerName})
 
 	// Delete Pod

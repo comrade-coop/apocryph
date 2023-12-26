@@ -114,8 +114,8 @@ contract Payment {
         if (leftoverFunds != 0) token.safeTransfer(publisher, leftoverFunds);
     }
 
-    // allows the provider to withdraw as many tokens as would be needed to reach totalWithdrawlAmount since the opening of the channel
-    function withdrawUpTo(address publisher, bytes32 podId, uint256 totalWithdrawlAmount, address transferAddress)
+    // allows the provider to withdraw as many tokens as would be needed to reach totalWithdrawAmount since the opening of the channel
+    function withdrawUpTo(address publisher, bytes32 podId, uint256 totalWithdrawAmount, address transferAddress)
         public
     {
         if (transferAddress == address(0)) {
@@ -124,19 +124,19 @@ contract Payment {
 
         address provider = msg.sender;
         Channel storage channel = channels[publisher][provider][podId];
-        if (totalWithdrawlAmount > channel.investedByPublisher) revert InsufficientFunds();
-        if (totalWithdrawlAmount <= channel.withdrawnByProvider) revert AmountRequired();
+        if (totalWithdrawAmount > channel.investedByPublisher) revert InsufficientFunds();
+        if (totalWithdrawAmount <= channel.withdrawnByProvider) revert AmountRequired();
 
-        uint256 transferAmonut = totalWithdrawlAmount - channel.withdrawnByProvider;
-        channel.withdrawnByProvider = totalWithdrawlAmount;
+        uint256 transferAmount = totalWithdrawAmount - channel.withdrawnByProvider;
+        channel.withdrawnByProvider = totalWithdrawAmount;
 
-        emit Withdrawn(publisher, provider, podId, transferAmonut);
+        emit Withdrawn(publisher, provider, podId, transferAmount);
 
         if (channel.unlockedAt != 0) {
             channel.unlockedAt = block.timestamp;
         }
 
-        token.safeTransfer(transferAddress, transferAmonut);
+        token.safeTransfer(transferAddress, transferAmount);
     }
 
     // allows the provider to withdraw amount more tokens

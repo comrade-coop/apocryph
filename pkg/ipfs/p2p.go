@@ -114,7 +114,7 @@ func (api *P2pApi) Connect(protocol string, target multiaddr.Multiaddr) (*IpfsAd
 	netAddr, err := manet.ToNetAddr(multiaddr)
 	if err != nil {
 		connection.Close()
-		return nil, fmt.Errorf("failed to convert connection address to network addresss: %w", err)
+		return nil, fmt.Errorf("failed to convert connection address to network address: %w", err)
 	}
 
 	return &IpfsAddr{netAddr, connection}, nil

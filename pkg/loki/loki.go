@@ -106,7 +106,7 @@ func GetLogs(namespace, containerName, limit string, url string) ([]*pb.LogEntry
 func parseEntries(lines [][]string) ([]*pb.LogEntry, error) {
 	logEntries := make([]*pb.LogEntry, len(lines))
 	for i, line := range lines {
-		logEntries[i] = &pb.LogEntry{} // inittialize the logEntry or it will cause null pointer derefrence (i miss rust)
+		logEntries[i] = &pb.LogEntry{} // inittialize the logEntry or it will cause null pointer dereference (i miss rust)
 		if err := protojson.Unmarshal([]byte(line[1]), logEntries[i]); err != nil {
 			fmt.Printf("Error unmarshalling entry:%v", err)
 			return nil, err

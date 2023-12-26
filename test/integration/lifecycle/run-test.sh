@@ -11,7 +11,7 @@ MINIKUBE_IP=$(minikube ip)
 
 SERVER_PORT=$(kubectl get svc devserver -n devspace -o jsonpath='{.spec.ports[0].nodePort}')
 IPFS_PORT=$(kubectl get svc ipfs -n devspace -o jsonpath='{.spec.ports[0].nodePort}')
-# knwon k8s issue, broken pipes when transfering large files
+# known k8s issue, broken pipes when transferring large files
 # kubectl port-forward --namespace devspace svc/ipfs 5001:5001 > /dev/null & sleep 0.5;
 # kubectl port-forward --namespace devspace svc/ipfs 4001:4001 > /dev/null & sleep 0.5;
 # kubectl port-forward --namespace devspace svc/ipfs 8080:8080 > /dev/null & sleep 0.5;

@@ -26,7 +26,7 @@ var newPrice = big.NewInt(10)
 func main() {
 	err := mainErr()
 	if err != nil {
-		fmt.Printf("Error occured: %v", err)
+		fmt.Printf("Error occurred: %v", err)
 		os.Exit(1)
 	}
 }

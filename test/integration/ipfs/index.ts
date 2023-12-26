@@ -24,4 +24,4 @@ if (result.error !== '3') {
   // return "WRONG RESULT?!"
 }
 
-console.log('Sucessfully connected from javascript!')
+console.log('Successfully connected from javascript!')

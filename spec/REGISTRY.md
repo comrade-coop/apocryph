@@ -15,8 +15,8 @@ The Registry protocol connects publishers and providers in a decentralized envir
 ## Provider
 
 * Get the list of available [pricing tables](https://github.com/comrade-coop/trusted-pods/blob/master/spec/PRICING.md) from the registry
-* Create or Retreive Attestation details
-* Registering in the contract by providing the following informations:
+* Create or Retrieve Attestation details
+* Registering in the contract by providing the following information:
     * Contact Information,
     * Name
     * Pod execution request endpoints
@@ -27,7 +27,7 @@ The Registry protocol connects publishers and providers in a decentralized envir
 
 ## Publisher
 
-* Retreives the list of available pricing tables from the contract
+* Retrieves the list of available pricing tables from the contract
 * Create a configuration which includes:
     * pricing table
     * Choose the Region(s) in which the pod will be hosted.
@@ -35,4 +35,4 @@ The Registry protocol connects publishers and providers in a decentralized envir
 * If automatic selection is enabled, it will select a provider filtered by the configuration
 * the publisher pings the provider and checks its availability
   * In the event that the provider is offline, the publisher iterates through the provider list associated with the pricing table until it identifies an available provider.
-* The publisher creates a payment channel configured with the selected pricing planand and intiates the pod execution request protocol 
+* The publisher creates a payment channel configured with the selected pricing planand and initiates the pod execution request protocol 

@@ -129,6 +129,6 @@ func init() {
 
 	AddConfig("withdraw.address", &withdrawAddressString, "", "ethereum address to withdraw funds to")
 	AddConfig("withdraw.tolerace", &withdrawTolerance, "10", "tolerance for withdrawing from address")
-	AddConfig("withdraw.time", &withdrawTime, 100, "time in seconds between sucessive billing checks")
+	AddConfig("withdraw.time", &withdrawTime, 100, "time in seconds between successive billing checks")
 
 }

@@ -21,7 +21,7 @@ var localOciRegistry string
 
 var listenCmd = &cobra.Command{
 	Use:   "listen",
-	Short: "Start a service listening for incomming execution requests",
+	Short: "Start a service listening for incoming execution requests",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ipfs, ipfsMultiaddr, err := tpipfs.GetIpfsClient(ipfsApi)
 		if err != nil {

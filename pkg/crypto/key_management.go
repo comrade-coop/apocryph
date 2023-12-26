@@ -92,15 +92,15 @@ func EncryptWithKey(key *pb.Key, plaintext []byte) ([]byte, error) {
 	return EncryptWithAES(plaintext, aesKey)
 }
 
-func DecryptWithKey(key *pb.Key, cyphertext []byte) ([]byte, error) {
+func DecryptWithKey(key *pb.Key, ciphertext []byte) ([]byte, error) {
 	aesKey, err := getAESKey(key)
 	if err != nil {
 		return nil, err
 	}
 	if aesKey == nil {
-		return cyphertext, nil
+		return ciphertext, nil
 	}
-	return DecryptWithAES(cyphertext, aesKey)
+	return DecryptWithAES(ciphertext, aesKey)
 }
 
 func GetCryptoConfigKey(key *pb.Key) (encconfig.CryptoConfig, error) {

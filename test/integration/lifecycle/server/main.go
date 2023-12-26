@@ -26,7 +26,7 @@ func main() {
 	ipfsApi, _, err := tpipfs.GetIpfsClient("/dns4/ipfs.devspace.svc.cluster.local/tcp/5001")
 
 	if err != nil {
-		fmt.Printf("failed to retreived Ipfs Client: %v", err)
+		fmt.Printf("failed to retrieved Ipfs Client: %v", err)
 		return
 	}
 

@@ -116,7 +116,7 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *connect.
 	fmt.Println("Received request for pod deployment")
 	namespace := pbcon.GetNamespace(request)
 
-	// TODO should return error (just usefull for now in testing lifecycle without payment)
+	// TODO should return error (just useful for now in testing lifecycle without payment)
 	if s.paymentValidator != nil {
 		_, err := s.paymentValidator.Parse(request.Msg.Payment)
 		if err != nil {

@@ -54,7 +54,7 @@ func (v *PaymentChannelValidator) Parse(channel *pb.PaymentChannel) (*PaymentCha
 		for a := range v.pricingTables {
 			allowedContracts = append(allowedContracts, a)
 		}
-		return nil, fmt.Errorf("Invaid payment contract address (expected one of %v)", allowedContracts)
+		return nil, fmt.Errorf("Invalid payment contract address (expected one of %v)", allowedContracts)
 	}
 	payment, err := abi.NewPayment(paymentContract, v.ethClient)
 	if err != nil {

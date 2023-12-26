@@ -29,7 +29,7 @@ func fetchAndFilterProviders(ipfs *rpc.HttpApi, ethClient *ethclient.Client) (pu
 		paymentContract := common.HexToAddress(paymentContractAddress)
 		payment, err := abi.NewPayment(paymentContract, ethClient)
 		if err != nil {
-			return nil, fmt.Errorf("Failed instanciating payment contract: %w", err)
+			return nil, fmt.Errorf("Failed instantiating payment contract: %w", err)
 		}
 		tokenContract, err = payment.Token(&bind.CallOpts{})
 		if err != nil {

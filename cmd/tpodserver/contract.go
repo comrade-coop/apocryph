@@ -100,7 +100,7 @@ var withdrawContractCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		log.Println("Amount transfered successfully")
+		log.Println("Amount transferred successfully")
 		return nil
 	},
 }

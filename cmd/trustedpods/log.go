@@ -20,7 +20,7 @@ var containerName string
 
 var logPodCmd = &cobra.Command{
 	Use:     fmt.Sprintf("log [%s] [deployment.yaml]", publisher.DefaultPodFile),
-	Short:   "get pod conatiner logs",
+	Short:   "get pod container logs",
 	Args:    cobra.ExactArgs(1),
 	GroupID: "main",
 	RunE: func(cmd *cobra.Command, args []string) error {

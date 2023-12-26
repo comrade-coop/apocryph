@@ -18,36 +18,36 @@ import (
 
 type FetchSecret func(cid []byte) (map[string][]byte, error)
 
-func updateOrCreate(ctx context.Context, ressourceName, kind, namespace string, ressource interface{}, client k8cl.Client, update bool) error {
+func updateOrCreate(ctx context.Context, resourceName, kind, namespace string, resource interface{}, client k8cl.Client, update bool) error {
 	if update {
 		key := &k8cl.ObjectKey{
 			Namespace: namespace,
-			Name:      ressourceName,
+			Name:      resourceName,
 		}
-		oldRessource := GetRessource(kind)
+		oldResource := GetResource(kind)
 
-		updatedRessource := ressource.(k8cl.Object)
-		updatedRessource.SetNamespace(namespace)
-		updatedRessource.SetName(ressourceName)
+		updatedResource := resource.(k8cl.Object)
+		updatedResource.SetNamespace(namespace)
+		updatedResource.SetName(resourceName)
 
-		err := client.Get(ctx, *key, oldRessource.(k8cl.Object))
-		updatedRessource.SetResourceVersion(oldRessource.(k8cl.Object).GetResourceVersion()) // resource version should be retreived from the old ressource in order for httpSo to work
+		err := client.Get(ctx, *key, oldResource.(k8cl.Object))
+		updatedResource.SetResourceVersion(oldResource.(k8cl.Object).GetResourceVersion()) // resource version should be retrieved from the old resource in order for httpSo to work
 		if err != nil {
-			fmt.Printf("Added New Ressource: %v \n", ressourceName)
-			if err := client.Create(ctx, updatedRessource); err != nil {
+			fmt.Printf("Added New Resource: %v \n", resourceName)
+			if err := client.Create(ctx, updatedResource); err != nil {
 				return err
 			}
 			return nil
 		}
 
-		err = client.Update(ctx, updatedRessource)
+		err = client.Update(ctx, updatedResource)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Updated %v \n", ressourceName)
+		fmt.Printf("Updated %v \n", resourceName)
 		return nil
 	}
-	if err := client.Create(ctx, ressource.(k8cl.Object)); err != nil {
+	if err := client.Create(ctx, resource.(k8cl.Object)); err != nil {
 		return err
 	}
 	return nil
@@ -69,7 +69,7 @@ func ApplyPodRequest(
 
 	labels := map[string]string{"tpod": "1"}
 	depLabels := map[string]string{}
-	activeRessource := []string{}
+	activeResource := []string{}
 	startupReplicas := int32(0)
 	podId := strings.Split(namespace, "-")[1]
 	// NOTE: podId is 52 characters long. Most names are 63 characters max. Thus: don't make any constant string longer than 10 characters. "tpod-dep-" is 9.
@@ -124,7 +124,7 @@ func ApplyPodRequest(
 				return err
 			}
 
-			activeRessource = append(activeRessource, service.GetName())
+			activeResource = append(activeResource, service.GetName())
 			multiaddrPart := ""
 
 			switch port.ExposedPort.(type) {
@@ -201,7 +201,7 @@ func ApplyPodRequest(
 				}
 
 			}
-			activeRessource = append(activeRessource, volumeName)
+			activeResource = append(activeResource, volumeName)
 
 			volumeSpec.VolumeSource.PersistentVolumeClaim = &corev1.PersistentVolumeClaimVolumeSource{
 				ClaimName: persistentVolumeClaim.ObjectMeta.Name,
@@ -222,7 +222,7 @@ func ApplyPodRequest(
 			if err != nil {
 				return err
 			}
-			activeRessource = append(activeRessource, secretName)
+			activeResource = append(activeResource, secretName)
 
 			volumeSpec.VolumeSource.Secret = &corev1.SecretVolumeSource{
 				SecretName: secret.ObjectMeta.Name,
@@ -234,7 +234,7 @@ func ApplyPodRequest(
 	if err != nil {
 		return err
 	}
-	activeRessource = append(activeRessource, deploymentName)
+	activeResource = append(activeResource, deploymentName)
 
 	if httpSO.Spec.ScaleTargetRef.Service != "" {
 		httpSO.Spec.ScaleTargetRef.Deployment = deployment.ObjectMeta.Name
@@ -255,11 +255,11 @@ func ApplyPodRequest(
 		if err != nil {
 			return err
 		}
-		activeRessource = append(activeRessource, httpSoName)
+		activeResource = append(activeResource, httpSoName)
 
 	}
 	if update == true {
-		err := cleanNamespace(ctx, namespace, activeRessource, client)
+		err := cleanNamespace(ctx, namespace, activeResource, client)
 		if err != nil {
 			return err
 		}

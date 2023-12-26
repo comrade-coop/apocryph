@@ -24,7 +24,7 @@ Despite that, the current [implementation](../pkg/prometheus/) uses Prometheus a
 
 Status: Correct as needed
 
-Currently, the whole of the Trusted Pods' Provider client/node is implemented as a pair of long-running processes deployed within Kubernetes -- one for listening for incomming Pod deployments and one for monitoring them. Going forward, it could be beneficial to make more parts of that service reusable by splitting off libp2p connections, actual deployments, metrics collection, and smart contract invoicing into their own processes/services can be changed or reused on their own.
+Currently, the whole of the Trusted Pods' Provider client/node is implemented as a pair of long-running processes deployed within Kubernetes -- one for listening for incoming Pod deployments and one for monitoring them. Going forward, it could be beneficial to make more parts of that service reusable by splitting off libp2p connections, actual deployments, metrics collection, and smart contract invoicing into their own processes/services can be changed or reused on their own.
 
 ### Payment contract is one contract and not multiple
 
@@ -90,7 +90,7 @@ Status: Known issue
 
 In line with the two notes about Constellation's cluster recovery and attestation features, a third departure of a Trusted Pods cluster from what Constellation provides out of the box is the fact that Constellation issues an admin-level Kubectl access token upon installation; however, we would like to keep parts of the Trusted Pods cluster inaccessible even to the administrator.
 
-For that, we would likely need to issue a Kubectl access token with lesser priviledges, allowing for only partial configuration of the Trusted Pods cluster. The customizable features should be selected carefully to align with Provider needs, to allow for things like configuring backups and some kinds of dashboards and monitoring, while minimizing the leaking of user privacy.
+For that, we would likely need to issue a Kubectl access token with lesser privileges, allowing for only partial configuration of the Trusted Pods cluster. The customizable features should be selected carefully to align with Provider needs, to allow for things like configuring backups and some kinds of dashboards and monitoring, while minimizing the leaking of user privacy.
 
 ### Secret encryption done with AESGCM directly
 
@@ -98,7 +98,7 @@ Status: Correct as needed
 
 Currently, we encrypt secrets' data ([(see `EncryptWith`/`DecryptWith`)](../pkg/crypto/key_management.go)) with AESGCM directly, forgoing using any libraries that could do this for us and give us a more generic encrypted package. Ideally, given that the rest of the code uses `go-jose` we would use `go-jose`'s encryption facilities directly -- however, JWE objects base64-encode the whole ciphertext... making them ~33% less efficient in terms of space on-wire! Hence, we opt to directly write the bytes ourselves and save on some space.
 
-Some ways to improve the situation would be to contribute `BSON` functionallity to `go-jose` (unfortunatelly, such functionallity would not be standards-compliant, unless someone goes the whole way to suggest `BSON` (or other binary) serialization for [RFC7516](https://www.rfc-editor.org/rfc/rfc7516.html)), to switch to using PKCS11 instead of JSON Web Keys, or implementing our own key provider for `ocicrypt` (which was the reason to start using JSON Web Keys in the first place), perhaps one based on [ERC-5630](https://eips.ethereum.org/EIPS/eip-5630). Alternatively, we could look into other standards for storing encrypted secrets, such as [IPFS/Ceramic's dag-jose](https://github.com/ceramicnetwork/js-dag-jose/) or [WNFS](https://github.com/wnfs-wg/) or any of the [other nascent IPFS encryption standards](https://discuss.ipfs.tech/t/encryption-private-data-and-private-swarms-with-ipfs/15363).
+Some ways to improve the situation would be to contribute `BSON` functionality to `go-jose` (unfortunately, such functionality would not be standards-compliant, unless someone goes the whole way to suggest `BSON` (or other binary) serialization for [RFC7516](https://www.rfc-editor.org/rfc/rfc7516.html)), to switch to using PKCS11 instead of JSON Web Keys, or implementing our own key provider for `ocicrypt` (which was the reason to start using JSON Web Keys in the first place), perhaps one based on [ERC-5630](https://eips.ethereum.org/EIPS/eip-5630). Alternatively, we could look into other standards for storing encrypted secrets, such as [IPFS/Ceramic's dag-jose](https://github.com/ceramicnetwork/js-dag-jose/) or [WNFS](https://github.com/wnfs-wg/) or any of the [other nascent IPFS encryption standards](https://discuss.ipfs.tech/t/encryption-private-data-and-private-swarms-with-ipfs/15363).
 
 ## Missing features
 

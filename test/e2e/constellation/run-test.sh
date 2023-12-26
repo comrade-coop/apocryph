@@ -72,7 +72,7 @@ SWARM_ADDRESSES="[\"/ip4/$NODE_ADDRESS/tcp/$SWARM_PORT\", \"/ip4/$NODE_ADDRESS/u
 
 PROVIDER_IPFS=$(curl -X POST "http://127.0.0.1:5004/api/v0/id" | jq '.ID' -r); echo $PROVIDER_IPFS
 
-# Unfortunatelly, we can't restart the ipfs daemon since we don't have persistent storage in miniconstellation. Swarm addresses have been hardcoded.
+# Unfortunately, we can't restart the ipfs daemon since we don't have persistent storage in miniconstellation. Swarm addresses have been hardcoded.
 #O_IPFS_PATH=$IPFS_PATH
 #export IPFS_PATH=$(mktemp ipfs.XXXX --tmpdir -d)
 #echo /ip4/127.0.0.1/tcp/5004 > $IPFS_PATH/api

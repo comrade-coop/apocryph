@@ -61,7 +61,7 @@ docker push localhost:5000/comradecoop/trusted-pods/p2p-helper:latest
 
 ## 0.3: Set up a local ethereum node and deploy contracts to it
 
-# (NOTE: Unfortunatelly, we cannot use a port other than 8545, or otherwise the eth-rpc service will break)
+# (NOTE: Unfortunately, we cannot use a port other than 8545, or otherwise the eth-rpc service will break)
 docker run -d -p 8545:8545 --restart=always --name=anvil \
   ghcr.io/foundry-rs/foundry:nightly-619f3c56302b5a665164002cb98263cd9812e4d5 \
   -- 'anvil --host 0.0.0.0 --state /anvil-state.json' 2>/dev/null || {

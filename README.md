@@ -36,12 +36,15 @@ test/e2e/minikube/run-test.sh teardown
 
 ## Development
 
-After editing files in `proto/` or `contracts/`, make sure to run both of the following commands to sync the generated files:
+After editing files in `proto/` or `contracts/`, make sure to run the following commands to sync the generated files:
 
 ```bash
 forge build --root contracts
 go generate
+npm run -ws generate
 ```
+
+<!-- Note that while committing generated files is foreign to Nodejs/NPM, it's the usual way of life in the Go ecosystem, as packages are directly cloned from git rather than downloaded from the package manager. Here we are committing both in order to not require forge/protoc for JavaScript development when it's optional for Go development. -->
 
 ## Contributing
 

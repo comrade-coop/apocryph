@@ -41,13 +41,13 @@ func ConvertPricingTables(tables []*pb.PricingTable) map[common.Address]PricingT
 	return result
 }
 
-const numRessources = 5
+const numResources = 5
 
-func GetTablesPrices(pricingTables map[common.Address]PricingTableMap) ([][numRessources]*big.Int, error) {
-	var allPrices [][numRessources]*big.Int
+func GetTablesPrices(pricingTables map[common.Address]PricingTableMap) ([][numResources]*big.Int, error) {
+	var allPrices [][numResources]*big.Int
 	for _, table := range pricingTables {
-		var prices [numRessources]*big.Int
-		for i := 0; i < numRessources; i++ {
+		var prices [numResources]*big.Int
+		for i := 0; i < numResources; i++ {
 			prices[i] = new(big.Int).SetInt64(0)
 		}
 		for resource, price := range table {
@@ -70,7 +70,7 @@ func GetTablesPrices(pricingTables map[common.Address]PricingTableMap) ([][numRe
 				prices[bandwidthIn] = p
 				break
 			default:
-				return nil, fmt.Errorf("unrecognized ressource name")
+				return nil, fmt.Errorf("unrecognized resource name")
 			}
 		}
 		allPrices = append(allPrices, prices)

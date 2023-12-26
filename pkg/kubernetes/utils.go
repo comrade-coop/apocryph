@@ -59,7 +59,7 @@ func NewHttpSo(namespace, name string) *kedahttpv1alpha1.HTTPScaledObject {
 	}
 }
 
-func GetRessource(kind string) interface{} {
+func GetResource(kind string) interface{} {
 	switch kind {
 	case "Service":
 		return &corev1.Service{}

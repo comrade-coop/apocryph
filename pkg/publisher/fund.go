@@ -25,7 +25,7 @@ func FundPaymentChannel(ethClient *ethclient.Client, publisherAuth *bind.Transac
 		// get a payment contract instance
 		payment, err := abi.NewPayment(paymentContract, ethClient)
 		if err != nil {
-			return fmt.Errorf("Failed instanciating payment contract: %w", err)
+			return fmt.Errorf("Failed instantiating payment contract: %w", err)
 		}
 		tokenContract, err := payment.Token(&bind.CallOpts{})
 		if err != nil {
@@ -35,7 +35,7 @@ func FundPaymentChannel(ethClient *ethclient.Client, publisherAuth *bind.Transac
 		if mintFunds {
 			token, err := abi.NewMockToken(tokenContract, ethClient)
 			if err != nil {
-				return fmt.Errorf("Failed instanciating token contract: %w", err)
+				return fmt.Errorf("Failed instantiating token contract: %w", err)
 			}
 
 			tx, err := token.Mint(publisherAuth, funds)
@@ -47,7 +47,7 @@ func FundPaymentChannel(ethClient *ethclient.Client, publisherAuth *bind.Transac
 
 		token, err := abi.NewIERC20(tokenContract, ethClient)
 		if err != nil {
-			return fmt.Errorf("Failed instanciating token contract: %w", err)
+			return fmt.Errorf("Failed instantiating token contract: %w", err)
 		}
 
 		tx, err := token.Approve(publisherAuth, paymentContract, funds)

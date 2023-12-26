@@ -134,7 +134,7 @@ func GetProviderHostInfo(ipfs iface.CoreAPI, ethClient *ethclient.Client, regist
 
 	err = tpipfs.GetProtobufFile(ipfs, infoCid, providerInfo)
 	if err != nil {
-		return nil, fmt.Errorf("failed retreiving provider info from ipfs: %w", err)
+		return nil, fmt.Errorf("failed retrieving provider info from ipfs: %w", err)
 	}
 
 	return providerInfo, nil

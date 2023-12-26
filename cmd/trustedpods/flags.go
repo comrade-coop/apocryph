@@ -67,7 +67,7 @@ var _ = func() error {
 	fundFlags.StringVar(&publisherKey, "ethereum-key", "", "account string (private key | http[s]://clef#account | /keystore#account | account (in default keystore))")
 	fundFlags.StringVar(&paymentContractAddress, "payment-contract", "", "payment contract address")
 	fundFlags.StringVar(&podId, "pod-id", "", "pod id")
-	fundFlags.StringVar(&funds, "funds", "0", "intial funds")
+	fundFlags.StringVar(&funds, "funds", "0", "initial funds")
 	fundFlags.BoolVar(&debugMintFunds, "mint-funds", false, "Attempt minting funds with a mint(amount) call on the token")
 	fundFlags.Int64Var(&unlockTime, "unlock-time", 5*60, "time for unlocking tokens (in seconds)")
 
