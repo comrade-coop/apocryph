@@ -1,36 +1,38 @@
 # Trusted Pods
 
-Trusted Pods is a decentralized compute marketplace where developers can run container pods securely and confidentially through small and medium cloud providers. It is tailored towards providing a one-stop service for finding infrastructure to run pods in a cost efficient, serverless manner.
+Trusted Pods is a decentralized compute marketplace where developers can run container pods securely and confidentially through small and medium cloud providers.
 
-## Building
+Once complete, this project would allow a regular user to deploy their own personal instance of "cloud" software (say, a wiki, website, gallery, storage backup, AI assistant, email/chat server, etc.) to another person's specialized machine, where it would run inside a secure computing enclave that no one else can access (using TEE technology) for a modest fee (however much the machine provider charges; it's a marketplace) and with regular uptime and data storage SLAs.
 
-To build the Go projects in `./cmd/`, use the following command:
+[![Discord](https://img.shields.io/badge/DISCORD-COMMUNITY-informational?style=for-the-badge&logo=discord)](https://discord.gg/C4e37Xhvt4)
 
-```bash
-go build -o bin ./cmd/*/
-```
+## Spinning up a local testing environment
 
-Alternatively, you can run the commands directly with `go run` after running the various generate commands:
+To start a local environment for e.g. integration-testing or evaluating the project, you can use the end-to-end tests in the `test/e2e` folder.
 
-```bash
-go run ./cmd/trustedpods/ # ..
-```
-
-## Testing
-
-To run the minikube integration test, run the following command:
+Typical development involves running the minikube end-to-end test, which can be done using the following command:
 
 ```bash
-test/integration/minikube/run-test.sh
+test/e2e/minikube/run-test.sh
 ```
 
-The command will proceed to start a minikube cluster, deploy all necessary prerequisites into the cluster, apply a [manifest file](spec/MANIFEST.md) into the cluster, and finally query the started pod over HTTP. It should display the curl command used to query the pod, and you should be able to run it yourself after the script is finished.
+The command will report any missing dependencies; for a full list of the required packages, you can just read the first lines of the script.
 
-When you are done playing around with the test, simply run the following command to delete the minikube cluster:
+The command, once all dependencies are met, will proceed to start a local docker registry and test ethereum node, build and upload the project to them, then spin up a minikube cluster and deploy all necessary prerequisites into it, and finally deploying a pod from a [manifest file](spec/MANIFEST.md) into the cluster and then querying it over HTTP. It should display the curl command used to query the pod, and you should be able to use it yourself after the script is finished.
+
+In addition, once you have started the minikube end-to-end test, you can also run the web UI test, which presents a sample interface that publishers can use to deploy a predefined pod template onto the minikube cluster / provider directly from their web browser.
 
 ```bash
-test/integration/minikube/run-test.sh teardown
+test/e2e/webui/run-test.sh
 ```
+
+Once you are done playing around with the tests, simply run the following command to delete and stop the minikube cluster:
+
+```bash
+test/e2e/minikube/run-test.sh teardown
+```
+
+(or alternatively, pass `teardown full` to also stop any local docker containers used by the test)
 
 ## Development
 
@@ -41,6 +43,12 @@ forge build --root contracts
 go generate
 ```
 
-## Architecture
+## Contributing
 
-See [`ARCHITECTURE.md`](spec/ARCHITECTURE.md).
+As it is, this project is still in its infancy, and most non-trivial contributions should be done only after discussing them with the team -- or else risk missing the point. So, if you fancy contributing to the project, please feel free to hop on [our Discord server](https://discord.gg/C4e37Xhvt4) or just open/reply to an issue discussing your concrete ideas for contribution.
+
+Also, see the [`ARCHITECTURE.md`](spec/ARCHITECTURE.md) documentation for more details on the overall structure of the project.
+
+## License
+
+[SPDX-License-Identifier: GPL-3.0](./LICENSE.md)
