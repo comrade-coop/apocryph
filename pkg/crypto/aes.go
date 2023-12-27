@@ -6,10 +6,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"crypto/sha256"
 	"io"
-
-	"golang.org/x/crypto/pbkdf2"
 )
 
 // Helper functions related to AES-GCM encryption, used by the crypto package itself.
@@ -63,11 +60,6 @@ func generateNonce() ([]byte, error) {
 		return nil, err
 	}
 	return nonce, nil
-}
-
-// could drive a nonce or a symmetric key, both are []byte
-func deriveAesKey(password []byte, salt []byte) []byte {
-	return pbkdf2.Key(password, salt, pbkdf2_ITER_COUNT, aes_KEY_SIZE, sha256.New)
 }
 
 func createAESGCMMode(key []byte) (cipher.AEAD, error) {
