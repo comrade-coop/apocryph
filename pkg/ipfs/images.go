@@ -17,11 +17,12 @@ import (
 	"github.com/containers/image/v5/signature"
 	"github.com/containers/image/v5/types"
 	encconfig "github.com/containers/ocicrypt/config"
-	iface "github.com/ipfs/kubo/core/coreiface"
 	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/go-cid"
+	iface "github.com/ipfs/kubo/core/coreiface"
 )
 
+// Convert an [pb.Container_Image] to a [types.ImageReference] plus a digest that can be used for caching later steps.
 func GetImageRef(ctx context.Context, sys *types.SystemContext, image *pb.Container_Image) (imageRef types.ImageReference, digest string, err error) {
 	if image.Url != "" {
 		var imageCloser types.ImageCloser
@@ -49,6 +50,7 @@ func GetImageRef(ctx context.Context, sys *types.SystemContext, image *pb.Contai
 	return
 }
 
+// Convert a [types.ImageReference] to a string that can be passed to tools like docker or kubernetes.
 func GetRefUrl(imageRef types.ImageReference) string {
 	if imageRef.Transport() == docker.Transport {
 		return strings.TrimPrefix(imageRef.StringWithinTransport(), "//")
@@ -62,6 +64,7 @@ func GetRefUrl(imageRef types.ImageReference) string {
 	return ""
 }
 
+// Encrypt and upload an [types.ImageReference] to IPDR, returning the [pb.Key] and CID (as bytes) of the uploaded image that can then be put into a [pb.Container_Image] or [pb.UploadedImage].
 func UploadImageToIpdr(ctx context.Context, ipfs iface.CoreAPI, sys *types.SystemContext, imageRef types.ImageReference) (key *pb.Key, imageCid []byte, err error) {
 	ipdrTransport := ipdr.NewIpdrTransport(ipfs)
 
@@ -83,7 +86,7 @@ func UploadImageToIpdr(ctx context.Context, ipfs iface.CoreAPI, sys *types.Syste
 	}
 
 	copyOptions.OciEncryptConfig = cryptoConfig.EncryptConfig
-	copyOptions.OciEncryptLayers = &[]int{}
+	copyOptions.OciEncryptLayers = &[]int{} // All layers
 
 	policy := &signature.Policy{
 		Default: signature.PolicyRequirements{
@@ -111,6 +114,7 @@ func UploadImageToIpdr(ctx context.Context, ipfs iface.CoreAPI, sys *types.Syste
 	return
 }
 
+// Download and decrypt an image from IPDR, reuploading it to a local Docker v2 registry. Takes a [pb.Container_Image] to return the [types.ImageReference] of the uploaded image.
 func ReuploadImageFromIpdr(ctx context.Context, ipfs iface.CoreAPI, localRegistryUrl string, sys *types.SystemContext, image *pb.Container_Image) (types.ImageReference, error) {
 	if sys == nil {
 		sys = &types.SystemContext{

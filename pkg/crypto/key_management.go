@@ -15,16 +15,22 @@ import (
 	"github.com/go-jose/go-jose/v3"
 )
 
+type KeyType string
+
 const (
-	KeyTypeEcdsaP256 = "ECDSAP256"
-	KeyTypeRsa4096   = "RSA4096"
-	KeyTypeAESGCM256 = "AESGCM256"
+	KeyTypeEcdsaP256 = KeyType("ECDSAP256")
+	KeyTypeRsa4096   = KeyType("RSA4096")
+	KeyTypeAESGCM256 = KeyType("AESGCM256")
 )
 
+// Key type to use for Ocicrypt (image encryption) operations.
 var KeyTypeOcicrypt = KeyTypeEcdsaP256
+
+// Key type to use for general encryption (secret encryption) operations.
 var KeyTypeEncrypt = KeyTypeAESGCM256
 
-func NewKey(keyType string) (*pb.Key, error) {
+// Generate a new [pb.Key] of the given type. Note that for public/private cryptography, this always return a private key.
+func NewKey(keyType KeyType) (*pb.Key, error) {
 	var err error
 	var key interface{}
 	var keyAlg string
@@ -36,7 +42,7 @@ func NewKey(keyType string) (*pb.Key, error) {
 		key, err = rsa.GenerateKey(rand.Reader, 4096)
 		keyAlg = string(jose.RSA_OAEP)
 	case KeyTypeAESGCM256:
-		key, err = GenerateAESKey(rand.Reader)
+		key, err = generateAESKey(rand.Reader)
 		keyAlg = string(jose.DIRECT)
 	}
 	if err != nil {
@@ -55,6 +61,7 @@ func NewKey(keyType string) (*pb.Key, error) {
 	}, nil
 }
 
+// Get the [jose.JSONWebKey] out of a [pb.Key].
 func getJwkKey(key *pb.Key) (*jose.JSONWebKey, error) {
 	jwk := key.Data
 	jwkUnmarshalled := &jose.JSONWebKey{}
@@ -65,6 +72,7 @@ func getJwkKey(key *pb.Key) (*jose.JSONWebKey, error) {
 	return jwkUnmarshalled, nil
 }
 
+// Get an AES key out of a [pb.Key].
 func getAESKey(key *pb.Key) ([]byte, error) {
 	jwkUnmarshalled, err := getJwkKey(key)
 	if err != nil {
@@ -81,6 +89,7 @@ func getAESKey(key *pb.Key) ([]byte, error) {
 	}
 }
 
+// Encrypt a given plaintext with a key. Might not work with keys that are not of type [KeyTypeEncrypt].
 func EncryptWithKey(key *pb.Key, plaintext []byte) ([]byte, error) {
 	aesKey, err := getAESKey(key)
 	if err != nil {
@@ -89,9 +98,10 @@ func EncryptWithKey(key *pb.Key, plaintext []byte) ([]byte, error) {
 	if aesKey == nil {
 		return plaintext, nil
 	}
-	return EncryptWithAES(plaintext, aesKey)
+	return encryptWithAES(plaintext, aesKey)
 }
 
+// Decrypt a given ciphertext with a key. Might not work with keys that are not of type [KeyTypeEncrypt].
 func DecryptWithKey(key *pb.Key, ciphertext []byte) ([]byte, error) {
 	aesKey, err := getAESKey(key)
 	if err != nil {
@@ -100,9 +110,10 @@ func DecryptWithKey(key *pb.Key, ciphertext []byte) ([]byte, error) {
 	if aesKey == nil {
 		return ciphertext, nil
 	}
-	return DecryptWithAES(ciphertext, aesKey)
+	return decryptWithAES(ciphertext, aesKey)
 }
 
+// Get an OCI [encconfig.CryptoConfig] for a given key. Might not work if the key is not of type [KeyTypeOcicrypt].
 func GetCryptoConfigKey(key *pb.Key) (encconfig.CryptoConfig, error) {
 	jwkUnmarshalled, err := getJwkKey(key)
 	if err != nil {

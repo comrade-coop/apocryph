@@ -12,16 +12,18 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
-const NONCE_SIZE = 12
-const AES_KEY_SIZE = 32
-const ITER_COUNT = 10
+// Helper functions related to AES-GCM encryption, used by the crypto package itself.
 
-func EncryptWithAES(data []byte, key []byte) ([]byte, error) {
+const aes_NONCE_SIZE = 12
+const aes_KEY_SIZE = 32
+const pbkdf2_ITER_COUNT = 10
+
+func encryptWithAES(data []byte, key []byte) ([]byte, error) {
 	aesGCM, err := createAESGCMMode(key)
 	if err != nil {
 		return nil, err
 	}
-	nonce, err := GenerateNonce()
+	nonce, err := generateNonce()
 	if err != nil {
 		return nil, err
 	}
@@ -30,13 +32,13 @@ func EncryptWithAES(data []byte, key []byte) ([]byte, error) {
 	return ciphertext, nil
 }
 
-func DecryptWithAES(data []byte, key []byte) ([]byte, error) {
+func decryptWithAES(data []byte, key []byte) ([]byte, error) {
 	aesGCM, err := createAESGCMMode(key)
 	if err != nil {
 		return nil, err
 	}
-	nonce := data[:NONCE_SIZE]
-	data = data[NONCE_SIZE:]
+	nonce := data[:aes_NONCE_SIZE]
+	data = data[aes_NONCE_SIZE:]
 
 	plaintext, err := aesGCM.Open(nil, nonce, data, nil)
 	if err != nil {
@@ -46,8 +48,8 @@ func DecryptWithAES(data []byte, key []byte) ([]byte, error) {
 }
 
 // Generate a AES_KEY_SIZE-byte random key
-func GenerateAESKey(random io.Reader) ([]byte, error) {
-	key := make([]byte, AES_KEY_SIZE)
+func generateAESKey(random io.Reader) ([]byte, error) {
+	key := make([]byte, aes_KEY_SIZE)
 	if _, err := io.ReadFull(random, key); err != nil {
 		return nil, err
 	}
@@ -55,8 +57,8 @@ func GenerateAESKey(random io.Reader) ([]byte, error) {
 }
 
 // Generate a NONCE_SIZE-byte random nonce
-func GenerateNonce() ([]byte, error) {
-	nonce := make([]byte, NONCE_SIZE)
+func generateNonce() ([]byte, error) {
+	nonce := make([]byte, aes_NONCE_SIZE)
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 		return nil, err
 	}
@@ -64,8 +66,8 @@ func GenerateNonce() ([]byte, error) {
 }
 
 // could drive a nonce or a symmetric key, both are []byte
-func DeriveAesKey(password []byte, salt []byte) []byte {
-	return pbkdf2.Key(password, salt, ITER_COUNT, AES_KEY_SIZE, sha256.New)
+func deriveAesKey(password []byte, salt []byte) []byte {
+	return pbkdf2.Key(password, salt, pbkdf2_ITER_COUNT, aes_KEY_SIZE, sha256.New)
 }
 
 func createAESGCMMode(key []byte) (cipher.AEAD, error) {

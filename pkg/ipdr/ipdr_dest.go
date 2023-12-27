@@ -10,16 +10,17 @@ import (
 	"net/url"
 
 	"github.com/containers/image/v5/types"
+	"github.com/ipfs/boxo/files"
+	"github.com/ipfs/boxo/path"
+	"github.com/ipfs/go-cid"
 	iface "github.com/ipfs/kubo/core/coreiface"
 	"github.com/ipfs/kubo/core/coreiface/options"
-	"github.com/ipfs/boxo/path"
-	"github.com/ipfs/boxo/files"
-	"github.com/ipfs/go-cid"
 	"github.com/opencontainers/go-digest"
 )
 
 var addOptions = []options.UnixfsAddOption{options.Unixfs.CidVersion(1)}
 
+// Implements a [types.ImageDestination]
 type ipdrImageDestination struct {
 	reference    *ipdrImageReference
 	ipfs         iface.CoreAPI

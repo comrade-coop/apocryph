@@ -9,12 +9,13 @@ import (
 
 	"github.com/containers/image/v5/manifest"
 	"github.com/containers/image/v5/types"
-	iface "github.com/ipfs/kubo/core/coreiface"
-	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/boxo/files"
+	"github.com/ipfs/boxo/path"
+	iface "github.com/ipfs/kubo/core/coreiface"
 	"github.com/opencontainers/go-digest"
 )
 
+// Implements a [types.ImageSource]
 type ipdrImageSource struct {
 	reference *ipdrImageReference
 	ipfs      iface.CoreAPI

@@ -11,10 +11,10 @@ import (
 
 	tpcrypto "github.com/comrade-coop/apocryph/pkg/crypto"
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
-	iface "github.com/ipfs/kubo/core/coreiface"
-	ifacepath "github.com/ipfs/boxo/path"
 	"github.com/ipfs/boxo/files"
+	ifacepath "github.com/ipfs/boxo/path"
 	"github.com/ipfs/go-cid"
+	iface "github.com/ipfs/kubo/core/coreiface"
 )
 
 type SecretTransformation func(secret *pb.Volume_SecretConfig) error

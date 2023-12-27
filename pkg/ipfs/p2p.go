@@ -16,11 +16,14 @@ import (
 	manet "github.com/multiformats/go-multiaddr/net"
 )
 
+// A wrapper around the experimental P2P api of kubo.
 type P2pApi struct {
 	http     *rpc.HttpApi
 	nodeAddr multiaddr.Multiaddr
 }
 
+// Create a new [P2pApi] given an HttpApi and the IP address where the kubo node resides.
+// The node address is passed as a [multiaddr.Multiaddr] and is expected to be either a multiaddr that will be accepted by [manet.ToNetAddr] or the same plus a TCP component at the end which will be stripped off.
 func NewP2pApi(http *rpc.HttpApi, nodeAddr multiaddr.Multiaddr) *P2pApi {
 	nodeBaseAddr := nodeAddr
 	for {
@@ -41,11 +44,15 @@ func NewP2pApi(http *rpc.HttpApi, nodeAddr multiaddr.Multiaddr) *P2pApi {
 	}
 }
 
+// A [net.Listener] which has been enhanced with a Close() method that can be used to stop listening for the given connection.
 type IpfsListener struct {
 	net.Listener
 	*ExposedEndpoint
 }
 
+// Start listening for a certain libp2p protocol on the kubo node, and forward connections to the returned listener.
+// Make sure to close the resulting listener once you are done using it, for garbage-collection.
+// If another Listen request has been made to the kubo node for the same protocol, this method will produce an error.
 func (api *P2pApi) Listen(protocol string) (*IpfsListener, error) {
 	fakeConn, err := manet.Dial(api.nodeAddr.Encapsulate(multiaddr.StringCast("/udp/12345")))
 	if err != nil {
@@ -82,15 +89,20 @@ func (api *P2pApi) Listen(protocol string) (*IpfsListener, error) {
 	return &IpfsListener{listener, service}, nil
 }
 
+// Close the local listener as well as the endpoint on the kubo node.
 func (l *IpfsListener) Close() error {
 	return errors.Join(l.ExposedEndpoint.Close(), l.Listener.Close())
 }
 
+// A [net.Addr] which has been enhanced with a Close() method that can be used to stop forwarding requests for the given connection.
+// You may convert the address to a String() representing the TCP host and port; however, note that this address is only accessible locally and may not be resolvable on other hosts.
 type IpfsAddr struct {
 	net.Addr
 	*ForwardedConnection
 }
 
+// Connect to a given peer over the specified libp2p protocol through the kubo node.
+// Make sure to close the resulting address once you are done using it, for garbage-collection.
 func (api *P2pApi) ConnectTo(protocol string, target peer.ID) (*IpfsAddr, error) {
 	addrs, err := peer.AddrInfoToP2pAddrs(&peer.AddrInfo{ID: target})
 	if err != nil {
@@ -99,6 +111,8 @@ func (api *P2pApi) ConnectTo(protocol string, target peer.ID) (*IpfsAddr, error)
 	return api.Connect(protocol, addrs[0])
 }
 
+// Connect to a given peer (as a /p2p/... multiaddr) over the specified libp2p protocol through the kubo node.
+// Make sure to close the resulting address once you are done using it, for garbage-collection
 func (api *P2pApi) Connect(protocol string, target multiaddr.Multiaddr) (*IpfsAddr, error) {
 	connection, err := api.ForwardConnection(protocol, api.nodeAddr.Encapsulate(multiaddr.StringCast("/tcp/0")), target)
 	if err != nil {
@@ -120,18 +134,22 @@ func (api *P2pApi) Connect(protocol string, target multiaddr.Multiaddr) (*IpfsAd
 	return &IpfsAddr{netAddr, connection}, nil
 }
 
+// Represents the low-level counterpart of a [IpfsListener]; a local endpoint that the kubo node is exposing to the world on a given libp2p protocol.
 type ExposedEndpoint struct {
 	P2PListenerInfoOutput
 	api *P2pApi
 }
 
+// Configures how [ExposeEndpoint] should behave when there is an endpoint for the same protocol already registered by another ExposeEndpoint call.
 type ExistingOption int
 
 const (
-	ConflictExistingEndpoint ExistingOption = 0
-	ReturnExistingEndpoint   ExistingOption = 1
+	ConflictExistingEndpoint ExistingOption = 0 // Throw an error (default)
+	ReturnExistingEndpoint   ExistingOption = 1 // Return the previously existing endpoint, at which point you can close it or compare it with the desired endpoint.
 )
 
+// Expose an endpoint accessible by the kubo node to the rest of the network over a libp2p protocol. (any peer -> us)
+// The endpoint passed in should be accessible _from_ the kubo node; this methods makes no attempts to fix the network address given. (i.e. this means that passing localhost:XXX for the endpoint will result in the kubo node exposing its own localhost and not the localhost of the machine making the request.)
 func (api *P2pApi) ExposeEndpoint(protocol string, endpoint multiaddr.Multiaddr, existing ExistingOption) (*ExposedEndpoint, error) {
 	ctx := context.Background()
 	if existing == ReturnExistingEndpoint {
@@ -158,6 +176,8 @@ func (api *P2pApi) ExposeEndpoint(protocol string, endpoint multiaddr.Multiaddr,
 	return &ExposedEndpoint{listener, api}, nil
 }
 
+// Stop listening on the exposed endpoint, removing it from the node, and making the desired protocol available for future ExposeEndpoint calls.
+// Note that this is not automatically garbage-collected in cases of process crash; if a lingering p2p connection remains, `ipfs p2p close -a` would close all forwarded and exposed connections, while `ipfs p2p close -l /p2p/<own node id> -p <protocol>` would close the specific exposed endpoint.
 func (i *ExposedEndpoint) Close() error {
 	ctx := context.Background()
 	request := i.api.http.Request("p2p/close").Option("target-address", i.TargetAddress)
@@ -171,11 +191,15 @@ func (i *ExposedEndpoint) Close() error {
 	return nil
 }
 
+// Represents the low-level counterpart of a [IpfsAddr]; a local address that the kubo node is listening on and forwarding requests to over a given libp2p protocol.
 type ForwardedConnection struct {
 	P2PListenerInfoOutput
 	api *P2pApi
 }
 
+// Listen on an address on the kubo node and forward connections to a particular peer over a libp2p protocol. (us -> specific peer)
+// The endpoint passed in should be on the kubo node itself; this methods makes no attempts to fix the network address given. (i.e. this means that passing localhost:XXX for the endpoint will result in the kubo node listening on its own localhost -- which is typically precisely the desired effect)
+// The target peer should be a /p2p/... multiaddr.
 func (api *P2pApi) ForwardConnection(protocol string, endpoint multiaddr.Multiaddr, target multiaddr.Multiaddr) (*ForwardedConnection, error) {
 
 	ctx := context.Background()
@@ -196,6 +220,8 @@ func (api *P2pApi) ForwardConnection(protocol string, endpoint multiaddr.Multiad
 	return &ForwardedConnection{listener, api}, nil
 }
 
+// Stop forwarding connections from the specified address, making the endpoint accessible for futere ForwardConnection calls.
+// Note that this is not automatically garbage-collected in cases of process crash; if a lingering p2p connection remains, `ipfs p2p close -a` would close all forwarded and exposed connections, while `ipfs p2p close -t /p2p/<target node id> -p <protocol>` would close the specific exposed endpoint.
 func (f *ForwardedConnection) Close() error {
 	ctx := context.Background()
 	request := f.api.http.Request("p2p/close").Option("listen-address", f.ListenAddress)
@@ -209,16 +235,19 @@ func (f *ForwardedConnection) Close() error {
 	return nil
 }
 
+// Copy of [github.com/ipfs/kubo/core/commands.P2PListenerInfoOutput]
 type P2PListenerInfoOutput struct {
 	Protocol      string
 	ListenAddress string
 	TargetAddress string
 }
 
+// Copy of [github.com/ipfs/kubo/core/commands.P2PLsOutput]
 type P2PLsOutput struct {
 	Listeners []P2PListenerInfoOutput
 }
 
+// Look up the listener for a given protocol+targetAddress pair, used since p2p/forward ad p2p/expose don't return any info on the P2P listener registered in kubo.
 func (api *P2pApi) findListenerForAddress(protocol string, targetAddress multiaddr.Multiaddr) (P2PListenerInfoOutput, error) {
 	ctx := context.Background()
 

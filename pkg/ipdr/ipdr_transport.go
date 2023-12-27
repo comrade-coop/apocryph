@@ -10,24 +10,30 @@ import (
 	"github.com/containers/image/v5/docker/reference"
 	"github.com/containers/image/v5/image"
 	"github.com/containers/image/v5/types"
-	iface "github.com/ipfs/kubo/core/coreiface"
-	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/boxo/files"
+	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/go-cid"
+	iface "github.com/ipfs/kubo/core/coreiface"
 )
 
+// An implementation of [types.ImageTransport] for IPDR-stored images
 type IpdrTransport interface {
 	types.ImageTransport
 
+	// Create an [IpdrImageReference] that will be used as a destination of a push or copy command.
 	NewDestinationReference(tag string) IpdrImageReference
+	// Create an [IpdrImageReference] from an IPFS path and tag. Alternatively, these can be created through ParseReference() using path.String() + ":" + tag, or through [github.com/containers/image/v5/transports/alltransports.ParseImageName], using "ipdr:" + path.String() + ":" + tag.
 	NewReference(p path.Path, tag string) IpdrImageReference
 }
 
+// Implements an [IpdrTransport]
 type ipdrTransport struct {
 	ipfs iface.CoreAPI
 }
 
+// Create a new IPDR transport given a connection to IPFS.
 func NewIpdrTransport(ipfs iface.CoreAPI) IpdrTransport {
+	// TODO: it would be nice if we could create the IPFS connection on the fly using [types.SystemContext]; sadly, there aren't many way to extend the SystemContext struct with such data.
 	return &ipdrTransport{ipfs: ipfs}
 }
 
@@ -65,13 +71,18 @@ func (*ipdrTransport) ValidatePolicyConfigurationScope(scope string) error {
 	return nil
 }
 
+// A reference to an image stored in IPDR. Extends [types.ImageReference] with methods for getting the exact IPFS Path where the image is store as well as the tag it is being accessed through.
+// If the path is mutable, writes to the image (through [types.ImageReference.NewImageDestination]) will result in an IPNS update of the mutable data; otherwise writes to the image will result in the [IpdrImageReference] changing its Path, and thus its serialized StringWithinTransport() / [github.com/containers/image/v5/transports.ImageName] form
 type IpdrImageReference interface {
 	types.ImageReference
 
+	// Path returns the IPFS path that holds all of the image's contents.
 	Path() path.Path
+	// Tag returns the string tag that the image is accessed as. Typically, "latest" is used.
 	Tag() string
 }
 
+// Implements an [IpdrImageReference]
 type ipdrImageReference struct {
 	transport *ipdrTransport
 	path      path.Path
