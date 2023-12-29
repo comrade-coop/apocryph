@@ -5,18 +5,28 @@ import { PeerId, isPeerId } from '@libp2p/interface/peer-id'
 import type { Multiaddr } from '@multiformats/multiaddr'
 import type { ConnectionGater } from '@libp2p/interface/connection-gater'
 
+/**
+ * A libp2p connection gater implementation that never denies peers that have been explicitly allow()-ed
+ * Necessary to connect to peers running on localhost without an external IP address.
+ */
 export class AllowConnectionGater implements ConnectionGater {
   public allowed: Set<string>
   public onlyAllowed: boolean
 
-  constructor({ onlyAllowed = false, allowed = [] }) {
+  /**
+   * @param opts Options
+   * @param opts.onlyAllowed Only allow explicitly-allowed peers, overriding the default connection-gater behavior
+   */
+  constructor({ onlyAllowed = false }) {
     this.onlyAllowed = onlyAllowed
-    this.allowed = new Set<string>(allowed)
+    this.allowed = new Set<string>()
   }
 
+  /**
+   * Allow dialing the specified peer
+   */
   allow(peer: PeerId | Multiaddr | Multiaddr[]): void {
     if (isPeerId(peer)) {
-      console.log(peer.toString())
       this.allowed.add(peer.toString())
     } else {
       const addrs = Array.isArray(peer) ? peer : [peer]

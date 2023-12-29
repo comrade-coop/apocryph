@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 
-import { Transport } from '@connectrpc/connect'
+import { Transport, Interceptor } from '@connectrpc/connect'
 import {
   UniversalClientRequest,
   UniversalClientResponse
@@ -15,12 +15,15 @@ const eol = encoder.encode('\r\n')
 
 export interface Libp2pTransportOptions {
   dialStream: () => Promise<Stream>
-  interceptors: []
-  readMaxBytes: 10000
-  useBinaryFormat: true
-  writeMaxBytes: 10000
+  interceptors: Interceptor[]
+  readMaxBytes: number
+  useBinaryFormat: boolean
+  writeMaxBytes: number
 }
 
+/**
+ * Create a connectRPC transport that uses Libp2p streams for communication.
+ */
 export function createLibp2pConnectTransport(
   options: Libp2pTransportOptions
 ): Transport {
@@ -30,6 +33,8 @@ export function createLibp2pConnectTransport(
     ): Promise<UniversalClientResponse> {
       const stream = await options.dialStream() // NOTE: keepalive could be nice here?
 
+      // Create the request
+
       let requestIsChunked = false
       if (!req.header.has('Content-Length') && req.body !== undefined) {
         requestIsChunked = true
@@ -37,6 +42,7 @@ export function createLibp2pConnectTransport(
       }
       req.header.append('Host', '127.0.0.1')
 
+      // Encode headers
       const requestHeadersBuffer = new Uint8ArrayList()
       requestHeadersBuffer.append(
         encoder.encode(`${req.method} ${req.url} HTTP/1.2`),
@@ -47,7 +53,9 @@ export function createLibp2pConnectTransport(
       })
       requestHeadersBuffer.append(eol)
 
-      let signalEnd!: () => Promise<void>
+      let signalEnd!: () => Promise<void> // Used to signal the end of the response body, so that we can close the request stream
+
+      // Send the request (in the background)
       const bodyPromise = stream.sink(
         writeBody(
           new Uint8ArrayList(requestHeadersBuffer),
@@ -62,6 +70,10 @@ export function createLibp2pConnectTransport(
         )
       )
 
+      // Receive the response
+
+      // Decode headers
+
       let isStatusLine = true
       let isBody = false
       let responseStatus = -1
@@ -75,7 +87,7 @@ export function createLibp2pConnectTransport(
           if (res.done ?? false) {
             throw new Error('Invalid HTTP response (ended too early)')
           }
-          buffer.append(res.value)
+          buffer.append(res.value) // Concatenate chunks so that we can process responses where one part of a response header is in one packet/chunk and the other is in the next chunk
         } catch (e) {
           console.log(e)
           throw e
@@ -107,6 +119,7 @@ export function createLibp2pConnectTransport(
         }
       }
 
+      // Parse the rest of the response body
       let responseContentLength: number
       const transferEncoding = responseHeader.get('Transfer-Encoding')
       if ((transferEncoding?.indexOf('chunked') ?? -1) !== -1) {
@@ -121,6 +134,7 @@ export function createLibp2pConnectTransport(
       }
       const responseTrailer = new Headers()
 
+      // Delegate to readBody(), as we need to return the initial response headers right away with the promise
       return {
         status: responseStatus,
         header: responseHeader,
@@ -137,7 +151,7 @@ export function createLibp2pConnectTransport(
     baseUrl: '',
     acceptCompression: [],
     compressMinBytes: 10,
-    interceptors: [],
+    interceptors: options.interceptors,
     readMaxBytes: options.readMaxBytes,
     sendCompression: null,
     useBinaryFormat: options.useBinaryFormat,
@@ -145,6 +159,9 @@ export function createLibp2pConnectTransport(
   })
 }
 
+/**
+ * Write a request body out, taking care of chunked encoding
+ */
 async function* writeBody(
   buffer: Uint8ArrayList,
   body?: AsyncIterable<Uint8Array>,
@@ -178,6 +195,15 @@ async function* writeBody(
   }
 }
 
+/**
+ * Read response body out, taking care of chunked encoding
+ *
+ * @param buffer chunks that have already been read (e.g. while parsing headers)
+ * @param source
+ * @param contentLength length of the body, or -1 if using chunked encoding
+ * @param trailers Headers object to write chunked encoding trailers
+ * @param signalEnd function to call when the whole body has been received
+ */
 async function* readBody(
   buffer: Uint8ArrayList,
   source: AsyncGenerator<Uint8ArrayList>,
@@ -185,16 +211,19 @@ async function* readBody(
   trailers: Headers,
   signalEnd?: () => Promise<void>
 ): AsyncGenerator<Uint8Array, void, undefined> {
-  let remainingChunkBytes = 0
-  let remainingChunkEolBytes = 0
+  let remainingChunkBytes = 0 // Remaining bytes from the chunk (bytes that we have to read from the buffer/source and output right away)
+  let remainingChunkEolBytes = 0 // Remaining EOL bytes at the end of the chunk (that we have to consume and ensure == \r\n)
   let isTrailers = false
 
+  // This while maintains the buffer/source by pulling an extra frame from the source every iteration, while the rest of the code within it tries to parse as much of the buffer as possible
   while (true) {
     if (contentLength === -1) {
+      // Chunked encoding
+      // Best of luck to whoever might end up having to debug this.. I am sorry :/
       while (!isTrailers) {
-        // Best of luck to whoever might end up having to debug this.. I am sorry :/
         if (remainingChunkEolBytes === 0) {
           if (remainingChunkBytes === 0) {
+            // We are starting a new chunk!
             const eolIndex = buffer.indexOf(eol)
             if (eolIndex !== -1) {
               const chunkLine = decoder.decode(buffer.subarray(0, eolIndex))
@@ -207,10 +236,11 @@ async function* readBody(
               }
               remainingChunkBytes = chunkSize + eol.byteLength
             } else {
+              // It's the last chunk!
               break
             }
           } else {
-            // (remainingChunkBytes !== 0)
+            // (remainingChunkBytes !== 0) - we are in the middle of a chunk!
             if (buffer.byteLength >= remainingChunkBytes) {
               yield buffer.subarray(0, remainingChunkBytes)
               buffer.consume(remainingChunkBytes)
@@ -226,7 +256,7 @@ async function* readBody(
             }
           }
         } else {
-          // (remainingChunkEolBytes !== 0)
+          // (remainingChunkEolBytes !== 0) - the chuck is over!
           if (buffer.byteLength < eol.byteLength) {
             break
           }
@@ -240,7 +270,7 @@ async function* readBody(
         }
       }
       if (isTrailers) {
-        // Lack of else is important (so we parse the trailers in the buffer right away)
+        // Lack of else is important (so we parse any trailers present in the buffer right away)
         let eolIndex: number
         while ((eolIndex = buffer.indexOf(eol)) !== -1) {
           const line = decoder.decode(buffer.subarray(0, eolIndex))
@@ -256,6 +286,7 @@ async function* readBody(
         }
       }
     } else {
+      // (contentLength !== -1) -- Content-length/unchunked encoding
       if (buffer.byteLength >= contentLength) {
         yield buffer.subarray(0, contentLength)
         buffer.consume(contentLength)
@@ -270,6 +301,7 @@ async function* readBody(
       }
     }
 
+    // Advance the buffer
     const res = await source.next()
     if (res.done ?? false) {
       break

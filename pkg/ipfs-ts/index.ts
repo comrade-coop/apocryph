@@ -11,6 +11,14 @@ import { AllowConnectionGater } from './connection-gater'
 
 export { createLibp2pConnectTransport, AllowConnectionGater }
 
+/**
+ * Connect to the specified peer over the specified protocol using the specified helia node. Thin wrapper around createLibp2pConnectTransport.
+ *
+ * @param node the Helia node
+ * @param peerAddr the address of the peer
+ * @param protocol the protocol to use
+ * @returns a connectrpc transport
+ */
 export function connectTo(
   node: Helia,
   peerAddr: PeerId | Multiaddr | Multiaddr[],
@@ -25,6 +33,12 @@ export function connectTo(
   })
 }
 
+/**
+ * Creates a helia node and configures it to allow connecting to any peers that are explicitly dialed.
+ *
+ * @param opts options
+ * @param opts.testMode run in test mode, which disables any peer discovery mechnisms and default libp2p background operations
+ */
 export async function createClient({ testMode = false }): Promise<Helia> {
   const connectionGater = new AllowConnectionGater({
     onlyAllowed: testMode

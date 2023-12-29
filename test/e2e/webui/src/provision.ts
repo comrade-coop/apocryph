@@ -21,6 +21,13 @@ import {
 import { PartialMessage } from '@bufbuild/protobuf'
 
 // Copied and adapted from pkg/publisher/connect.go
+
+/**
+ * Provision a pod on the configured provider. This function currently only does the initial provisioning of a pod, and will not update a pod if one already exists.
+ *
+ * @param config deployment configuration; includes payment channel details as well as provider details
+ * @param config.pod the pod configuration to provision on the provider
+ */
 export async function provisionPod(config: {
   payment: {
     paymentContractAddress: Uint8Array

@@ -6,6 +6,16 @@ import { bytesToHex } from 'viem'
 import { publicClient, walletClient } from './connections'
 
 // Copied and adapted from pkg/publisher/fund.go
+
+/**
+ * Fund a given payment channel. This function currently only does the initial funding of a channel, and will not deposit funds if a channel already exists.
+ *
+ * @param config deployment configuration; includes payment channel details as well as provider details
+ * @param funds the amount of funds to approve+send to the channel
+ * @param opts additional options
+ * @param opts.unlockTime time (in seconds) the publisher needs to wait before unlocked tokens may be withdrawn. Provider may reject channels with unlock time that is too low.
+ * @param opts.mintFunds use MockToken to mint funds before the transfer.
+ */
 export async function fundPaymentChannel(
   config: {
     payment: {

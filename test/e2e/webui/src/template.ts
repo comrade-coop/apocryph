@@ -9,6 +9,9 @@ import type {
 import type { PartialMessage } from '@bufbuild/protobuf'
 import { hexToBytes } from 'viem'
 
+/**
+ * Returns a new field/object for the deployment configuration of the pod, that can then be displayed or converted to an object as needed.
+ */
 export function template(): FieldOrRaw<{
   funds: bigint
   unlockTime: bigint

@@ -2,14 +2,31 @@
 
 import { bytesToHex, checksumAddress, hexToBytes, isHex } from 'viem'
 
+// NOTE: A lot of this code can probably be converted to simple React/Vue/Svelte with components instead of fields, and it would probably work better too. It seemed simpler to do it this way when I was starting out, as it would also give the user full view of the configuration structure, but it's probably better to just hide it / make it available in some advanced view instead, as it is not particularly pretty to deal with.
+
+/**
+ * Represents a field that can be converted to a raw JSON value or to an HTML element. Compatible with the interface expected by JSON.stringify()
+ */
 export interface Field<T> {
   toElement: () => Element
   toJSON: () => T
 }
+
+/**
+ * Represents either a raw value of type T or a field that produces a value of type T
+ */
 export type FieldOrRaw<T> = Field<T> | RecordField<T> | T
+
+/**
+ * Represents an object (or array) that has all its properties be either of the proper type or a field
+ */
 export type RecordField<T> = {
   [P in keyof T]: FieldOrRaw<T[P]>
 }
+
+/**
+ * Type matcher for the Field<T> interface
+ */
 export function isField<T>(value: FieldOrRaw<T>): value is Field<T> {
   return (
     typeof value === 'object' &&
@@ -18,7 +35,11 @@ export function isField<T>(value: FieldOrRaw<T>): value is Field<T> {
     'toJSON' in value
   )
 }
-function isRecordField<T>(value: RecordField<T> | T): value is RecordField<T> {
+
+/**
+ * Type matcher for the RecordField<T> interface. Note that due to how general that interface is, nearly every object will pass, other than class instances.
+ */
+export function isRecordField<T>(value: RecordField<T> | T): value is RecordField<T> {
   return (
     typeof value === 'object' &&
     value !== null &&
@@ -26,6 +47,9 @@ function isRecordField<T>(value: RecordField<T> | T): value is RecordField<T> {
   )
 }
 
+/**
+ * Convert a key to its textual representation (default implementation)
+ */
 function defaultKeyToText(key: string): string {
   return key
     .split(/(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])/)
@@ -33,6 +57,16 @@ function defaultKeyToText(key: string): string {
     .join(' ')
 }
 
+/**
+ * Convert an object/field to an element that can be inserted in the DOM tree.
+ *
+ * @remarks
+ * Note that some fields might cache the element, and thus calling toElement on the same object could result in errors.
+ *
+ * @param value the object to get the element for
+ * @param opts options
+ * @param opts.keyToText a function converting an object key to a label
+ */
 export function toElement<T>(
   value: FieldOrRaw<T>,
   { keyToText = defaultKeyToText } = {}
@@ -70,6 +104,11 @@ export function toElement<T>(
   }
 }
 
+/**
+ * Convert an object/field to a JSON/object structure with all the regular parameters
+ *
+ * @param value the object to get the object for
+ */
 export function toJSON<T>(value: FieldOrRaw<T>): T {
   if (isField(value)) {
     return value.toJSON()
@@ -89,10 +128,18 @@ export function toJSON<T>(value: FieldOrRaw<T>): T {
   }
 }
 
+/**
+ * Encoding for binary fields
+ */
 export interface Encoding {
   encode: (_: Uint8Array) => string
   decode: (_: string) => Uint8Array
 }
+
+// NOTE: typing is a bit odd here; ideally typescript would autodetect the list of encoding names without having to duplicate it, but eslint compalins about it.
+/**
+ * Recognized binary field encodings
+ */
 export const Encodings: { 'eth-address': Encoding; 'eth-hash': Encoding } = {
   'eth-address': {
     encode(value: Uint8Array) {
@@ -119,14 +166,26 @@ export const Encodings: { 'eth-address': Encoding; 'eth-hash': Encoding } = {
     }
   }
 }
+
+/**
+ * Options for encoded binary fields
+ */
 export interface EncodingOptions {
   encoding: keyof typeof Encodings
 }
+
+/**
+ * Options for spinner (input type=number) fields
+ */
 export interface SpinnerOptions<T> {
   min?: T
   max?: T
   step?: T
 }
+
+/**
+ * Type matcher for SpinnerOptions<T>
+ */
 export function isSpinnerOptions<T>(
   options?: object
 ): options is SpinnerOptions<T> {
@@ -135,19 +194,38 @@ export function isSpinnerOptions<T>(
     ('min' in options || 'max' in options || 'step' in options)
   )
 }
+
+/**
+ * Create a string field with a given initial value
+ */
 export function field(initialValue: string, options?: object): Field<string>
+/**
+ * Create a number field with the given spinner options
+ */
 export function field(
   initialValue: number,
   options: SpinnerOptions<number>
 ): Field<number>
+/**
+ * Create a bigint field with the given spinner options
+ */
 export function field(
   initialValue: bigint,
   options: SpinnerOptions<bigint>
 ): Field<bigint>
+/**
+ * Create a binary field with the given encoding options
+ */
 export function field(
   initialValue: Uint8Array,
   options: EncodingOptions
 ): Field<Uint8Array>
+/**
+ * Create a field with the given initial value and options
+ *
+ * @param initialValue the default value of the field
+ * @param options additional configuration options for the field
+ */
 export function field(
   initialValue: string | number | bigint | Uint8Array,
   options?: object
@@ -173,6 +251,9 @@ export function field(
   throw new Error('Invalid options for field()')
 }
 
+/**
+ * Class wrapping an input field as a Field<T>
+ */
 abstract class InputFieldBase<T> implements Field<T> {
   element: HTMLInputElement
   abstract value: T
@@ -189,6 +270,9 @@ abstract class InputFieldBase<T> implements Field<T> {
   }
 }
 
+/**
+ * Class capturing common functionallity of spinner fields
+ */
 abstract class SpinnerFieldBase<T> extends InputFieldBase<T> {
   constructor(options: SpinnerOptions<T>) {
     super()
@@ -199,6 +283,9 @@ abstract class SpinnerFieldBase<T> extends InputFieldBase<T> {
   }
 }
 
+/**
+ * Class representing a string field
+ */
 class StringField extends InputFieldBase<string> {
   constructor(value: string) {
     super()
@@ -215,6 +302,9 @@ class StringField extends InputFieldBase<string> {
   }
 }
 
+/**
+ * Class representing a number field
+ */
 class SpinnerNumberField extends SpinnerFieldBase<number> {
   constructor(value: number, options: SpinnerOptions<number>) {
     super(options)
@@ -230,6 +320,9 @@ class SpinnerNumberField extends SpinnerFieldBase<number> {
   }
 }
 
+/**
+ * Class representing a bigint field
+ */
 class SpinnerBigintField extends SpinnerFieldBase<bigint> {
   constructor(value: bigint, options: SpinnerOptions<bigint>) {
     super(options)
@@ -245,6 +338,9 @@ class SpinnerBigintField extends SpinnerFieldBase<bigint> {
   }
 }
 
+/**
+ * Class representing a binary encoded field
+ */
 class EncodedField extends InputFieldBase<Uint8Array> {
   public encoding: Encoding
   constructor(value: Uint8Array, options: EncodingOptions) {
