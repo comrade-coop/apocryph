@@ -43,6 +43,10 @@ echo 'CONSTELLATION_PATH='$CONSTELLATION_PATH
 
 ( cd $CONSTELLATION_PATH; constellation mini up || true )
 
+kubectl patch -n kube-system configmap ip-masq-agent --type merge -p '{"data":{"config": "{\"masqLinkLocal\":true,\"nonMasqueradeCIDRs\":[]}"}}'
+kubectl rollout  restart -n kube-system daemonset cilium
+kubectl delete pod -l k8s-app=join-service -n kube-system
+
 ## 1.0: Deploy contracts to anvil ##
 
 helmfile apply -l name=eth
