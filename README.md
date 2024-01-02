@@ -31,7 +31,7 @@ The command, once all dependencies are met, will proceed to start a local docker
 In addition, once you have started the minikube end-to-end test, you can also run the web UI test, which presents a sample interface that publishers can use to deploy a predefined pod template onto the minikube cluster / provider directly from their web browser.
 
 ```bash
-test/e2e/webui/run-test.sh
+turbo dev
 ```
 
 Once you are done playing around with the tests, simply run the following command to delete and stop the minikube cluster:
@@ -49,7 +49,7 @@ After editing files in `proto/` or `contracts/`, make sure to run the following 
 ```bash
 forge build --root contracts
 go generate
-npm run -ws generate
+turbo build
 ```
 
 <!-- Note that while committing generated files is foreign to Nodejs/NPM, it's the usual way of life in the Go ecosystem, as packages are directly cloned from git rather than downloaded from the package manager. Here we are committing both in order to not require forge/protoc for JavaScript development when it's optional for Go development. -->

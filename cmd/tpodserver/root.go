@@ -13,8 +13,7 @@ var cfgFileFields = make(map[string]interface{})
 var cfgFile string
 
 const (
-	keystorePath   string = "/tmp/keystore"
-	exportPassword string = "psw"
+	keystorePath string = "/tmp/keystore"
 )
 
 var rootCmd = &cobra.Command{

@@ -75,6 +75,8 @@ DEPLOYER_KEY=$(docker logs anvil | awk '/Private Keys/ {flag=1; next} flag && /^
 
 ## 1: Set up the Kubernetes environment ##
 
+minikube addons enable metrics-server
+
 [ "$(minikube status -f'{{.Kubelet}}')" = "Running" ] || minikube start --insecure-registry='host.minikube.internal:5000'
 
 ## 1.1: Apply Helm configurations ##
