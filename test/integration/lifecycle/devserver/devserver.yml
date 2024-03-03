@@ -55,7 +55,7 @@ spec:
     spec:
       containers:
       - name: devserver
-        image: host.minikube.internal:5000/comradecoop/apocryph/devserver
+        image: ghcr.io/comrade-coop/apocryph/server:master
         env:
           - name: SERVER_PORT
             value: "8090"
