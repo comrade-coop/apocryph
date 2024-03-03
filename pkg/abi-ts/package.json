@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "gen-abi": "wagmi generate",
+    "ts-gen-abi": "wagmi generate",
     "generate": "npm run gen-abi"
   },
   "devDependencies": {

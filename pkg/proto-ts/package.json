@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "gen-proto": "protoc -I=../../proto --es_out=target=ts:. --connect-es_out=target=ts:. ../../proto/provision-pod.proto ../../proto/pod.proto ../../proto/deployment.proto",
+    "ts-gen-proto": "protoc -I=../../proto --es_out=target=ts:. --connect-es_out=target=ts:. ../../proto/provision-pod.proto ../../proto/pod.proto ../../proto/deployment.proto",
     "generate": "npm run gen-proto"
   },
   "license": "GPL-3.0",

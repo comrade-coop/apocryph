@@ -2,11 +2,31 @@
   "$schema": "https://turbo.build/schema.json",
   "pipeline": {
     "build": {
-      "dependsOn": ["^build", "gen-abi", "gen-proto"]
+      "dependsOn": ["//#build-images", "ts-gen-abi", "ts-gen-proto"]
     },
-    "lint": {},
-    "gen-proto": {},
-    "gen-abi": {},
+    "//#lint": {},
+    "//#go-build": {
+      "inputs": ["./proto/**"],
+      "dependsOn": ["//#build-contracts"]
+    },
+    "//#build-tpodserver": {
+      "dependsOn": ["//#go-build"]
+    },
+    "//#build-p2p-helper": {
+      "dependsOn": ["//#go-build"]
+    },
+    "//#build-images": {
+      "dependsOn": ["//#build-tpodserver", "//#build-p2p-helper"]
+    },
+    "//#build-contracts": {
+      "inputs": ["./contracts/**"]
+    },
+    "ts-gen-proto": {
+      "inputs": ["../../proto/**"]
+    },
+    "ts-gen-abi": {
+      "inputs": ["../../contracts/**"]
+    },
     "dev": {
       "cache": false,
       "persistent": true
