@@ -1,8 +1,8 @@
 #!/bin/sh
 
 # Check the number of arguments
-if [ "$#" -lt 2 ]; then
-    echo "Usage: $0 <helm-chart-path> <constellation-path>"
+if [ "$#" -lt 3 ]; then
+    echo "Usage: $0 <helm-chart-path> <constellation-path> <workspace-path>"
     exit 1
 fi
 
@@ -12,13 +12,12 @@ current_dir=$(pwd)
 helmfile template -f $1 > $2/image/base/mkosi.skeleton/usr/lib/helmfile-template
 
 # cleanup leftover
-cd $current_dir
-cd constell-cluster
+cd $3
 constellation terminate
-cd $current_dir
-sudo rm -r constell-cluster 2>/dev/null
-mkdir constell-cluster
+sudo rm -r $3 2>/dev/null
+mkdir $3
 
+cd $current_dir
 cd $2
 # Get go dependecies
 bazel run //:tidy
@@ -28,19 +27,18 @@ bazel build //image/system:qemu_stable
 
 # Get the new image measurements
 link=$(readlink -f bazel-out/k8-opt/bin/image/system/qemu_qemu-vtpm_stable) 
-output=$(bazel run --run_under="sudo -E" //image/measured-boot/cmd $link/constellation.raw $current_dir/custom-measurements.json 2>&1)
+output=$(bazel run --run_under="sudo -E" //image/measured-boot/cmd $link/constellation.raw $3/custom-measurements.json 2>&1)
 
 # Extract relevant PCR values
 PCR4=$(echo "$output" | sed -n '/PCR\[ *4\]/ s/.*: \(.*\)/\1/p')
 PCR9=$(echo "$output" | sed -n '/PCR\[ *9\]/ s/.*: \(.*\)/\1/p')
 PCR11=$(echo "$output" | sed -n '/PCR\[ *11\]/ s/.*: \(.*\)/\1/p')
 
-echo "PCR4: $PCR4"
-echo "PCR9: $PCR9"
+echo "PCR4:  $PCR4"
+echo "PCR9:  $PCR9"
 echo "PCR11: $PCR11"
 
-cd "$current_dir"
-cd constell-cluster
+cd $3
 
 constellation config generate qemu
 
