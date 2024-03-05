@@ -11,6 +11,88 @@ spec:
     app: devserver
 ---
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trustedpods-configs
+  namespace: devspace
+data:
+  config.yaml: |
+    pricing:
+      table:
+        format: yaml
+        # filename: pricing.yaml
+        contents: |
+          tables:
+          - paymentContractAddress: "5/FyXnc0ziiPg2fhuxQ+kLs/BRI="
+            resources:
+            - resource: "cpu"
+              priceForReservation: 200000000000
+            - resource: "ram"
+              priceForReservation: 500
+    withdraw:
+      address: "0x90F79bf6EB2c4f870365E785982E1f101E93b906"
+      time: 15
+    cpu_model: "Intel Xeon Platinum 8452Y Processor"
+    tee_type: "Secure Enclaves"
+    info:
+      format: yaml
+      contents: |
+        regions:
+          - name: "bul"
+            zone: "east"
+            num: 1
+          - name: "alg"
+            zone: "west"
+            num: 2
+        multiaddrs:
+          - "/dns4/kubo.business"
+  # tokenAddress=$(echo e7f1725E7734CE288F8367e1Bb143E90bb3F0512 | xxd -p -r | base64)
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: eth-rpc
+  namespace: devspace
+  labels:
+    app: eth
+spec:
+  ports:
+  - name: jsonrpc
+    port: 8545
+    targetPort: jsonrpc
+  type: NodePort
+  selector:
+    provide: eth-rpc
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: anvil
+  namespace: devspace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: anvil
+  serviceName: eth-rpc
+  template:
+    metadata:
+      labels:
+        app: anvil
+        provide: eth-rpc
+    spec:
+      containers:
+      - name: anvil
+        image: ghcr.io/foundry-rs/foundry:nightly-619f3c56302b5a665164002cb98263cd9812e4d5
+        command: ["anvil"]
+        ports:
+        - name: jsonrpc
+          containerPort: 8545
+        env:
+        - name: ANVIL_IP_ADDR
+          value: 0.0.0.0
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: ipfs
@@ -56,16 +138,28 @@ spec:
       containers:
       - name: devserver
         image: ghcr.io/comrade-coop/apocryph/server:master
-        env:
-          - name: SERVER_PORT
-            value: "8090"
-          - name: SERVER_ADDRESS
-            value: '0.0.0.0:8090'
+        command: [
+          "tpodserver", "listen",
+          "--address", "0.0.0.0:8090",
+          "--config","config.yaml",
+          "--ethereum-key", "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
+          "--ipfs", "/dns4/ipfs.ipfs.svc.cluster.local/tcp/5001",
+          "--ethereum-rpc", "http://eth-rpc.devspace.svc.cluster.local:8545"]
+        volumeMounts:
+        - name: configs
+          mountPath: /config.yaml
+          subPath: config.yaml
+      volumes:
+      - name: configs
+        configMap:
+          name: trustedpods-configs
+          items:
+          - key: config.yaml
+            path: config.yaml
         ports:
         - containerPort: 8090
       serviceAccountName: devserver-serviceaccount
 ---
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
