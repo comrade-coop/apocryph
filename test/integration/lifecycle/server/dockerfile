@@ -1,7 +1,0 @@
-FROM docker.io/golang:1.21-bookworm
-
-RUN apt-get update && apt-get install -y libgpgme-dev
-
-COPY . .
-
-ENTRYPOINT ["./start-server.sh"]

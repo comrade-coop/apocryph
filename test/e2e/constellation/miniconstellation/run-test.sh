@@ -61,7 +61,7 @@ DEPLOYER_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 
 
 ## 1.1: Apply the rest of the Helm configuration ##
 
-helmfile apply || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile apply; }
+helmfile apply 
 
 ## 1.2: Configure provider/in-cluster IPFS and publisher IPFS ##
 

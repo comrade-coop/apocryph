@@ -25,7 +25,8 @@
       "inputs": ["../../proto/**"]
     },
     "ts-gen-abi": {
-      "inputs": ["../../contracts/**"]
+      "inputs": ["../../contracts/**"],
+      "dependsOn": ["//#build-contracts"]
     },
     "dev": {
       "cache": false,

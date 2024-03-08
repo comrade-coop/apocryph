@@ -15,6 +15,17 @@ releases:
   - name: ingress-nginx
     namespace: keda
     chart: ingress-nginx/ingress-nginx
+    hooks:
+      - events: ['postsync']
+        showlogs: true
+        command: 'kubectl'
+        args:
+          - 'wait'
+          - '--namespace'
+          - 'keda'
+          - '--for=condition=available'
+          - 'deployment/ingress-nginx-controller'
+          - '--timeout=800s'
   - name: keda-http-addon
     namespace: keda
     chart: kedacore/keda-add-ons-http
@@ -28,7 +39,7 @@ releases:
     namespace: keda
     needs:
       - keda-http-addon
-      - ingress-nginx # NOTE: helmfile typically fails to wait long enough for nginx to start at this step
+      - ingress-nginx # NOTE: nginx admission controllers typically fails to wait long enough for nginx to start at this step
   - name: devserver
     chart: ./devserver
     namespace: devspace

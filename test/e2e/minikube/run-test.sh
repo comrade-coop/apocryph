@@ -83,7 +83,7 @@ minikube addons enable metrics-server
 
 kubectl delete namespace trustedpods 2>/dev/null || true
 
-helmfile sync || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile apply; }
+helmfile sync 
 
 ## 1.2: Configure provider/in-cluster IPFS and publisher IPFS ##
 
