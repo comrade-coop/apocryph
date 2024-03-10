@@ -9,6 +9,8 @@ repositories:
     url: https://grafana.github.io/helm-charts
 
 releases:
+  - name: namespaces
+    chart: ./namespaces
   - name: keda
     namespace: keda
     chart: kedacore/keda

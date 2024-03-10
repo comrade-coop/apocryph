@@ -56,7 +56,6 @@ spec:
   selector:
     matchLabels:
       app: ipfs
-  serviceName: ipfs-rpc
   template:
     metadata:
       labels:

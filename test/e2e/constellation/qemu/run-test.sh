@@ -1,74 +1,146 @@
-#!/bin/sh
+#!/bin/bash
 set -e
+set -v
+# sometimes if the cluster did no terminate correctly, try modifying this
+WORKSPACE_PATH="$HOME/.apocryph/constellation/"
+CURRENT_DIR=$(pwd)
+export KUBECONFIG="$HOME/.apocryph/constellation/constellation-admin.conf"
 
-chart_path="$1"
-constellation_path="$2"
-workspace_path="$3"
-current_dir=$(pwd)
-
-if [ -n "$4" ]; then
-  STEP=${4:-1}
+# based on https://stackoverflow.com/a/31269848 / https://bobcopeland.com/blog/2012/10/goto-in-bash/
+if [ -n "$1" ]; then
+  STEP=${1:-1}
   eval "set -v; $(sed -n "/## $STEP: /{:a;n;p;ba};" $0)"
   exit
 fi
 
-# Check the number of arguments
-if [ "$#" -lt 3 ]; then
-    echo "Usage: $0 <helm-chart-path> <constellation-path> <workspace-path>"
-    exit 1
-fi
+echo -e "\e[1;32m---"
+echo "Note: To skip steps, use '$0 <number>'"
+echo -e "---\e[0m"
 
-## 0: Generate helm template and inject it into constellation base image
-helmfile template -f "$chart_path" > "$constellation_path/image/base/mkosi.skeleton/usr/lib/helmfile-template"
+## 0: Build build custom os image & run the cluster
 
-## 1: Build modified image
-cd $current_dir
-cd "$constellation_path"
-bazel run //:tidy
+# use the miniconstellation chart
+./build.sh ../miniconstellation
 
-## 1.1: Build the image
-cd $current_dir
-cd "$constellation_path"
-bazel build //image/system:qemu_stable
-
-## 1.2: Get the new image measurements
-link=$(readlink -f bazel-out/k8-opt/bin/image/system/qemu_qemu-vtpm_stable) 
-output=$(bazel run --run_under="sudo -E" //image/measured-boot/cmd $link/constellation.raw "$workspace_path/custom-measurements.json" 2>&1)
-
-## 1.3: Extract relevant PCR values
-PCR4=$(echo "$output" | sed -n '/PCR\[ *4\]/ s/.*: \(.*\)/\1/p')
-PCR9=$(echo "$output" | sed -n '/PCR\[ *9\]/ s/.*: \(.*\)/\1/p')
-PCR11=$(echo "$output" | sed -n '/PCR\[ *11\]/ s/.*: \(.*\)/\1/p')
-
-echo "PCR4:  $PCR4"
-echo "PCR9:  $PCR9"
-echo "PCR11: $PCR11"
-
-## 2: terminate clutser
-cd "$workspace_path"
-constellation terminate
-sudo rm -r "$workspace_path" 2>/dev/null
-mkdir "$workspace_path"
-
-
-## 3: create,configure, run workspace
-cd "$current_dir"
-cd "$workspace_path"
-
-constellation config generate qemu
-
-# Replace the values in the configuration file
-sed -i.bak -e "/^\s*4:/ {n;s/\( *expected: \).*$/\1$PCR4/}" \
-           -e "/^\s*9:/ {n;s/\( *expected: \).*$/\1$PCR9/}" \
-           -e "/^\s*11:/ {n;s/\( *expected: \).*$/\1$PCR11/}" constellation-conf.yaml
-# Replace the control plance count & nodes to 1
-sed -i 's/initialCount: [0-9]*/initialCount: 1/' "constellation-conf.yaml"
-
-output=$(constellation version)
-version=$(echo "$output" | grep -oP 'Version:\s+\K\S+' | head -n 1)
-
-# Copy the image & rename it to the current constellation version to bypass downloading upstream image
-cp $link/constellation.raw "$version.raw" 
-
-## 3.1 Start the constellation cluster
+## 1: Start the constellation cluster
+cd "$WORKSPACE_PATH"
 constellation apply -y
+
+## 1.1: wait for server
+cd $CURRENT_DIR
+kubectl wait --namespace keda --for=condition=available deployment/ingress-nginx-controller
+kubectl wait --namespace prometheus --for=condition=available deployment/prometheus-kube-state-metrics
+kubectl wait --namespace prometheus --for=condition=available deployment/prometheus-prometheus-pushgateway
+kubectl wait --namespace prometheus --for=condition=available deployment/prometheus-server
+kubectl wait --namespace eth --for=condition=available deployment/anvil
+kubectl wait --namespace ipfs --for=condition=available deployment/ipfs
+kubectl wait --namespace trustedpods --for=condition=available deployment/tpodserver
+
+## 2: Deploy sample App
+
+[ "$PORT_8545" == "" ] && { PORT_8545="yes" ; kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
+
+DEPLOYER_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 #TODO= anvil.accounts[0]
+
+sleep 2
+
+( cd ../../../../contracts; forge script script/Deploy.s.sol --private-key "$DEPLOYER_KEY" --rpc-url http://localhost:8545 --broadcast)
+
+## 2.1: Configure provider/in-cluster IPFS and publisher IPFS ##
+
+{ while ! kubectl get -n ipfs endpoints ipfs-rpc -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; }
+
+[ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
+
+NODE_ADDRESS=$(kubectl get no -o json | jq -r '.items[].status.addresses[] | select(.type == "InternalIP") | .address' | head -n 1)
+SWARM_PORT=$(kubectl get svc -n ipfs ipfs-swarm -o json | jq -r '.spec.ports[].nodePort' | head -n 1)
+
+SWARM_ADDRESSES="[\"/ip4/$NODE_ADDRESS/tcp/$SWARM_PORT\", \"/ip4/$NODE_ADDRESS/udp/$SWARM_PORT/quic\", \"/ip4/$NODE_ADDRESS/udp/$SWARM_PORT/quic-v1\", \"/ip4/$NODE_ADDRESS/udp/$SWARM_PORT/quic-v1/webtransport\"]"
+
+PROVIDER_IPFS=$(curl -X POST "http://127.0.0.1:5004/api/v0/id" | jq '.ID' -r); echo $PROVIDER_IPFS
+
+ipfs id &>/dev/null || ipfs init
+
+ipfs config --json Experimental.Libp2pStreamMounting true
+
+IPFS_CONFIG="$HOME/.ipfs/config"
+# default gateway is already used by libvirt container
+NEW_GATEWAY="/ip4/127.0.0.1/tcp/8090"
+jq --arg new_gateway "$NEW_GATEWAY" '.Addresses.Gateway = $new_gateway' "$IPFS_CONFIG" > tmp.json && mv tmp.json "$IPFS_CONFIG"
+
+[ -n "$IPFS_DAEMON" ] || { IPFS_DAEMON=yes; ipfs daemon & { while ! [ -f ${IPFS_PATH:-~/.ipfs}/api ]; do sleep 0.1; done; } 2>/dev/null; }
+
+echo "$SWARM_ADDRESSES" | jq -r '.[] + "/p2p/'"$PROVIDER_IPFS"'"' | xargs -n 1 ipfs swarm connect || true
+
+sleep 1
+
+## 3: Deploy example manifest to cluster ##
+
+DEPLOYER_ETH=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 #TODO= anvil.accounts[0]
+PROVIDER_ETH=0x70997970C51812dc3A010C7d01b50e0d17dc79C8 #TODO= anvil.accounts[1]
+PUBLISHER_KEY=0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a #TODO= anvil.accounts[2]
+
+TOKEN_CONTRACT=0x5fbdb2315678afecb367f032d93f642f64180aa3 # TODO= result of forge create
+PAYMENT_CONTRACT=0xe7f1725e7734ce288f8367e1bb143e90bb3f0512 # TODO= result of forge create
+REGISTRY_CONTRACT=0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0 # TODO= result of forge create
+
+
+# PAYMENT_CONTRACT=$(cat ../../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.payment.value')
+# REGISTRY_CONTRACT=$(cat ../../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.registry.value')
+FUNDS=10000000000000000000000
+
+[ "$PORT_8545" == "" ] && { PORT_8545="yes" ; kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
+[ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
+[ -n "$PROVIDER_IPFS" ] || { PROVIDER_IPFS=$(curl -X POST "http://127.0.0.1:5004/api/v0/id" -s | jq '.ID' -r); echo $PROVIDER_IPFS; }
+[ -n "$IPFS_DAEMON" ] || { IPFS_DAEMON=yes; ipfs daemon & { while ! [ -f ${IPFS_PATH:-~/.ipfs}/api ]; do sleep 0.1; done; } 2>/dev/null; }
+
+set +v
+set -x
+
+go run ../../../../cmd/trustedpods/ pod deploy ../../common/manifest-guestbook-nostorage.yaml \
+  --ethereum-key "$PUBLISHER_KEY" \
+  --payment-contract "$PAYMENT_CONTRACT" \
+  --registry-contract "$REGISTRY_CONTRACT" \
+  --funds "$FUNDS" \
+  --upload-images=false \
+  --mint-funds
+
+set +x
+set -v
+
+## 4: Connect and measure balances ##
+
+DEPLOYER_ETH=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 #TODO= anvil.accounts[0]
+WITHDRAW_ETH=0x90F79bf6EB2c4f870365E785982E1f101E93b906 # From trustedpods/tpodserver.yml
+TOKEN_CONTRACT=$(cat ../../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.token.value')
+NODE_ADDRESS=$(kubectl get no -o json | jq -r '.items[].status.addresses[] | select(.type == "InternalIP") | .address' | head -n 1)
+INGRESS_PORT=$(kubectl get svc -n keda ingress-nginx-controller -o json | jq -r '.spec.ports[] | select(.name == "http") | .nodePort' | head -n 1)
+INGRESS_URL="http://$NODE_ADDRESS:$INGRESS_PORT"; echo $INGRESS_URL
+MANIFEST_HOST=guestbook.localhost # From manifest-guestbook.yaml
+
+[ "$PORT_8545" == "" ] && { PORT_8545="yes" ; kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
+
+echo "Provider balance before:" $(cast call "$TOKEN_CONTRACT" "balanceOf(address)" "$WITHDRAW_ETH" | cast to-fixed-point 18)
+
+set -x
+
+while ! curl --connect-timeout 40 -H "Host: $MANIFEST_HOST" $INGRESS_URL --fail-with-body; do sleep 10; done
+curl -H "Host: $MANIFEST_HOST" $INGRESS_URL/test.html --fail-with-body
+
+set +x
+
+sleep 45
+
+echo "Provider balance after:" $(cast call "$TOKEN_CONTRACT" "balanceOf(address)" "$WITHDRAW_ETH" | cast to-fixed-point 18)
+
+## 5: In conclusion.. ##
+ 
+set +v
+
+echo -e "\e[1;32m---"
+echo "Note: To interact with the deployed guestbook, run the following"
+echo "  kubectl port-forward --namespace keda svc/ingress-nginx-controller 1234:80 &"
+echo "  xdg-open http://guestbook.localhost:1234/"
+echo "Note: To stop the minikube cluster/provider, use '$0 teardown'"
+echo "  and to clean-up everything the script does, use '$0 teardown full'"
+echo -e "---\e[0m"

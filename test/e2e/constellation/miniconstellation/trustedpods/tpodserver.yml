@@ -59,6 +59,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: tpodregister
+  namespace: trustedpods  
 spec:
   ttlSecondsAfterFinished: 60 # delete the job after 1 min
   template:
