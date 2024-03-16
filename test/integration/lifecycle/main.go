@@ -98,7 +98,7 @@ func ProvisionPod(client pbcon.ProvisionPodServiceClient, podPath string) string
 		log.Fatalf("failed uploading Manifest: %v", err)
 	}
 
-	err = publisher.UploadImages(context.Background(), "/ip4/127.0.0.1/tcp/5001", pod, deployment)
+	err = publisher.UploadImages(context.Background(), ctrdClient, "/ip4/127.0.0.1/tcp/5001", pod, deployment)
 	if err != nil {
 		log.Fatalf("failed uploading Manifest: %v", err)
 	}
@@ -131,7 +131,11 @@ func UpdatePod(client pbcon.ProvisionPodServiceClient) string {
 	if err != nil {
 		log.Fatalf("failed uploading Manifest: %v", err)
 	}
-	err = publisher.UploadImages(context.Background(), ipfs, pod, deployment)
+	ctrdClient, err := ipcr.GetContainerdClient("k8s.io")
+	if err != nil {
+		log.Fatalf("failed uploading Manifest: %v", err)
+	}
+	err = publisher.UploadImages(context.Background(), ctrdClient, "/ip4/127.0.0.1/tcp/5001", pod, deployment)
 	if err != nil {
 		log.Fatalf("failed uploading Manifest: %v", err)
 	}
