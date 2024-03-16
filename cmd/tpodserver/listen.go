@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/comrade-coop/apocryph/pkg/ethereum"
+	"github.com/comrade-coop/apocryph/pkg/ipcr"
 	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"
 	tpk8s "github.com/comrade-coop/apocryph/pkg/kubernetes"
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
@@ -60,8 +61,13 @@ var listenCmd = &cobra.Command{
 			return err
 		}
 
+		ctrdClient, err := ipcr.GetContainerdClient("k8s.io")
+		if err != nil {
+			return err
+		}
+
 		mux := http.NewServeMux()
-		mux.Handle(provider.NewTPodServerHandler(ipfs, dryRun, k8cl, localOciRegistry, validator, "loki.loki.svc.cluster.local:3100"))
+		mux.Handle(provider.NewTPodServerHandler(ipfsApi, ipfs, dryRun, ctrdClient, k8cl, localOciRegistry, validator, "loki.loki.svc.cluster.local:3100"))
 		server := &http.Server{Handler: mux}
 
 		go server.Serve(listener)

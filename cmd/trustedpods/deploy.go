@@ -9,6 +9,7 @@ import (
 
 	"github.com/comrade-coop/apocryph/pkg/abi"
 	"github.com/comrade-coop/apocryph/pkg/ethereum"
+	"github.com/comrade-coop/apocryph/pkg/ipcr"
 	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"
 	pbcon "github.com/comrade-coop/apocryph/pkg/proto/protoconnect"
 	"github.com/comrade-coop/apocryph/pkg/publisher"
@@ -145,8 +146,13 @@ var deployPodCmd = &cobra.Command{
 			}
 		}
 
+		ctrdClient, err := ipcr.GetContainerdClient("k8s.io")
+		if err != nil {
+			return err
+		}
+
 		if uploadImages {
-			err = publisher.UploadImages(cmd.Context(), ipfs, pod, deployment)
+			err = publisher.UploadImages(cmd.Context(), ctrdClient, ipfsApi, pod, deployment)
 			if err != nil {
 				return err
 			}

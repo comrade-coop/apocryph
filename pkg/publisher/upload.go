@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/comrade-coop/apocryph/pkg/ipcr"
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
+	"github.com/containerd/containerd"
 	iface "github.com/ipfs/kubo/core/coreiface"
 	"golang.org/x/exp/slices"
 
@@ -65,8 +67,8 @@ func UploadSecrets(ctx context.Context, ipfs iface.CoreAPI, basepath string, pod
 	return nil
 }
 
-func UploadImages(ctx context.Context, ipfs iface.CoreAPI, pod *pb.Pod, deployment *pb.Deployment) error {
-	fmt.Fprintf(os.Stderr, "Encrypting and uploading images to IPDR...\n")
+func UploadImages(ctx context.Context, client *containerd.Client, IPFSAddress string, pod *pb.Pod, deployment *pb.Deployment) error {
+	fmt.Fprintf(os.Stderr, "Encrypting and uploading images to IPCR...\n")
 
 	oldUploadedImages := map[string]*pb.UploadedImage{}
 	for _, uploadedImage := range deployment.Images {
@@ -76,27 +78,23 @@ func UploadImages(ctx context.Context, ipfs iface.CoreAPI, pod *pb.Pod, deployme
 
 	for _, container := range pod.Containers {
 		image := container.Image
-		imageRef, imageDigest, err := tpipfs.GetImageRef(ctx, nil, image)
+
+		err := ipcr.EnsureImage(ctx, client, image.Url)
 		if err != nil {
-			return fmt.Errorf("Failed parsing images reference: %w", err)
-		}
-		uploadedImage, ok := oldUploadedImages[image.Url]
-		if !ok || imageDigest != uploadedImage.Digest {
-			fmt.Fprintf(os.Stderr, "Uploading image `%s`...\n", image.Url)
-			imageKey, imageCid, err := tpipfs.UploadImageToIpdr(ctx, ipfs, nil, imageRef)
-			if err != nil {
-				return fmt.Errorf("Failed encrypting and uploading image to IPDR: %w", err)
-			}
-
-			uploadedImage = &pb.UploadedImage{
-				SourceUrl: image.Url,
-				Digest:    imageDigest,
-				Cid:       imageCid,
-				Key:       imageKey,
-			}
-			fmt.Fprintf(os.Stderr, "Uploaded image `%s`\n", image.Url)
+			return err
 		}
 
+		_, prvKey, err := ipcr.EncryptImage(ctx, client, image.Url, "")
+		if err != nil {
+			return err
+		}
+
+		cid, err := ipcr.PushImage(ctx, client, IPFSAddress, image.Url)
+		if err != nil {
+			return err
+		}
+
+		uploadedImage := &pb.UploadedImage{SourceUrl: image.Url, Cid: []byte(cid), Key: &pb.Key{Data: prvKey}}
 		deployment.Images = append(deployment.Images, uploadedImage)
 	}
 	return nil
@@ -135,6 +133,7 @@ func LinkUploadsFromDeployment(pod *pb.Pod, deployment *pb.Deployment) *pb.Pod {
 		if uploadedImage, ok := uploadedImages[container.Image.Url]; ok {
 			container.Image = &pb.Container_Image{
 				Cid: uploadedImage.Cid,
+				Url: uploadedImage.SourceUrl,
 				Key: uploadedImage.Key,
 			}
 		}

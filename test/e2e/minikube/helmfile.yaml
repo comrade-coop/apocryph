@@ -61,8 +61,6 @@ releases:
   - name: trustedpods
     chart: ./trustedpods
     namespace: trustedpods
-    needs:
-      - prometheus # tpodmonitor
   - name: eth
     chart: ./eth
     namespace: eth

@@ -85,6 +85,7 @@ func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, depl
 			request := &pb.UpdatePodRequest{
 				Pod: pod,
 			}
+
 			response, err = client.UpdatePod(ctx, connect.NewRequest(request))
 			if err != nil {
 				return fmt.Errorf("Failed executing update pod request: %w", err)

@@ -57,9 +57,9 @@ var _ = func() error {
 	deploymentFlags.StringVar(&manifestFormat, "deployment-format", "", fmt.Sprintf("Deployment format. One of %v (leave empty to auto-detect)", pb.FormatNames))
 	deploymentFlags.StringVar(&providerPeer, "provider", "", "provider peer id")
 	deploymentFlags.StringVar(&providerEthAddress, "provider-eth", "", "provider public address")
-	deploymentFlags.Int64Var(&expirationOffset, "token-expiration", 10, "authentication token expires after token-expiration seconds")
+	deploymentFlags.Int64Var(&expirationOffset, "token-expiration", 10, "authentication token expires after token-expiration seconds (expired after 10 seconds by default)")
 
-	uploadFlags.StringVar(&ipfsApi, "ipfs", "", "multiaddr where the ipfs/kubo api can be accessed (leave blank to use the daemon running in IPFS_PATH)")
+	uploadFlags.StringVar(&ipfsApi, "ipfs", "/ip4/127.0.0.1/tcp/5001", "multiaddr where the ipfs/kubo api can be accessed")
 	uploadFlags.BoolVar(&uploadImages, "upload-images", true, "upload images")
 	uploadFlags.BoolVar(&uploadSecrets, "upload-secrets", true, "upload secrets")
 

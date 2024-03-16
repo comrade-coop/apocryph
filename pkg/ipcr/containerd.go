@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	tpcrypto "github.com/comrade-coop/apocryph/pkg/crypto"
 	"github.com/containerd/containerd"
@@ -34,22 +33,22 @@ var cryptOptions = types.ImageCryptOptions{
 }
 
 // EncryptImage returns the private key for decryption
+// password could be ommitted
 func EncryptImage(ctx context.Context, client *containerd.Client, image, password string) ([]byte, []byte, error) {
 	pubKey, prvKey, err := encutils.CreateRSATestKey(RSA_KEY_SIZE, []byte(password), true)
 	if err != nil {
 		return nil, nil, err
 	}
-	err = tpcrypto.Crypt(ctx, client, image, image+":encrypted", true, cryptOptions, [][]byte{pubKey}, [][]byte{})
+	err = tpcrypto.Crypt(ctx, client, image, image, true, cryptOptions, [][]byte{pubKey}, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 	return pubKey, prvKey, nil
 }
-func DecryptImage(ctx context.Context, client *containerd.Client, password, image string, pubKey, prvKey []byte) error {
+func DecryptImage(ctx context.Context, client *containerd.Client, password, image string, prvKey []byte) error {
 	cryptOptions.Keys = []string{"prvkey.pem:" + password}
 	// remove encrypted string
-	newImage := strings.Split(image, ":")
-	err := tpcrypto.Crypt(ctx, client, image, newImage[0], false, cryptOptions, [][]byte{pubKey}, [][]byte{prvKey})
+	err := tpcrypto.Crypt(ctx, client, image, image, false, cryptOptions, nil, [][]byte{prvKey})
 	if err != nil {
 		return err
 	}
@@ -106,6 +105,41 @@ func IpfsPush(ctx context.Context, client *containerd.Client, rawRef string, opt
 	return "", fmt.Errorf("Could not parse ipfs image name")
 }
 
+// EnsureImage makes sure the image is available in containerd store
+func EnsureImage(ctx context.Context, client *containerd.Client, image string) error {
+	options := types.ImagePullOptions{
+		GOptions:      types.GlobalCommandOptions{},
+		VerifyOptions: types.ImageVerifyOptions{Provider: "none"},
+		AllPlatforms:  false,
+		Platform:      nil,
+		Unpack:        "false",
+		Quiet:         false,
+		RFlags: imgutil.RemoteSnapshotterFlags{
+			SociIndexDigest: "",
+		},
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	}
+	err := img.Pull(ctx, client, image, options)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func ImageExists(ctx context.Context, client *containerd.Client, image string) (bool, error) {
+	images, err := img.List(ctx, client, []string{"reference=" + image}, nil)
+	if err != nil {
+		return false, err
+	}
+	for _, im := range images {
+		if im.Name == image {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func PullImage(ctx context.Context, client *containerd.Client, ipfsAddr, image, target string) error {
 	cmd := cobra.Command{}
 	options := types.ImagePullOptions{
@@ -135,4 +169,12 @@ func PullImage(ctx context.Context, client *containerd.Client, ipfsAddr, image, 
 		return err
 	}
 	return nil
+}
+
+func GetContainerdClient(namespace string) (*containerd.Client, error) {
+	client, err := containerd.New("/run/containerd/containerd.sock", containerd.WithDefaultNamespace(namespace))
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
 }

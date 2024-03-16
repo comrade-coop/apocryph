@@ -75,9 +75,10 @@ DEPLOYER_KEY=$(docker logs anvil | awk '/Private Keys/ {flag=1; next} flag && /^
 
 ## 1: Set up the Kubernetes environment ##
 
-minikube addons enable metrics-server
 
-[ "$(minikube status -f'{{.Kubelet}}')" = "Running" ] || minikube start --insecure-registry='host.minikube.internal:5000'
+[ "$(minikube status -f'{{.Kubelet}}')" = "Running" ] || minikube start --insecure-registry='host.minikube.internal:5000' --container-runtime=containerd
+
+minikube addons enable metrics-server
 
 ## 1.1: Apply Helm configurations ##
 
@@ -134,12 +135,14 @@ FUNDS=10000000000000000000000
 set +v
 set -x
 
-go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-guestbook.yaml \
+sudo chmod o+rw /run/containerd/containerd.sock
+
+go run ../../../cmd/trustedpods/ pod deploy ../../integration/lifecycle/logger-manifest.json \
   --ethereum-key "$PUBLISHER_KEY" \
   --payment-contract "$PAYMENT_CONTRACT" \
   --registry-contract "$REGISTRY_CONTRACT" \
   --funds "$FUNDS" \
-  --upload-images=false \
+  --upload-images=true \
   --mint-funds
 
 set +x

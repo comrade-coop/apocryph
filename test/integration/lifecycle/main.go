@@ -14,6 +14,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/comrade-coop/apocryph/pkg/ethereum"
 	tpeth "github.com/comrade-coop/apocryph/pkg/ethereum"
+	"github.com/comrade-coop/apocryph/pkg/ipcr"
 	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	pbcon "github.com/comrade-coop/apocryph/pkg/proto/protoconnect"
@@ -92,7 +93,12 @@ func ProvisionPod(client pbcon.ProvisionPodServiceClient, podPath string) string
 	if err != nil {
 		log.Fatalf("failed uploading Manifest: %v", err)
 	}
-	err = publisher.UploadImages(context.Background(), ipfs, pod, deployment)
+	ctrdClient, err := ipcr.GetContainerdClient("k8s.io")
+	if err != nil {
+		log.Fatalf("failed uploading Manifest: %v", err)
+	}
+
+	err = publisher.UploadImages(context.Background(), "/ip4/127.0.0.1/tcp/5001", pod, deployment)
 	if err != nil {
 		log.Fatalf("failed uploading Manifest: %v", err)
 	}

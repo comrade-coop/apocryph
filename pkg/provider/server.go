@@ -17,6 +17,7 @@ import (
 	"github.com/comrade-coop/apocryph/pkg/loki"
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	pbcon "github.com/comrade-coop/apocryph/pkg/proto/protoconnect"
+	"github.com/containerd/containerd"
 	"github.com/ipfs/kubo/client/rpc"
 	"golang.org/x/exp/slices"
 	appsv1 "k8s.io/api/apps/v1"
@@ -28,6 +29,8 @@ import (
 type provisionPodServer struct {
 	pbcon.UnimplementedProvisionPodServiceHandler
 	ipfs             *rpc.HttpApi
+	ipfsApi          string
+	ctrdClient       *containerd.Client
 	k8cl             client.Client
 	loki             loki.LokiConfig
 	paymentValidator *ethereum.PaymentChannelValidator
@@ -68,7 +71,7 @@ func (s *provisionPodServer) UpdatePod(ctx context.Context, request *connect.Req
 	if err != nil {
 		return transformError(err)
 	}
-	images, err := DownloadImages(ctx, s.ipfs, s.localOciRegistry, request.Msg.Pod)
+	images, err := DownloadImages(ctx, s.ctrdClient, s.ipfsApi, s.localOciRegistry, request.Msg.Pod)
 	if err != nil {
 		return transformError(err)
 	}
@@ -128,7 +131,7 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *connect.
 	if err != nil {
 		return transformError(err)
 	}
-	images, err := DownloadImages(ctx, s.ipfs, s.localOciRegistry, request.Msg.Pod)
+	images, err := DownloadImages(ctx, s.ctrdClient, s.ipfsApi, s.localOciRegistry, request.Msg.Pod)
 	if err != nil {
 		return transformError(err)
 	}
@@ -148,9 +151,11 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *connect.
 	return connect.NewResponse(response), nil
 }
 
-func NewTPodServerHandler(ipfsApi *rpc.HttpApi, dryRun bool, k8cl client.Client, localOciRegistry string, validator *ethereum.PaymentChannelValidator, lokiHost string) (string, http.Handler) {
+func NewTPodServerHandler(ipfsApi string, ipfs *rpc.HttpApi, dryRun bool, ctrdClient *containerd.Client, k8cl client.Client, localOciRegistry string, validator *ethereum.PaymentChannelValidator, lokiHost string) (string, http.Handler) {
 	return pbcon.NewProvisionPodServiceHandler(&provisionPodServer{
-		ipfs:             ipfsApi,
+		ipfs:             ipfs,
+		ipfsApi:          ipfsApi,
+		ctrdClient:       ctrdClient,
 		k8cl:             k8cl,
 		loki:             loki.LokiConfig{Host: lokiHost, Limit: "100"},
 		paymentValidator: validator,

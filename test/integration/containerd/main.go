@@ -22,32 +22,29 @@ const (
 
 func main() {
 	// Initialize containerd client
-	client, err := containerd.New("/run/containerd/containerd.sock", containerd.WithDefaultNamespace("k8s.io"))
+	client, err := ipcr.GetContainerdClient("k8s.io")
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
-	defer client.Close()
 	log.Println("Encrypting Image ...")
-	pubKey, prvKey, err := ipcr.EncryptImage(context.Background(), client, IMAGE_NAME, PASSWORD)
+	err = ipcr.EnsureImage(context.Background(), client, IMAGE_NAME)
+	if err != nil {
+		log.Panic(err)
+	}
+	_, prvKey, err := ipcr.EncryptImage(context.Background(), client, IMAGE_NAME, PASSWORD)
 	if err != nil {
 		panic(err)
 	}
 	log.Println("Image Encrypted")
-	// removing the original image
-	err = img.Remove(context.Background(), client, []string{IMAGE_NAME}, types.ImageRemoveOptions{Stdout: os.Stdout})
-	if err != nil {
-		panic(err)
-	}
 
 	printImages(client)
 	// push the encrypted image to ipfs
-	cid, err := ipcr.PushImage(context.Background(), client, IPFS_ADDRESS, IMAGE_NAME+":encrypted")
+	cid, err := ipcr.PushImage(context.Background(), client, IPFS_ADDRESS, IMAGE_NAME)
 	if err != nil {
 		log.Panic(err)
 	}
-
 	// removing encrypted image
-	err = img.Remove(context.Background(), client, []string{IMAGE_NAME + ":encrypted"}, types.ImageRemoveOptions{Stdout: os.Stdout})
+	err = img.Remove(context.Background(), client, []string{IMAGE_NAME}, types.ImageRemoveOptions{Stdout: os.Stdout})
 	if err != nil {
 		log.Panic(err)
 	}
@@ -55,14 +52,14 @@ func main() {
 
 	// pulling the ecnrypted image from ipfs
 	log.Println("Pulling Encrypted Image")
-	err = ipcr.PullImage(context.Background(), client, IPFS_ADDRESS, cid, IMAGE_NAME+":encrypted")
+	err = ipcr.PullImage(context.Background(), client, IPFS_ADDRESS, cid, IMAGE_NAME)
 	if err != nil {
 		log.Panic(err)
 	}
 	printImages(client)
 
 	// decrypting pulled Image
-	err = ipcr.DecryptImage(context.Background(), client, PASSWORD, IMAGE_NAME+":encrypted", pubKey, prvKey)
+	err = ipcr.DecryptImage(context.Background(), client, PASSWORD, IMAGE_NAME, prvKey)
 	if err != nil {
 		log.Panic(err)
 	}

@@ -118,11 +118,16 @@ spec:
         ]
         ports:
         - containerPort: 8080
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 0
         volumeMounts:
         - name: configs
           mountPath: /config.yaml
           subPath: config.yaml
           readOnly: true
+        - name: containerd-socket
+          mountPath: /run/containerd/containerd.sock    
       - name: tpodmonitor
         image: host.minikube.internal:5000/comradecoop/apocryph/server
         command: [
@@ -146,4 +151,7 @@ spec:
           items:
           - key: config.yaml
             path: config.yaml
+      - name: containerd-socket
+        hostPath:
+         path: /run/containerd/containerd.sock
       serviceAccountName: tpodserver-serviceaccount

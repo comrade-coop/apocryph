@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/comrade-coop/apocryph/pkg/ipcr"
 	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"
 	"github.com/comrade-coop/apocryph/pkg/publisher"
 	"github.com/spf13/cobra"
@@ -29,6 +30,11 @@ var uploadPodCmd = &cobra.Command{
 			return fmt.Errorf("Failed connecting to IPFS: %w", err)
 		}
 
+		ctrdClient, err := ipcr.GetContainerdClient("k8s.io")
+		if err != nil {
+			return err
+		}
+
 		if uploadSecrets {
 			err = publisher.UploadSecrets(cmd.Context(), ipfs, filepath.Dir(podFile), pod, deployment)
 			if err != nil {
@@ -37,7 +43,7 @@ var uploadPodCmd = &cobra.Command{
 		}
 
 		if uploadImages {
-			err = publisher.UploadImages(cmd.Context(), ipfs, pod, deployment)
+			err = publisher.UploadImages(cmd.Context(), ctrdClient, ipfsApi, pod, deployment)
 			if err != nil {
 				return err
 			}
