@@ -1,0 +1,24 @@
+{
+  "containers": [
+    {
+      "name": "logger",
+      "image": {
+        "url": "chentex/random-logger:latest"
+      },
+      "resourceRequests": [
+        {
+          "resource": "cpu",
+          "amountMillis": 100
+        },
+        {
+          "resource": "memory",
+          "amount": 100000000
+        }
+      ]
+    }
+  ],
+  "replicas": {
+    "min": 1,
+    "max": 2
+  }
+}

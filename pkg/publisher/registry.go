@@ -46,7 +46,6 @@ func GetPricingTables(ethClient *ethclient.Client, registryContract common.Addre
 
 func FilterPricingTables(tables PricingTableList, filter *abi.RegistryNewPricingTable) PricingTableList {
 	var filteredTables PricingTableList
-
 	for _, table := range tables {
 		if matchPricingTable(table, filter) {
 			filteredTables = append(filteredTables, table)

@@ -2,9 +2,10 @@
 set -e
 set -v
 CHART_PATH="$1"
+SUFFIX=$RANDOM
 CONSTELLATION_PATH="../../../../constellation"
-# sometimes if the cluster did no terminate correctly, try modifying this
-WORKSPACE_PATH="$HOME/.apocryph/constellation"
+WORKSPACE_PATH="$HOME/.apocryph/constellation-$SUFFIX"
+echo "WORKSPACE_PATH:: $WORKSPACE_PATH"
 CURRENT_DIR=$(pwd)
 
 if [ -n "$2" ]; then
@@ -38,7 +39,10 @@ cd "$CONSTELLATION_PATH"
 bazel build //image/system:qemu_stable
 
 
-## 2: create,configure, run workspace
+## 2: create & configure constellation workspace
+set -e
+set -v
+
 cd "$CURRENT_DIR"
 cd "$CONSTELLATION_PATH"
 # Get the new image measurements
@@ -55,7 +59,7 @@ echo "PCR9:  $PCR9"
 echo "PCR11: $PCR11"
 
 if [ -d "$WORKSPACE_PATH" ]; then
-    cd "$WORKSPACE_PATH" && constellation terminate
+    cd "$WORKSPACE_PATH" && constellation terminate 2>/dev/null
     sudo rm -r "$WORKSPACE_PATH"
 fi
 
@@ -76,6 +80,8 @@ version=$(echo "$output" | grep -oP 'Version:\s+\K\S+' | head -n 1)
 
 # Copy the image & rename it to the current constellation version to bypass downloading upstream image
 cp $link/constellation.raw "$version.raw" 
+
+export KUBECONFIG="$HOME/.apocryph/constellation-$SUFFIX/constellation-admin.conf"
 
 
 

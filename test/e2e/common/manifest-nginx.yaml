@@ -1,15 +1,16 @@
 containers:
-- name: test-container
-  image:
-    url: docker.io/nginxdemos/nginx-hello:latest
-  ports:
-  - containerPort: '8080'
-    hostHttpHost: example.local
-  resourceRequests:
-  - amountMillis: '10'
-    resource: cpu
-  - amount: '100000000'
-    resource: memory
+  - name: test-container
+    image:
+      url: docker.io/nginxdemos/nginx-hello:latest
+    ports:
+      - containerPort: '8080'
+        hostHttpHost: example.local
+        name: internal
+    resourceRequests:
+      - amountMillis: '10'
+        resource: cpu
+      - amount: '100000000'
+        resource: memory
 replicas:
+  min: 1
   max: 1
-

@@ -1,7 +1,7 @@
 containers:
-  - name: redis-master
+  - name: php-redis
     image:
-      url: registry.k8s.io/redis:e2e
+      url: gcr.io/google-samples/gb-frontend@sha256:cbc8ef4b0a2d0b95965e0e7dc8938c270ea98e34ec9d60ea64b2d5f2df2dfbbf
     env:
       GET_HOSTS_FROM: env
       REDIS_MASTER_SERVICE_HOST: redis
@@ -41,5 +41,4 @@ volumes:
       file: 'test.html'
     type: VOLUME_SECRET
 replicas:
-  min: 1
   max: 1

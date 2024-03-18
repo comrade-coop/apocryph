@@ -14,6 +14,7 @@ import (
 	"github.com/comrade-coop/apocryph/pkg/publisher"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
@@ -66,31 +67,12 @@ var getTablesCmd = &cobra.Command{
 		}
 
 		filteredTables := publisher.FilterPricingTables(tables, filter)
-		table := tablewriter.NewWriter(os.Stdout)
 
-		table.SetHeader([]string{"Id", "CPU", "RAM", "STORAGE", "BANDWIDTH EGRESS", "BANDWIDTH INGRESS", "CPU MODEL", "TEE TECHNOLOGY", "Providers"})
-		for _, t := range filteredTables {
-			subscribers, err := publisher.GetPricingTableSubscribers(ethClient, registryContract, t.Id)
-			if err != nil {
-				return err
-			}
-			// if table has no subscribers skip printing it
-			if len(subscribers) == 0 {
-				continue
-			}
-			var subs string = ""
-			for _, subscriber := range subscribers {
-				subs = subs + subscriber.String() + "\n"
-			}
-			row := []string{t.Id.String(), t.CpuPrice.String(), t.RamPrice.String(),
-				t.StoragePrice.String(), t.BandwidthEgressPrice.String(),
-				t.BandwidthIngressPrice.String(), t.Cpumodel, t.TeeType, subs}
-			table.Append(row)
-		}
 		if len(filteredTables) == 0 {
 			return fmt.Errorf("no table found by given filter")
 		}
-		table.Render()
+
+		PrintTableInfo(filteredTables, ethClient, registryContract)
 
 		allProviders, err := publisher.GetProviderHostInfos(ipfs, ethClient, registryContract, filteredTables)
 		if err != nil {
@@ -104,18 +86,48 @@ var getTablesCmd = &cobra.Command{
 			return fmt.Errorf("could not find providers with the given filter")
 		}
 
-		infoTable := tablewriter.NewWriter(os.Stdout)
-		infoTable.SetHeader([]string{"Id", "Regions", "Addresses"})
-		for id, info := range filteredInfos {
-			row := []string{id.Hex(), formatRegions(info.Regions), strings.Join(info.Multiaddrs, "\n")}
-			infoTable.Append(row)
-		}
-		infoTable.SetRowLine(true)
-		fmt.Printf("\nProviders:\n")
-		infoTable.Render()
+		PrintProvidersInfo(filteredInfos)
 
 		return nil
 	},
+}
+
+func PrintProvidersInfo(filteredInfos publisher.ProviderHostInfoList) {
+	infoTable := tablewriter.NewWriter(os.Stdout)
+	infoTable.SetHeader([]string{"Id", "Regions", "Addresses"})
+	for id, info := range filteredInfos {
+		row := []string{id.Hex(), formatRegions(info.Regions), strings.Join(info.Multiaddrs, "\n")}
+		infoTable.Append(row)
+	}
+	infoTable.SetRowLine(true)
+	fmt.Printf("Providers:\n")
+	infoTable.Render()
+}
+
+func PrintTableInfo(filteredTables publisher.PricingTableList, ethClient *ethclient.Client, registryContract common.Address) error {
+	table := tablewriter.NewWriter(os.Stdout)
+
+	table.SetHeader([]string{"Id", "CPU", "RAM", "STORAGE", "BANDWIDTH EGRESS", "BANDWIDTH INGRESS", "CPU MODEL", "TEE TECHNOLOGY", "Providers"})
+	for _, t := range filteredTables {
+		subscribers, err := publisher.GetPricingTableSubscribers(ethClient, registryContract, t.Id)
+		if err != nil {
+			return err
+		}
+		// if table has no subscribers skip printing it
+		if len(subscribers) == 0 {
+			continue
+		}
+		var subs string = ""
+		for _, subscriber := range subscribers {
+			subs = subs + subscriber.String() + "\n"
+		}
+		row := []string{t.Id.String(), t.CpuPrice.String(), t.RamPrice.String(),
+			t.StoragePrice.String(), t.BandwidthEgressPrice.String(),
+			t.BandwidthIngressPrice.String(), t.Cpumodel, t.TeeType, subs}
+		table.Append(row)
+	}
+	table.Render()
+	return nil
 }
 
 func formatRegions(regions []*pb.HostInfo_Region) string {

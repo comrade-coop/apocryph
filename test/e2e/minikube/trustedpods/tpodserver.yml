@@ -53,41 +53,6 @@ data:
         multiaddrs:
           - "/dns4/kubo.business"
   # tokenAddress=$(echo e7f1725E7734CE288F8367e1Bb143E90bb3F0512 | xxd -p -r | base64)
-
----
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: tpodregister
-spec:
-  ttlSecondsAfterFinished: 60 # delete the job after 1 min
-  template:
-    spec:
-      containers:
-      - name: register
-        image: host.minikube.internal:5000/comradecoop/apocryph/server
-        command: [
-          "tpodserver", "registry", "register",
-          "--config", "config.yaml",
-          "--ipfs", "/dns4/ipfs-rpc.ipfs.svc.cluster.local/tcp/5001",
-          "--ethereum-rpc", "http://eth-rpc.eth.svc.cluster.local:8545",
-          "--ethereum-key", "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d", # TODO= anvil.accounts[1] prvkey
-          "--token-contract", "0x5FbDB2315678afecb367f032d93F642f64180aa3", # TODO= result of forge create
-          "--registry-contract", "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", # TODO= result of forge create
-        ]
-        volumeMounts:
-        - name: configs
-          mountPath: /config.yaml
-          subPath: config.yaml
-      restartPolicy: Never
-      volumes:
-      - name: configs
-        configMap:
-          name: trustedpods-configs
-          items:
-          - key: config.yaml
-            path: config.yaml
-  backoffLimit: 4
 ---
 apiVersion: apps/v1
 kind: Deployment

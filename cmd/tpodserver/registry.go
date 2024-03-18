@@ -179,7 +179,7 @@ var registerCmd = &cobra.Command{
 
 		tx, err := registry.RegisterProvider(providerAuth, cid.String())
 		if err != nil {
-			return err
+			return fmt.Errorf("Could not register Provider: %v", err)
 		}
 
 		prices, err := resource.GetTablesPrices(pricingTables)

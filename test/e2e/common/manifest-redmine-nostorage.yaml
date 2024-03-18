@@ -1,0 +1,26 @@
+containers:
+  - name: redmine
+    image:
+      url: redmine
+    volumes:
+      - mountPath: /var/www/html/test.html
+        name: test-html
+    ports:
+      - containerPort: '8080'
+        hostHttpHost: guestbook.localhost
+        name: internal
+    resourceRequests:
+      - amountMillis: '100'
+        resource: cpu
+      - amount: '100000000'
+        resource: memory
+volumes:
+  - name: db-data
+    type: VOLUME_EMPTY
+  - name: test-html
+    secret:
+      file: 'test.html'
+    type: VOLUME_SECRET
+replicas:
+  min: 1
+  max: 1

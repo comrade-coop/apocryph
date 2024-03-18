@@ -45,6 +45,10 @@ func fetchAndFilterProviders(ipfs *rpc.HttpApi, ethClient *ethclient.Client) (pu
 		return nil, err
 	}
 
+	if len(tables) == 0 {
+		return nil, fmt.Errorf("Marketplace is empty! are you sure you are connected to the right contract?")
+	}
+
 	filter, err := getRegistryTableFilter()
 	if err != nil {
 		return nil, err
@@ -53,6 +57,11 @@ func fetchAndFilterProviders(ipfs *rpc.HttpApi, ethClient *ethclient.Client) (pu
 	filteredTables := publisher.FilterPricingTables(tables, filter)
 	if len(filteredTables) == 0 {
 		return nil, fmt.Errorf("no table found by filter")
+	}
+
+	err = PrintTableInfo(filteredTables, ethClient, registryContract)
+	if err != nil {
+		return nil, err
 	}
 
 	availableProviders, err := publisher.GetProviderHostInfos(ipfs, ethClient, registryContract, filteredTables)
@@ -64,6 +73,8 @@ func fetchAndFilterProviders(ipfs *rpc.HttpApi, ethClient *ethclient.Client) (pu
 	if err != nil {
 		return nil, err
 	}
+
+	PrintProvidersInfo(availableProviders)
 
 	return availableProviders, nil
 }

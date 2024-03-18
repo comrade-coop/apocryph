@@ -148,6 +148,8 @@ spec:
         - name: configs
           mountPath: /config.yaml
           subPath: config.yaml
+        - name: containerd-socket
+          mountPath: /run/containerd/containerd.sock   
       volumes:
       - name: configs
         configMap:
@@ -157,6 +159,12 @@ spec:
             path: config.yaml
         ports:
         - containerPort: 8090
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 0
+      - name: containerd-socket
+        hostPath:
+         path: /run/containerd/containerd.sock
       serviceAccountName: devserver-serviceaccount
 ---
 apiVersion: apps/v1

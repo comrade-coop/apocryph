@@ -120,6 +120,17 @@ echo "$SWARM_ADDRESSES" | jq -r '.[] + "/p2p/'"$PROVIDER_IPFS"'"' | xargs -n 1 i
 
 sleep 1
 
+## 1.3: Register the provider in the marketplace
+
+gp run ../../../cmd/tpodserver/  registry  register \
+  --config ../common/config.yaml \
+  --ipfs /ip4/127.0.0.1/tcp/5001 \
+  --ethereum-rpc http://127.0.0.1:8545 \
+  --ethereum-key 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d \
+  --token-contract 0x5FbDB2315678afecb367f032d93F642f64180aa3 \
+  --registry-contract 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 \
+        
+
 ## 2: Deploy example manifest to cluster ##
 
 PROVIDER_ETH=0x70997970C51812dc3A010C7d01b50e0d17dc79C8 #TODO= anvil.accounts[1]

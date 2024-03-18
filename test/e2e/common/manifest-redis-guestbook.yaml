@@ -1,0 +1,55 @@
+containers:
+  - name: redis-master
+    image:
+      url: registry.k8s.io/redis:e2e
+    volumes:
+      - mountPath: /var/www/html/test.html
+        name: test-html
+    ports:
+      - containerPort: '6379'
+        name: internal
+    resourceRequests:
+      - amountMillis: '100'
+        resource: cpu
+      - amount: '100000000'
+        resource: memory
+  - name: redis-replica
+    image:
+      url: gcr.io/google_samples/gb-redisslave:v1
+    env:
+      GET_HOSTS_FROM: dns
+    ports:
+      - containerPort: '6379'
+        name: internal
+    resourceRequests:
+      - amountMillis: '10'
+        resource: cpu
+      - amount: '100000000'
+        resource: memory
+  - name: frontend
+    image:
+      url: gcr.io/google-samples/gb-frontend:v4
+    resourceRequests:
+      - amountMillis: '100'
+        resource: cpu
+      - amount: '100000000'
+        resource: memory
+    env:
+      GET_HOSTS_FROM: dns
+    ports:
+      - containerPort: '80'
+        hostHttpHost: guestbook.localhost
+        name: internal
+volumes:
+  - filesystem:
+      resourceRequests:
+        - amount: '1000000000'
+          resource: storage
+    type: VOLUME_EMPTY
+  - name: test-html
+    secret:
+      file: 'test.html'
+    type: VOLUME_SECRET
+replicas:
+  min: 1
+  max: 1
