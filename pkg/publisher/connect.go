@@ -77,6 +77,7 @@ func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, depl
 					PodID:            deployment.Payment.PodID,
 				},
 			}
+			fmt.Println("Processing Request ...")
 			response, err = client.ProvisionPod(ctx, connect.NewRequest(request))
 			if err != nil {
 				return fmt.Errorf("Failed executing provision pod request: %w", err)

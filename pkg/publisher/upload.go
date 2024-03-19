@@ -127,7 +127,6 @@ func LinkUploadsFromDeployment(pod *pb.Pod, deployment *pb.Deployment) *pb.Pod {
 	for _, uploadedImage := range deployment.Images {
 		uploadedImages[uploadedImage.SourceUrl] = uploadedImage
 	}
-	deployment.Images = []*pb.UploadedImage{}
 
 	for _, container := range pod.Containers {
 		if uploadedImage, ok := uploadedImages[container.Image.Url]; ok {

@@ -15,7 +15,7 @@ import (
 	"github.com/mitchellh/go-homedir"
 )
 
-var DefaultDeploymentPath = "~/.trustedpods/deployment"
+var DefaultDeploymentPath = "~/.apocryph/deployment"
 var DefaultPodFile = "manifest.yaml"
 
 func GenerateDeploymentFilename(podFile string, deploymentFormat string) (deploymentFile string, relPodFile string, err error) {
@@ -60,14 +60,7 @@ func ReadPodAndDeployment(args []string, manifestFormat string, deploymentFormat
 	case 0:
 		podFile = DefaultPodFile
 	case 1:
-		err2 := pb.UnmarshalFile(args[0], deploymentFormat, deployment)
-		if err2 == nil {
-			deploymentFile = args[0]
-			podFile = filepath.Join(filepath.Dir(deploymentFile), deployment.PodManifestFile)
-			readDeployment = true
-		} else {
-			podFile = args[0]
-		}
+		podFile = args[0]
 	case 2:
 		podFile = args[0]
 		deploymentFile = args[1]
@@ -76,6 +69,7 @@ func ReadPodAndDeployment(args []string, manifestFormat string, deploymentFormat
 		return
 	}
 
+	// Get the name of the deployment file if it was not passed in the args
 	if deploymentFile == "" {
 		deploymentFile, deployment.PodManifestFile, err = GenerateDeploymentFilename(podFile, deploymentFormat)
 		if err != nil {

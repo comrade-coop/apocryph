@@ -180,7 +180,7 @@ func ApplyPodRequest(
 					Name: volumeName,
 				},
 				Spec: corev1.PersistentVolumeClaimSpec{
-					Resources: corev1.ResourceRequirements{
+					Resources: corev1.VolumeResourceRequirements{
 						Requests: convertResourceList(volume.GetFilesystem().ResourceRequests),
 					},
 				},
@@ -237,7 +237,7 @@ func ApplyPodRequest(
 	activeResource = append(activeResource, deploymentName)
 
 	if httpSO.Spec.ScaleTargetRef.Service != "" {
-		httpSO.Spec.ScaleTargetRef.Deployment = deployment.ObjectMeta.Name
+		httpSO.Spec.ScaleTargetRef.Kind = deployment.ObjectMeta.Name
 		minReplicas := int32(podManifest.Replicas.GetMin())
 		maxReplicas := int32(podManifest.Replicas.GetMax())
 		targetPendingRequests := int32(podManifest.Replicas.GetTargetPendingRequests())

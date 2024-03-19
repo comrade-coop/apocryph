@@ -233,7 +233,6 @@ var deletePodCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-
 		return publisher.SaveDeployment(deploymentFile, deploymentFormat, deployment)
 	},
 }

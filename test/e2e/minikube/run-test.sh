@@ -122,14 +122,15 @@ sleep 1
 
 ## 1.3: Register the provider in the marketplace
 
-gp run ../../../cmd/tpodserver/  registry  register \
+[ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
+
+go run ../../../cmd/tpodserver  registry  register \
   --config ../common/config.yaml \
-  --ipfs /ip4/127.0.0.1/tcp/5001 \
+  --ipfs /ip4/127.0.0.1/tcp/5004 \
   --ethereum-rpc http://127.0.0.1:8545 \
   --ethereum-key 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d \
   --token-contract 0x5FbDB2315678afecb367f032d93F642f64180aa3 \
-  --registry-contract 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 \
-        
+  --registry-contract 0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0 \
 
 ## 2: Deploy example manifest to cluster ##
 
@@ -148,12 +149,12 @@ set -x
 
 sudo chmod o+rw /run/containerd/containerd.sock
 
-go run ../../../cmd/trustedpods/ pod deploy ../../integration/lifecycle/logger-manifest.json \
+go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-nginx.yaml \
   --ethereum-key "$PUBLISHER_KEY" \
   --payment-contract "$PAYMENT_CONTRACT" \
   --registry-contract "$REGISTRY_CONTRACT" \
   --funds "$FUNDS" \
-  --upload-images=true \
+  --upload-images=false \
   --mint-funds
 
 set +x
@@ -164,7 +165,7 @@ set -v
 WITHDRAW_ETH=0x90F79bf6EB2c4f870365E785982E1f101E93b906 #TODO copied from trustedpods/tpodserver.yml
 TOKEN_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.token.value')
 INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true | head -n 1); echo $INGRESS_URL
-MANIFEST_HOST=guestbook.localhost # From manifest-guestbook.yaml
+MANIFEST_HOST=example.local # From manifest-guestbook.yaml
 
 echo "Provider balance before:" $(cast call "$TOKEN_CONTRACT" "balanceOf(address)" "$WITHDRAW_ETH" | cast to-fixed-point 18)
 
