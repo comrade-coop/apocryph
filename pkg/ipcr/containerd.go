@@ -39,16 +39,14 @@ func EncryptImage(ctx context.Context, client *containerd.Client, image, passwor
 	if err != nil {
 		return nil, nil, err
 	}
-	err = tpcrypto.Crypt(ctx, client, image, image, true, cryptOptions, [][]byte{pubKey}, nil)
+	err = tpcrypto.Crypt(ctx, client, image, image, true, cryptOptions, [][]byte{pubKey}, nil, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 	return pubKey, prvKey, nil
 }
 func DecryptImage(ctx context.Context, client *containerd.Client, password, image string, prvKey []byte) error {
-	cryptOptions.Keys = []string{"prvkey.pem:" + password}
-	// remove encrypted string
-	err := tpcrypto.Crypt(ctx, client, image, image, false, cryptOptions, nil, [][]byte{prvKey})
+	err := tpcrypto.Crypt(ctx, client, image, image, false, cryptOptions, nil, [][]byte{prvKey}, [][]byte{[]byte(password)})
 	if err != nil {
 		return err
 	}
