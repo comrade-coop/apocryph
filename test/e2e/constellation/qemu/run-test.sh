@@ -25,6 +25,7 @@ echo -e "---\e[0m"
 
 ## 1: Start the constellation cluster
 cd "$WORKSPACE_PATH"*
+constellation terminate
 constellation apply -y
 
 ## 1.1: wait for the setup
@@ -44,14 +45,13 @@ kubectl wait --namespace trustedpods --for=condition=available deployment/tpodse
 
 [ "$PORT_8545" == "" ] && { PORT_8545="yes" ; kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
 
+sleep 2
+
 DEPLOYER_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 #TODO= anvil.accounts[0]
 
 TOKEN_CONTRACT=0x5fbdb2315678afecb367f032d93f642f64180aa3 # TODO= result of forge create
 
-forge create --root ../../../../contracts MockToken --private-key $DEPLOYER_KEY
-forge create --root ../../../../contracts Payment --private-key $DEPLOYER_KEY --constructor-args $TOKEN_CONTRACT
-forge create --root ../../../../contracts Registry --private-key $DEPLOYER_KEY
-
+( cd ../../../../contracts; forge script script/Deploy.s.sol --private-key "$DEPLOYER_KEY" --rpc-url http://127.0.0.1:8545 --broadcast)
 
 ## 2.1: Register the provider
 [ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
@@ -118,7 +118,7 @@ set -x
 sudo chmod o+rw /run/containerd/containerd.sock
 
 
-go run ../../../../cmd/trustedpods/ pod deploy ../../common/manifest-redmine-nostorage.yaml \
+go run ../../../../cmd/trustedpods/ pod deploy ../../common/manifest-nginx.yaml \
   --ethereum-key "$PUBLISHER_KEY" \
   --payment-contract "$PAYMENT_CONTRACT" \
   --registry-contract "$REGISTRY_CONTRACT" \
@@ -134,7 +134,7 @@ TOKEN_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.
 NODE_ADDRESS=$(kubectl get no -o json | jq -r '.items[].status.addresses[] | select(.type == "InternalIP") | .address' | head -n 1)
 INGRESS_PORT=$(kubectl get svc -n keda ingress-nginx-controller -o json | jq -r '.spec.ports[] | select(.name == "http") | .nodePort' | head -n 1)
 INGRESS_URL="http://$NODE_ADDRESS:$INGRESS_PORT"; echo $INGRESS_URL
-MANIFEST_HOST=guestbook.localhost # From manifest-guestbook.yaml
+MANIFEST_HOST=example.local # From manifest-guestbook.yaml
 
 [ "$PORT_8545" == "" ] && { PORT_8545="yes" ; kubectl port-forward --namespace eth svc/eth-rpc 8545:8545 & }
 

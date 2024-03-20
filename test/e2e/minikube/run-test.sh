@@ -154,7 +154,7 @@ go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-nginx.yaml \
   --payment-contract "$PAYMENT_CONTRACT" \
   --registry-contract "$REGISTRY_CONTRACT" \
   --funds "$FUNDS" \
-  --upload-images=false \
+  --upload-images=true \
   --mint-funds
 
 set +x
@@ -165,14 +165,14 @@ set -v
 WITHDRAW_ETH=0x90F79bf6EB2c4f870365E785982E1f101E93b906 #TODO copied from trustedpods/tpodserver.yml
 TOKEN_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.token.value')
 INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true | head -n 1); echo $INGRESS_URL
-MANIFEST_HOST=example.local # From manifest-guestbook.yaml
+MANIFEST_HOST=example.local # From manifest-nginx.yaml
 
 echo "Provider balance before:" $(cast call "$TOKEN_CONTRACT" "balanceOf(address)" "$WITHDRAW_ETH" | cast to-fixed-point 18)
 
 set -x
 
 while ! curl --connect-timeout 40 -H "Host: $MANIFEST_HOST" $INGRESS_URL --fail-with-body; do sleep 10; done
-curl -H "Host: $MANIFEST_HOST" $INGRESS_URL/test.html --fail-with-body
+curl -H "Host: $MANIFEST_HOST" $INGRESS_URL --fail-with-body
 
 set +x
 

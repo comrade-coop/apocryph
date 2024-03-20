@@ -131,6 +131,8 @@ func ApplyPodRequest(
 			case *pb.Container_Port_HostHttpHost:
 				httpSO.Spec.ScaleTargetRef.Service = service.ObjectMeta.Name
 				httpSO.Spec.ScaleTargetRef.Port = servicePort
+				httpSO.Spec.ScaleTargetRef.APIVersion = "apps/v1"
+
 				multiaddrPart = fmt.Sprintf("http/%s", httpSO.Spec.Hosts[0])
 			case *pb.Container_Port_HostTcpPort:
 				multiaddrPart = fmt.Sprintf("tcp/%d", service.Spec.Ports[0].NodePort)
@@ -237,7 +239,8 @@ func ApplyPodRequest(
 	activeResource = append(activeResource, deploymentName)
 
 	if httpSO.Spec.ScaleTargetRef.Service != "" {
-		httpSO.Spec.ScaleTargetRef.Kind = deployment.ObjectMeta.Name
+		httpSO.Spec.ScaleTargetRef.Kind = "Deployment"
+		httpSO.Spec.ScaleTargetRef.Name = deploymentName
 		minReplicas := int32(podManifest.Replicas.GetMin())
 		maxReplicas := int32(podManifest.Replicas.GetMax())
 		targetPendingRequests := int32(podManifest.Replicas.GetTargetPendingRequests())
@@ -250,6 +253,10 @@ func ApplyPodRequest(
 		if targetPendingRequests > 0 {
 			httpSO.Spec.TargetPendingRequests = &targetPendingRequests
 		}
+		// update status
+		httpSO.Status = kedahttpv1alpha1.HTTPScaledObjectStatus{}
+		httpSO.Status.TargetWorkload = fmt.Sprintf("%s/%s/%s", httpSO.Spec.ScaleTargetRef.APIVersion, httpSO.Spec.ScaleTargetRef.Kind, httpSO.Spec.ScaleTargetRef.Name)
+		httpSO.Status.TargetService = fmt.Sprintf("%s:%d", httpSO.Spec.ScaleTargetRef.Service, httpSO.Spec.ScaleTargetRef.Port)
 
 		err := updateOrCreate(ctx, httpSoName, "HttpSo", namespace, httpSO, client, update)
 		if err != nil {

@@ -74,6 +74,8 @@ sed -i.bak -e "/^\s*4:/ {n;s/\( *expected: \).*$/\1$PCR4/}" \
            -e "/^\s*11:/ {n;s/\( *expected: \).*$/\1$PCR11/}" constellation-conf.yaml
 # Replace the control plance count & nodes to 1
 sed -i 's/initialCount: [0-9]*/initialCount: 1/' "constellation-conf.yaml"
+sed -i 's/vcpus: [0-9]*/vcpus: 4/' "constellation-conf.yaml"
+sed -i 's/memory: [0-9]*/memory: 4096/' "constellation-conf.yaml"
 
 output=$(constellation version)
 version=$(echo "$output" | grep -oP 'Version:\s+\K\S+' | head -n 1)
