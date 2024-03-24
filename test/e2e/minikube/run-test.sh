@@ -11,7 +11,7 @@ if [ "$1" = "teardown" ]; then
   if [ "$2" = "full" ]; then
     docker rm --force registry
     docker rm --force anvil
-    rm -r /home/ezio/.trustedpods/deployment/
+    rm -r /home/ezio/.apocryph/deployment/
     exit 0
   fi
   exit 0
@@ -86,7 +86,19 @@ kubectl delete namespace trustedpods 2>/dev/null || true
 
 helmfile sync 
 
-## 1.2: Configure provider/in-cluster IPFS and publisher IPFS ##
+## 1.2: Register the provider in the marketplace
+
+[ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
+
+go run ../../../cmd/tpodserver  registry  register \
+  --config ../common/config.yaml \
+  --ipfs /ip4/127.0.0.1/tcp/5004 \
+  --ethereum-rpc http://127.0.0.1:8545 \
+  --ethereum-key 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d \
+  --token-contract 0x5FbDB2315678afecb367f032d93F642f64180aa3 \
+  --registry-contract 0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0 \
+
+## 1.3: Configure provider/in-cluster IPFS and publisher IPFS ##
 
 { while ! kubectl get -n ipfs endpoints ipfs-rpc -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; }
 
@@ -120,17 +132,7 @@ echo "$SWARM_ADDRESSES" | jq -r '.[] + "/p2p/'"$PROVIDER_IPFS"'"' | xargs -n 1 i
 
 sleep 1
 
-## 1.3: Register the provider in the marketplace
 
-[ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
-
-go run ../../../cmd/tpodserver  registry  register \
-  --config ../common/config.yaml \
-  --ipfs /ip4/127.0.0.1/tcp/5004 \
-  --ethereum-rpc http://127.0.0.1:8545 \
-  --ethereum-key 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d \
-  --token-contract 0x5FbDB2315678afecb367f032d93F642f64180aa3 \
-  --registry-contract 0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0 \
 
 ## 2: Deploy example manifest to cluster ##
 

@@ -12,5 +12,5 @@ containers:
       - amount: '100000000'
         resource: memory
 replicas:
-  min: 1
+  min: 0
   max: 1
