@@ -1,14 +1,14 @@
 # Backlog
 
-This file seeks to document the tasks left to do in this repository, as well as design flaws and accumulated tech debt present in the current implementation. 
+This file seeks to document the tasks left to do in this repository, as well as design flaws and accumulated tech debt present in the current implementation.
 
 Rationale for not shoving all of this in GitHub Issues: while Issues are a great way for users and contributors to voice concerns and problems, for huge planned milestones, it feels simpler to just have them listed in a format more prone to conveying information and not to discussing the minutiae details.
 
 ## Features yet to be implemented
 
-* Integrate attestation
-* Support private docker registries (in parallel to IPDR support)
-* Registry support in web frontend
+- Integrate attestation
+- Support private docker registries
+- Registry support in web frontend
 
 ## Technical debt accumulated
 
@@ -48,16 +48,6 @@ Currently, the `ipfs-p2p-helper`, a small piece of code responsible for register
 
 This is currently done using a sidecar container (a container in the same pod), so the helper gets restarted together with IPFS -- and to top that off, it just watches the list of Services for ones that are labeled correctly. Ideally, if we keep using the `p2p` feature of Kubo, we would rewrite `ipfs-p2p-helper` to be a "proper" Kubernetes operator with a "proper" custom resource definition.
 
-### Reuploading IPDR images
-
-Status: Correct as needed, upstream available but needs bugfixing
-
-Currently, the [code (see `ReuploadImagesFromIpdr`)](../pkg/ipfs/images.go) dealing with transforming images that have been uploaded as IPDR takes those same images and uploads them to a local registry. Ideally, what would happen instead is that IPDR images would instead be treated as first-class citizens and downloaded on-demand (probably with some prefetching to reduce first-boot time).
-
-There are a couple ways to implement that. One would be to run an IPDR registry in the cluster and fetch images from it. Unfortunately, as the [relevant issue in ipdr/ipdr notes](https://github.com/ipdr/ipdr/issues/18), the IPDR's code currently (flawedly) assumes CIDv1 multihashes are CIDv0 -- and as a whole, the `ipdr/ipdr` repository is outdated (checked 2023-10-27) and full of code which is not making use of the Go IPFS libraries nor of the OCI image-handling libraries -- making depending on that library an overall increase of tech debt.
-
-Another way to implement first-class IPDR images would be to develop a `containerd` [plugin](https://github.com/containerd/containerd/blob/main/docs/PLUGINS.md) which handles image downloads using our (surprisingly functional, considering the code size) [IPDR transport](../pkg/ipdr) -- or better yet, getting IPDR support merged into mainline `containerd`. A potential hurdle to actually doing that is that Constellation has hardcoded their [`containerd` config](https://github.com/edgelesssys/constellation/blob/main/image/base/mkosi.skeleton/usr/etc/containerd/config.toml) as part of the base layer that is later attested to.
-
 ### Custom HTTP client implementation in web frontend
 
 Status: Correct as needed
@@ -96,7 +86,7 @@ There are multiple ways to do so. A simple one would be to generate and store th
 
 ### Trusted pods cluster attestation
 
-Status: Solution outlined
+Status: Correct as needed
 
 Constellation allows [attesting a cluster](https://docs.edgeless.systems/constellation/workflows/verify-cluster).. however, upon closer inspection, the attestation features provided only allow attesting that the whole machine is running a real Constellation cluster in a real TEE enclave... and say nothing about the containers running inside that cluster. This is only fair, perhaps, given that the containers can be configured in ways that could allow them to escape the confines of their sandboxes; however, it does mean that attestation, if implemented, will not be sufficient to convince the publisher the peer they are talking to is a Trusted Pods node.
 
