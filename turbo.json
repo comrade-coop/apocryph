@@ -2,12 +2,18 @@
   "$schema": "https://turbo.build/schema.json",
   "pipeline": {
     "build": {
-      "dependsOn": ["//#build-images", "ts-gen-abi", "ts-gen-proto"]
+      "dependsOn": ["//#build-images"]
     },
     "//#lint": {},
+    "sync": {
+      "dependsOn": ["//#go-build", "ts-gen-proto", "ts-gen-abi"]
+    },
     "//#go-build": {
       "inputs": ["./proto/**"],
       "dependsOn": ["//#build-contracts"]
+    },
+    "//#build-contracts": {
+      "inputs": ["./contracts/**"]
     },
     "//#build-tpodserver": {
       "dependsOn": ["//#go-build"]
@@ -16,10 +22,7 @@
       "dependsOn": ["//#go-build"]
     },
     "//#build-images": {
-      "dependsOn": ["//#build-tpodserver", "//#build-p2p-helper"]
-    },
-    "//#build-contracts": {
-      "inputs": ["./contracts/**"]
+      "dependsOn": ["//#sync", "//#build-tpodserver", "//#build-p2p-helper"]
     },
     "ts-gen-proto": {
       "inputs": ["../../proto/**"]
