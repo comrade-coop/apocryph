@@ -13,7 +13,8 @@ Apocryph is a decentralised three-sided compute marketplace, allowing end-users 
 [![Discord](https://img.shields.io/badge/DISCORD-COMMUNITY-informational?style=for-the-badge&logo=discord)](https://discord.gg/C4e37Xhvt4)
 
 :notebook: For more information you can check our documentation (specs) draft:
-- [Markdown](spec/SUMMARY.md)
+- [GitHub Pages](https://comrade-coop.github.io/apocryph)
+- [GitHub Markdown](spec/SUMMARY.md)
 
 ## Spinning up a local testing environment
 
