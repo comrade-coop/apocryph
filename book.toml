@@ -1,3 +1,14 @@
 [book]
 title = "Apocryph Docs"
 src = "spec"
+
+[preprocessor]
+
+[preprocessor.mermaid]
+command = "mdbook-mermaid"
+
+[output]
+
+[output.html]
+additional-js = ["spec/assets/mermaid.min.js", "spec/assets/mermaid-init.js"]
+git-repository-url = "https://github.com/comrade-coop/apocryph"

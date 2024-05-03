@@ -27,11 +27,11 @@ sequenceDiagram
     participant Docker/IPDR
     Developer->>Docker/IPDR: Upload encrypted image, referencing self
     Developer->>+Provider: Attest
-    Provider->>-Developer: 
+    Provider->>-Developer: Report
     Developer->>Docker/IPDR: Publish decryption key,<br/>encrypted with Provider's key
     note over Developer: later...
     Publisher->>+Provider: Attest
-    Provider->>-Publisher: 
+    Provider->>-Publisher: Report
     Publisher->>Blockchain: Create payment with reference to Developer
     Publisher->>+Provider: Provision pod
     Docker/IPDR->>Provider: Download encrypted image info
@@ -41,11 +41,11 @@ sequenceDiagram
     Provider->>-Publisher: Deployment info
     note over Developer: later...
     Publisher->>+Provider: Use deployed pod
-    Provider->>-Publisher: 
+    Provider->>-Publisher: Result
     Provider->>+Blockchain: Withdraw payment
-    Blockchain-->>-Provider: 
+    Blockchain-->>-Provider: Funds
     Developer->>+Blockchain: Withdraw payment
-    Blockchain-->>-Developer: 
+    Blockchain-->>-Developer: Funds
 ```
 
 In terms of what will happen in a realistic user story:
