@@ -24,13 +24,13 @@ Despite that, the current [implementation](../pkg/prometheus/) uses Prometheus a
 
 Status: Correct as needed
 
-Currently, the whole of the Trusted Pods' Provider client/node is implemented as a pair of long-running processes deployed within Kubernetes -- one for listening for incoming Pod deployments and one for monitoring them. Going forward, it could be beneficial to make more parts of that service reusable by splitting off libp2p connections, actual deployments, metrics collection, and smart contract invoicing into their own processes/services can be changed or reused on their own.
+Currently, the whole of the Apocryph' Provider client/node is implemented as a pair of long-running processes deployed within Kubernetes -- one for listening for incoming Pod deployments and one for monitoring them. Going forward, it could be beneficial to make more parts of that service reusable by splitting off libp2p connections, actual deployments, metrics collection, and smart contract invoicing into their own processes/services can be changed or reused on their own.
 
 ### Payment contract is one contract and not multiple
 
 Status: Still evaluating, alternative prototyped
 
-The [payment contract](../contracts/src/Payment.sol) currently takes care of absolutely all payments that pass through Trusted Pods. However, it might be worth splitting it into a factory/library contract and small "flyweight" contracts instead. Currently, that is prototyped in the [`contract-factory`](github.com/comrade-coop/apocryph/tree/contract-factory) branch, but it ended up using more way more gas for deployment, so it was temporarily scrapped.
+The [payment contract](../contracts/src/Payment.sol) currently takes care of absolutely all payments that pass through Apocryph. However, it might be worth splitting it into a factory/library contract and small "flyweight" contracts instead. Currently, that is prototyped in the [`contract-factory`](github.com/comrade-coop/apocryph/tree/contract-factory) branch, but it ended up using more way more gas for deployment, so it was temporarily scrapped.
 
 ### Using Kubo/IPFS p2p feature marked experimental
 
@@ -80,25 +80,25 @@ Status: Solutions outlined
 
 Constellation, the confidential Kubernetes solution we have opted to use, works by bootstrapping additional nodes on top of an existing cluster through their JoinService -- whereby a new node asks the old node's Join service for the keys used for encrypting Kubernetes state, while the old node confirms the new node's attestation through aTLS. This makes it excellent for autoscaling scenarios; however, in the case a full-cluster power outage occurs, it leaves the cluster in an hung state, as there is no initial node to bootstrap off of, and requires manually re-attesting the cluster and inputting the key that was backed up when provisioning the cluster initially -- as documented in [the recovery procedure documentation](https://docs.edgeless.systems/constellation/workflows/recovery)
 
-For Trusted Pods, however, we cannot trust the provider with a key that decrypts the whole state of the cluster - as that will destroy the confidentiality of the pods running within Trusted Pods. Hence, when recovering an existing cluster, or when initially provisioning a cluster, we would need a securely-stored key that can only be accessed from an attested TEE that is part of the cluster.
+For Apocryph, however, we cannot trust the provider with a key that decrypts the whole state of the cluster - as that will destroy the confidentiality of the pods running within Apocryph. Hence, when recovering an existing cluster, or when initially provisioning a cluster, we would need a securely-stored key that can only be accessed from an attested TEE that is part of the cluster.
 
 There are multiple ways to do so. A simple one would be to generate and store the key within a TPM, and making sure the TPM only reveals the key to the attested TEE; this still leaves attesting that the key is generated there as an open task. Another one would be to modify Constellation to allow for the master secret to be stored encrypted with the TEE's own key (inasmuch as one exists) - so that the same machine, when rebooted, can be bootstrapped on its own. And finally, a more involved solution would be to use [Integretee](https://www.integritee.network/) or an equivalent thereof to generate and store cluster keys in a cloud of working attested enclaves.
 
-### Trusted pods cluster attestation
+### Apocryph cluster attestation
 
 Status: Correct as needed
 
-Constellation allows [attesting a cluster](https://docs.edgeless.systems/constellation/workflows/verify-cluster).. however, upon closer inspection, the attestation features provided only allow attesting that the whole machine is running a real Constellation cluster in a real TEE enclave... and say nothing about the containers running inside that cluster. This is only fair, perhaps, given that the containers can be configured in ways that could allow them to escape the confines of their sandboxes; however, it does mean that attestation, if implemented, will not be sufficient to convince the publisher the peer they are talking to is a Trusted Pods node.
+Constellation allows [attesting a cluster](https://docs.edgeless.systems/constellation/workflows/verify-cluster).. however, upon closer inspection, the attestation features provided only allow attesting that the whole machine is running a real Constellation cluster in a real TEE enclave... and say nothing about the containers running inside that cluster. This is only fair, perhaps, given that the containers can be configured in ways that could allow them to escape the confines of their sandboxes; however, it does mean that attestation, if implemented, will not be sufficient to convince the publisher the peer they are talking to is a Apocryph node.
 
-The main solution to this, other than switching away from Constellation (to, e.g. Confidential Containers, despite them not being fully ready yet), would be to modify the base Constellation image so that it includes an additional API, either running within or without a container, whose hash is verified in the boot process, and which allows querying, and hence, attesting the rest of the Kubernetes state. Alternatively, the image could be modified to attest the Trusted Pods server container as part of the boot process; however, this feels like too much hardcoding.
+The main solution to this, other than switching away from Constellation (to, e.g. Confidential Containers, despite them not being fully ready yet), would be to modify the base Constellation image so that it includes an additional API, either running within or without a container, whose hash is verified in the boot process, and which allows querying, and hence, attesting the rest of the Kubernetes state. Alternatively, the image could be modified to attest the Apocryph server container as part of the boot process; however, this feels like too much hardcoding.
 
-### Trusted pods cluster hardening
+### Apocryph cluster hardening
 
 Status: Known issue
 
-In line with the two notes about Constellation's cluster recovery and attestation features, a third departure of a Trusted Pods cluster from what Constellation provides out of the box is the fact that Constellation issues an admin-level Kubectl access token upon installation; however, we would like to keep parts of the Trusted Pods cluster inaccessible even to the administrator.
+In line with the two notes about Constellation's cluster recovery and attestation features, a third departure of a Apocryph cluster from what Constellation provides out of the box is the fact that Constellation issues an admin-level Kubectl access token upon installation; however, we would like to keep parts of the Apocryph cluster inaccessible even to the administrator.
 
-For that, we would likely need to issue a Kubectl access token with lesser privileges, allowing for only partial configuration of the Trusted Pods cluster. The customizable features should be selected carefully to align with Provider needs, to allow for things like configuring backups and some kinds of dashboards and monitoring, while minimizing the leaking of user privacy.
+For that, we would likely need to issue a Kubectl access token with lesser privileges, allowing for only partial configuration of the Apocryph cluster. The customizable features should be selected carefully to align with Provider needs, to allow for things like configuring backups and some kinds of dashboards and monitoring, while minimizing the leaking of user privacy.
 
 ### Storage reliability
 

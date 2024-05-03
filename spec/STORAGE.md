@@ -2,7 +2,7 @@
 
 (Document status: draft)
 
-For Trusted Pods to be a viable platform for deploying confidential applications in production, it needs to provide some guarantees about the longevity of data stored on it.
+For Apocryph to be a viable platform for deploying confidential applications in production, it needs to provide some guarantees about the longevity of data stored on it.
 
 A naive implementation of persistent storage volumes attached to pods as encrypted partitions stored on the provider's cluster runs two major risks: the provider could (intentionally or not) destroy the stored data, and the provider could (again, intentionally or not) revert the data to an older version thereof, thus potentially exposing the pod to various kinds of double-spend-like attacks. The rest of this document attempts to define a protocol for mitigating these risks.
 
@@ -85,4 +85,4 @@ As mentioned in the staking contract section, an issue that arises is proving th
 
 A different approach to improve storage reliability would be to use multiple backups. Smart contract staking would already allow for the provider to back up the encrypted storage medium in multiple locations (with or without changes to the storage plane), and then offer a much higher insurance premium for that more-reliable storage. However, backups are often useful for more than just reliable storage, as they provide additional historical data.
 
-Therefore, a dedicated backup solution or integration might be worth even with the introduction of storage reliability staking; application developers can already run a pod that includes all needed infrastructure for backups, but having that baked into the core Trusted Pods offering could be a benefit for users still. Either way, ensuring storage reliability through staking would prevent a range of potential malicious provider behavior, and as such would be a good step regardless of whether it later expands to encompass backups or whether backups remain separate altogether.
+Therefore, a dedicated backup solution or integration might be worth even with the introduction of storage reliability staking; application developers can already run a pod that includes all needed infrastructure for backups, but having that baked into the core Apocryph offering could be a benefit for users still. Either way, ensuring storage reliability through staking would prevent a range of potential malicious provider behavior, and as such would be a good step regardless of whether it later expands to encompass backups or whether backups remain separate altogether.

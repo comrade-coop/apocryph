@@ -1,10 +1,10 @@
-# Architecture
+# Application Publishing
 
 (Document status: mostly complete)
 
-Much of the architecture of Trusted Pods revolves around two key pieces, the "Publisher Client" and the "Provider Client". A publisher is a buyer in the Trusted Pods network seeking to provision their pod/container on the network. A provider is a seller seeking to offer their hardware for rent.
+Much of the architecture of Apocryph revolves around two key pieces, the "Publisher Client" and the "Provider Client". A publisher is a buyer in the Apocryph network seeking to provision their pod/container on the network. A provider is a seller seeking to offer their hardware for rent.
 
-The planned version of Trusted Pods takes care of matching the two and provisioning the pod on a specific target provider. While it offers a way to manually pick a provider, it defaults to automatically picking one for the user. However, it does not take care of operational issues that might subsequently arise; specifically, it does not take care of rescheduling pods when a provider becomes unavailable nor does it make any guarantees about uptime or availability of data—those will be handled in later versions. Such concerns are kept track of in the [backlog](BACKLOG.md).
+The planned version of Apocryph takes care of matching the two and provisioning the pod on a specific target provider. While it offers a way to manually pick a provider, it defaults to automatically picking one for the user. However, it does not take care of operational issues that might subsequently arise; specifically, it does not take care of rescheduling pods when a provider becomes unavailable nor does it make any guarantees about uptime or availability of data—those will be handled in later versions. Such concerns are kept track of in the [backlog](BACKLOG.md).
 
 ## Bird's-eye view
 

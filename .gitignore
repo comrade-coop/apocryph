@@ -8,5 +8,6 @@ contracts/broadcast/
 
 node_modules/
 
+book/
 
 **/.turbo/
