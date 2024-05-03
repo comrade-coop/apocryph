@@ -7,7 +7,20 @@ As Apocryph aims to become a viable option for deploying big and small applicati
 
 The following document attempts to describe a protocol for staking based on the uptime of applications, similar to what the cloud industry is already doing with [SLAs](https://en.wikipedia.org/wiki/Service-level_agreement). A fair bit of the protocol deals with proving that the application was down due to a fault of the provider and not of the publisher.
 
-## Schematic
+
+The main challenges of uptime monitoring in a decentralized environment like that of Apocryph are twofold:
+
+1. First, internet connectivity is not as simple as a boolean yes/no, and there are cases in which a client cannot access a web server despite that server being perfectly accessible by others.
+2. Second, it's possible for a server to be reachable, but the application to be unable to respond to requests, e.g. because of programming errors.
+
+To deal with the first challenge, this document discuses two approaches:
+
+1. Ingress through inbound connection - in this case the service provider (in conjuction with ISP) control the internet connectivity endpoint. For such scenarios one the solution discussed in the document is based on a decentralized network of validators that check the liveliness of a particular provider/pod combo. 
+2. Ingress through outbound connection (reverse proxy) - in this case the service provider (in conjuction with ISP) only provide / control the outbout connectivity and the internet connectivity endpoint is controlled by an independent party (e.g. edge network like ngork).
+
+The second challenge related to the availability of the pod itself can be tackled with a trusted variation of the well known heartbeat approach.
+
+## Monitoring network
 
 ```mermaid
 flowchart
@@ -41,20 +54,6 @@ flowchart
   Validators -- Report failed heartbeats --> UptimeC
 ```
 
-The main challenges of uptime monitoring in a decentralized environment like that of Apocryph are twofold:
-
-1. First, internet connectivity is not as simple as a boolean yes/no, and there are cases in which a client cannot access a web server despite that server being perfectly accessible by others.
-2. Second, it's possible for a server to be reachable, but the application to be unable to respond to requests, e.g. because of programming errors.
-
-To deal with the first challenge, this document discuses two approaches:
-
-1. Ingress through inbound connection - in this case the service provider (in conjuction with ISP) control the internet connectivity endpoint. For such scenarios one the solution discussed in the document is based on a decentralized network of validators that check the liveliness of a particular provider/pod combo. 
-2. Ingress through outbound connection (reverse proxy) - in this case the service provider (in conjuction with ISP) only provide / control the outbout connectivity and the internet connectivity endpoint is controlled by an independent party (e.g. edge network like ngork).
-
-The second challenge related to the availability of the pod itself can be tackled with a trusted variation of the well known heartbeat approach.
-
-## Monitoring network
-
 The network of validators monitoring the various pods running within Apocryph ideally needs to reflect the internet connectivity of those pods' users. In addition, it would ideally be unbiased towards the particular providers and publishers; that is, the nodes comprising the monitoring network should not have an incentive to blacklist a particular provider, nor should they have an incentive to report connection failures for a particular publisher. Unfortunately, neither of those two can be proven with a TEE or similar construct, as they involve network conditions between potentially-trusted machines.
 
 In addition, while it is plausible to run monitoring nodes in Apocryph or other cloud providers, neither is a particularly good way to run such nodes, as both cloud providers and more so Apocryph providers would benefit, in the long term, from having less competition, and as such are not unbiased sources of measurements.
@@ -72,6 +71,8 @@ Altogether, all of this would make a good implementation of the monitoring netwo
 <!-- TODO: NOTE: An alternative here is to have no heartbeats, but instead to have a monitoring network that users can route requests through to get a signed confirmation that the request gets no response -- along with ensuring the facade always returns at least *some* response. -->
 
 ## Edge network
+
+TODO: Add alternative schematic for this case
 
 Ingress design is based on reverse-proxy model in which ingress daeomns are running in the TEE enclave and are connecting to edge netwok using outbound connection. In this case the availability of the network connection can be monitored from the TEE enclave and thus can be verified by the protocol. The service provider is further isolated by the fact that the TLS termination could also happen at ingress (agent) level, also known as Zero-Knowledge TLS, where the edge network is forwarding on TCP/IP level, by using SNI data from the incomming TLS requests. 
 
