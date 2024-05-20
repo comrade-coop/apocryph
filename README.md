@@ -28,6 +28,11 @@ Before running the various tests, Make sure the following dependencies are insta
 - **xargs**: A command that builds and executes command lines from standard input.
 - **sed**: A stream editor for filtering and transforming text.
 - **[go](https://go.dev/doc/install)**: The Go programming language compiler.
+- **[protoc](https://grpc.io/docs/protoc-installation/)**: The protocol buffer compiler, protoc, is used to compile .proto files, which contain service and message definitions.
+- **[protoc-gen-go](https://grpc.io/docs/languages/go/quickstart/)**: tool used in conjunction with protobuf to generate Go code from protobuf definition files
+- **protoc-gen-connect-go**: `go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest`
+- **abigen**: convert Ethereum ABI definitions into easy to use, type-safe Go packages. `go install github.com/ethereum/go-ethereum/cmd/abigen@latest`
+- **[turbo](https://turbo.build/repo/docs/installing)**: Incremental bundler and build system
 - **[kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/)**: The Kubernetes command-line tool for managing Kubernetes clusters.
 - **[docker](https://docs.docker.com/engine/install/)**: A platform for developing, shipping, and running applications using containerization.
 - **[jq](https://jqlang.github.io/jq/)**: A lightweight and flexible command-line JSON processor.
@@ -38,18 +43,17 @@ Before running the various tests, Make sure the following dependencies are insta
 - **[ipfs](https://docs.ipfs.tech/install/command-line/#install-official-binary-distributions)**: The InterPlanetary File System
 - **[constellation](https://docs.edgeless.systems/constellation/getting-started/first-steps-local)**: Constellation is a Kubernetes engine that provides a secure and confidential way to run Kubernetes clusters. (Needed in `test/e2e/constellation`).
 
-### E2E Tests
 To start a local environment for e.g. integration-testing or evaluating the project, you can use the end-to-end tests in the `test/e2e` folder.
 
 Typical development involves running the minikube end-to-end test, which can be done using the following command:
 
 ```bash
-test/e2e/minikube/run-test.sh
+npm i
+turbo sync
+./test/e2e/minikube/run-test.sh
 ```
 
-The command will report any missing dependencies; for a full list of the required packages.
-
-The command, once all dependencies are met, will proceed to start a local docker registry and test ethereum node, build and upload the project to them, then spin up a minikube cluster and deploy all necessary prerequisites into it, and finally deploying a pod from a [manifest file](spec/MANIFEST.md) into the cluster and then querying it over HTTP. It should display the curl command used to query the pod, and you should be able to use it yourself after the script is finished.
+The command, all dependencies are met, will proceed to start a local docker registry and test ethereum node, build and upload the project to them, then spin up a minikube cluster and deploy all necessary prerequisites into it, and finally deploying a pod from a [manifest file](spec/MANIFEST.md) into the cluster and then querying it over HTTP. It should display the curl command used to query the pod, and you should be able to use it yourself after the script is finished.
 
 In addition, once you have started the minikube end-to-end test, you can also run the web UI test, which presents a sample interface that publishers can use to deploy a predefined pod template onto the minikube cluster / provider directly from their web browser.
 
