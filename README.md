@@ -17,7 +17,24 @@ Apocryph is a decentralised three-sided compute marketplace, allowing end-users 
 - [GitHub Markdown](spec/SUMMARY.md)
 
 ## Spinning up a local testing environment
+### Required Dependencies
 
+Before running the various tests or setting up the local testing environment, Make sure the following dependencies are installed and available in your PATH:
+
+- **curl**: A command-line tool for transferring data with URL syntax.
+- **xargs**: A command that builds and executes command lines from standard input.
+- **sed**: A stream editor for filtering and transforming text.
+- **go**: The Go programming language compiler.
+- **kubectl**: The Kubernetes command-line tool for managing Kubernetes clusters.
+- **docker**: A platform for developing, shipping, and running applications using containerization.
+- **[jq](https://jqlang.github.io/jq/)**: A lightweight and flexible command-line JSON processor.
+- **[minikube](https://minikube.sigs.k8s.io/docs/start/)**: A tool that runs a single-node Kubernetes cluster on your personal computer (locally).
+- **[helmfile](https://github.com/helmfile/helmfile)**: A declarative configuration tool for Helm.
+- **[forge, cast, anvil](https://github.com/foundry-rs/foundry)**: tools for building Ethereum-based applications.
+- **[ipfs](https://docs.ipfs.tech/install/ipfs-desktop/)**: The InterPlanetary File System
+- **[constellation](https://docs.edgeless.systems/constellation/getting-started/first-steps-local)**: A platform for secure data exchange in distributed systems, particularly in blockchain networks (Needed in `test/e2e/constellation`).
+
+### E2E Tests
 To start a local environment for e.g. integration-testing or evaluating the project, you can use the end-to-end tests in the `test/e2e` folder.
 
 Typical development involves running the minikube end-to-end test, which can be done using the following command:
@@ -26,7 +43,7 @@ Typical development involves running the minikube end-to-end test, which can be 
 test/e2e/minikube/run-test.sh
 ```
 
-The command will report any missing dependencies; for a full list of the required packages, you can just read the first lines of the script.
+The command will report any missing dependencies; for a full list of the required packages.
 
 The command, once all dependencies are met, will proceed to start a local docker registry and test ethereum node, build and upload the project to them, then spin up a minikube cluster and deploy all necessary prerequisites into it, and finally deploying a pod from a [manifest file](spec/MANIFEST.md) into the cluster and then querying it over HTTP. It should display the curl command used to query the pod, and you should be able to use it yourself after the script is finished.
 
