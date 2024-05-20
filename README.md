@@ -32,6 +32,7 @@ Before running the various tests, Make sure the following dependencies are insta
 - **[docker](https://docs.docker.com/engine/install/)**: A platform for developing, shipping, and running applications using containerization.
 - **[jq](https://jqlang.github.io/jq/)**: A lightweight and flexible command-line JSON processor.
 - **[minikube](https://minikube.sigs.k8s.io/docs/start/)**: A tool that runs a single-node Kubernetes cluster on your personal computer (locally).
+- **[helm](https://helm.sh/)**: The package manager for Kubernetes 
 - **[helmfile](https://github.com/helmfile/helmfile)**: A declarative configuration tool for Helm.
 - **[forge, cast, anvil](https://github.com/foundry-rs/foundry)**: tools for building Ethereum-based applications.
 - **[ipfs](https://docs.ipfs.tech/install/ipfs-desktop/)**: The InterPlanetary File System
