@@ -32,7 +32,7 @@ Before running the various tests or setting up the local testing environment, Ma
 - **[helmfile](https://github.com/helmfile/helmfile)**: A declarative configuration tool for Helm.
 - **[forge, cast, anvil](https://github.com/foundry-rs/foundry)**: tools for building Ethereum-based applications.
 - **[ipfs](https://docs.ipfs.tech/install/ipfs-desktop/)**: The InterPlanetary File System
-- **[constellation](https://docs.edgeless.systems/constellation/getting-started/first-steps-local)**: A platform for secure data exchange in distributed systems, particularly in blockchain networks (Needed in `test/e2e/constellation`).
+- **[constellation](https://docs.edgeless.systems/constellation/getting-started/first-steps-local)**: Constellation is a Kubernetes engine that provides a secure and confidential way to run Kubernetes clusters. (Needed in `test/e2e/constellation`).
 
 ### E2E Tests
 To start a local environment for e.g. integration-testing or evaluating the project, you can use the end-to-end tests in the `test/e2e` folder.
