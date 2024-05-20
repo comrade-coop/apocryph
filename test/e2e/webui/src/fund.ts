@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 import './style.css'
-import { paymentABI, ierc20ABI, mockTokenABI } from 'apocryph-abi-ts'
+import { paymentAbi, mockTokenAbi } from 'apocryph-abi-ts'
 import { bytesToHex } from 'viem'
 import { publicClient, walletClient } from './connections'
 
@@ -39,14 +39,14 @@ export async function fundPaymentChannel(
   const podId = bytesToHex(config.payment.podID, { size: 32 })
   if (funds > 0n) {
     const tokenAddress = await publicClient.readContract({
-      abi: paymentABI,
+      abi: paymentAbi,
       address: paymentContractAddress,
       functionName: 'token'
     })
 
     if (mintFunds) {
       const { request } = await publicClient.simulateContract({
-        abi: mockTokenABI,
+        abi: mockTokenAbi,
         address: tokenAddress,
         account: walletClient.account.address,
         functionName: 'mint',
@@ -56,7 +56,7 @@ export async function fundPaymentChannel(
     }
 
     const approved = await publicClient.readContract({
-      abi: ierc20ABI,
+      abi: mockTokenAbi,
       address: tokenAddress,
       functionName: 'allowance',
       args: [walletClient.account.address, paymentContractAddress]
@@ -64,7 +64,7 @@ export async function fundPaymentChannel(
 
     if (approved < funds) {
       const { request } = await publicClient.simulateContract({
-        abi: ierc20ABI,
+        abi: mockTokenAbi,
         address: tokenAddress,
         functionName: 'approve',
         account: walletClient.account.address,
@@ -74,7 +74,7 @@ export async function fundPaymentChannel(
     }
 
     const { request } = await publicClient.simulateContract({
-      abi: paymentABI,
+      abi: paymentAbi,
       address: paymentContractAddress,
       functionName: 'createChannel',
       account: walletClient.account.address,

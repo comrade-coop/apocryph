@@ -41,6 +41,8 @@ echo -e "---\e[0m"
 
 set -v
 
+sudo chmod o+rw /run/containerd/containerd.sock
+
 ## 0: Set up the external environment
 
 ## 0.1: Build/tag server and p2p-helper images
@@ -149,7 +151,6 @@ FUNDS=10000000000000000000000
 set +v
 set -x
 
-sudo chmod o+rw /run/containerd/containerd.sock
 
 go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-nginx.yaml \
   --ethereum-key "$PUBLISHER_KEY" \

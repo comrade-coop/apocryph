@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0
 
 import isPrivate from 'private-ip'
-import { PeerId, isPeerId } from '@libp2p/interface/peer-id'
+import { PeerId, isPeerId } from '@libp2p/interface'
 import type { Multiaddr } from '@multiformats/multiaddr'
-import type { ConnectionGater } from '@libp2p/interface/connection-gater'
+import type { ConnectionGater } from '@libp2p/interface'
 
 /**
  * A libp2p connection gater implementation that never denies peers that have been explicitly allow()-ed
