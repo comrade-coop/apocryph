@@ -17,16 +17,19 @@ Apocryph is a decentralised three-sided compute marketplace, allowing end-users 
 - [GitHub Markdown](spec/SUMMARY.md)
 
 ## Spinning up a local testing environment
-### Required Dependencies
+> __Note__
+The following tests have been conducted on Linux.
 
-Before running the various tests or setting up the local testing environment, Make sure the following dependencies are installed and available in your PATH:
+### Dependencies
+
+Before running the various tests, Make sure the following dependencies are installed and available in your PATH:
 
 - **curl**: A command-line tool for transferring data with URL syntax.
 - **xargs**: A command that builds and executes command lines from standard input.
 - **sed**: A stream editor for filtering and transforming text.
-- **go**: The Go programming language compiler.
-- **kubectl**: The Kubernetes command-line tool for managing Kubernetes clusters.
-- **docker**: A platform for developing, shipping, and running applications using containerization.
+- **[go](https://go.dev/doc/install)**: The Go programming language compiler.
+- **[kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/)**: The Kubernetes command-line tool for managing Kubernetes clusters.
+- **[docker](https://docs.docker.com/engine/install/)**: A platform for developing, shipping, and running applications using containerization.
 - **[jq](https://jqlang.github.io/jq/)**: A lightweight and flexible command-line JSON processor.
 - **[minikube](https://minikube.sigs.k8s.io/docs/start/)**: A tool that runs a single-node Kubernetes cluster on your personal computer (locally).
 - **[helmfile](https://github.com/helmfile/helmfile)**: A declarative configuration tool for Helm.
