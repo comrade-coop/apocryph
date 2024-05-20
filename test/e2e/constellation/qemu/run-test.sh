@@ -114,10 +114,6 @@ FUNDS=10000000000000000000000
 set +v
 set -x
 
-
-sudo chmod o+rw /run/containerd/containerd.sock
-
-
 go run ../../../../cmd/trustedpods/ pod deploy ../../common/manifest-nginx.yaml \
   --ethereum-key "$PUBLISHER_KEY" \
   --payment-contract "$PAYMENT_CONTRACT" \

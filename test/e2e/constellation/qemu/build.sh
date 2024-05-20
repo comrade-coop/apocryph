@@ -25,6 +25,8 @@ if [ "$1" = "teardown" ]; then
    exit 0
 fi
 
+sudo chmod o+rw /run/containerd/containerd.sock
+
 ## 0: Generate helm template and inject it into constellation base image
 helmfile template -f "$CHART_PATH" > "$CONSTELLATION_PATH/image/base/mkosi.skeleton/usr/lib/helmfile-template"
 

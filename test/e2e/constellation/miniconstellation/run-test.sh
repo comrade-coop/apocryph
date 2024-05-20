@@ -12,7 +12,7 @@ which go >/dev/null
 which ipfs >/dev/null
 which forge &>/dev/null || export PATH=$PATH:~/.bin/foundry
 which forge >/dev/null; which cast >/dev/null
-which helmfile >/dev/null; which helm >/dev/null; which kustomize >/dev/null; which kubectl >/dev/null
+which helmfile >/dev/null; which helm >/dev/null; which kubectl >/dev/null
 which constellation >/dev/null || { echo "Install Constellation, https://docs.edgeless.systems/constellation/getting-started/first-steps-local#software-installation-on-ubuntu"; exit 1; }
 
 CONSTELLATION_PATH=${CONSTELLATION_PATH:-~/.constellation-root}

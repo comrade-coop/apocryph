@@ -8,7 +8,7 @@ trap 'pkill -f "kubectl port-forward" && kill $(jobs -p) &>/dev/null' EXIT
 cd "$(dirname "$0")"
 
 which curl >/dev/null; which jq >/dev/null; which xargs >/dev/null; which sed >/dev/null
-which minikube >/dev/null; which helmfile >/dev/null; which helm >/dev/null; which kustomize >/dev/null; which kubectl >/dev/null
+which minikube >/dev/null; which helmfile >/dev/null; which helm >/dev/null; which kubectl >/dev/null
 which npm >/dev/null
 
 echo "=============================================================================================="

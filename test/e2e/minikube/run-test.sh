@@ -24,7 +24,7 @@ which go >/dev/null
 which ipfs >/dev/null
 which forge &>/dev/null || export PATH=$PATH:~/.bin/foundry
 which forge >/dev/null; which cast >/dev/null
-which minikube >/dev/null; which helmfile >/dev/null; which helm >/dev/null; which kustomize >/dev/null; which kubectl >/dev/null
+which minikube >/dev/null; which helmfile >/dev/null; which helm >/dev/null; which kubectl >/dev/null
 which docker >/dev/null
 
 # based on https://stackoverflow.com/a/31269848 / https://bobcopeland.com/blog/2012/10/goto-in-bash/

@@ -6,7 +6,7 @@
     "ts-gen-abi": "wagmi generate",
     "generate": "npm run gen-abi"
   },
-  "devDependencies": {
-    "@wagmi/cli": "^1.5.2"
+  "dependencies": {
+    "@wagmi/cli": "^2.1.7"
   }
 }
