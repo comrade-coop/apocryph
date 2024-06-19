@@ -24,36 +24,46 @@ The following tests have been conducted on Linux.
 
 Before running the various tests, Make sure the following dependencies are installed and available in your PATH:
 
-- **curl**: A command-line tool for transferring data with URL syntax.
-- **xargs**: A command that builds and executes command lines from standard input.
-- **sed**: A stream editor for filtering and transforming text.
+- **curl**: tool for transferring data using various network protocols. The name stands for "Client for URL"
+- **xargs**: command that builds and executes command lines from standard input.
+- **sed**: stream editor for filtering and transforming text.
 - **[go](https://go.dev/doc/install)**: The Go programming language compiler.
 - **[protoc](https://grpc.io/docs/protoc-installation/)**: The protocol buffer compiler, protoc, is used to compile .proto files, which contain service and message definitions.
 - **[protoc-gen-go](https://grpc.io/docs/languages/go/quickstart/)**: tool used in conjunction with protobuf to generate Go code from protobuf definition files
-- **protoc-gen-connect-go**: `go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest`
+- **protoc-gen-connect-go**: generates Go code from protobuf files specifically tailored for the Connect RPC. `go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest`
 - **abigen**: convert Ethereum ABI definitions into easy to use, type-safe Go packages. `go install github.com/ethereum/go-ethereum/cmd/abigen@latest`
-- **[turbo](https://turbo.build/repo/docs/installing)**: Incremental bundler and build system
+- **[turbo](https://turbo.build/repo/docs/installing)**: High-performance build system
 - **[kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/)**: The Kubernetes command-line tool for managing Kubernetes clusters.
-- **[docker](https://docs.docker.com/engine/install/)**: A platform for developing, shipping, and running applications using containerization.
-- **[jq](https://jqlang.github.io/jq/)**: A lightweight and flexible command-line JSON processor.
-- **[minikube](https://minikube.sigs.k8s.io/docs/start/)**: A tool that runs a single-node Kubernetes cluster on your personal computer (locally).
-- **[helm](https://helm.sh/)**: The package manager for Kubernetes 
-- **[helmfile](https://github.com/helmfile/helmfile)**: A declarative configuration tool for Helm.
+- **[docker](https://docs.docker.com/engine/install/)**: platform for developing, shipping, and running applications using containerization.
+- **[jq](https://jqlang.github.io/jq/)**: lightweight and flexible command-line JSON processor.
+- **[minikube](https://minikube.sigs.k8s.io/docs/start/)**: tool that runs a single-node Kubernetes cluster locally.
+- **[helm](https://helm.sh/)**: package manager for Kubernetes 
+- **[helmfile](https://github.com/helmfile/helmfile)**: declarative configuration tool for Helm.
 - **[forge, cast, anvil](https://github.com/foundry-rs/foundry)**: tools for building Ethereum-based applications.
 - **[ipfs](https://docs.ipfs.tech/install/command-line/#install-official-binary-distributions)**: The InterPlanetary File System
 - **[constellation](https://docs.edgeless.systems/constellation/getting-started/first-steps-local)**: Constellation is a Kubernetes engine that provides a secure and confidential way to run Kubernetes clusters. (Needed in `test/e2e/constellation`).
+
+Clone and cd into the project:
+```bash
+git clone https://github.com/comrade-coop/apocryph
+cd apocryph
+```
+Run the following commands to complete all necessary build steps and generate the required files for running the tests.
+
+```bash
+npm i && turbo sync 
+```
+> Rerun `turbo sync` whenever you change files under the `proto/` and `contracts/` folders.
 
 To start a local environment for e.g. integration-testing or evaluating the project, you can use the end-to-end tests in the `test/e2e` folder.
 
 Typical development involves running the minikube end-to-end test, which can be done using the following command:
 
 ```bash
-npm i
-turbo sync
 ./test/e2e/minikube/run-test.sh
 ```
 
-The command, all dependencies are met, will proceed to start a local docker registry and test ethereum node, build and upload the project to them, then spin up a minikube cluster and deploy all necessary prerequisites into it, and finally deploying a pod from a [manifest file](spec/MANIFEST.md) into the cluster and then querying it over HTTP. It should display the curl command used to query the pod, and you should be able to use it yourself after the script is finished.
+The command, after all dependencies are met, will proceed to start a local docker registry and test ethereum node, build and upload the project to them, then spin up a minikube cluster and deploy all necessary prerequisites into it, and finally deploying a pod from a [manifest file](spec/MANIFEST.md) into the cluster and then querying it over HTTP. It should display the curl command used to query the pod, and you should be able to use it yourself after the script is finished.
 
 In addition, once you have started the minikube end-to-end test, you can also run the web UI test, which presents a sample interface that publishers can use to deploy a predefined pod template onto the minikube cluster / provider directly from their web browser.
 
