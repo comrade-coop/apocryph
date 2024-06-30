@@ -1,4 +1,4 @@
-# Pod Manifest
+# Application Package
 
 (Document status: work-in-progress)
 

@@ -1,5 +1,5 @@
-# Registry Protocol
-The Registry protocol connects publishers and providers in a decentralized environment, promoting service discovery, competitive and transparent pricing.
+# Application Registry
+The Registry connects publishers and providers in a decentralized environment, promoting service discovery, competitive and transparent pricing.
 
 ## Smart contract
 

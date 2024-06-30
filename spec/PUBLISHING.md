@@ -1,4 +1,4 @@
-# Application Publishing
+# App Publishing
 
 (Document status: mostly complete)
 
@@ -51,7 +51,7 @@ As a sequence of steps:
 2. The Publisher Client gets the list of providers from the [Registry Contract](REGISTRY.md)
 3. The Publisher Client selects a provider, using the configured strategy (automatic or by asking the user to manually make a choice)
 4. The Publisher Client creates a [Payment Contract](../) and transfers the initial payment amount (possibly in parallel with steps 5-6)
-5. The Publisher Client bundles up the Pod Manifest, any related resources, and the Payment Contract's address and sends them to the Provider Client over the [Network Protocol](PROTOCOL.md), encrypted
+5. The Publisher Client bundles up the Pod Manifest, any related resources, and the Payment Contract's address and sends them to the Provider Client over the [Deployment sub-protocol](PROTOCOL.md), encrypted
 6. The Provider Client creates the relevant configurations for the Pod using the [Kubernetes API](https://kubernetes.io/docs/reference/kubernetes-api/), including an HTTP Scaler, an Application Pod, and Monitoring
 7. The Provider Client confirms receiving the manifest and resources
 8. When HTTP requests come in, the HTTP Scaler contacts the Kubernetes API in order to scale the Application Pod up
