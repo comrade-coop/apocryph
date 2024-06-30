@@ -110,7 +110,7 @@ See [the respective document](UPTIME.md) for a more in-depth uptime reliability 
 
 ### Software licensing
 
-See [the respective document](B2B2X.md) for a more in-depth software licensing design proposal.
+See [the respective document](MARKETPLACE.md) for a more in-depth software licensing design proposal.
 
 ### Individual TEEs
 
