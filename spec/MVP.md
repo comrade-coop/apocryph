@@ -27,6 +27,3 @@ Once deployed, allows an app to automatically redeploy itself on various provide
 - **Primary Function**: Exists as an autonomous application, where providers can get themselves listed, and publishers (/autoscalers) can query using various criteria (needs to specify). ⏳
 - **Reverse Market**: Applications get listed and providers can bid on them. ⏳
 - **Integration**: Integrated with publisher (tooling) and provider (addon? so it's outside the trusted base) out-of-the-box. ⏳
-
-## Storage Application
-- **Autonomous Applications**: One or more autonomous applications of Minio/esque storage, rebalanced on various providers to provide resilience. ⏳
