@@ -1,6 +1,6 @@
-### Application Overview
+### Autoscaler
 
-The application is designed to enable automatic redeployment across various providers, ensuring flexibility and resilience in deployment strategies. Below is a detailed explanation of its key features and functionalities:
+The Autoscaler autonomous applicatoin is designed to enable automatic redeployment across various providers, ensuring flexibility and resilience in deployment strategies. Below is a detailed explanation of its key features and functionalities:
 
 #### Provider Selection Configuration
 This feature allows users to configure criteria for selecting deployment providers and determining the number of instances to run. Users can specify detailed selection parameters to optimize deployment according to their requirements.
