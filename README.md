@@ -79,26 +79,6 @@ test/e2e/minikube/run-test.sh teardown
 
 (or alternatively, pass `teardown full` to also stop any local docker containers used by the test)
 
-## Development
-
-Install Turbo (If you haven't already) using your favorite package manager , Ex: `npm i -g turbo`
-
-#### Syncing Generated Files
-
-After editing files in `proto/` or `contracts/`, run the following command to sync the generated files:
-
-```sh
-turbo sync
-```
-
-#### Build Images
-
-The following will build the apocryph trusted pods server and the p2p-helper images
-
-```sh
-turbo build-images
-```
-
   <!-- Note that while committing generated files is foreign to Nodejs/NPM, it's the usual way of life in the Go ecosystem, as packages are directly cloned from git rather than downloaded from the package manager. Here we are committing both in order to not require forge/protoc for JavaScript development when it's optional for Go development. -->
 
 ## Contributing
