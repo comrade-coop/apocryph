@@ -199,6 +199,8 @@ var registerCmd = &cobra.Command{
 	},
 }
 
+// automatically injects current ipfs peer id in the multiaddrs field from the
+// config file provided, the peerID is needed for p2p connection over ipfs
 func getHostInfo(ctx context.Context, ipfs *rpc.HttpApi) (*pb.HostInfo, error) {
 	if hostInfoContents == "" {
 		return nil, fmt.Errorf("Empty host info")
