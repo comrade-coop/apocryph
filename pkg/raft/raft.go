@@ -34,7 +34,7 @@ type RaftNode struct {
 	LogStore    raft.LogStore
 }
 
-func NewRaftNode(host host.Host, peers []*host.Host, raftDir *string) (*RaftNode, error) {
+func NewRaftNode(host host.Host, peers []*host.Host, raftDir string) (*RaftNode, error) {
 	for _, peerPtr := range peers {
 		peer := *peerPtr
 		if peer.Addrs()[0].String() != host.Addrs()[0].String() {
@@ -56,20 +56,20 @@ func NewRaftNode(host host.Host, peers []*host.Host, raftDir *string) (*RaftNode
 		Transport: transport,
 	}
 
-	if raftDir == nil {
+	if raftDir == "" {
 		raftNode.LogStore = raft.NewInmemStore()
 		raftNode.StableStore = raft.NewInmemStore()
 		raftNode.Snapshots = raft.NewInmemSnapshotStore()
 	} else {
 		boltDB, err := raftboltdb.New(raftboltdb.Options{
-			Path: filepath.Join(*raftDir, "raft.db"),
+			Path: filepath.Join(raftDir, "raft.db"),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("new bolt store: %s", err)
 		}
 		raftNode.LogStore = boltDB
 		raftNode.StableStore = boltDB
-		raftNode.Snapshots, err = raft.NewFileSnapshotStore(filepath.Join(*raftDir, "raft_snapshots"), SNAPSHOT_RETAIN, nil)
+		raftNode.Snapshots, err = raft.NewFileSnapshotStore(filepath.Join(raftDir, "raft_snapshots"), SNAPSHOT_RETAIN, nil)
 		if err != nil {
 			return nil, fmt.Errorf("Failed creating file snapshot store")
 		}
@@ -88,7 +88,7 @@ func NewRaftNode(host host.Host, peers []*host.Host, raftDir *string) (*RaftNode
 	// initializes a server's storage with the given cluster configuration,
 	err = raft.BootstrapCluster(config, raftNode.LogStore, raftNode.StableStore, raftNode.Snapshots, raftNode.Transport, serversCfg.Clone())
 	if err != nil {
-		return nil, fmt.Errorf("Failed bootstraping cluster:%v", err)
+		return nil, fmt.Errorf("Failed bootstraping cluster: %v", err)
 	}
 	raftNode.Config = *config
 	return &raftNode, nil

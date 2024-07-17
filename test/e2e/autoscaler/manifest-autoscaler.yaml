@@ -1,0 +1,16 @@
+containers:
+  - name: autoscaler
+    image:
+      url: autoscaler
+    ports:
+      - containerPort: '9999'
+        hostHttpHost: autoscaler.local
+        name: internal
+    resourceRequests:
+      - amountMillis: '10'
+        resource: cpu
+      - amount: '100000000'
+        resource: memory
+replicas:
+  min: 1
+  max: 1

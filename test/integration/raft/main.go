@@ -22,17 +22,17 @@ func main() {
 	defer peer3.Close()
 
 	peers := []*host.Host{&peer1, &peer2, &peer3}
-	node1, err := raft.NewRaftNode(peer1, peers, nil)
+	node1, err := raft.NewRaftNode(peer1, peers, "")
 	if err != nil {
 		fmt.Printf("Error:%s", err)
 		return
 	}
-	node2, err := raft.NewRaftNode(peer2, peers, nil)
+	node2, err := raft.NewRaftNode(peer2, peers, "")
 	if err != nil {
 		fmt.Printf("Error:%s", err)
 		return
 	}
-	node3, err := raft.NewRaftNode(peer3, peers, nil)
+	node3, err := raft.NewRaftNode(peer3, peers, "")
 	if err != nil {
 		fmt.Printf("Error:%s", err)
 		return
@@ -45,6 +45,12 @@ func main() {
 	fmt.Println("Waiting for leader election")
 	// Provide some time for leader election
 	time.Sleep(5 * time.Second)
+
+	go func() {
+		for range node1.Raft.LeaderCh() {
+			fmt.Println("Leadership changed")
+		}
+	}()
 
 	domain := "www.webapp.com"
 	fmt.Printf("Trying to set the key:%v with node1\n", domain)
