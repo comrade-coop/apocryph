@@ -37,8 +37,7 @@ kubectl wait --namespace keda --for=condition=available deployment/ingress-nginx
 kubectl wait --namespace prometheus --for=condition=available deployment/prometheus-kube-state-metrics
 kubectl wait --namespace prometheus --for=condition=available deployment/prometheus-prometheus-pushgateway
 kubectl wait --namespace prometheus --for=condition=available deployment/prometheus-server
-kubectl wait --namespace eth --for=condition=available deployment/anvil
-kubectl wait --namespace ipfs --for=condition=available deployment/ipfs
+kubectl wait --namespace ipfs --for=condition=available StatefulSet/ipfs
 kubectl wait --namespace trustedpods --for=condition=available deployment/tpodserver
 
 ## 2: Deploy sample App
