@@ -49,11 +49,12 @@ DEPLOYER_KEY=$(docker logs anvil | awk '/Private Keys/ {flag=1; next} flag && /^
 
 ## 1.0 Starting the First Cluster
 echo "Starting the first cluster"
-minikube start --insecure-registry='host.minikube.internal:5000' --container-runtime=containerd -p c1
+minikube start --insecure-registry='host.minikube.internal:5000' --container-runtime=containerd --driver=kvm2 -p c1
 minikube profile c1
 ./deploy.sh
 
-minikube profile list
+# wait until all the deployments are ready
+./wait-deployments.sh
 
 ## 1.1: Register the provider in the marketplace
 [ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
@@ -68,10 +69,12 @@ go run ../../../cmd/tpodserver  registry  register \
 
 ## 2.0: Starting the second Cluster
 echo "Starting the second cluster"
-minikube delete -p c2
-minikube start --insecure-registry='host.minikube.internal:5000' --container-runtime=containerd -p c2
+minikube start --insecure-registry='host.minikube.internal:5000' --container-runtime=containerd --driver=kvm2 -p c2
 minikube profile c2
 ./deploy.sh
+
+# wait until all the deployments are ready
+./wait-deployments.sh
 
 [ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
 go run ../../../cmd/tpodserver  registry  register \
@@ -82,17 +85,16 @@ go run ../../../cmd/tpodserver  registry  register \
   --token-contract 0x5FbDB2315678afecb367f032d93F642f64180aa3 \
   --registry-contract 0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0 \
 
-minikube profile list
-
 
 ## 3.0: Starting the third Cluster
 echo "Starting the third cluster"
-minikube delete -p c3
-minikube start --insecure-registry='host.minikube.internal:5000' --container-runtime=containerd -p c3
+minikube start --insecure-registry='host.minikube.internal:5000' --container-runtime=containerd --driver=kvm2 -p c3
 minikube profile c3
 ./deploy.sh
 
-minikube profile list
+# wait until all the deployments are ready
+./wait-deployments.sh
+
 [ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5005:5001 & sleep 0.5; }
 go run ../../../cmd/tpodserver  registry  register \
   --config ../common/config.yaml \
@@ -102,10 +104,5 @@ go run ../../../cmd/tpodserver  registry  register \
   --token-contract 0x5FbDB2315678afecb367f032d93F642f64180aa3 \
   --registry-contract 0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0 \
 
-kubectl wait --namespace keda --for=condition=available deployment/ingress-nginx-controller
-kubectl wait --namespace prometheus --for=condition=available deployment/prometheus-kube-state-metrics
-kubectl wait --namespace prometheus --for=condition=available deployment/prometheus-prometheus-pushgateway
-kubectl wait --namespace prometheus --for=condition=available deployment/prometheus-server
-kubectl wait --namespace eth --for=condition=available deployment/anvil
-kubectl wait --namespace ipfs --for=condition=available deployment/ipfs
-kubectl wait --namespace trustedpods --for=condition=available deployment/tpodserver
+
+minikube profile list

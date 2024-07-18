@@ -42,7 +42,8 @@ echo -e "---\e[0m"
 
 ## 1.1: Apply Helm configurations ##
 
-helmfile sync -f ../minikube/
+
+helmfile sync -f ../minikube || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile apply; }
 
 ## 1.2: Configure provider/in-cluster IPFS and publisher IPFS ##
 
