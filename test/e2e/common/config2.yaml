@@ -1,0 +1,35 @@
+pricing:
+  table:
+    format: yaml
+    # filename: pricing.yaml
+    contents: |
+      tables:
+        - paymentContractAddress: "5/FyXnc0ziiPg2fhuxQ+kLs/BRI="
+          resources:
+            - resource: "cpu"
+              priceForReservation: 200000000000
+            - resource: "ram"
+              priceForReservation: 500
+            - resource: "storage"
+              priceForUsage: 500
+            - resource: "bandwidth_ingress"
+              priceForUsage: 800
+            - resource: "bandwidth_egress"
+              priceForUsage: 800
+cpu_model: 'Intel Xeon Platinum 8452Y Processor'
+tee_type: 'Secure Enclaves'
+withdraw:
+  address: '0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f'
+  time: 15
+info:
+  format: yaml
+  contents: |
+    regions:
+      - name: "usa"
+        zone: "north"
+        num: 5
+      - name: "aus"
+        zone: "south"
+        num: 2
+    multiaddrs:
+      - "https://kubo.business/"
