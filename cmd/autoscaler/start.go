@@ -68,8 +68,9 @@ var startCmd = &cobra.Command{
 			}
 		}
 
-		// using Raft.leaderCh() wont help because it works does not work with
-		// first leader, therefore from the docs, this is the way to detect the new leader
+		// using Raft.leaderCh() wont help because it does not count
+		// first leader election as a leadership change, therefore from the docs,
+		// this is the way to detect the new leader
 		obsCh := make(chan raft.Observation, 1)
 		observer := raft.NewObserver(obsCh, false, nil)
 		node.Raft.RegisterObserver(observer)

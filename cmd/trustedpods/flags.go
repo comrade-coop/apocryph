@@ -73,6 +73,7 @@ var _ = func() error {
 
 	syncFlags.AddFlag(uploadFlags.Lookup("ipfs"))
 
+	registryFlags.StringVar(&ipfsApi, "ipfs", "/ip4/127.0.0.1/tcp/5001", "multiaddr where the ipfs/kubo api can be accessed")
 	registryFlags.StringVar(&registryContractAddress, "registry-contract", "", "registry contract address")
 	registryFlags.StringVar(&tokenContractAddress, "token-contract", "", "token contract address")
 	registryFlags.AddFlag(fundFlags.Lookup("payment-contract"))

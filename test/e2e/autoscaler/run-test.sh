@@ -2,6 +2,16 @@
 
 cd "$(dirname "$0")"
 
+trap 'kill $(jobs -p) &>/dev/null' EXIT
+
+which curl >/dev/null; which jq >/dev/null; which xargs >/dev/null; which sed >/dev/null
+which go >/dev/null
+which ipfs >/dev/null
+which forge &>/dev/null || export PATH=$PATH:~/.bin/foundry
+which forge >/dev/null; which cast >/dev/null
+which minikube >/dev/null; which helmfile >/dev/null; which helm >/dev/null; which kubectl >/dev/null
+which docker >/dev/null
+
 set -v
 
 # based on https://stackoverflow.com/a/31269848 / https://bobcopeland.com/blog/2012/10/goto-in-bash/
@@ -35,29 +45,42 @@ docker push localhost:5000/comradecoop/apocryph/p2p-helper:latest
 
 ## 0.3: Set up a local ethereum node and deploy contracts to it
 
-# (NOTE: Unfortunately, we cannot use a port other than 8545, or otherwise the eth-rpc service will break)
-docker run -d -p 8545:8545 --restart=always --name=anvil \
-  ghcr.io/foundry-rs/foundry:nightly-619f3c56302b5a665164002cb98263cd9812e4d5 \
-  -- 'anvil --host 0.0.0.0 --state /anvil-state.json' 2>/dev/null || {
-    docker exec anvil ash -c 'kill 1 && rm -f /anvil-state.json' # Reset anvil state
-}
-sleep 5
-
-# deploy the contracts
-DEPLOYER_KEY=$(docker logs anvil | awk '/Private Keys/ {flag=1; next} flag && /^\(0\)/ {print $2; exit}') # anvil.accounts[0]
-( cd ../../../contracts; forge script script/Deploy.s.sol --private-key "$DEPLOYER_KEY" --rpc-url http://localhost:8545 --broadcast)
+./redeploy-contracts.sh
 
 ## 1.0 Starting the First Cluster
-echo "Starting the first cluster"
-minikube start --insecure-registry='host.minikube.internal:5000' --container-runtime=containerd --driver=kvm2 -p c1
+minikube start --insecure-registry='host.minikube.internal:5000' --container-runtime=containerd --driver=virtualbox -p c1
 minikube profile c1
-./deploy.sh
+helmfile sync -f ../minikube || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile apply; }
 
 # wait until all the deployments are ready
 ./wait-deployments.sh
 
-## 1.1: Register the provider in the marketplace
-[ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
+
+## 2.0: Starting the second Cluster
+minikube start --insecure-registry='host.minikube.internal:5000' --container-runtime=containerd --driver=virtualbox -p c2
+minikube profile c2
+helmfile sync -f ../minikube || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile apply; }
+
+# wait until all the deployments are ready
+./wait-deployments.sh
+
+
+## 3.0: Starting the third Cluster
+minikube start --insecure-registry='host.minikube.internal:5000' --container-runtime=containerd --driver=virtualbox -p c3
+minikube profile c3
+helmfile sync -f ../minikube || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile apply; }
+
+# wait until all the deployments are ready
+./wait-deployments.sh
+
+
+minikube profile list
+
+## 4.0: Register the providers in the marketplace
+
+minikube profile c1
+pkill -f "kubectl port-forward"
+kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5;
 go run ../../../cmd/tpodserver  registry  register \
   --config ../common/config.yaml \
   --ipfs /ip4/127.0.0.1/tcp/5004 \
@@ -67,42 +90,39 @@ go run ../../../cmd/tpodserver  registry  register \
   --registry-contract 0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0 \
 
 
-## 2.0: Starting the second Cluster
-echo "Starting the second cluster"
-minikube start --insecure-registry='host.minikube.internal:5000' --container-runtime=containerd --driver=kvm2 -p c2
 minikube profile c2
-./deploy.sh
-
-# wait until all the deployments are ready
-./wait-deployments.sh
-
-[ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
+pkill -f "kubectl port-forward"
+kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5;
 go run ../../../cmd/tpodserver  registry  register \
-  --config ../common/config.yaml \
+  --config ../common/config2.yaml \
   --ipfs /ip4/127.0.0.1/tcp/5004 \
   --ethereum-rpc http://127.0.0.1:8545 \
-  --ethereum-key 0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a \
+  --ethereum-key 0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97 \
   --token-contract 0x5FbDB2315678afecb367f032d93F642f64180aa3 \
   --registry-contract 0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0 \
 
 
-## 3.0: Starting the third Cluster
-echo "Starting the third cluster"
-minikube start --insecure-registry='host.minikube.internal:5000' --container-runtime=containerd --driver=kvm2 -p c3
 minikube profile c3
-./deploy.sh
+pkill -f "kubectl port-forward"
+kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5;
 
-# wait until all the deployments are ready
-./wait-deployments.sh
-
-[ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5005:5001 & sleep 0.5; }
 go run ../../../cmd/tpodserver  registry  register \
-  --config ../common/config.yaml \
-  --ipfs /ip4/127.0.0.1/tcp/5005 \
+  --config ../common/config3.yaml \
+  --ipfs /ip4/127.0.0.1/tcp/5004 \
   --ethereum-rpc http://127.0.0.1:8545 \
-  --ethereum-key 0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6 \
+  --ethereum-key 0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6 \
   --token-contract 0x5FbDB2315678afecb367f032d93F642f64180aa3 \
   --registry-contract 0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0 \
 
+# Connect the three ipfs nodes
 
-minikube profile list
+## 4.1: Get the tables and the providers  
+
+
+pkill -f "kubectl port-forward"
+
+ipfs daemon >/dev/null &
+go run ../../../cmd/trustedpods registry get --config ../../integration/registry/config.yaml config.yaml \
+  --ethereum-key 0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a \
+  --registry-contract 0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0 \
+  --token-contract 0x5FbDB2315678afecb367f032d93F642f64180aa3 \
