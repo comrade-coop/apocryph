@@ -20,7 +20,7 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect.IsAtLeastVersion0_1_0
+const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// ProvisionPodServiceName is the fully-qualified name of the ProvisionPodService service.
@@ -49,6 +49,15 @@ const (
 	ProvisionPodServiceGetPodLogsProcedure = "/apocryph.proto.v0.provisionPod.ProvisionPodService/GetPodLogs"
 )
 
+// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
+var (
+	provisionPodServiceServiceDescriptor            = proto.File_provision_pod_proto.Services().ByName("ProvisionPodService")
+	provisionPodServiceProvisionPodMethodDescriptor = provisionPodServiceServiceDescriptor.Methods().ByName("ProvisionPod")
+	provisionPodServiceUpdatePodMethodDescriptor    = provisionPodServiceServiceDescriptor.Methods().ByName("UpdatePod")
+	provisionPodServiceDeletePodMethodDescriptor    = provisionPodServiceServiceDescriptor.Methods().ByName("DeletePod")
+	provisionPodServiceGetPodLogsMethodDescriptor   = provisionPodServiceServiceDescriptor.Methods().ByName("GetPodLogs")
+)
+
 // ProvisionPodServiceClient is a client for the apocryph.proto.v0.provisionPod.ProvisionPodService
 // service.
 type ProvisionPodServiceClient interface {
@@ -72,22 +81,26 @@ func NewProvisionPodServiceClient(httpClient connect.HTTPClient, baseURL string,
 		provisionPod: connect.NewClient[proto.ProvisionPodRequest, proto.ProvisionPodResponse](
 			httpClient,
 			baseURL+ProvisionPodServiceProvisionPodProcedure,
-			opts...,
+			connect.WithSchema(provisionPodServiceProvisionPodMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		updatePod: connect.NewClient[proto.UpdatePodRequest, proto.ProvisionPodResponse](
 			httpClient,
 			baseURL+ProvisionPodServiceUpdatePodProcedure,
-			opts...,
+			connect.WithSchema(provisionPodServiceUpdatePodMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		deletePod: connect.NewClient[proto.DeletePodRequest, proto.DeletePodResponse](
 			httpClient,
 			baseURL+ProvisionPodServiceDeletePodProcedure,
-			opts...,
+			connect.WithSchema(provisionPodServiceDeletePodMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		getPodLogs: connect.NewClient[proto.PodLogRequest, proto.PodLogResponse](
 			httpClient,
 			baseURL+ProvisionPodServiceGetPodLogsProcedure,
-			opts...,
+			connect.WithSchema(provisionPodServiceGetPodLogsMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 	}
 }
@@ -138,22 +151,26 @@ func NewProvisionPodServiceHandler(svc ProvisionPodServiceHandler, opts ...conne
 	provisionPodServiceProvisionPodHandler := connect.NewUnaryHandler(
 		ProvisionPodServiceProvisionPodProcedure,
 		svc.ProvisionPod,
-		opts...,
+		connect.WithSchema(provisionPodServiceProvisionPodMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	provisionPodServiceUpdatePodHandler := connect.NewUnaryHandler(
 		ProvisionPodServiceUpdatePodProcedure,
 		svc.UpdatePod,
-		opts...,
+		connect.WithSchema(provisionPodServiceUpdatePodMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	provisionPodServiceDeletePodHandler := connect.NewUnaryHandler(
 		ProvisionPodServiceDeletePodProcedure,
 		svc.DeletePod,
-		opts...,
+		connect.WithSchema(provisionPodServiceDeletePodMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	provisionPodServiceGetPodLogsHandler := connect.NewServerStreamHandler(
 		ProvisionPodServiceGetPodLogsProcedure,
 		svc.GetPodLogs,
-		opts...,
+		connect.WithSchema(provisionPodServiceGetPodLogsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	return "/apocryph.proto.v0.provisionPod.ProvisionPodService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
