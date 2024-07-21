@@ -11,6 +11,7 @@ which forge &>/dev/null || export PATH=$PATH:~/.bin/foundry
 which forge >/dev/null; which cast >/dev/null
 which minikube >/dev/null; which helmfile >/dev/null; which helm >/dev/null; which kubectl >/dev/null
 which docker >/dev/null
+which virtualbox >/dev/null
 
 set -v
 
