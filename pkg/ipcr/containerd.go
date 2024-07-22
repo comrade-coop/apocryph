@@ -158,14 +158,12 @@ func PullImage(ctx context.Context, client *containerd.Client, ipfsAddr, image, 
 	if err != nil {
 		return err
 	}
+
 	err = img.Tag(ctx, client, types.ImageTagOptions{Source: image, Target: target})
 	if err != nil {
 		return err
 	}
-	err = img.Remove(ctx, client, []string{image}, types.ImageRemoveOptions{Stdout: cmd.OutOrStdout()})
-	if err != nil {
-		return err
-	}
+
 	return nil
 }
 
