@@ -27,31 +27,16 @@ sudo chmod o+rw /run/containerd/containerd.sock
 ## 0: Set up the external environment
 
 ## 0.1: Build/tag server and p2p-helper and autoscaler images
+./redeploy-images.sh
 
-docker build -t comradecoop/apocryph/server:latest ../../.. --target server
-
-docker build -t comradecoop/apocryph/p2p-helper:latest ../../.. --target p2p-helper
-
-docker build -t comradecoop/apocryph/autoscaler:latest ../../.. --target autoscaler
-
-## 0.2: Create local registry and push server and p2p-helper images
-
-docker run -d -p 5000:5000 --restart=always --name registry registry:2 || echo "Docker registry already running"
-
-docker tag comradecoop/apocryph/server:latest localhost:5000/comradecoop/apocryph/server:latest
-docker push localhost:5000/comradecoop/apocryph/server:latest
-
-docker tag comradecoop/apocryph/p2p-helper:latest localhost:5000/comradecoop/apocryph/p2p-helper:latest
-docker push localhost:5000/comradecoop/apocryph/p2p-helper:latest
-
-## 0.3: Set up a local ethereum node and deploy contracts to it
+## 0.2: Set up a local ethereum node and deploy contracts to it
 
 ./redeploy-contracts.sh
 
 ## 1.0 Starting the First Cluster
 minikube start --insecure-registry='host.minikube.internal:5000' --container-runtime=containerd --driver=virtualbox -p c1
 minikube profile c1
-helmfile sync -f ../minikube || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile apply; }
+helmfile sync -f ../minikube || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile apply -f ../minikube; }
 
 # wait until all the deployments are ready
 ./wait-deployments.sh
@@ -60,7 +45,7 @@ helmfile sync -f ../minikube || { while ! kubectl get -n keda endpoints ingress-
 ## 2.0: Starting the second Cluster
 minikube start --insecure-registry='host.minikube.internal:5000' --container-runtime=containerd --driver=virtualbox -p c2
 minikube profile c2
-helmfile sync -f ../minikube || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile apply; }
+helmfile sync -f ../minikube || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile apply -f ../minikube; }
 
 # wait until all the deployments are ready
 ./wait-deployments.sh
@@ -69,7 +54,7 @@ helmfile sync -f ../minikube || { while ! kubectl get -n keda endpoints ingress-
 ## 3.0: Starting the third Cluster
 minikube start --insecure-registry='host.minikube.internal:5000' --container-runtime=containerd --driver=virtualbox -p c3
 minikube profile c3
-helmfile sync -f ../minikube || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile apply; }
+helmfile sync -f ../minikube || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile apply -f ../minikube; }
 
 # wait until all the deployments are ready
 ./wait-deployments.sh
@@ -115,15 +100,40 @@ go run ../../../cmd/tpodserver  registry  register \
   --token-contract 0x5FbDB2315678afecb367f032d93F642f64180aa3 \
   --registry-contract 0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0 \
 
-# Connect the three ipfs nodes
-
 ## 4.1: Get the tables and the providers  
 
-
 pkill -f "kubectl port-forward"
+kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5;
 
-ipfs daemon >/dev/null &
 go run ../../../cmd/trustedpods registry get --config ../../integration/registry/config.yaml config.yaml \
   --ethereum-key 0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a \
   --registry-contract 0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0 \
   --token-contract 0x5FbDB2315678afecb367f032d93F642f64180aa3 \
+  --ipfs /ip4/127.0.0.1/tcp/5004 \
+
+## 5.0: Deploy the autoscaler to the providers using their p2p multiaddr
+minikube profile c1
+
+
+source swarm-connect.sh
+
+PROVIDER_ETH=0x70997970C51812dc3A010C7d01b50e0d17dc79C8 #TODO= anvil.accounts[1]
+PUBLISHER_KEY=$(docker logs anvil | awk '/Private Keys/ {flag=1; next} flag && /^\(2\)/ {print $2; exit}')
+PAYMENT_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.payment.value')
+REGISTRY_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.registry.value')
+FUNDS=10000000000000000000000
+
+set +v
+set -x
+
+go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-autoscaler.yaml \
+  --ethereum-key "$PUBLISHER_KEY" \
+  --payment-contract "$PAYMENT_CONTRACT" \
+  --registry-contract "$REGISTRY_CONTRACT" \
+  --funds "$FUNDS" \
+  --upload-images=true \
+  --mint-funds \
+  --provider /p2p/"$PROVIDER_IPFS" \
+  --provider-eth "$PROVIDER_ETH"
+
+
