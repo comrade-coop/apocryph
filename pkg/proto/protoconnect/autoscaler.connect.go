@@ -38,18 +38,23 @@ const (
 	// AutoscalerServiceConnectClusterProcedure is the fully-qualified name of the AutoscalerService's
 	// ConnectCluster RPC.
 	AutoscalerServiceConnectClusterProcedure = "/apocryph.proto.v0.autoscaler.AutoscalerService/ConnectCluster"
+	// AutoscalerServiceTriggerNodeProcedure is the fully-qualified name of the AutoscalerService's
+	// TriggerNode RPC.
+	AutoscalerServiceTriggerNodeProcedure = "/apocryph.proto.v0.autoscaler.AutoscalerService/TriggerNode"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
 	autoscalerServiceServiceDescriptor              = proto.File_autoscaler_proto.Services().ByName("AutoscalerService")
 	autoscalerServiceConnectClusterMethodDescriptor = autoscalerServiceServiceDescriptor.Methods().ByName("ConnectCluster")
+	autoscalerServiceTriggerNodeMethodDescriptor    = autoscalerServiceServiceDescriptor.Methods().ByName("TriggerNode")
 )
 
 // AutoscalerServiceClient is a client for the apocryph.proto.v0.autoscaler.AutoscalerService
 // service.
 type AutoscalerServiceClient interface {
 	ConnectCluster(context.Context, *connect.Request[proto.ConnectClusterRequest]) (*connect.Response[proto.ConnectClusterResponse], error)
+	TriggerNode(context.Context, *connect.Request[proto.ConnectClusterRequest]) (*connect.Response[proto.TriggerNodeResponse], error)
 }
 
 // NewAutoscalerServiceClient constructs a client for the
@@ -69,12 +74,19 @@ func NewAutoscalerServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			connect.WithSchema(autoscalerServiceConnectClusterMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		triggerNode: connect.NewClient[proto.ConnectClusterRequest, proto.TriggerNodeResponse](
+			httpClient,
+			baseURL+AutoscalerServiceTriggerNodeProcedure,
+			connect.WithSchema(autoscalerServiceTriggerNodeMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // autoscalerServiceClient implements AutoscalerServiceClient.
 type autoscalerServiceClient struct {
 	connectCluster *connect.Client[proto.ConnectClusterRequest, proto.ConnectClusterResponse]
+	triggerNode    *connect.Client[proto.ConnectClusterRequest, proto.TriggerNodeResponse]
 }
 
 // ConnectCluster calls apocryph.proto.v0.autoscaler.AutoscalerService.ConnectCluster.
@@ -82,10 +94,16 @@ func (c *autoscalerServiceClient) ConnectCluster(ctx context.Context, req *conne
 	return c.connectCluster.CallUnary(ctx, req)
 }
 
+// TriggerNode calls apocryph.proto.v0.autoscaler.AutoscalerService.TriggerNode.
+func (c *autoscalerServiceClient) TriggerNode(ctx context.Context, req *connect.Request[proto.ConnectClusterRequest]) (*connect.Response[proto.TriggerNodeResponse], error) {
+	return c.triggerNode.CallUnary(ctx, req)
+}
+
 // AutoscalerServiceHandler is an implementation of the
 // apocryph.proto.v0.autoscaler.AutoscalerService service.
 type AutoscalerServiceHandler interface {
 	ConnectCluster(context.Context, *connect.Request[proto.ConnectClusterRequest]) (*connect.Response[proto.ConnectClusterResponse], error)
+	TriggerNode(context.Context, *connect.Request[proto.ConnectClusterRequest]) (*connect.Response[proto.TriggerNodeResponse], error)
 }
 
 // NewAutoscalerServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -100,10 +118,18 @@ func NewAutoscalerServiceHandler(svc AutoscalerServiceHandler, opts ...connect.H
 		connect.WithSchema(autoscalerServiceConnectClusterMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	autoscalerServiceTriggerNodeHandler := connect.NewUnaryHandler(
+		AutoscalerServiceTriggerNodeProcedure,
+		svc.TriggerNode,
+		connect.WithSchema(autoscalerServiceTriggerNodeMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/apocryph.proto.v0.autoscaler.AutoscalerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AutoscalerServiceConnectClusterProcedure:
 			autoscalerServiceConnectClusterHandler.ServeHTTP(w, r)
+		case AutoscalerServiceTriggerNodeProcedure:
+			autoscalerServiceTriggerNodeHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -115,4 +141,8 @@ type UnimplementedAutoscalerServiceHandler struct{}
 
 func (UnimplementedAutoscalerServiceHandler) ConnectCluster(context.Context, *connect.Request[proto.ConnectClusterRequest]) (*connect.Response[proto.ConnectClusterResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("apocryph.proto.v0.autoscaler.AutoscalerService.ConnectCluster is not implemented"))
+}
+
+func (UnimplementedAutoscalerServiceHandler) TriggerNode(context.Context, *connect.Request[proto.ConnectClusterRequest]) (*connect.Response[proto.TriggerNodeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("apocryph.proto.v0.autoscaler.AutoscalerService.TriggerNode is not implemented"))
 }

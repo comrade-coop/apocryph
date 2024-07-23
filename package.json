@@ -6,6 +6,7 @@
   "directories": {
     "test": "test"
   },
+  "packageManager": "npm@10.7.0",
   "scripts": {
     "lint": "eslint pkg/**/*.\\{ts,js\\} test/**/*.\\{ts,js\\} --ignore-pattern **/*.config.ts",
     "fmt": "eslint --fix pkg/**/*.\\{ts,js\\} test/**/*.\\{ts,js\\} --ignore-pattern **/*.config.ts",
@@ -49,10 +50,5 @@
     "helia": "^4.2.1",
     "private-ip": "^3.0.2"
   },
-  "workspaces": [
-    "test/e2e/webui",
-    "pkg/ipfs-ts",
-    "pkg/proto-ts",
-    "pkg/abi-ts"
-  ]
+  "workspaces": ["test/e2e/webui", "pkg/ipfs-ts", "pkg/proto-ts", "pkg/abi-ts"]
 }
