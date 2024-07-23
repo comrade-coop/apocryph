@@ -18,13 +18,14 @@ func main() {
 		fmt.Println("Failed creating p2p node")
 		return
 	}
+	fmt.Printf("PEER ID: %v\n", self.ID())
 	server := &AutoScalerServer{self: self}
 	server.mainLoop = setAppGatewayExample
 	path, handler := pbcon.NewAutoscalerServiceHandler(server)
 	mux.Handle(path, handler)
 	log.Println("Autoscaler RPC Server Started")
 	http.ListenAndServe(
-		"localhost:8080",
+		":8080",
 		// Use h2c so we can serve HTTP/2 without TLS.
 		h2c.NewHandler(mux, &http2.Server{}),
 	)

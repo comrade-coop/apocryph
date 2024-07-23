@@ -1,6 +1,9 @@
 #!/bin/bash
 
 cd "$(dirname "$0")"
+set -v
+
+sudo chmod o+rw /run/containerd/containerd.sock
 
 trap 'kill $(jobs -p) &>/dev/null' EXIT
 
@@ -13,7 +16,6 @@ which minikube >/dev/null; which helmfile >/dev/null; which helm >/dev/null; whi
 which docker >/dev/null
 which virtualbox >/dev/null
 
-set -v
 
 # based on https://stackoverflow.com/a/31269848 / https://bobcopeland.com/blog/2012/10/goto-in-bash/
 if [ -n "$1" ]; then
@@ -22,7 +24,6 @@ if [ -n "$1" ]; then
   exit
 fi
 
-sudo chmod o+rw /run/containerd/containerd.sock
 
 ## 0: Set up the external environment
 
@@ -61,6 +62,8 @@ helmfile sync -f ../minikube || { while ! kubectl get -n keda endpoints ingress-
 
 
 minikube profile list
+
+sleep 5
 
 ## 4.0: Register the providers in the marketplace
 
@@ -112,19 +115,20 @@ go run ../../../cmd/trustedpods registry get --config ../../integration/registry
   --ipfs /ip4/127.0.0.1/tcp/5004 \
 
 ## 5.0: Deploy the autoscaler to the providers using their p2p multiaddr
+
+set -v
+rm -f ~/.apocryph/deployment/*
+
+PAYMENT_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.payment.value')
+REGISTRY_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.registry.value')
+PUBLISHER_KEY=$(docker logs anvil | awk '/Private Keys/ {flag=1; next} flag && /^\(2\)/ {print $2; exit}')
+FUNDS=10000000000000000000000
+
 minikube profile c1
-
-
 source swarm-connect.sh
 
 PROVIDER_ETH=0x70997970C51812dc3A010C7d01b50e0d17dc79C8 #TODO= anvil.accounts[1]
-PUBLISHER_KEY=$(docker logs anvil | awk '/Private Keys/ {flag=1; next} flag && /^\(2\)/ {print $2; exit}')
-PAYMENT_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.payment.value')
-REGISTRY_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.registry.value')
-FUNDS=10000000000000000000000
-
-set +v
-set -x
+echo $PROVIDER_IPFS
 
 go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-autoscaler.yaml \
   --ethereum-key "$PUBLISHER_KEY" \
@@ -136,4 +140,66 @@ go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-autoscaler.yaml \
   --provider /p2p/"$PROVIDER_IPFS" \
   --provider-eth "$PROVIDER_ETH"
 
+sleep 5
 
+## 5.2: deploy to the second cluster
+minikube profile c2
+source swarm-connect.sh
+# for now just remove the deployment file to avoid uploading instead of deploying
+rm -f ~/.apocryph/deployment/*
+
+PUBLISHER_KEY=$(docker logs anvil | awk '/Private Keys/ {flag=1; next} flag && /^\(2\)/ {print $2; exit}')
+PAYMENT_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.payment.value')
+REGISTRY_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.registry.value')
+FUNDS=10000000000000000000000
+
+PROVIDER_ETH=0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f #TODO= anvil.accounts[7]
+echo $PROVIDER_IPFS
+
+go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-autoscaler.yaml \
+  --ethereum-key "$PUBLISHER_KEY" \
+  --payment-contract "$PAYMENT_CONTRACT" \
+  --registry-contract "$REGISTRY_CONTRACT" \
+  --funds "$FUNDS" \
+  --upload-images=true \
+  --mint-funds \
+  --provider /p2p/"$PROVIDER_IPFS" \
+  --provider-eth "$PROVIDER_ETH"
+
+sleep 5
+
+## 5.3: deploy to the third cluster
+minikube profile c3
+source swarm-connect.sh
+rm -f ~/.apocryph/deployment/*
+
+PUBLISHER_KEY=$(docker logs anvil | awk '/Private Keys/ {flag=1; next} flag && /^\(2\)/ {print $2; exit}')
+PAYMENT_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.payment.value')
+REGISTRY_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.registry.value')
+FUNDS=10000000000000000000000
+
+PROVIDER_ETH=0xa0Ee7A142d267C1f36714E4a8F75612F20a79720 #TODO= anvil.accounts[8]
+FUNDS=10000000000000000000000
+
+echo $PROVIDER_IPFS
+
+go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-autoscaler.yaml \
+  --ethereum-key "$PUBLISHER_KEY" \
+  --payment-contract "$PAYMENT_CONTRACT" \
+  --registry-contract "$REGISTRY_CONTRACT" \
+  --funds "$FUNDS" \
+  --upload-images=true \
+  --mint-funds \
+  --provider /p2p/"$PROVIDER_IPFS" \
+  --provider-eth "$PROVIDER_ETH"
+
+## 6.0: Connect the cluster
+
+minikube profile c1
+C1_INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true | head -n 1); echo $C1_INGRESS_URL
+minikube profile c2
+C2_INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true | head -n 1); echo $C2_INGRESS_URL
+minikube profile c3
+C3_INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true | head -n 1); echo $C3_INGRESS_URL
+
+go run ../../../cmd/trustedpods/ autoscale --url "$C1_INGRESS_URL" --providers "$C1_INGRESS_URL","$C2_INGRESS_URL","$C3_INGRESS_URL"

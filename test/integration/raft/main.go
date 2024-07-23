@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/comrade-coop/apocryph/pkg/raft"
-	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 func main() {
@@ -21,7 +21,21 @@ func main() {
 	defer peer2.Close()
 	defer peer3.Close()
 
-	peers := []*host.Host{&peer1, &peer2, &peer3}
+	peerInfo1, err := peer.AddrInfoFromString(fmt.Sprintf("/ip4/127.0.0.1/tcp/9997/p2p/%v", peer1.ID()))
+	if err != nil {
+		panic("failed to create AddrInfo from address")
+	}
+	peerInfo2, err := peer.AddrInfoFromString(fmt.Sprintf("/ip4/127.0.0.1/tcp/9998/p2p/%v", peer2.ID()))
+	if err != nil {
+		panic("failed to create AddrInfo from address")
+	}
+	peerInfo3, err := peer.AddrInfoFromString(fmt.Sprintf("/ip4/127.0.0.1/tcp/9999/p2p/%v", peer3.ID()))
+	if err != nil {
+		panic("failed to create AddrInfo from address")
+	}
+
+	peers := []*peer.AddrInfo{peerInfo1, peerInfo2, peerInfo3}
+
 	node1, err := raft.NewRaftNode(peer1, peers, "")
 	if err != nil {
 		fmt.Printf("Error:%s", err)

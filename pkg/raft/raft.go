@@ -11,6 +11,7 @@ import (
 	"github.com/libp2p/go-libp2p"
 	raftp2p "github.com/libp2p/go-libp2p-raft"
 	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/peerstore"
 )
 
@@ -34,11 +35,12 @@ type RaftNode struct {
 	LogStore    raft.LogStore
 }
 
-func NewRaftNode(host host.Host, peers []*host.Host, raftDir string) (*RaftNode, error) {
+func NewRaftNode(host host.Host, peers []*peer.AddrInfo, raftDir string) (*RaftNode, error) {
 	for _, peerPtr := range peers {
 		peer := *peerPtr
-		if peer.Addrs()[0].String() != host.Addrs()[0].String() {
-			host.Peerstore().AddAddrs(peer.ID(), peer.Addrs(), peerstore.PermanentAddrTTL)
+		// skip adding self
+		if peer.Addrs[0].String() != host.Addrs()[0].String() {
+			host.Peerstore().AddAddrs(peer.ID, peer.Addrs, peerstore.PermanentAddrTTL)
 		}
 	}
 
@@ -79,8 +81,8 @@ func NewRaftNode(host host.Host, peers []*host.Host, raftDir string) (*RaftNode,
 		peer := *peerPtr
 		servers = append(servers, raft.Server{
 			Suffrage: raft.Voter,
-			ID:       raft.ServerID(peer.ID().String()),
-			Address:  raft.ServerAddress(peer.ID().String()),
+			ID:       raft.ServerID(peer.ID.String()),
+			Address:  raft.ServerAddress(peer.ID.String()),
 		})
 	}
 	serversCfg := raft.Configuration{Servers: servers}

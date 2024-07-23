@@ -25,8 +25,11 @@ var autoscalerCmd = &cobra.Command{
 		client := pbcon.NewAutoscalerServiceClient(
 			http.DefaultClient,
 			baseUrl)
-		log.Printf("%v\n", nodesAddrs)
-		request := connect.NewRequest(&pb.ConnectClusterRequest{NodeGateway: baseUrl, Servers: nodesAddrs, Timeout: 10})
+		log.Printf("Connecting Clusters:%v\n", nodesAddrs)
+		request := connect.NewRequest(&pb.ConnectClusterRequest{NodeGateway: baseUrl, Servers: nodesAddrs, Timeout: 30})
+		// Add the Host that is needed for the ingress to route the autoscaler pod
+		request.Header().Set("Host", "autoscaler.local")
+		log.Printf("Sending Request to: %v\n", baseUrl)
 		response, err := client.ConnectCluster(context.Background(), request)
 		if err != nil {
 			return fmt.Errorf("Error connecting to cluster:%v", err)
