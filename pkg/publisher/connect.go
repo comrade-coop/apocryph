@@ -13,9 +13,13 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+	"github.com/comrade-coop/apocryph/pkg/abi"
 	"github.com/comrade-coop/apocryph/pkg/ipfs"
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	pbcon "github.com/comrade-coop/apocryph/pkg/proto/protoconnect"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/libp2p/go-libp2p/core/peer"
 
 	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"
@@ -57,7 +61,7 @@ func ConnectToProvider(ipfsP2p *ipfs.P2pApi, deployment *pb.Deployment, intercep
 	}, nil
 }
 
-func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, deployment *pb.Deployment, client *P2pProvisionPodServiceClient) error {
+func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, deployment *pb.Deployment, client *P2pProvisionPodServiceClient, ethClient *ethclient.Client, publisherAuth *bind.TransactOpts) error {
 	// tpipfs.NewP2pApi(ipfs, ipfsMultiaddr)
 	pod = LinkUploadsFromDeployment(pod, deployment)
 	defer client.Close()
@@ -97,8 +101,22 @@ func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, depl
 			return fmt.Errorf("Error from provider: %w", errors.New(response.Msg.Error))
 		}
 
+		if response.Msg.PubAddress != "" {
+			// authorize the public address to control the payment channel
+			// get a payment contract instance
+			payment, err := abi.NewPayment(common.Address(deployment.Payment.PaymentContractAddress), ethClient)
+			if err != nil {
+				return fmt.Errorf("Failed instantiating payment contract: %w", err)
+			}
+			tx, err := payment.Authorize(publisherAuth, common.HexToAddress(response.Msg.PubAddress), common.Address(deployment.Provider.EthereumAddress), [32]byte(deployment.Payment.PodID))
+			if err != nil {
+				return fmt.Errorf("Failed Authorizing Address: %w", err)
+			}
+			fmt.Fprintf(os.Stdout, "Authorized Address Successfully %v\n", tx)
+		}
+
 		deployment.Deployed = response.Msg
-		fmt.Fprintf(os.Stderr, "Successfully deployed! %v\n", response)
+		fmt.Fprintf(os.Stdout, "Successfully deployed! %v\n", response)
 	} else {
 		request := &pb.DeletePodRequest{}
 		response, err := client.DeletePod(ctx, connect.NewRequest(request))

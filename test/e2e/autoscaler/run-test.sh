@@ -114,6 +114,7 @@ go run ../../../cmd/trustedpods registry get --config ../../integration/registry
   --token-contract 0x5FbDB2315678afecb367f032d93F642f64180aa3 \
   --ipfs /ip4/127.0.0.1/tcp/5004 \
 
+sleep 5
 ## 5.0: Deploy the autoscaler to the providers using their p2p multiaddr
 
 set -v
@@ -138,8 +139,8 @@ go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-autoscaler.yaml \
   --upload-images=true \
   --mint-funds \
   --provider /p2p/"$PROVIDER_IPFS" \
-  --provider-eth "$PROVIDER_ETH"
-
+  --provider-eth "$PROVIDER_ETH" \
+  --authorize
 sleep 5
 
 ## 5.2: deploy to the second cluster
@@ -164,7 +165,8 @@ go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-autoscaler.yaml \
   --upload-images=true \
   --mint-funds \
   --provider /p2p/"$PROVIDER_IPFS" \
-  --provider-eth "$PROVIDER_ETH"
+  --provider-eth "$PROVIDER_ETH" \
+  --authorize
 
 sleep 5
 
@@ -191,7 +193,8 @@ go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-autoscaler.yaml \
   --upload-images=true \
   --mint-funds \
   --provider /p2p/"$PROVIDER_IPFS" \
-  --provider-eth "$PROVIDER_ETH"
+  --provider-eth "$PROVIDER_ETH" \
+  --authorize
 
 ## 6.0: Connect the cluster
 

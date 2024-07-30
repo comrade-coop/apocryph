@@ -51,8 +51,8 @@ ENTRYPOINT ["tpodserver"]
 
 FROM build-common as build-autoscaler
 
-COPY cmd/autoscaler ./cmd/autoscaler
-RUN --mount=type=cache,target=/root/.cache/go-build go build -v -o /usr/local/bin/autoscaler ./cmd/autoscaler
+COPY autoscaler ./autoscaler
+RUN --mount=type=cache,target=/root/.cache/go-build go build -v -o /usr/local/bin/autoscaler ./autoscaler
 
 FROM run-common as autoscaler 
 

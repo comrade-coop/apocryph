@@ -155,4 +155,77 @@ contract PaymentTest is Test {
         payment.withdrawUnlocked(provider, podId);
         assertEq(token.balanceOf(publisher), 300);
     }
+
+    function test_authorize() public {
+        // Setup
+        vm.startPrank(publisher);
+        token.mint(1000);
+        token.approve(address(payment), 1000);
+        payment.createChannel(provider, podId, 1, 500);
+
+        // Test authorizing an address
+        address authorizedAddr = address(0x123);
+        payment.authorize(authorizedAddr, provider, podId);
+
+        // Verify authorization (we'll need to add a getter function in the contract for this)
+        assertTrue(payment.isAuthorized(publisher, provider, podId, authorizedAddr));
+
+        // Test authorizing for non-existent channel
+        bytes32 nonExistentPodId = keccak256("non-existent");
+        vm.expectRevert(Payment.DoesNotExist.selector);
+        payment.authorize(authorizedAddr, provider, nonExistentPodId);
+
+        vm.stopPrank();
+    }
+
+    function test_createSubChannel() public {
+        // Setup
+        vm.startPrank(publisher);
+        // mint 1000 to the caller (publisher)
+        token.mint(1000);
+        token.approve(address(payment), 1000);
+        payment.createChannel(provider, podId, 1, 500);
+        bytes32 newPodId = bytes32(uint256(1));
+
+        address authorizedAddr = address(0x123);
+        payment.authorize(authorizedAddr, provider, podId);
+        vm.stopPrank();
+
+        // Test creating a sub-channel
+        vm.startPrank(authorizedAddr);
+        address newProvider = address(0x456);
+        payment.createSubChannel(publisher, provider, podId, newProvider,
+                                 newPodId, 200);
+
+        // Verify sub-channel creation
+        (uint256 investedAmount, uint256 withdrawnAmount, uint256 unlockTime,) =
+            payment.channels(authorizedAddr, newProvider, newPodId);
+        assertEq(investedAmount, 200);
+        assertEq(withdrawnAmount, 0);
+        assertEq(unlockTime, 1); // should be the same as the main channel's unlock time
+
+        // Verify main channel balance reduction
+        (uint256 mainChannelBalance,,,) = payment.channels(publisher, provider, podId);
+        assertEq(mainChannelBalance, 300);
+
+        // Test creating sub-channel with insufficient funds
+        vm.expectRevert(Payment.InsufficientFunds.selector);
+        payment.createSubChannel(publisher, provider, podId, newProvider,
+                                 newPodId,400);
+
+        // Test creating sub-channel from non-existent main channel
+        bytes32 nonExistentPodId = keccak256("non-existent");
+        vm.expectRevert(Payment.DoesNotExist.selector);
+        payment.createSubChannel(publisher, provider, nonExistentPodId,
+                                 newProvider, newPodId,100);
+
+        // Test creating sub-channel without authorization
+        vm.stopPrank();
+        vm.startPrank(address(0x789)); // Non-authorized address
+        vm.expectRevert(Payment.NotAuthorized.selector);
+        payment.createSubChannel(publisher, provider, podId,
+                                 newProvider,newPodId, 100);
+
+        vm.stopPrank();
+    }
 }

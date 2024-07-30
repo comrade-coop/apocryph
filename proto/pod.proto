@@ -9,6 +9,7 @@ message Pod {
   repeated Container containers = 1;
   repeated Volume volumes = 2;
   Replicas replicas = 3;
+  bool authorized = 4;
 }
 
 message Container {

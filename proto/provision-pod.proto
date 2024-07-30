@@ -28,6 +28,7 @@ message DeletePodResponse {
 
 message UpdatePodRequest {
   pod.Pod pod = 1;
+  PaymentChannel payment = 2;
 }
 message UpdatePodResponse {
   bool success = 1;
@@ -51,6 +52,7 @@ message ProvisionPodResponse {
     string containerName = 2;
     uint64 containerPort = 3;
   }
+  string pubAddress = 4;
 }
 
 message PodLogRequest{
