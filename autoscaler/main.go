@@ -14,15 +14,15 @@ import (
 
 func main() {
 	mux := http.NewServeMux()
-	self, err := tpraft.NewPeer(fmt.Sprintf("/ip4/0.0.0.0/tcp/%v", autoscaler.RAFT_P2P_PORT))
+	p2pHost, err := tpraft.NewPeer(fmt.Sprintf("/ip4/0.0.0.0/tcp/%v", autoscaler.RAFT_P2P_PORT))
 	if err != nil {
 		fmt.Println("Failed creating p2p node")
 		return
 	}
 
-	fmt.Printf("PEER ID: %v\n", self.ID())
+	log.Printf("PEER ID: %v\n", p2pHost.ID())
 
-	server, err := autoscaler.NewAutoSalerServer("http://eth-rpc.eth.svc.cluster.local:8545")
+	server, err := autoscaler.NewAutoSalerServer("http://eth-rpc.eth.svc.cluster.local:8545", p2pHost)
 	if err != nil {
 		fmt.Println("Failed creating AutoScaler Server")
 		return

@@ -14,7 +14,6 @@ import (
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -106,11 +105,10 @@ func ApplyPodRequest(
 	if podManifest.Authorized == true {
 		// create the keypair that will be accessible for all pods
 		var err error
-		privateKey, err = ecdsa.GenerateKey(secp256k1.S256(), rand.Reader)
+		privateKey, err = ecdsa.GenerateKey(crypto.S256(), rand.Reader)
 		if err != nil {
-			return fmt.Errorf("Could not create private key for the application")
+			return fmt.Errorf("Could not create private key for the application: %w", err)
 		}
-
 		// Ensure the public key is valid before getting the address
 		if privateKey == nil || privateKey.PublicKey.X == nil || privateKey.PublicKey.Y == nil {
 			return fmt.Errorf("Generated an invalid public key")
@@ -139,14 +137,15 @@ func ApplyPodRequest(
 
 			key, err := ethereum.EncodePrivateKey(privateKey)
 			if err != nil {
-				return err
+				return fmt.Errorf("Failed encoding private key: %v\n", err)
 			}
+			fmt.Println("Setting Env variables:")
 			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PRIVATE_KEY, Value: key})
 			// save as hex to parse later as hex
 			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PAYMENT_ADDR_KEY, Value: common.BytesToAddress(paymentChannel.ContractAddress).Hex()})
 			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PUBLISHER_ADDR_KEY, Value: common.BytesToAddress(paymentChannel.PublisherAddress).Hex()})
 			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PROVIDER_ADDR_KEY, Value: common.BytesToAddress(paymentChannel.ProviderAddress).Hex()})
-			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.POD_ID_KEY, Value: string(paymentChannel.PodID)})
+			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.POD_ID_KEY, Value: common.BytesToHash(paymentChannel.PodID).Hex()})
 			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PRIVATE_KEY, Value: key})
 			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PUBLIC_ADDRESS_KEY, Value: address.Hex()})
 

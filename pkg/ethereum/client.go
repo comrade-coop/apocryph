@@ -5,8 +5,7 @@ package ethereum
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/x509"
-	"encoding/pem"
+	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -127,23 +126,23 @@ func GetAccountAndSigner(accountString string, client *ethclient.Client) (*bind.
 	}
 }
 
-// Encode private key
 func EncodePrivateKey(privateKey *ecdsa.PrivateKey) (string, error) {
-	x509Encoded, err := x509.MarshalECPrivateKey(privateKey)
-	if err != nil {
-		return "", err
-	}
-	pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509Encoded})
-	return string(pemEncoded), nil
+	privateKeyBytes := crypto.FromECDSA(privateKey)
+	return hex.EncodeToString(privateKeyBytes), nil
 }
 
-// Decode private key
-func DecodePrivateKey(pemEncoded string) (*ecdsa.PrivateKey, error) {
-	block, _ := pem.Decode([]byte(pemEncoded))
-	if block == nil {
-		return nil, fmt.Errorf("Could decode Pem Encoded key")
+func DecodePrivateKey(encodedKey string) (*ecdsa.PrivateKey, error) {
+	// Decode the hex string
+	privateKeyBytes, err := hex.DecodeString(encodedKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode hex string: %w", err)
 	}
-	x509Encoded := block.Bytes
-	privateKey, err := x509.ParseECPrivateKey(x509Encoded)
-	return privateKey, err
+
+	// Convert bytes to ECDSA private key
+	privateKey, err := crypto.ToECDSA(privateKeyBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert bytes to ECDSA private key: %w", err)
+	}
+
+	return privateKey, nil
 }

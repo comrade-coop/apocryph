@@ -13,13 +13,9 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
-	"github.com/comrade-coop/apocryph/pkg/abi"
 	"github.com/comrade-coop/apocryph/pkg/ipfs"
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	pbcon "github.com/comrade-coop/apocryph/pkg/proto/protoconnect"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/libp2p/go-libp2p/core/peer"
 
 	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"
@@ -61,7 +57,7 @@ func ConnectToProvider(ipfsP2p *ipfs.P2pApi, deployment *pb.Deployment, intercep
 	}, nil
 }
 
-func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, deployment *pb.Deployment, client *P2pProvisionPodServiceClient, ethClient *ethclient.Client, publisherAuth *bind.TransactOpts) error {
+func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, deployment *pb.Deployment, client *P2pProvisionPodServiceClient) (interface{}, error) {
 	// tpipfs.NewP2pApi(ipfs, ipfsMultiaddr)
 	pod = LinkUploadsFromDeployment(pod, deployment)
 	defer client.Close()
@@ -84,7 +80,7 @@ func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, depl
 			fmt.Println("Processing Request ...")
 			response, err = client.ProvisionPod(ctx, connect.NewRequest(request))
 			if err != nil {
-				return fmt.Errorf("Failed executing provision pod request: %w", err)
+				return nil, fmt.Errorf("Failed executing provision pod request: %w", err)
 			}
 		} else {
 			request := &pb.UpdatePodRequest{
@@ -93,42 +89,30 @@ func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, depl
 
 			response, err = client.UpdatePod(ctx, connect.NewRequest(request))
 			if err != nil {
-				return fmt.Errorf("Failed executing update pod request: %w", err)
+				return nil, fmt.Errorf("Failed executing update pod request: %w", err)
 			}
+			return response.Msg, nil
 		}
 
 		if response.Msg.Error != "" {
-			return fmt.Errorf("Error from provider: %w", errors.New(response.Msg.Error))
+			return nil, fmt.Errorf("Error from provider: %w", errors.New(response.Msg.Error))
 		}
-
-		if response.Msg.PubAddress != "" {
-			// authorize the public address to control the payment channel
-			// get a payment contract instance
-			payment, err := abi.NewPayment(common.Address(deployment.Payment.PaymentContractAddress), ethClient)
-			if err != nil {
-				return fmt.Errorf("Failed instantiating payment contract: %w", err)
-			}
-			tx, err := payment.Authorize(publisherAuth, common.HexToAddress(response.Msg.PubAddress), common.Address(deployment.Provider.EthereumAddress), [32]byte(deployment.Payment.PodID))
-			if err != nil {
-				return fmt.Errorf("Failed Authorizing Address: %w", err)
-			}
-			fmt.Fprintf(os.Stdout, "Authorized Address Successfully %v\n", tx)
-		}
-
 		deployment.Deployed = response.Msg
 		fmt.Fprintf(os.Stdout, "Successfully deployed! %v\n", response)
+
+		return response.Msg, nil
+
 	} else {
 		request := &pb.DeletePodRequest{}
 		response, err := client.DeletePod(ctx, connect.NewRequest(request))
 		if err != nil {
-			return fmt.Errorf("Failed executing update pod request: %w", err)
+			return nil, fmt.Errorf("Failed executing update pod request: %w", err)
 		}
 		if response.Msg.Error != "" {
-			return fmt.Errorf("Error from provider: %w", errors.New(response.Msg.Error))
+			return nil, fmt.Errorf("Error from provider: %w", errors.New(response.Msg.Error))
 		}
 		deployment.Deployed = nil
 		fmt.Fprintf(os.Stderr, "Successfully undeployed!\n")
+		return response.Msg, nil
 	}
-
-	return nil
 }
