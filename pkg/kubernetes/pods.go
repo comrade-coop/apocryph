@@ -99,11 +99,12 @@ func ApplyPodRequest(
 
 	for cIdx, container := range podManifest.Containers {
 		containerSpec := corev1.Container{
-			Name:       container.Name,
-			Image:      images[container.Name],
-			Command:    container.Entrypoint,
-			Args:       container.Command,
-			WorkingDir: container.WorkingDir,
+			Name:            container.Name,
+			Image:           images[container.Name],
+			ImagePullPolicy: corev1.PullNever,
+			Command:         container.Entrypoint,
+			Args:            container.Command,
+			WorkingDir:      container.WorkingDir,
 		}
 		for field, value := range container.Env {
 			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: field, Value: value})

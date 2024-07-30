@@ -9,6 +9,7 @@
 //go:generate protoc -I=../../proto --go_out=paths=source_relative:. ../../proto/pricing.proto
 //go:generate protoc -I=../../proto --go_out=paths=source_relative:. ../../proto/deployment.proto
 //go:generate protoc -I=../../proto --go_out=paths=source_relative:. --connect-go_out=paths=source_relative:. ../../proto/provision-pod.proto
+//go:generate protoc -I=../../proto --go_out=paths=source_relative:. --connect-go_out=paths=source_relative:. ../../proto/autoscaler.proto
 //go:generate protoc -I=../../proto --go_out=paths=source_relative:. ../../proto/provisioning-capacity.proto
 //go:generate protoc -I=../../proto --go_out=paths=source_relative:. ../../proto/registry.proto
 package proto

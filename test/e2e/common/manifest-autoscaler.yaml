@@ -1,0 +1,19 @@
+containers:
+  - name: autoscaler
+    image:
+      url: localhost:5000/comradecoop/apocryph/autoscaler
+    ports:
+      - containerPort: '8080'
+        hostHttpHost: autoscaler.local
+        name: internal
+      - containerPort: '32500'
+        hostTcpPort: 32500
+        name: raft
+    resourceRequests:
+      - amountMillis: '10'
+        resource: cpu
+      - amount: '100000000'
+        resource: memory
+replicas:
+  min: 1
+  max: 1

@@ -52,14 +52,14 @@ func main() {
 
 	// pulling the ecnrypted image from ipfs
 	log.Println("Pulling Encrypted Image")
-	err = ipcr.PullImage(context.Background(), client, IPFS_ADDRESS, cid, IMAGE_NAME)
+	err = ipcr.PullImage(context.Background(), client, IPFS_ADDRESS, cid, cid)
 	if err != nil {
 		log.Panic(err)
 	}
 	printImages(client)
 
 	// decrypting pulled Image
-	err = ipcr.DecryptImage(context.Background(), client, PASSWORD, IMAGE_NAME, prvKey)
+	err = ipcr.DecryptImage(context.Background(), client, PASSWORD, cid, prvKey)
 	if err != nil {
 		log.Panic(err)
 	}

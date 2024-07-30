@@ -1,6 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "pipeline": {
+  "tasks": {
     "build": {
       "dependsOn": ["//#build-images"]
     },
@@ -9,7 +9,7 @@
       "dependsOn": ["//#go-build", "ts-gen-proto", "ts-gen-abi"]
     },
     "//#go-build": {
-      "inputs": ["./proto/**"],
+      "inputs": ["./proto/**", "./pkg/proto/**"],
       "dependsOn": ["//#build-contracts"]
     },
     "//#build-contracts": {

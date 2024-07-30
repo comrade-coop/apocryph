@@ -1,0 +1,35 @@
+pricing:
+  table:
+    format: yaml
+    # filename: pricing.yaml
+    contents: |
+      tables:
+        - paymentContractAddress: "5/FyXnc0ziiPg2fhuxQ+kLs/BRI="
+          resources:
+            - resource: "cpu"
+              priceForReservation: 200000000000
+            - resource: "ram"
+              priceForReservation: 500
+            - resource: "storage"
+              priceForUsage: 500
+            - resource: "bandwidth_ingress"
+              priceForUsage: 800
+            - resource: "bandwidth_egress"
+              priceForUsage: 800
+cpu_model: 'AMD EPIC 7742'
+tee_type: 'CVM'
+withdraw:
+  address: '0xa0Ee7A142d267C1f36714E4a8F75612F20a79720'
+  time: 15
+info:
+  format: yaml
+  contents: |
+    regions:
+      - name: "bul"
+        zone: "north"
+        num: 3
+      - name: "alg"
+        zone: "south"
+        num: 8
+    multiaddrs:
+      - "https://kubo.business/"

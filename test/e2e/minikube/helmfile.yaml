@@ -25,7 +25,7 @@ releases:
           - 'keda'
           - '--for=condition=available'
           - 'deployment/ingress-nginx-controller'
-          - '--timeout=1600s'
+          - '--timeout=500000s'
   - name: keda-http-addon
     namespace: keda
     chart: kedacore/keda-add-ons-http

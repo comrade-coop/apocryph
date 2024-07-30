@@ -36,7 +36,7 @@ data:
             - resource: "ram"
               priceForReservation: 500
     withdraw:
-      address: "0x90F79bf6EB2c4f870365E785982E1f101E93b906"
+      address: {{ .Values.withdraw.address }}
       time: 15
     cpu_model: "Intel Xeon Platinum 8452Y Processor"
     tee_type: "Secure Enclaves"
@@ -79,7 +79,7 @@ spec:
           "--ipfs", "/dns4/ipfs-rpc.ipfs.svc.cluster.local/tcp/5001",
           "--oci-registry", "host.minikube.internal:5000",
           "--ethereum-rpc", "http://eth-rpc.eth.svc.cluster.local:8545",
-          "--ethereum-key", "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d", # TODO= anvil.accounts[1] prvkey
+          "--ethereum-key", {{ .Values.ethKey }}, # TODO= anvil.accounts[1] prvkey
         ]
         ports:
         - containerPort: 8080
@@ -100,7 +100,7 @@ spec:
           "--config", "config.yaml",
           "--prometheus", "http://prometheus-server.prometheus.svc.cluster.local:80/",
           "--ethereum-rpc", "http://eth-rpc.eth.svc.cluster.local:8545",
-          "--ethereum-key", "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d", # TODO= anvil.accounts[1]
+          "--ethereum-key", {{ .Values.ethKey }}, # TODO= anvil.accounts[1]
         ]
         ports:
         - containerPort: 8080

@@ -1,0 +1,29 @@
+// SPDX-License-Identifier: GPL-3.0
+
+syntax = "proto3";
+package apocryph.proto.v0.autoscaler;
+
+option go_package = "github.com/comrade-coop/apocryph/pkg/proto";
+
+import "google/protobuf/empty.proto";
+
+service AutoscalerService {
+  rpc ConnectCluster(ConnectClusterRequest) returns (ConnectClusterResponse);
+  rpc TriggerNode(ConnectClusterRequest) returns (TriggerNodeResponse);
+}
+
+message ConnectClusterRequest {
+  // could get it from within the cluster maybe? 
+  string nodeGateway = 1;
+  repeated string servers = 2;
+  uint32 timeout = 3;
+}
+
+message ConnectClusterResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message TriggerNodeResponse {
+  string peerID =1;
+}
