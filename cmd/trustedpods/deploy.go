@@ -11,6 +11,7 @@ import (
 	"github.com/comrade-coop/apocryph/pkg/ethereum"
 	"github.com/comrade-coop/apocryph/pkg/ipcr"
 	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	pbcon "github.com/comrade-coop/apocryph/pkg/proto/protoconnect"
 	"github.com/comrade-coop/apocryph/pkg/publisher"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -94,7 +95,6 @@ var deployPodCmd = &cobra.Command{
 		configureDeployment(deployment)
 
 		if authorize {
-			fmt.Println("Authorizing ...")
 			pod.Authorized = true
 		}
 
@@ -184,9 +184,19 @@ var deployPodCmd = &cobra.Command{
 			return err
 		}
 
-		err = publisher.SendToProvider(cmd.Context(), ipfsp2p, pod, deployment, provisionPodclient, ethClient, publisherAuth)
+		fmt.Printf("PODID is:%v\n", common.BytesToHash(deployment.Payment.PodID))
+
+		response, err := publisher.SendToProvider(cmd.Context(), ipfsp2p, pod, deployment, provisionPodclient)
 		if err != nil {
 			return err
+		}
+		// Authorize the application to manipulate the payment channel and fund
+		// it to make it able to send transactions
+		if authorize {
+			err := publisher.AuthorizeAndFundApplication(cmd.Context(), response.(*pb.ProvisionPodResponse), deployment, ethClient, publisherAuth, publisherKey, 1000000000000000000)
+			if err != nil {
+				return err
+			}
 		}
 
 		return publisher.SaveDeployment(deploymentFile, deploymentFormat, deployment)
@@ -220,7 +230,7 @@ var deletePodCmd = &cobra.Command{
 			publisherKey = common.BytesToAddress(deployment.Payment.PublisherAddress).String()
 		}
 
-		publisherAuth, sign, err := ethereum.GetAccountAndSigner(publisherKey, ethClient)
+		_, sign, err := ethereum.GetAccountAndSigner(publisherKey, ethClient)
 		if err != nil {
 			return fmt.Errorf("Could not get ethereum account: %w", err)
 		}
@@ -234,10 +244,11 @@ var deletePodCmd = &cobra.Command{
 			return err
 		}
 
-		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), nil, deployment, client, ethClient, publisherAuth)
+		_, err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), nil, deployment, client)
 		if err != nil {
 			return err
 		}
+
 		return publisher.SaveDeployment(deploymentFile, deploymentFormat, deployment)
 	},
 }

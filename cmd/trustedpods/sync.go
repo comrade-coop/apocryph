@@ -40,7 +40,7 @@ var syncPodCmd = &cobra.Command{
 			publisherKey = common.BytesToAddress(deployment.Payment.PublisherAddress).String()
 		}
 
-		publisherAuth, sign, err := ethereum.GetAccountAndSigner(publisherKey, ethClient)
+		_, sign, err := ethereum.GetAccountAndSigner(publisherKey, ethClient)
 		if err != nil {
 			return fmt.Errorf("Could not get ethereum account: %w", err)
 		}
@@ -54,7 +54,7 @@ var syncPodCmd = &cobra.Command{
 			return err
 		}
 
-		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), pod, deployment, client, ethClient, publisherAuth)
+		_, err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), pod, deployment, client)
 		if err != nil {
 			return err
 		}
