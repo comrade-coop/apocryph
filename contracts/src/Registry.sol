@@ -85,7 +85,7 @@ contract Registry {
         subscription[msg.sender][tableId] = false;
     }
 
-    function isSubscribed(address provider ,uint256 tableId) external view returns (bool) {
+    function isSubscribed(address provider, uint256 tableId) external view returns (bool) {
         return subscription[provider][tableId];
     }
 }

@@ -4,10 +4,17 @@ package kubernetes
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/rand"
 	"fmt"
 	"strings"
 
+	"github.com/comrade-coop/apocryph/pkg/constants"
+	"github.com/comrade-coop/apocryph/pkg/ethereum"
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -17,6 +24,9 @@ import (
 )
 
 type FetchSecret func(cid []byte) (map[string][]byte, error)
+
+const PRIVATE_KEY = "PRIVATE_KEY"
+const PUBLIC_ADDRESS = "PUBLIC_ADDRESS"
 
 func updateOrCreate(ctx context.Context, resourceName, kind, namespace string, resource interface{}, client k8cl.Client, update bool) error {
 	if update {
@@ -59,6 +69,7 @@ func ApplyPodRequest(
 	namespace string,
 	update bool,
 	podManifest *pb.Pod,
+	paymentChannel *pb.PaymentChannel,
 	images map[string]string,
 	secrets map[string][]byte,
 	response *pb.ProvisionPodResponse,
@@ -89,6 +100,23 @@ func ApplyPodRequest(
 			},
 		},
 	}
+	var privateKey *ecdsa.PrivateKey
+	var address common.Address
+
+	if podManifest.Authorized == true {
+		// create the keypair that will be accessible for all pods
+		var err error
+		privateKey, err = ecdsa.GenerateKey(secp256k1.S256(), rand.Reader)
+		if err != nil {
+			return fmt.Errorf("Could not create private key for the application")
+		}
+
+		// Ensure the public key is valid before getting the address
+		if privateKey == nil || privateKey.PublicKey.X == nil || privateKey.PublicKey.Y == nil {
+			return fmt.Errorf("Generated an invalid public key")
+		}
+		address = crypto.PubkeyToAddress(privateKey.PublicKey)
+	}
 
 	podTemplate := &deployment.Spec.Template
 
@@ -101,14 +129,34 @@ func ApplyPodRequest(
 		containerSpec := corev1.Container{
 			Name:            container.Name,
 			Image:           images[container.Name],
-			ImagePullPolicy: corev1.PullNever,
+			ImagePullPolicy: corev1.PullNever, // make sure images are pulled localy
 			Command:         container.Entrypoint,
 			Args:            container.Command,
 			WorkingDir:      container.WorkingDir,
 		}
+
+		if podManifest.Authorized {
+
+			key, err := ethereum.EncodePrivateKey(privateKey)
+			if err != nil {
+				return err
+			}
+			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PRIVATE_KEY, Value: key})
+			// save as hex to parse later as hex
+			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PAYMENT_ADDR_KEY, Value: common.BytesToAddress(paymentChannel.ContractAddress).Hex()})
+			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PUBLISHER_ADDR_KEY, Value: common.BytesToAddress(paymentChannel.PublisherAddress).Hex()})
+			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PROVIDER_ADDR_KEY, Value: common.BytesToAddress(paymentChannel.ProviderAddress).Hex()})
+			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.POD_ID_KEY, Value: string(paymentChannel.PodID)})
+			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PRIVATE_KEY, Value: key})
+			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PUBLIC_ADDRESS_KEY, Value: address.Hex()})
+
+			response.PubAddress = address.Hex()
+		}
+
 		for field, value := range container.Env {
 			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: field, Value: value})
 		}
+
 		for _, port := range container.Ports {
 			portName := fmt.Sprintf("p%d-%d", cIdx, port.ContainerPort)
 			containerSpec.Ports = append(containerSpec.Ports, corev1.ContainerPort{

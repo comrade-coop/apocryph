@@ -27,6 +27,11 @@ export class Pod extends Message<Pod> {
    */
   replicas?: Replicas;
 
+  /**
+   * @generated from field: bool authorized = 4;
+   */
+  authorized = false;
+
   constructor(data?: PartialMessage<Pod>) {
     super();
     proto3.util.initPartial(data, this);
@@ -38,6 +43,7 @@ export class Pod extends Message<Pod> {
     { no: 1, name: "containers", kind: "message", T: Container, repeated: true },
     { no: 2, name: "volumes", kind: "message", T: Volume, repeated: true },
     { no: 3, name: "replicas", kind: "message", T: Replicas },
+    { no: 4, name: "authorized", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Pod {

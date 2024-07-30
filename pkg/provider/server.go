@@ -78,7 +78,7 @@ func (s *provisionPodServer) UpdatePod(ctx context.Context, request *connect.Req
 
 	namespace := pbcon.GetNamespace(request)
 	response := &pb.ProvisionPodResponse{}
-	err = tpk8s.ApplyPodRequest(ctx, s.k8cl, namespace, true, request.Msg.Pod, images, secrets, response)
+	err = tpk8s.ApplyPodRequest(ctx, s.k8cl, namespace, true, request.Msg.Pod, request.Msg.Payment, images, secrets, response)
 	if err != nil {
 		return transformError(err)
 	}
@@ -135,11 +135,12 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *connect.
 	if err != nil {
 		return transformError(err)
 	}
+	fmt.Printf("Authorized:%v\n", request.Msg.Pod.Authorized)
 
 	response := &pb.ProvisionPodResponse{}
 	ns := tpk8s.NewTrustedPodsNamespace(namespace, request.Msg.Payment)
 	err = tpk8s.RunInNamespaceOrRevert(ctx, s.k8cl, ns, s.dryRun, func(cl client.Client) error {
-		return tpk8s.ApplyPodRequest(ctx, cl, ns.ObjectMeta.Name, false, request.Msg.Pod, images, secrets, response)
+		return tpk8s.ApplyPodRequest(ctx, cl, ns.ObjectMeta.Name, false, request.Msg.Pod, request.Msg.Payment, images, secrets, response)
 	})
 	if err != nil {
 		return transformError(err)

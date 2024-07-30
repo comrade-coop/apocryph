@@ -4,6 +4,9 @@ package ethereum
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"strings"
 
@@ -122,4 +125,25 @@ func GetAccountAndSigner(accountString string, client *ethclient.Client) (*bind.
 
 		return nil, nil, fmt.Errorf("Account %s not found in keystore %s", accountAddress, uri)
 	}
+}
+
+// Encode private key
+func EncodePrivateKey(privateKey *ecdsa.PrivateKey) (string, error) {
+	x509Encoded, err := x509.MarshalECPrivateKey(privateKey)
+	if err != nil {
+		return "", err
+	}
+	pemEncoded := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: x509Encoded})
+	return string(pemEncoded), nil
+}
+
+// Decode private key
+func DecodePrivateKey(pemEncoded string) (*ecdsa.PrivateKey, error) {
+	block, _ := pem.Decode([]byte(pemEncoded))
+	if block == nil {
+		return nil, fmt.Errorf("Could decode Pem Encoded key")
+	}
+	x509Encoded := block.Bytes
+	privateKey, err := x509.ParseECPrivateKey(x509Encoded)
+	return privateKey, err
 }

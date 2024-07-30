@@ -135,6 +135,11 @@ export class UpdatePodRequest extends Message<UpdatePodRequest> {
    */
   pod?: Pod;
 
+  /**
+   * @generated from field: apocryph.proto.v0.provisionPod.PaymentChannel payment = 2;
+   */
+  payment?: PaymentChannel;
+
   constructor(data?: PartialMessage<UpdatePodRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -144,6 +149,7 @@ export class UpdatePodRequest extends Message<UpdatePodRequest> {
   static readonly typeName = "apocryph.proto.v0.provisionPod.UpdatePodRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "pod", kind: "message", T: Pod },
+    { no: 2, name: "payment", kind: "message", T: PaymentChannel },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdatePodRequest {
@@ -286,6 +292,11 @@ export class ProvisionPodResponse extends Message<ProvisionPodResponse> {
    */
   namespace = "";
 
+  /**
+   * @generated from field: string pubAddress = 4;
+   */
+  pubAddress = "";
+
   constructor(data?: PartialMessage<ProvisionPodResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -297,6 +308,7 @@ export class ProvisionPodResponse extends Message<ProvisionPodResponse> {
     { no: 1, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "addresses", kind: "message", T: ProvisionPodResponse_ExposedHostPort, repeated: true },
     { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "pubAddress", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ProvisionPodResponse {

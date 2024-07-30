@@ -93,6 +93,11 @@ var deployPodCmd = &cobra.Command{
 		}
 		configureDeployment(deployment)
 
+		if authorize {
+			fmt.Println("Authorizing ...")
+			pod.Authorized = true
+		}
+
 		fundsInt, _ := (&big.Int{}).SetString(funds, 10)
 		if fundsInt == nil {
 			return fmt.Errorf("Invalid number passed for funds: %s", funds)
@@ -130,7 +135,7 @@ var deployPodCmd = &cobra.Command{
 
 		interceptor := pbcon.NewAuthInterceptorClient(deployment, expirationOffset, sign)
 
-		var client *publisher.P2pProvisionPodServiceClient
+		var provisionPodclient *publisher.P2pProvisionPodServiceClient
 		if len(deployment.GetProvider().GetEthereumAddress()) == 0 || deployment.GetProvider().GetLibp2PAddress() == "" {
 			availableProviders, err := fetchAndFilterProviders(ipfs, ethClient)
 			if err != nil {
@@ -139,12 +144,12 @@ var deployPodCmd = &cobra.Command{
 			if len(availableProviders) == 0 {
 				return fmt.Errorf("Failed finding a provider: no available providers found matching filter")
 			}
-			client, err = publisher.SetFirstConnectingProvider(ipfsp2p, availableProviders, deployment, interceptor)
+			provisionPodclient, err = publisher.SetFirstConnectingProvider(ipfsp2p, availableProviders, deployment, interceptor)
 			if err != nil {
 				return fmt.Errorf("Failed setting a provider: %w", err)
 			}
 		} else {
-			client, err = publisher.ConnectToProvider(ipfsp2p, deployment, interceptor)
+			provisionPodclient, err = publisher.ConnectToProvider(ipfsp2p, deployment, interceptor)
 			if err != nil {
 				return err
 			}
@@ -179,7 +184,7 @@ var deployPodCmd = &cobra.Command{
 			return err
 		}
 
-		err = publisher.SendToProvider(cmd.Context(), ipfsp2p, pod, deployment, client)
+		err = publisher.SendToProvider(cmd.Context(), ipfsp2p, pod, deployment, provisionPodclient, ethClient, publisherAuth)
 		if err != nil {
 			return err
 		}
@@ -215,7 +220,7 @@ var deletePodCmd = &cobra.Command{
 			publisherKey = common.BytesToAddress(deployment.Payment.PublisherAddress).String()
 		}
 
-		_, sign, err := ethereum.GetAccountAndSigner(publisherKey, ethClient)
+		publisherAuth, sign, err := ethereum.GetAccountAndSigner(publisherKey, ethClient)
 		if err != nil {
 			return fmt.Errorf("Could not get ethereum account: %w", err)
 		}
@@ -229,7 +234,7 @@ var deletePodCmd = &cobra.Command{
 			return err
 		}
 
-		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), nil, deployment, client)
+		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), nil, deployment, client, ethClient, publisherAuth)
 		if err != nil {
 			return err
 		}

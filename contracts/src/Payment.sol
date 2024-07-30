@@ -13,6 +13,7 @@ contract Payment {
     error AmountRequired();
     error ChannelLocked();
     error InsufficientFunds();
+    error NotAuthorized();
 
     event UnlockTimerStarted(
         address indexed publisher, address indexed provider, bytes32 indexed podId, uint256 unlockedAt
@@ -30,6 +31,7 @@ contract Payment {
         uint256 withdrawnByProvider;
         uint256 unlockTime; // minimum time in seconds needed to unlock the funds
         uint256 unlockedAt; // time @ unlock + unlockTime
+        mapping(address => bool) authorized;
     }
 
     // publisher => provider => token => PodID => funds
@@ -158,5 +160,52 @@ contract Payment {
     function withdrawn(address publisher, address provider, bytes32 podId) public view returns (uint256) {
         Channel storage channel = channels[publisher][provider][podId];
         return channel.withdrawnByProvider;
+    }
+
+    // authorize other addresses to create subChannels
+    function authorize(address _authorized, address provider, bytes32 podId) public {
+        Channel storage channel = channels[msg.sender][provider][podId];
+        if (channel.investedByPublisher == 0) revert DoesNotExist();
+        channel.authorized[_authorized] = true;
+    }
+
+    function isAuthorized(address publisher, address provider, bytes32 podId, address _address)
+        public
+        view
+        returns (bool)
+    {
+        return channels[publisher][provider][podId].authorized[_address];
+    }
+
+    // create a subChannel from a main channel
+    function createSubChannel(
+        address publisher,
+        address provider,
+        bytes32 podId,
+        address newProvider,
+        bytes32 newPodId,
+        uint256 amount
+    ) public {
+        Channel storage channel = channels[publisher][provider][podId];
+        // Ensure the channel exists
+        if (channel.investedByPublisher == 0) revert DoesNotExist();
+
+        // Check if the caller is authorized
+        if (!channel.authorized[msg.sender]) revert NotAuthorized();
+
+        // Ensure there is enough invested by the publisher
+        if (channel.investedByPublisher < amount) revert InsufficientFunds();
+
+        // Deduct the amount from the main channel's funds
+        channel.investedByPublisher -= amount;
+
+        // Create the subChannel for the authorized caller
+        Channel storage subChannel = channels[msg.sender][newProvider][newPodId];
+
+        // fund the new sub channel with the deducted amount from the main channel
+        subChannel.investedByPublisher = amount;
+        subChannel.unlockTime = channel.unlockTime; // Inherit unlock time from main channel
+
+        emit Deposited(msg.sender, newProvider, newPodId, amount);
     }
 }
