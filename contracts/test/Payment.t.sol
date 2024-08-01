@@ -100,12 +100,12 @@ contract PaymentTest is Test {
         token.approve(address(payment), 1000);
 
         vm.expectRevert(Payment.DoesNotExist.selector);
-        payment.unlock(provider, podId);
+        payment.unlock(publisher, provider, podId);
 
         payment.createChannel(provider, podId, 20, 500);
 
         vm.expectRevert(Payment.ChannelLocked.selector);
-        payment.withdrawUnlocked(provider, podId);
+        payment.withdrawUnlocked(publisher, provider, podId);
 
         vm.startPrank(provider);
         payment.withdraw(publisher, podId, 100, address(0));
@@ -113,22 +113,22 @@ contract PaymentTest is Test {
         vm.startPrank(publisher);
 
         vm.expectRevert(Payment.ChannelLocked.selector);
-        payment.withdrawUnlocked(provider, podId);
+        payment.withdrawUnlocked(publisher, provider, podId);
 
-        payment.unlock(provider, podId);
+        payment.unlock(publisher, provider, podId);
         // advance the block timestamp
         vm.warp(block.timestamp + 20);
 
-        payment.withdrawUnlocked(provider, podId);
+        payment.withdrawUnlocked(publisher, provider, podId);
         assertEq(400, token.balanceOf(publisher));
 
         vm.expectRevert(Payment.AmountRequired.selector);
-        payment.withdrawUnlocked(provider, podId);
+        payment.withdrawUnlocked(publisher, provider, podId);
 
         vm.expectRevert(Payment.AlreadyExists.selector);
         payment.createChannel(provider, podId, 20, 400);
 
-        payment.closeChannel(provider, podId);
+        payment.closeChannel(publisher, provider, podId);
 
         payment.createChannel(provider, podId, 20, 400);
     }
@@ -140,11 +140,11 @@ contract PaymentTest is Test {
 
         payment.createChannel(provider, podId, 20, 500);
 
-        payment.unlock(provider, podId);
+        payment.unlock(publisher, provider, podId);
         vm.warp(10);
 
         vm.expectRevert(Payment.ChannelLocked.selector);
-        payment.withdrawUnlocked(provider, podId);
+        payment.withdrawUnlocked(publisher, provider, podId);
 
         vm.startPrank(provider);
         payment.withdrawUpTo(publisher, podId, 200, address(0));
@@ -152,7 +152,7 @@ contract PaymentTest is Test {
 
         vm.startPrank(publisher);
 
-        payment.withdrawUnlocked(provider, podId);
+        payment.withdrawUnlocked(publisher, provider, podId);
         assertEq(token.balanceOf(publisher), 300);
     }
 
@@ -194,8 +194,7 @@ contract PaymentTest is Test {
         // Test creating a sub-channel
         vm.startPrank(authorizedAddr);
         address newProvider = address(0x456);
-        payment.createSubChannel(publisher, provider, podId, newProvider,
-                                 newPodId, 200);
+        payment.createSubChannel(publisher, provider, podId, newProvider, newPodId, 200);
 
         // Verify sub-channel creation
         (uint256 investedAmount, uint256 withdrawnAmount, uint256 unlockTime,) =
@@ -210,22 +209,72 @@ contract PaymentTest is Test {
 
         // Test creating sub-channel with insufficient funds
         vm.expectRevert(Payment.InsufficientFunds.selector);
-        payment.createSubChannel(publisher, provider, podId, newProvider,
-                                 newPodId,400);
+        payment.createSubChannel(publisher, provider, podId, newProvider, newPodId, 400);
 
         // Test creating sub-channel from non-existent main channel
         bytes32 nonExistentPodId = keccak256("non-existent");
         vm.expectRevert(Payment.DoesNotExist.selector);
-        payment.createSubChannel(publisher, provider, nonExistentPodId,
-                                 newProvider, newPodId,100);
+        payment.createSubChannel(publisher, provider, nonExistentPodId, newProvider, newPodId, 100);
 
         // Test creating sub-channel without authorization
         vm.stopPrank();
         vm.startPrank(address(0x789)); // Non-authorized address
         vm.expectRevert(Payment.NotAuthorized.selector);
-        payment.createSubChannel(publisher, provider, podId,
-                                 newProvider,newPodId, 100);
+        payment.createSubChannel(publisher, provider, podId, newProvider, newPodId, 100);
 
         vm.stopPrank();
+    }
+
+    function test_close_channel() public {
+        vm.startPrank(publisher);
+        token.mint(500);
+        token.approve(address(payment), 500);
+        bytes32 newPodId = bytes32(uint256(1));
+
+        payment.createChannel(provider, podId, 0, 500);
+        payment.unlock(publisher, provider, podId);
+        uint256 balanceBeforeClose = token.balanceOf(publisher);
+        payment.closeChannel(publisher, provider, podId);
+        uint256 balanceAfterClose = token.balanceOf(publisher);
+        assertEq(balanceAfterClose - balanceBeforeClose, 500, "Caller should receive 500 tokens back");
+
+        // test closing a subchannel
+        token.approve(address(payment), 500);
+        payment.createChannel(provider, podId, 10, 500); // re-create the channel
+        address subChannelCreator = address(0x123);
+        payment.authorize(subChannelCreator, provider, podId);
+        vm.stopPrank();
+
+        vm.startPrank(subChannelCreator);
+        address newProvider = address(0x456);
+        payment.createSubChannel(publisher, provider, podId, newProvider, newPodId, 200); // create the subchannel
+        vm.stopPrank();
+
+        // close it
+        vm.startPrank(publisher);
+        balanceBeforeClose = token.balanceOf(publisher);
+
+        vm.expectRevert(Payment.ChannelLocked.selector); // test closing locked channel
+        payment.closeChannel(subChannelCreator, newProvider, newPodId);
+        // advance time
+        payment.unlock(subChannelCreator, newProvider, newPodId);
+        vm.warp(block.timestamp + 11);
+        payment.closeChannel(subChannelCreator, newProvider, newPodId);
+        balanceAfterClose = token.balanceOf(publisher);
+        assertEq(
+            balanceAfterClose - balanceBeforeClose,
+            200,
+            "Caller(publisher) should receive 200 tokens back after closing subchannel"
+        );
+
+        // test closing nonexistent Channel
+        vm.expectRevert(Payment.DoesNotExist.selector);
+        payment.closeChannel(subChannelCreator, newProvider, newPodId);
+
+        // Test that non-authorized address can't close channel
+        vm.stopPrank();
+        vm.prank(address(0xdead));
+        vm.expectRevert(Payment.NotAuthorized.selector);
+        payment.closeChannel(publisher, provider, podId);
     }
 }

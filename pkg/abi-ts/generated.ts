@@ -220,6 +220,7 @@ export const paymentAbi = [
   {
     type: 'function',
     inputs: [
+      { name: 'publisher', internalType: 'address', type: 'address' },
       { name: 'provider', internalType: 'address', type: 'address' },
       { name: 'podId', internalType: 'bytes32', type: 'bytes32' }
     ],
@@ -286,6 +287,7 @@ export const paymentAbi = [
   {
     type: 'function',
     inputs: [
+      { name: 'publisher', internalType: 'address', type: 'address' },
       { name: 'provider', internalType: 'address', type: 'address' },
       { name: 'podId', internalType: 'bytes32', type: 'bytes32' }
     ],
@@ -308,6 +310,7 @@ export const paymentAbi = [
   {
     type: 'function',
     inputs: [
+      { name: 'publisher', internalType: 'address', type: 'address' },
       { name: 'provider', internalType: 'address', type: 'address' },
       { name: 'podId', internalType: 'bytes32', type: 'bytes32' }
     ],
