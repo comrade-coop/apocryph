@@ -135,7 +135,6 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *connect.
 	if err != nil {
 		return transformError(err)
 	}
-	fmt.Printf("Authorized:%v\n", request.Msg.Pod.Authorized)
 
 	response := &pb.ProvisionPodResponse{}
 	ns := tpk8s.NewTrustedPodsNamespace(namespace, request.Msg.Payment)

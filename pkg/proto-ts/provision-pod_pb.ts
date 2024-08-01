@@ -292,11 +292,6 @@ export class ProvisionPodResponse extends Message<ProvisionPodResponse> {
    */
   namespace = "";
 
-  /**
-   * @generated from field: string pubAddress = 4;
-   */
-  pubAddress = "";
-
   constructor(data?: PartialMessage<ProvisionPodResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -308,7 +303,6 @@ export class ProvisionPodResponse extends Message<ProvisionPodResponse> {
     { no: 1, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "addresses", kind: "message", T: ProvisionPodResponse_ExposedHostPort, repeated: true },
     { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "pubAddress", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ProvisionPodResponse {
@@ -461,21 +455,9 @@ export class LogEntry extends Message<LogEntry> {
   NanosecondsUnixEpoch = protoInt64.zero;
 
   /**
-   * @generated from field: string log = 2;
+   * @generated from field: string line = 2;
    */
-  log = "";
-
-  /**
-   * std(in/out/err)
-   *
-   * @generated from field: string stream = 3;
-   */
-  stream = "";
-
-  /**
-   * @generated from field: string time = 4;
-   */
-  time = "";
+  line = "";
 
   constructor(data?: PartialMessage<LogEntry>) {
     super();
@@ -486,9 +468,7 @@ export class LogEntry extends Message<LogEntry> {
   static readonly typeName = "apocryph.proto.v0.provisionPod.LogEntry";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "NanosecondsUnixEpoch", kind: "scalar", T: 4 /* ScalarType.UINT64 */ },
-    { no: 2, name: "log", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "stream", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "time", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "line", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): LogEntry {

@@ -9,7 +9,7 @@ message Pod {
   repeated Container containers = 1;
   repeated Volume volumes = 2;
   Replicas replicas = 3;
-  bool authorized = 4;
+  KeyPair keyPair = 4;
 }
 
 message Container {
@@ -95,4 +95,10 @@ message Resource {
 
 message Key {
   bytes data = 1;
+}
+
+message KeyPair {
+    Key key = 1;
+    bytes  privateKey= 2;
+    string pubAddress = 3;
 }

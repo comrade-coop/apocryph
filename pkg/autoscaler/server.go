@@ -156,7 +156,14 @@ func (s *AutoScalerServer) BoostrapCluster(req *connect.Request[pb.ConnectCluste
 
 func (s *AutoScalerServer) ConnectCluster(c context.Context, req *connect.Request[pb.ConnectClusterRequest]) (*connect.Response[pb.ConnectClusterResponse], error) {
 	log.Println("Forming a Raft Cluster with the following providers:", req.Msg.Servers)
-	s.started = true
+
+	if s.started == true {
+		return connect.NewResponse(&pb.ConnectClusterResponse{
+			Success: false,
+			Error:   "Server Already Started\n",
+		}), nil
+	}
+
 	err := s.BoostrapCluster(req)
 	if err != nil {
 		return connect.NewResponse(&pb.ConnectClusterResponse{
@@ -164,6 +171,8 @@ func (s *AutoScalerServer) ConnectCluster(c context.Context, req *connect.Reques
 			Error:   fmt.Sprintf("Failed Bootstraping Cluster: %v\n", err),
 		}), nil
 	}
+
+	s.started = true
 	response := &pb.ConnectClusterResponse{Success: true}
 	return connect.NewResponse(response), nil
 }

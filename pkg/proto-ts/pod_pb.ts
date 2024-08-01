@@ -28,9 +28,9 @@ export class Pod extends Message<Pod> {
   replicas?: Replicas;
 
   /**
-   * @generated from field: bool authorized = 4;
+   * @generated from field: apocryph.proto.v0.pod.KeyPair keyPair = 4;
    */
-  authorized = false;
+  keyPair?: KeyPair;
 
   constructor(data?: PartialMessage<Pod>) {
     super();
@@ -43,7 +43,7 @@ export class Pod extends Message<Pod> {
     { no: 1, name: "containers", kind: "message", T: Container, repeated: true },
     { no: 2, name: "volumes", kind: "message", T: Volume, repeated: true },
     { no: 3, name: "replicas", kind: "message", T: Replicas },
-    { no: 4, name: "authorized", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "keyPair", kind: "message", T: KeyPair },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Pod {
@@ -676,6 +676,55 @@ export class Key extends Message<Key> {
 
   static equals(a: Key | PlainMessage<Key> | undefined, b: Key | PlainMessage<Key> | undefined): boolean {
     return proto3.util.equals(Key, a, b);
+  }
+}
+
+/**
+ * @generated from message apocryph.proto.v0.pod.KeyPair
+ */
+export class KeyPair extends Message<KeyPair> {
+  /**
+   * @generated from field: apocryph.proto.v0.pod.Key key = 1;
+   */
+  key?: Key;
+
+  /**
+   * @generated from field: bytes privateKey = 2;
+   */
+  privateKey = new Uint8Array(0);
+
+  /**
+   * @generated from field: string pubAddress = 3;
+   */
+  pubAddress = "";
+
+  constructor(data?: PartialMessage<KeyPair>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "apocryph.proto.v0.pod.KeyPair";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "key", kind: "message", T: Key },
+    { no: 2, name: "privateKey", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 3, name: "pubAddress", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): KeyPair {
+    return new KeyPair().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): KeyPair {
+    return new KeyPair().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): KeyPair {
+    return new KeyPair().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: KeyPair | PlainMessage<KeyPair> | undefined, b: KeyPair | PlainMessage<KeyPair> | undefined): boolean {
+    return proto3.util.equals(KeyPair, a, b);
   }
 }
 

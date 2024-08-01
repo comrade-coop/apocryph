@@ -52,7 +52,6 @@ message ProvisionPodResponse {
     string containerName = 2;
     uint64 containerPort = 3;
   }
-  string pubAddress = 4;
 }
 
 message PodLogRequest{
@@ -65,7 +64,5 @@ message PodLogResponse{
 
 message LogEntry{
   uint64 NanosecondsUnixEpoch = 1;
-  string log = 2;
-  string stream = 3; // std(in/out/err)
-  string time = 4;
+  string line= 2;
 }

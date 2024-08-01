@@ -3,11 +3,14 @@
 package main
 
 import (
+	"crypto/ecdsa"
+	"crypto/rand"
 	"fmt"
 	"math/big"
 	"path/filepath"
 
 	"github.com/comrade-coop/apocryph/pkg/abi"
+	tpcrypto "github.com/comrade-coop/apocryph/pkg/crypto"
 	"github.com/comrade-coop/apocryph/pkg/ethereum"
 	"github.com/comrade-coop/apocryph/pkg/ipcr"
 	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"
@@ -16,6 +19,7 @@ import (
 	"github.com/comrade-coop/apocryph/pkg/publisher"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ipfs/kubo/client/rpc"
 	"github.com/spf13/cobra"
@@ -95,7 +99,29 @@ var deployPodCmd = &cobra.Command{
 		configureDeployment(deployment)
 
 		if authorize {
-			pod.Authorized = true
+			encryptionKey, err := tpcrypto.NewKey(tpcrypto.KeyTypeAESGCM256)
+			if err != nil {
+				return fmt.Errorf("Could not create AES key: %v", err)
+			}
+			// create the keypair that will be accessible for all pods
+			privateKey, err := ecdsa.GenerateKey(crypto.S256(), rand.Reader)
+			if err != nil {
+				return fmt.Errorf("Could not create private key for the application: %w", err)
+			}
+			// Ensure the public key is valid before getting the address
+			if privateKey == nil || privateKey.PublicKey.X == nil || privateKey.PublicKey.Y == nil {
+				return fmt.Errorf("Generated an invalid public key")
+			}
+
+			pubAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
+
+			encryptedPrivateKey, err := tpcrypto.EncryptWithKey(encryptionKey, crypto.FromECDSA(privateKey))
+			if err != nil {
+				return fmt.Errorf("Could not encrypt private key: %v", err)
+			}
+
+			pod.KeyPair = &pb.KeyPair{Key: encryptionKey, PrivateKey: encryptedPrivateKey, PubAddress: pubAddress.Hex()}
+			deployment.KeyPair = pod.KeyPair
 		}
 
 		fundsInt, _ := (&big.Int{}).SetString(funds, 10)

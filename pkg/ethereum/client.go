@@ -126,8 +126,7 @@ func GetAccountAndSigner(accountString string, client *ethclient.Client) (*bind.
 	}
 }
 
-func EncodePrivateKey(privateKey *ecdsa.PrivateKey) (string, error) {
-	privateKeyBytes := crypto.FromECDSA(privateKey)
+func EncodePrivateKey(privateKeyBytes []byte) (string, error) {
 	return hex.EncodeToString(privateKeyBytes), nil
 }
 

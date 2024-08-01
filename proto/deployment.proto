@@ -14,6 +14,8 @@ message Deployment {
   repeated UploadedImage images = 4;
   repeated UploadedSecret secrets = 5;
   provisionPod.ProvisionPodResponse deployed = 6;
+  pod.KeyPair keyPair = 7;
+  
 }
 
 message ProviderConfig {

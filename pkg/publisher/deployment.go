@@ -125,80 +125,87 @@ func SaveDeployment(deploymentFile string, deploymentFormat string, deployment *
 }
 
 func AuthorizeAndFundApplication(ctx context.Context, response *pb.ProvisionPodResponse, deployment *pb.Deployment, ethClient *ethclient.Client, publisherAuth *bind.TransactOpts, publisherKey string, amount int64) error {
-	if response.PubAddress != "" {
+	if deployment.KeyPair != nil {
 		// authorize the public address to control the payment channel
 		// get a payment contract instance
+		pubAddress := common.HexToAddress(deployment.KeyPair.PubAddress)
 		payment, err := abi.NewPayment(common.Address(deployment.Payment.PaymentContractAddress), ethClient)
 		if err != nil {
 			return fmt.Errorf("Failed instantiating payment contract: %w", err)
 		}
-		_, err = payment.Authorize(publisherAuth, common.HexToAddress(response.PubAddress), common.Address(deployment.Provider.EthereumAddress), [32]byte(deployment.Payment.PodID))
+		_, err = payment.Authorize(publisherAuth, pubAddress, common.Address(deployment.Provider.EthereumAddress), [32]byte(deployment.Payment.PodID))
 		if err != nil {
 			return fmt.Errorf("Failed Authorizing Address: %w", err)
 		}
 
-		fmt.Fprintf(os.Stdout, "Authorized Address Successfully %v\n", response.PubAddress)
-
 		// NOTE: the deployed application must be funded with the base
 		// currency (eth) in order for it to be able to make transactions
 		// (like creating subchannels)
-		pubAddress := common.HexToAddress(response.PubAddress)
 		amount := big.NewInt(amount)
-
-		// Estimate gas limit
-		gasLimit, err := ethClient.EstimateGas(context.Background(), ethereum.CallMsg{
-			From:  publisherAuth.From,
-			To:    &pubAddress,
-			Value: amount,
-		})
+		err = FundAddress(ctx, publisherKey, publisherAuth.From, pubAddress, ethClient, amount)
 		if err != nil {
-			return fmt.Errorf("Failed to estimate gas: %w", err)
+			return err
 		}
+		fmt.Fprintf(os.Stdout, "Authorized And funded address %v\n", pubAddress)
+	}
+	return nil
+}
 
-		// Get gas price
-		gasPrice, err := ethClient.SuggestGasPrice(context.Background())
+func FundAddress(ctx context.Context, key string, from, to common.Address, ethClient *ethclient.Client, amount *big.Int) error {
+
+	// Estimate gas limit
+	gasLimit, err := ethClient.EstimateGas(context.Background(), ethereum.CallMsg{
+		From:  from,
+		To:    &to,
+		Value: amount,
+	})
+	if err != nil {
+		return fmt.Errorf("Failed to estimate gas: %w", err)
+	}
+
+	// Get gas price
+	gasPrice, err := ethClient.SuggestGasPrice(context.Background())
+	if err != nil {
+		return fmt.Errorf("Failed to get gas price: %w", err)
+	}
+
+	nonce, err := ethClient.PendingNonceAt(ctx, from)
+	if err != nil {
+		return fmt.Errorf("Failed to get gas price: %w", err)
+	}
+
+	// Create a transaction
+	tx := types.NewTransaction(
+		nonce,
+		to,
+		amount,
+		gasLimit,
+		gasPrice,
+		nil,
+	)
+	chainId, err := ethClient.ChainID(ctx)
+	if err != nil {
+		return fmt.Errorf("Failed to get chain ID: %w", err)
+	}
+
+	var privateKey *ecdsa.PrivateKey
+	if privKey, ok := strings.CutPrefix(key, "0x"); ok && len(privKey) == PrivateKeySize*2 {
+		privateKey, err = crypto.HexToECDSA(privKey)
 		if err != nil {
-			return fmt.Errorf("Failed to get gas price: %w", err)
+			return err
 		}
+	}
 
-		nonce, err := ethClient.PendingNonceAt(ctx, publisherAuth.From)
-		if err != nil {
-			return fmt.Errorf("Failed to get gas price: %w", err)
-		}
+	// Sign the transaction
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainId), privateKey)
+	if err != nil {
+		return fmt.Errorf("Failed to sign transaction: %w", err)
+	}
 
-		// Create a transaction
-		tx := types.NewTransaction(
-			nonce,
-			pubAddress,
-			amount,
-			gasLimit,
-			gasPrice,
-			nil,
-		)
-		chainId, err := ethClient.ChainID(ctx)
-		if err != nil {
-			return fmt.Errorf("Failed to get chain ID: %w", err)
-		}
-
-		var privateKey *ecdsa.PrivateKey
-		if privKey, ok := strings.CutPrefix(publisherKey, "0x"); ok && len(privKey) == PrivateKeySize*2 {
-			privateKey, err = crypto.HexToECDSA(privKey)
-			if err != nil {
-				return err
-			}
-		}
-
-		// Sign the transaction
-		signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainId), privateKey)
-		if err != nil {
-			return fmt.Errorf("Failed to sign transaction: %w", err)
-		}
-
-		// Send the transaction
-		err = ethClient.SendTransaction(context.Background(), signedTx)
-		if err != nil {
-			return fmt.Errorf("Failed to send transaction: %w", err)
-		}
+	// Send the transaction
+	err = ethClient.SendTransaction(context.Background(), signedTx)
+	if err != nil {
+		return fmt.Errorf("Failed to send transaction: %w", err)
 	}
 	return nil
 }
