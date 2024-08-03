@@ -205,14 +205,21 @@ contract Payment {
         // Ensure there is enough invested by the publisher
         if (channel.investedByPublisher < amount) revert InsufficientFunds();
 
+        // Ensure channel is unlocked
+        if (channel.unlockedAt == 0 || block.timestamp < channel.unlockedAt) revert ChannelLocked();
+
         // Deduct the amount from the main channel's funds
         channel.investedByPublisher -= amount;
 
         // Create the subChannel for the authorized caller
         Channel storage subChannel = channels[msg.sender][newProvider][newPodId];
+        if (subChannel.investedByPublisher != 0) revert AlreadyExists();
 
         // authorize the main channel publisher to control the subchannel
         subChannel.authorized[publisher] = true;
+
+        // Ensure There are enough LeftOver funds
+        if (channel.investedByPublisher - channel.withdrawnByProvider < amount) revert InsufficientFunds();
 
         // fund the new sub channel with the deducted amount from the main channel
         subChannel.investedByPublisher += amount;

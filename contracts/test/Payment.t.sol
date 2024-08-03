@@ -194,6 +194,13 @@ contract PaymentTest is Test {
         // Test creating a sub-channel
         vm.startPrank(authorizedAddr);
         address newProvider = address(0x456);
+        
+        // test creating a subChannel from a locked main channel
+        vm.expectRevert(Payment.ChannelLocked.selector); 
+        payment.createSubChannel(publisher, provider, podId, newProvider, newPodId, 200);
+        
+        payment.unlock(publisher, provider, podId);
+        vm.warp(block.timestamp + 1);
         payment.createSubChannel(publisher, provider, podId, newProvider, newPodId, 200);
 
         // Verify sub-channel creation
@@ -215,6 +222,16 @@ contract PaymentTest is Test {
         bytes32 nonExistentPodId = keccak256("non-existent");
         vm.expectRevert(Payment.DoesNotExist.selector);
         payment.createSubChannel(publisher, provider, nonExistentPodId, newProvider, newPodId, 100);
+        
+        // test creating a subchannel from a channel with insufficient funds
+        vm.expectRevert(Payment.InsufficientFunds.selector);
+        payment.createSubChannel(publisher, provider, podId, provider, podId, 200);
+        
+        // test creating a subchannel that already exists
+        vm.startPrank(publisher);
+        payment.authorize(publisher, provider, podId);
+        vm.expectRevert(Payment.AlreadyExists.selector);
+        payment.createSubChannel(publisher, provider, podId, provider, podId, 100);
 
         // Test creating sub-channel without authorization
         vm.stopPrank();
@@ -247,6 +264,8 @@ contract PaymentTest is Test {
 
         vm.startPrank(subChannelCreator);
         address newProvider = address(0x456);
+        payment.unlock(publisher, provider, podId);
+        vm.warp(block.timestamp + 10);
         payment.createSubChannel(publisher, provider, podId, newProvider, newPodId, 200); // create the subchannel
         vm.stopPrank();
 
@@ -270,7 +289,7 @@ contract PaymentTest is Test {
         // test closing nonexistent Channel
         vm.expectRevert(Payment.DoesNotExist.selector);
         payment.closeChannel(subChannelCreator, newProvider, newPodId);
-
+        
         // Test that non-authorized address can't close channel
         vm.stopPrank();
         vm.prank(address(0xdead));
