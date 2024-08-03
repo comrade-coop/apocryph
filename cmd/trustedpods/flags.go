@@ -21,6 +21,7 @@ var providerEthAddress string
 var registryContractAddress string
 var tokenContractAddress string
 var expirationOffset int64
+var authorize bool
 
 var uploadFlags = &pflag.FlagSet{}
 var ipfsApi string
@@ -59,6 +60,7 @@ var _ = func() error {
 	deploymentFlags.StringVar(&providerEthAddress, "provider-eth", "", "provider public address")
 	deploymentFlags.Int64Var(&expirationOffset, "token-expiration", 10, "authentication token expires after token-expiration seconds (expired after 10 seconds by default)")
 	deploymentFlags.StringVar(&ipfsApi, "ipfs", "/ip4/127.0.0.1/tcp/5001", "multiaddr where the ipfs/kubo api can be accessed")
+	deploymentFlags.BoolVar(&authorize, "authorize", false, "Create a key pair for the application and authorize the returned addresses to control the payment channel")
 
 	uploadFlags.StringVar(&ipfsApi, "ipfs", "/ip4/127.0.0.1/tcp/5001", "multiaddr where the ipfs/kubo api can be accessed")
 	uploadFlags.BoolVar(&uploadImages, "upload-images", true, "upload images")
@@ -73,6 +75,7 @@ var _ = func() error {
 	fundFlags.Int64Var(&unlockTime, "unlock-time", 5*60, "time for unlocking tokens (in seconds)")
 
 	syncFlags.AddFlag(uploadFlags.Lookup("ipfs"))
+	syncFlags.StringVar(&publisherKey, "ethereum-key", "", "account string (private key | http[s]://clef#account | /keystore#account | account (in default keystore))")
 
 	registryFlags.StringVar(&ipfsApi, "ipfs", "/ip4/127.0.0.1/tcp/5001", "multiaddr where the ipfs/kubo api can be accessed")
 	registryFlags.StringVar(&registryContractAddress, "registry-contract", "", "registry contract address")

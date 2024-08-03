@@ -182,6 +182,17 @@ export const paymentAbi = [
   {
     type: 'function',
     inputs: [
+      { name: '_authorized', internalType: 'address', type: 'address' },
+      { name: 'provider', internalType: 'address', type: 'address' },
+      { name: 'podId', internalType: 'bytes32', type: 'bytes32' }
+    ],
+    name: 'authorize',
+    outputs: [],
+    stateMutability: 'nonpayable'
+  },
+  {
+    type: 'function',
+    inputs: [
       { name: 'publisher', internalType: 'address', type: 'address' },
       { name: 'provider', internalType: 'address', type: 'address' },
       { name: 'podId', internalType: 'bytes32', type: 'bytes32' }
@@ -209,6 +220,7 @@ export const paymentAbi = [
   {
     type: 'function',
     inputs: [
+      { name: 'publisher', internalType: 'address', type: 'address' },
       { name: 'provider', internalType: 'address', type: 'address' },
       { name: 'podId', internalType: 'bytes32', type: 'bytes32' }
     ],
@@ -231,6 +243,20 @@ export const paymentAbi = [
   {
     type: 'function',
     inputs: [
+      { name: 'publisher', internalType: 'address', type: 'address' },
+      { name: 'provider', internalType: 'address', type: 'address' },
+      { name: 'podId', internalType: 'bytes32', type: 'bytes32' },
+      { name: 'newProvider', internalType: 'address', type: 'address' },
+      { name: 'newPodId', internalType: 'bytes32', type: 'bytes32' },
+      { name: 'amount', internalType: 'uint256', type: 'uint256' }
+    ],
+    name: 'createSubChannel',
+    outputs: [],
+    stateMutability: 'nonpayable'
+  },
+  {
+    type: 'function',
+    inputs: [
       { name: 'provider', internalType: 'address', type: 'address' },
       { name: 'podId', internalType: 'bytes32', type: 'bytes32' },
       { name: 'amount', internalType: 'uint256', type: 'uint256' }
@@ -238,6 +264,18 @@ export const paymentAbi = [
     name: 'deposit',
     outputs: [],
     stateMutability: 'nonpayable'
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'publisher', internalType: 'address', type: 'address' },
+      { name: 'provider', internalType: 'address', type: 'address' },
+      { name: 'podId', internalType: 'bytes32', type: 'bytes32' },
+      { name: '_address', internalType: 'address', type: 'address' }
+    ],
+    name: 'isAuthorized',
+    outputs: [{ name: '', internalType: 'bool', type: 'bool' }],
+    stateMutability: 'view'
   },
   {
     type: 'function',
@@ -249,6 +287,7 @@ export const paymentAbi = [
   {
     type: 'function',
     inputs: [
+      { name: 'publisher', internalType: 'address', type: 'address' },
       { name: 'provider', internalType: 'address', type: 'address' },
       { name: 'podId', internalType: 'bytes32', type: 'bytes32' }
     ],
@@ -271,6 +310,7 @@ export const paymentAbi = [
   {
     type: 'function',
     inputs: [
+      { name: 'publisher', internalType: 'address', type: 'address' },
       { name: 'provider', internalType: 'address', type: 'address' },
       { name: 'podId', internalType: 'bytes32', type: 'bytes32' }
     ],
@@ -484,6 +524,7 @@ export const paymentAbi = [
     name: 'InsufficientBalance'
   },
   { type: 'error', inputs: [], name: 'InsufficientFunds' },
+  { type: 'error', inputs: [], name: 'NotAuthorized' },
   {
     type: 'error',
     inputs: [{ name: 'token', internalType: 'address', type: 'address' }],

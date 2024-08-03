@@ -4,6 +4,7 @@ package main
 
 import (
 	"crypto/sha256"
+
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"

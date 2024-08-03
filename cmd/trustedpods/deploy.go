@@ -3,18 +3,23 @@
 package main
 
 import (
+	"crypto/ecdsa"
+	"crypto/rand"
 	"fmt"
 	"math/big"
 	"path/filepath"
 
 	"github.com/comrade-coop/apocryph/pkg/abi"
+	tpcrypto "github.com/comrade-coop/apocryph/pkg/crypto"
 	"github.com/comrade-coop/apocryph/pkg/ethereum"
 	"github.com/comrade-coop/apocryph/pkg/ipcr"
 	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"
+	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	pbcon "github.com/comrade-coop/apocryph/pkg/proto/protoconnect"
 	"github.com/comrade-coop/apocryph/pkg/publisher"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ipfs/kubo/client/rpc"
 	"github.com/spf13/cobra"
@@ -93,6 +98,32 @@ var deployPodCmd = &cobra.Command{
 		}
 		configureDeployment(deployment)
 
+		if authorize {
+			encryptionKey, err := tpcrypto.NewKey(tpcrypto.KeyTypeAESGCM256)
+			if err != nil {
+				return fmt.Errorf("Could not create AES key: %v", err)
+			}
+			// create the keypair that will be accessible for all pods
+			privateKey, err := ecdsa.GenerateKey(crypto.S256(), rand.Reader)
+			if err != nil {
+				return fmt.Errorf("Could not create private key for the application: %w", err)
+			}
+			// Ensure the public key is valid before getting the address
+			if privateKey == nil || privateKey.PublicKey.X == nil || privateKey.PublicKey.Y == nil {
+				return fmt.Errorf("Generated an invalid public key")
+			}
+
+			pubAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
+
+			encryptedPrivateKey, err := tpcrypto.EncryptWithKey(encryptionKey, crypto.FromECDSA(privateKey))
+			if err != nil {
+				return fmt.Errorf("Could not encrypt private key: %v", err)
+			}
+
+			pod.KeyPair = &pb.KeyPair{Key: encryptionKey, PrivateKey: encryptedPrivateKey, PubAddress: pubAddress.Hex()}
+			deployment.KeyPair = pod.KeyPair
+		}
+
 		fundsInt, _ := (&big.Int{}).SetString(funds, 10)
 		if fundsInt == nil {
 			return fmt.Errorf("Invalid number passed for funds: %s", funds)
@@ -130,7 +161,7 @@ var deployPodCmd = &cobra.Command{
 
 		interceptor := pbcon.NewAuthInterceptorClient(deployment, expirationOffset, sign)
 
-		var client *publisher.P2pProvisionPodServiceClient
+		var provisionPodclient *publisher.P2pProvisionPodServiceClient
 		if len(deployment.GetProvider().GetEthereumAddress()) == 0 || deployment.GetProvider().GetLibp2PAddress() == "" {
 			availableProviders, err := fetchAndFilterProviders(ipfs, ethClient)
 			if err != nil {
@@ -139,12 +170,12 @@ var deployPodCmd = &cobra.Command{
 			if len(availableProviders) == 0 {
 				return fmt.Errorf("Failed finding a provider: no available providers found matching filter")
 			}
-			client, err = publisher.SetFirstConnectingProvider(ipfsp2p, availableProviders, deployment, interceptor)
+			provisionPodclient, err = publisher.SetFirstConnectingProvider(ipfsp2p, availableProviders, deployment, interceptor)
 			if err != nil {
 				return fmt.Errorf("Failed setting a provider: %w", err)
 			}
 		} else {
-			client, err = publisher.ConnectToProvider(ipfsp2p, deployment, interceptor)
+			provisionPodclient, err = publisher.ConnectToProvider(ipfsp2p, deployment, interceptor)
 			if err != nil {
 				return err
 			}
@@ -179,9 +210,19 @@ var deployPodCmd = &cobra.Command{
 			return err
 		}
 
-		err = publisher.SendToProvider(cmd.Context(), ipfsp2p, pod, deployment, client)
+		fmt.Printf("PODID is:%v\n", common.BytesToHash(deployment.Payment.PodID))
+
+		response, err := publisher.SendToProvider(cmd.Context(), ipfsp2p, pod, deployment, provisionPodclient)
 		if err != nil {
 			return err
+		}
+		// Authorize the application to manipulate the payment channel and fund
+		// it to make it able to send transactions
+		if authorize {
+			err := publisher.AuthorizeAndFundApplication(cmd.Context(), response.(*pb.ProvisionPodResponse), deployment, ethClient, publisherAuth, publisherKey, 1000000000000000000)
+			if err != nil {
+				return err
+			}
 		}
 
 		return publisher.SaveDeployment(deploymentFile, deploymentFormat, deployment)
@@ -229,10 +270,11 @@ var deletePodCmd = &cobra.Command{
 			return err
 		}
 
-		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), nil, deployment, client)
+		_, err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), nil, deployment, client)
 		if err != nil {
 			return err
 		}
+
 		return publisher.SaveDeployment(deploymentFile, deploymentFormat, deployment)
 	},
 }

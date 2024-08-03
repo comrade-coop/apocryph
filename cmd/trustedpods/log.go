@@ -21,7 +21,7 @@ var containerName string
 var logPodCmd = &cobra.Command{
 	Use:     fmt.Sprintf("log [%s] [deployment.yaml]", publisher.DefaultPodFile),
 	Short:   "get pod container logs",
-	Args:    cobra.ExactArgs(1),
+	Args:    cobra.MaximumNArgs(2),
 	GroupID: "main",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_, _, pod, deployment, err := publisher.ReadPodAndDeployment(args, manifestFormat, deploymentFormat)
@@ -40,6 +40,7 @@ var logPodCmd = &cobra.Command{
 		}
 
 		if publisherKey == "" {
+			fmt.Printf("publisherKey %v\n", publisherKey)
 			publisherKey = common.BytesToAddress(deployment.Payment.PublisherAddress).String()
 		}
 
@@ -91,6 +92,5 @@ var logPodCmd = &cobra.Command{
 func init() {
 	podCmd.AddCommand(logPodCmd)
 
-	logPodCmd.Flags().AddFlagSet(deploymentFlags)
 	logPodCmd.Flags().AddFlagSet(syncFlags)
 }

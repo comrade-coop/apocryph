@@ -66,7 +66,7 @@ contract RegistryTest is Test {
         vm.expectEmit(true, true, false, false, address(registry));
         emit Registry.Subscribed(tableId, provider2);
         registry.subscribe(tableId);
-        bool subscribed = registry.isSubscribed(provider2,tableId);
+        bool subscribed = registry.isSubscribed(provider2, tableId);
         assertEq(subscribed, true);
     }
 
@@ -78,7 +78,7 @@ contract RegistryTest is Test {
         bool subscribed = registry.isSubscribed(provider, tableId);
         assertEq(subscribed, true);
         registry.unsubscribe(tableId);
-        subscribed = registry.isSubscribed(provider,tableId);
+        subscribed = registry.isSubscribed(provider, tableId);
         assertEq(subscribed, false);
     }
 }

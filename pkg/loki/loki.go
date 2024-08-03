@@ -14,7 +14,6 @@ import (
 	"connectrpc.com/connect"
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	"github.com/gorilla/websocket"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 const tailPath = "/loki/api/v1/tail"
@@ -106,13 +105,8 @@ func GetLogs(namespace, containerName, limit string, url string) ([]*pb.LogEntry
 func parseEntries(lines [][]string) ([]*pb.LogEntry, error) {
 	logEntries := make([]*pb.LogEntry, len(lines))
 	for i, line := range lines {
-		logEntries[i] = &pb.LogEntry{} // inittialize the logEntry or it will cause null pointer dereference (i miss rust)
-		if err := protojson.Unmarshal([]byte(line[1]), logEntries[i]); err != nil {
-			fmt.Printf("Error unmarshalling entry:%v", err)
-			return nil, err
-		}
-
 		nanosecondsUnixEpoch, _ := strconv.ParseUint(line[0], 10, 64)
+		logEntries[i] = &pb.LogEntry{NanosecondsUnixEpoch: nanosecondsUnixEpoch, Line: line[1]} // inittialize the logEntry or it will cause null pointer dereference (i miss rust)
 		logEntries[i].NanosecondsUnixEpoch = nanosecondsUnixEpoch
 	}
 	return logEntries, nil
@@ -135,39 +129,27 @@ func GetStreamedEntries(namespace, containerName string, srv *connect.ServerStre
 
 	c, _, err := websocket.DefaultDialer.Dial(requestURL, nil)
 	if err != nil {
-		fmt.Println("Failed Dialing Server:", err)
-		return err
+		return fmt.Errorf("Failed Dialing Server:%v\n", err)
 	}
 	defer c.Close()
 	for {
 		var logs TailData
 		err := c.ReadJSON(&logs)
 		if err != nil {
-			fmt.Printf("Failed unmarshalling Json: %v \n", err)
-			return err
+			return fmt.Errorf("Failed unmarshalling Json: %v \n", err)
 		}
 		for _, result := range logs.Streams {
 			entries, err := parseEntries(result.Values)
 			if err != nil {
-				fmt.Println("Failed Parsing Entries:", err)
-				return err
+				return fmt.Errorf("Failed Parsing Entries:%v\n", err)
 			}
 			for _, entry := range entries {
 				response := pb.PodLogResponse{}
 				response.LogEntry = entry
 				if err := srv.Send(&response); err != nil {
-					fmt.Printf("Error generating response: %v", err)
-					return err
+					return fmt.Errorf("Error generating response: %v\n", err)
 				}
 			}
 		}
 	}
 }
-
-//
-// type LogEntry struct {
-// 	NanosecondsUnixEpoch int64  `json:"nanoseconds_unix_epoch"`
-// 	Log                  string `json:"log"`
-// 	Stream               string `json:"stream"`
-// 	Time                 string `json:"time"`
-// }

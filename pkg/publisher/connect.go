@@ -57,7 +57,7 @@ func ConnectToProvider(ipfsP2p *ipfs.P2pApi, deployment *pb.Deployment, intercep
 	}, nil
 }
 
-func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, deployment *pb.Deployment, client *P2pProvisionPodServiceClient) error {
+func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, deployment *pb.Deployment, client *P2pProvisionPodServiceClient) (interface{}, error) {
 	// tpipfs.NewP2pApi(ipfs, ipfsMultiaddr)
 	pod = LinkUploadsFromDeployment(pod, deployment)
 	defer client.Close()
@@ -80,7 +80,7 @@ func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, depl
 			fmt.Println("Processing Request ...")
 			response, err = client.ProvisionPod(ctx, connect.NewRequest(request))
 			if err != nil {
-				return fmt.Errorf("Failed executing provision pod request: %w", err)
+				return nil, fmt.Errorf("Failed executing provision pod request: %w", err)
 			}
 		} else {
 			request := &pb.UpdatePodRequest{
@@ -89,28 +89,30 @@ func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, depl
 
 			response, err = client.UpdatePod(ctx, connect.NewRequest(request))
 			if err != nil {
-				return fmt.Errorf("Failed executing update pod request: %w", err)
+				return nil, fmt.Errorf("Failed executing update pod request: %w", err)
 			}
+			return response.Msg, nil
 		}
 
 		if response.Msg.Error != "" {
-			return fmt.Errorf("Error from provider: %w", errors.New(response.Msg.Error))
+			return nil, fmt.Errorf("Error from provider: %w", errors.New(response.Msg.Error))
 		}
-
 		deployment.Deployed = response.Msg
-		fmt.Fprintf(os.Stderr, "Successfully deployed! %v\n", response)
+		fmt.Fprintf(os.Stdout, "Successfully deployed! %v\n", response)
+
+		return response.Msg, nil
+
 	} else {
 		request := &pb.DeletePodRequest{}
 		response, err := client.DeletePod(ctx, connect.NewRequest(request))
 		if err != nil {
-			return fmt.Errorf("Failed executing update pod request: %w", err)
+			return nil, fmt.Errorf("Failed executing update pod request: %w", err)
 		}
 		if response.Msg.Error != "" {
-			return fmt.Errorf("Error from provider: %w", errors.New(response.Msg.Error))
+			return nil, fmt.Errorf("Error from provider: %w", errors.New(response.Msg.Error))
 		}
 		deployment.Deployed = nil
 		fmt.Fprintf(os.Stderr, "Successfully undeployed!\n")
+		return response.Msg, nil
 	}
-
-	return nil
 }
