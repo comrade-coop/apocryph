@@ -83,7 +83,7 @@ test/e2e/minikube/run-test.sh teardown
 
 ## Contributing
 
-As it is, this project is still in its infancy, and most non-trivial contributions should be done only after discussing them with the team -- or else risk missing the point. So, if you fancy contributing to the project, please feel free to hop on [our Discord server](https://discord.gg/C4e37Xhvt4) or just open/reply to an issue discussing your concrete ideas for contribution.
+As it is, this project is still in its infancy, and most non-trivial contributions should be done only after discussing them with the team -- or else risk missing the point. So, if you fancy contributing to the project, please feel free to hop on [our Discord server](https://discord.gg/fWwMSZdBF2) or just open/reply to an issue discussing your concrete ideas for contribution.
 
 Also, see the [`PUBLISHING.md`](spec/PUBLISHING.md) documentation for more details on the overall structure of the project.
 
