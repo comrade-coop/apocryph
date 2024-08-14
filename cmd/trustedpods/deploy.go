@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 
 	"github.com/comrade-coop/apocryph/pkg/abi"
-	tpcrypto "github.com/comrade-coop/apocryph/pkg/crypto"
 	"github.com/comrade-coop/apocryph/pkg/ethereum"
 	"github.com/comrade-coop/apocryph/pkg/ipcr"
 	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"
@@ -99,10 +98,6 @@ var deployPodCmd = &cobra.Command{
 		configureDeployment(deployment)
 
 		if authorize {
-			encryptionKey, err := tpcrypto.NewKey(tpcrypto.KeyTypeAESGCM256)
-			if err != nil {
-				return fmt.Errorf("Could not create AES key: %v", err)
-			}
 			// create the keypair that will be accessible for all pods
 			privateKey, err := ecdsa.GenerateKey(crypto.S256(), rand.Reader)
 			if err != nil {
@@ -115,12 +110,9 @@ var deployPodCmd = &cobra.Command{
 
 			pubAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
 
-			encryptedPrivateKey, err := tpcrypto.EncryptWithKey(encryptionKey, crypto.FromECDSA(privateKey))
-			if err != nil {
-				return fmt.Errorf("Could not encrypt private key: %v", err)
-			}
+			encodedPrivateKey := ethereum.EncodePrivateKey(crypto.FromECDSA(privateKey))
 
-			pod.KeyPair = &pb.KeyPair{Key: encryptionKey, PrivateKey: encryptedPrivateKey, PubAddress: pubAddress.Hex()}
+			pod.KeyPair = &pb.KeyPair{PrivateKey: encodedPrivateKey, PubAddress: pubAddress.Hex()}
 			deployment.KeyPair = pod.KeyPair
 		}
 

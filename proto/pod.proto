@@ -98,7 +98,6 @@ message Key {
 }
 
 message KeyPair {
-    Key key = 1;
-    bytes  privateKey= 2;
+    string  privateKey= 2;
     string pubAddress = 3;
 }

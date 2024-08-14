@@ -684,14 +684,9 @@ export class Key extends Message<Key> {
  */
 export class KeyPair extends Message<KeyPair> {
   /**
-   * @generated from field: apocryph.proto.v0.pod.Key key = 1;
+   * @generated from field: string privateKey = 2;
    */
-  key?: Key;
-
-  /**
-   * @generated from field: bytes privateKey = 2;
-   */
-  privateKey = new Uint8Array(0);
+  privateKey = "";
 
   /**
    * @generated from field: string pubAddress = 3;
@@ -706,8 +701,7 @@ export class KeyPair extends Message<KeyPair> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "apocryph.proto.v0.pod.KeyPair";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "key", kind: "message", T: Key },
-    { no: 2, name: "privateKey", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 2, name: "privateKey", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "pubAddress", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 

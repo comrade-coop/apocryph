@@ -8,8 +8,6 @@ import (
 	"strings"
 
 	"github.com/comrade-coop/apocryph/pkg/constants"
-	tpcrypto "github.com/comrade-coop/apocryph/pkg/crypto"
-	"github.com/comrade-coop/apocryph/pkg/ethereum"
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	"github.com/ethereum/go-ethereum/common"
 	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
@@ -116,24 +114,13 @@ func ApplyPodRequest(
 		}
 
 		if podManifest.KeyPair != nil {
-			privatekey, err := tpcrypto.DecryptWithKey(podManifest.KeyPair.Key, podManifest.KeyPair.PrivateKey)
-			if err != nil {
-				return fmt.Errorf("Failed Decrypting private key: %v\n", err)
-			}
-
-			key, err := ethereum.EncodePrivateKey(privatekey)
-			if err != nil {
-				return fmt.Errorf("Failed encoding private key: %v\n", err)
-			}
-
-			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PRIVATE_KEY, Value: key})
 			// save as hex to parse later as hex
 			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PAYMENT_ADDR_KEY, Value: common.BytesToAddress(paymentChannel.ContractAddress).Hex()})
 			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PUBLISHER_ADDR_KEY, Value: common.BytesToAddress(paymentChannel.PublisherAddress).Hex()})
 			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PROVIDER_ADDR_KEY, Value: common.BytesToAddress(paymentChannel.ProviderAddress).Hex()})
 			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.POD_ID_KEY, Value: common.BytesToHash(paymentChannel.PodID).Hex()})
-			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PRIVATE_KEY, Value: key})
 			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PUBLIC_ADDRESS_KEY, Value: podManifest.KeyPair.PubAddress})
+			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PRIVATE_KEY, Value: podManifest.KeyPair.PrivateKey})
 		}
 
 		for field, value := range container.Env {

@@ -67,6 +67,9 @@ func NewAutoSalerServer(ethereumRpc string, p2pHost host.Host) (*AutoScalerServe
 	log.Printf("ENV Variables: Payment_Address: %v, Publisher Address: %v, ProviderAddress: %v, podId: %v\n", paymentAddress, publisherAddress, providerAddress, podId)
 
 	privateKey, err := ethereum.DecodePrivateKey(key)
+	if err != nil {
+		return nil, fmt.Errorf("Failed decoding private Key: %v", err)
+	}
 
 	chainID, err := ethClient.ChainID(context.Background())
 	if err != nil {
