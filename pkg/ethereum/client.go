@@ -4,6 +4,8 @@ package ethereum
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -122,4 +124,24 @@ func GetAccountAndSigner(accountString string, client *ethclient.Client) (*bind.
 
 		return nil, nil, fmt.Errorf("Account %s not found in keystore %s", accountAddress, uri)
 	}
+}
+
+func EncodePrivateKey(privateKeyBytes []byte) string {
+	return hex.EncodeToString(privateKeyBytes)
+}
+
+func DecodePrivateKey(encodedKey string) (*ecdsa.PrivateKey, error) {
+	// Decode the hex string
+	privateKeyBytes, err := hex.DecodeString(encodedKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode hex string: %w", err)
+	}
+
+	// Convert bytes to ECDSA private key
+	privateKey, err := crypto.ToECDSA(privateKeyBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert bytes to ECDSA private key: %w", err)
+	}
+
+	return privateKey, nil
 }

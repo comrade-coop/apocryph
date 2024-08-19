@@ -158,7 +158,7 @@ func GetPodLogs(client pbcon.ProvisionPodServiceClient, request *pb.PodLogReques
 	}
 	for stream.Receive() {
 		resp := stream.Msg()
-		valStr := fmt.Sprintf("%s:%s", resp.LogEntry.Time, resp.LogEntry.Log)
+		valStr := fmt.Sprintf("%v", resp.LogEntry)
 		log.Println(valStr)
 	}
 	err = stream.Err()

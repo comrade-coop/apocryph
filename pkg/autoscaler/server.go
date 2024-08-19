@@ -1,18 +1,26 @@
-package main
+package autoscaler
 
 import (
 	"context"
 	"fmt"
 	"log"
+	"math/big"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/comrade-coop/apocryph/pkg/abi"
+	"github.com/comrade-coop/apocryph/pkg/constants"
+	"github.com/comrade-coop/apocryph/pkg/ethereum"
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	pbcon "github.com/comrade-coop/apocryph/pkg/proto/protoconnect"
 	tpraft "github.com/comrade-coop/apocryph/pkg/raft"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hashicorp/raft"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -24,13 +32,71 @@ const RAFT_PATH = ""
 
 type AutoScalerServer struct {
 	pbcon.UnimplementedAutoscalerServiceHandler
-	node        *tpraft.RaftNode
-	store       *tpraft.KVStore
-	peers       []string
-	started     bool
-	self        host.Host
-	nodeGateway string
-	mainLoop    func(*AutoScalerServer)
+	node           *tpraft.RaftNode
+	store          *tpraft.KVStore
+	peers          []string
+	started        bool
+	p2pHost        host.Host
+	nodeGateway    string
+	ChannelManager *PaymentChannelManager
+	MainLoop       func(*AutoScalerServer)
+}
+
+type PaymentChannelManager struct {
+	Publisher  common.Address
+	Provider   common.Address
+	PodId      common.Hash
+	EthClient  *ethclient.Client
+	Transactor *bind.TransactOpts
+	Payment    *abi.Payment
+}
+
+func NewAutoSalerServer(ethereumRpc string, p2pHost host.Host) (*AutoScalerServer, error) {
+
+	ethClient, err := ethereum.GetClient(ethereumRpc)
+	if err != nil {
+		return nil, err
+	}
+
+	key := os.Getenv(constants.PRIVATE_KEY)
+	paymentAddress := common.HexToAddress(os.Getenv(constants.PAYMENT_ADDR_KEY))
+	publisherAddress := common.HexToAddress(os.Getenv(constants.PUBLISHER_ADDR_KEY))
+	providerAddress := common.HexToAddress(os.Getenv(constants.PROVIDER_ADDR_KEY))
+	podId := common.HexToHash((os.Getenv(constants.POD_ID_KEY)))
+
+	log.Printf("ENV Variables: Payment_Address: %v, Publisher Address: %v, ProviderAddress: %v, podId: %v\n", paymentAddress, publisherAddress, providerAddress, podId)
+
+	privateKey, err := ethereum.DecodePrivateKey(key)
+	if err != nil {
+		return nil, fmt.Errorf("Failed decoding private Key: %v", err)
+	}
+
+	chainID, err := ethClient.ChainID(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	transactor, err := bind.NewKeyedTransactorWithChainID(privateKey, chainID)
+	if err != nil {
+		return nil, err
+	}
+
+	payment, err := abi.NewPayment(paymentAddress, ethClient)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AutoScalerServer{
+		p2pHost: p2pHost,
+		ChannelManager: &PaymentChannelManager{
+			Publisher:  publisherAddress,
+			Provider:   providerAddress,
+			PodId:      podId,
+			EthClient:  ethClient,
+			Transactor: transactor,
+			Payment:    payment,
+		},
+	}, nil
 }
 
 func (s *AutoScalerServer) TriggerNode(c context.Context, req *connect.Request[pb.ConnectClusterRequest]) (*connect.Response[pb.TriggerNodeResponse], error) {
@@ -39,7 +105,7 @@ func (s *AutoScalerServer) TriggerNode(c context.Context, req *connect.Request[p
 		go s.BoostrapCluster(req)
 		s.started = true
 	}
-	return connect.NewResponse(&pb.TriggerNodeResponse{PeerID: s.self.ID().String()}), nil
+	return connect.NewResponse(&pb.TriggerNodeResponse{PeerID: s.p2pHost.ID().String()}), nil
 }
 
 func (s *AutoScalerServer) BoostrapCluster(req *connect.Request[pb.ConnectClusterRequest]) error {
@@ -70,7 +136,7 @@ func (s *AutoScalerServer) BoostrapCluster(req *connect.Request[pb.ConnectCluste
 		log.Printf("Added Peer %v ID:%s \n", peerInfo.Addrs, peerInfo.ID.String())
 	}
 
-	node, err := tpraft.NewRaftNode(s.self, peers, RAFT_PATH)
+	node, err := tpraft.NewRaftNode(s.p2pHost, peers, RAFT_PATH)
 	if err != nil {
 		log.Println("Error:Could not Creat Raft Node")
 		return fmt.Errorf("Failed Creating Raft Node %v\n", err)
@@ -93,7 +159,14 @@ func (s *AutoScalerServer) BoostrapCluster(req *connect.Request[pb.ConnectCluste
 
 func (s *AutoScalerServer) ConnectCluster(c context.Context, req *connect.Request[pb.ConnectClusterRequest]) (*connect.Response[pb.ConnectClusterResponse], error) {
 	log.Println("Forming a Raft Cluster with the following providers:", req.Msg.Servers)
-	s.started = true
+
+	if s.started == true {
+		return connect.NewResponse(&pb.ConnectClusterResponse{
+			Success: false,
+			Error:   "Server Already Started\n",
+		}), nil
+	}
+
 	err := s.BoostrapCluster(req)
 	if err != nil {
 		return connect.NewResponse(&pb.ConnectClusterResponse{
@@ -101,6 +174,8 @@ func (s *AutoScalerServer) ConnectCluster(c context.Context, req *connect.Reques
 			Error:   fmt.Sprintf("Failed Bootstraping Cluster: %v\n", err),
 		}), nil
 	}
+
+	s.started = true
 	response := &pb.ConnectClusterResponse{Success: true}
 	return connect.NewResponse(response), nil
 }
@@ -113,13 +188,16 @@ func (s *AutoScalerServer) FetchPeerIDsFromServers(req *connect.Request[pb.Conne
 			http.DefaultClient,
 			addr)
 
+		req.Header().Set("Host", "autoscaler.local")
+
 		resp, err := client.TriggerNode(context.Background(), req)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get PeerID from server %v: %w", addr, err)
+			log.Printf("failed to connect to PeerID from server %v: %v", addr, err)
+			continue
 		}
 		peerIDs[addr] = resp.Msg.PeerID
 	}
-
+	log.Printf("PeerIDs collected: %v", peerIDs)
 	return peerIDs, nil
 }
 
@@ -148,15 +226,15 @@ func (s *AutoScalerServer) waitLeaderElection(timeout uint32) error {
 			switch obs.Data.(type) {
 			case raft.RaftState:
 				if leaderAddr, _ := s.node.Raft.LeaderWithID(); leaderAddr != "" {
-					fmt.Printf("Leader Elected: %v\n", leaderAddr)
-					go s.mainLoop(s)
+					log.Printf("Leader Elected: %v\n", leaderAddr)
+					go s.MainLoop(s)
 					return nil
 				}
 			}
 		case <-ticker.C:
 			if leaderAddr, _ := s.node.Raft.LeaderWithID(); leaderAddr != "" {
-				fmt.Printf("Leader Elected: %v\n", leaderAddr)
-				go s.mainLoop(s)
+				log.Printf("Leader Elected: %v\n", leaderAddr)
+				go s.MainLoop(s)
 				return nil
 			}
 		case <-timeoutCh:
@@ -176,9 +254,15 @@ func (s *AutoScalerServer) watchNewStates() {
 	}
 }
 
-// example of main loop setting the value of a test domain with the current node
-// gateway every 5 seconds
-func setAppGatewayExample(s *AutoScalerServer) {
+// example of main loop creating a subchannel, then setting the value of a test domain
+// with the current node gateway every 10 seconds
+func SetAppGatewayExample(s *AutoScalerServer) {
+	_, err := s.ChannelManager.Payment.CreateSubChannel(s.ChannelManager.Transactor, s.ChannelManager.Publisher, s.ChannelManager.Provider, s.ChannelManager.PodId, s.ChannelManager.Provider, s.ChannelManager.PodId, big.NewInt(200))
+	if err != nil {
+		log.Printf("Failed to create subchannel: %v\n", err)
+	} else {
+		log.Printf("SubChannel Created Succefully \n")
+	}
 	log.Println("Starting Main Loop:")
 	for {
 		if s.node.Raft.State() == raft.Leader {

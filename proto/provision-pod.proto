@@ -28,6 +28,7 @@ message DeletePodResponse {
 
 message UpdatePodRequest {
   pod.Pod pod = 1;
+  PaymentChannel payment = 2;
 }
 message UpdatePodResponse {
   bool success = 1;
@@ -63,7 +64,5 @@ message PodLogResponse{
 
 message LogEntry{
   uint64 NanosecondsUnixEpoch = 1;
-  string log = 2;
-  string stream = 3; // std(in/out/err)
-  string time = 4;
+  string line= 2;
 }

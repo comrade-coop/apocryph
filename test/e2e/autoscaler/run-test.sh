@@ -34,8 +34,10 @@ fi
 
 ./redeploy-contracts.sh
 
+## 0.3: start clusters
+./start-clusters.sh
+
 ## 1.0 Starting the First Cluster
-minikube start --insecure-registry='host.minikube.internal:5000' --container-runtime=containerd --driver=virtualbox -p c1
 minikube profile c1
 helmfile sync -f ../minikube || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile apply -f ../minikube; }
 
@@ -44,7 +46,6 @@ helmfile sync -f ../minikube || { while ! kubectl get -n keda endpoints ingress-
 
 
 ## 2.0: Starting the second Cluster
-minikube start --insecure-registry='host.minikube.internal:5000' --container-runtime=containerd --driver=virtualbox -p c2
 minikube profile c2
 helmfile sync -f ../minikube || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile apply -f ../minikube; }
 
@@ -53,7 +54,6 @@ helmfile sync -f ../minikube || { while ! kubectl get -n keda endpoints ingress-
 
 
 ## 3.0: Starting the third Cluster
-minikube start --insecure-registry='host.minikube.internal:5000' --container-runtime=containerd --driver=virtualbox -p c3
 minikube profile c3
 helmfile sync -f ../minikube || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile apply -f ../minikube; }
 
@@ -114,6 +114,7 @@ go run ../../../cmd/trustedpods registry get --config ../../integration/registry
   --token-contract 0x5FbDB2315678afecb367f032d93F642f64180aa3 \
   --ipfs /ip4/127.0.0.1/tcp/5004 \
 
+sleep 5
 ## 5.0: Deploy the autoscaler to the providers using their p2p multiaddr
 
 set -v
@@ -138,8 +139,8 @@ go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-autoscaler.yaml \
   --upload-images=true \
   --mint-funds \
   --provider /p2p/"$PROVIDER_IPFS" \
-  --provider-eth "$PROVIDER_ETH"
-
+  --provider-eth "$PROVIDER_ETH" \
+  --authorize
 sleep 5
 
 ## 5.2: deploy to the second cluster
@@ -164,7 +165,8 @@ go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-autoscaler.yaml \
   --upload-images=true \
   --mint-funds \
   --provider /p2p/"$PROVIDER_IPFS" \
-  --provider-eth "$PROVIDER_ETH"
+  --provider-eth "$PROVIDER_ETH" \
+  --authorize
 
 sleep 5
 
@@ -191,7 +193,8 @@ go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-autoscaler.yaml \
   --upload-images=true \
   --mint-funds \
   --provider /p2p/"$PROVIDER_IPFS" \
-  --provider-eth "$PROVIDER_ETH"
+  --provider-eth "$PROVIDER_ETH" \
+  --authorize
 
 ## 6.0: Connect the cluster
 
@@ -203,3 +206,7 @@ minikube profile c3
 C3_INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true | head -n 1); echo $C3_INGRESS_URL
 
 go run ../../../cmd/trustedpods/ autoscale --url "$C1_INGRESS_URL" --providers "$C1_INGRESS_URL","$C2_INGRESS_URL","$C3_INGRESS_URL"
+
+## 6.1: Get Last deployed Autoscaler Logs
+PUBLISHER_KEY=$(docker logs anvil | awk '/Private Keys/ {flag=1; next} flag && /^\(2\)/ {print $2; exit}')
+go run ../../../cmd/trustedpods/ pod log ../common/manifest-autoscaler.yaml --ethereum-key "$PUBLISHER_KEY"

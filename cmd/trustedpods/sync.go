@@ -54,7 +54,7 @@ var syncPodCmd = &cobra.Command{
 			return err
 		}
 
-		err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), pod, deployment, client)
+		_, err = publisher.SendToProvider(cmd.Context(), tpipfs.NewP2pApi(ipfs, ipfsMultiaddr), pod, deployment, client)
 		if err != nil {
 			return err
 		}

@@ -8,7 +8,7 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3 } from "@bufbuild/protobuf";
 import { ProvisionPodResponse } from "./provision-pod_pb.js";
-import { Key } from "./pod_pb.js";
+import { Key, KeyPair } from "./pod_pb.js";
 
 /**
  * @generated from message apocryph.proto.v0.deployment.Deployment
@@ -44,6 +44,11 @@ export class Deployment extends Message<Deployment> {
    */
   deployed?: ProvisionPodResponse;
 
+  /**
+   * @generated from field: apocryph.proto.v0.pod.KeyPair keyPair = 7;
+   */
+  keyPair?: KeyPair;
+
   constructor(data?: PartialMessage<Deployment>) {
     super();
     proto3.util.initPartial(data, this);
@@ -58,6 +63,7 @@ export class Deployment extends Message<Deployment> {
     { no: 4, name: "images", kind: "message", T: UploadedImage, repeated: true },
     { no: 5, name: "secrets", kind: "message", T: UploadedSecret, repeated: true },
     { no: 6, name: "deployed", kind: "message", T: ProvisionPodResponse },
+    { no: 7, name: "keyPair", kind: "message", T: KeyPair },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Deployment {

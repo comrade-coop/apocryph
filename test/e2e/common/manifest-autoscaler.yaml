@@ -4,7 +4,7 @@ containers:
       url: localhost:5000/comradecoop/apocryph/autoscaler
     ports:
       - containerPort: '8080'
-        hostHttpHost: autoscaler.local
+        hostHttpHost: 'autoscaler.local'
         name: internal
       - containerPort: '32500'
         hostTcpPort: 32500
