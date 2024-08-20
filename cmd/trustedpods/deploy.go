@@ -104,6 +104,18 @@ var deployPodCmd = &cobra.Command{
 			}
 		}
 
+		if verify {
+			// NOTE it would be usefull if we continue with this approach to add
+			// them to the config file
+			if certificateIdentity == "" || certificateOidcIssuer == "" {
+				return fmt.Errorf("Must specify certificate-identity & certificate-oidc-issuer flags")
+			}
+			err = publisher.VerifyPodImages(pod, publisher.DefaultVerifyOptions(), certificateIdentity, certificateOidcIssuer)
+			if err != nil {
+				return fmt.Errorf("Failed verifying Pod Images: %v", err)
+			}
+		}
+
 		if authorize {
 			// create the keypair that will be accessible for all pods
 			privateKey, err := ecdsa.GenerateKey(crypto.S256(), rand.Reader)
@@ -287,6 +299,7 @@ func init() {
 	deployPodCmd.Flags().AddFlagSet(fundFlags)
 	deployPodCmd.Flags().AddFlagSet(syncFlags)
 	deployPodCmd.Flags().AddFlagSet(registryFlags)
+	deployPodCmd.Flags().AddFlagSet(verifyImagesFlags)
 	deletePodCmd.Flags().AddFlagSet(deploymentFlags)
 	deletePodCmd.Flags().AddFlagSet(syncFlags)
 

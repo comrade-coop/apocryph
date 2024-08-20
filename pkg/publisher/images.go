@@ -1,19 +1,31 @@
 package publisher
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/comrade-coop/apocryph/pkg/proto"
+	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 	"github.com/spf13/cobra"
 )
+
+const TIMEOUT = 3 * time.Minute
 
 func DefaultSignOptions() *options.SignOptions {
 	cmd := &cobra.Command{}
 	o := &options.SignOptions{}
+	o.AddFlags(cmd)
+	return o
+}
+
+func DefaultVerifyOptions() *options.VerifyOptions {
+	cmd := &cobra.Command{}
+	o := &options.VerifyOptions{}
 	o.AddFlags(cmd)
 	return o
 }
@@ -24,7 +36,7 @@ func SignPodImages(pod *proto.Pod, o *options.SignOptions) error {
 		images = append(images, container.Image.Url)
 	}
 
-	ro := &options.RootOptions{Timeout: 3 * time.Minute}
+	ro := &options.RootOptions{Timeout: TIMEOUT}
 
 	oidcClientSecret, err := o.OIDC.ClientSecret()
 	if err != nil {
@@ -61,4 +73,75 @@ func SignPodImages(pod *proto.Pod, o *options.SignOptions) error {
 		return fmt.Errorf("signing attachment %s for image %v: %w", o.Attachment, images, err)
 	}
 	return nil
+}
+
+func VerifyPodImages(pod *proto.Pod, o *options.VerifyOptions, certificateIdentity, certificateOidcIssuer string) error {
+	var images []string
+	for _, container := range pod.Containers {
+		images = append(images, container.Image.Url)
+	}
+
+	if o.CommonVerifyOptions.PrivateInfrastructure {
+		o.CommonVerifyOptions.IgnoreTlog = true
+	}
+
+	annotations, err := o.AnnotationsMap()
+	if err != nil {
+		return err
+	}
+
+	hashAlgorithm, err := o.SignatureDigest.HashAlgorithm()
+	if err != nil {
+		return err
+	}
+
+	o.CertVerify.CertIdentity = certificateIdentity
+	o.CertVerify.CertOidcIssuer = certificateOidcIssuer
+
+	v := &verify.VerifyCommand{
+		RegistryOptions:              o.Registry,
+		CertVerifyOptions:            o.CertVerify,
+		CheckClaims:                  o.CheckClaims,
+		KeyRef:                       o.Key,
+		CertRef:                      o.CertVerify.Cert,
+		CertChain:                    o.CertVerify.CertChain,
+		CAIntermediates:              o.CertVerify.CAIntermediates,
+		CARoots:                      o.CertVerify.CARoots,
+		CertGithubWorkflowTrigger:    o.CertVerify.CertGithubWorkflowTrigger,
+		CertGithubWorkflowSha:        o.CertVerify.CertGithubWorkflowSha,
+		CertGithubWorkflowName:       o.CertVerify.CertGithubWorkflowName,
+		CertGithubWorkflowRepository: o.CertVerify.CertGithubWorkflowRepository,
+		CertGithubWorkflowRef:        o.CertVerify.CertGithubWorkflowRef,
+		IgnoreSCT:                    o.CertVerify.IgnoreSCT,
+		SCTRef:                       o.CertVerify.SCT,
+		Sk:                           o.SecurityKey.Use,
+		Slot:                         o.SecurityKey.Slot,
+		Output:                       o.Output,
+		RekorURL:                     o.Rekor.URL,
+		Attachment:                   o.Attachment,
+		Annotations:                  annotations,
+		HashAlgorithm:                hashAlgorithm,
+		SignatureRef:                 o.SignatureRef,
+		PayloadRef:                   o.PayloadRef,
+		LocalImage:                   o.LocalImage,
+		Offline:                      o.CommonVerifyOptions.Offline,
+		TSACertChainPath:             o.CommonVerifyOptions.TSACertChainPath,
+		IgnoreTlog:                   o.CommonVerifyOptions.IgnoreTlog,
+		MaxWorkers:                   o.CommonVerifyOptions.MaxWorkers,
+		ExperimentalOCI11:            o.CommonVerifyOptions.ExperimentalOCI11,
+		CertOidcProvider:             o.CertVerify.CertOidcIssuer,
+	}
+
+	if o.CommonVerifyOptions.MaxWorkers == 0 {
+		return fmt.Errorf("please set the --max-worker flag to a value that is greater than 0")
+	}
+
+	if o.Registry.AllowInsecure {
+		v.NameOptions = append(v.NameOptions, name.Insecure)
+	}
+
+	// if o.CommonVerifyOptions.IgnoreTlog && !o.CommonVerifyOptions.PrivateInfrastructure {
+	// 	ui.Warnf(ctx, fmt.Sprintf(ignoreTLogMessage, "signature"))
+	// }
+	return v.Exec(context.Background(), images)
 }
