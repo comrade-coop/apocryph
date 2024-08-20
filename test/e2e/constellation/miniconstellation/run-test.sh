@@ -101,7 +101,7 @@ sleep 1
 ## 1.3: Register the provider
 
 go run ../../../cmd/tpodserver/  registry  register \
-  --config ../common/config.yaml \
+  --config ../../common/configs/config.yaml \
   --ipfs /ip4/127.0.0.1/tcp/5001 \
   --ethereum-rpc http://127.0.0.1:8545 \
   --ethereum-key 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d \

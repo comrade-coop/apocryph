@@ -56,7 +56,7 @@ TOKEN_CONTRACT=0x5fbdb2315678afecb367f032d93f642f64180aa3 # TODO= result of forg
 [ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
 
 go run ../../../../cmd/tpodserver  registry  register \
-  --config ../../common/config.yaml \
+  --config ../../common/configs/config.yaml \
   --ipfs /ip4/127.0.0.1/tcp/5004 \
   --ethereum-rpc http://127.0.0.1:8545 \
   --ethereum-key 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d \

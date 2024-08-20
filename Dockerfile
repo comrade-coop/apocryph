@@ -2,7 +2,7 @@
 
 ## common: ##
 
-FROM docker.io/library/golang@sha256:52362e252f452df17c24131b021bf2ebf1c9869f65c28f88ddb326191defea9c as build-common
+FROM docker.io/library/golang:1.22.6@sha256:367bb5295d3103981a86a572651d8297d6973f2ec8b62f716b007860e22cbc25 as build-common
 # 1.21-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive

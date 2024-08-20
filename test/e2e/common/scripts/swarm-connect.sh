@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ## Configure provider/in-cluster IPFS and publisher IPFS ##
-pkill ipfs
+ipfs shutdown
 pkill -f "kubectl port-forward"
 
 PORT_5004=""

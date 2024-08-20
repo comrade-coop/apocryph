@@ -10,6 +10,7 @@ message Pod {
   repeated Volume volumes = 2;
   Replicas replicas = 3;
   KeyPair keyPair = 4;
+  bool ForceAttestation = 5;
 }
 
 message Container {
