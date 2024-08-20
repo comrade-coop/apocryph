@@ -97,6 +97,13 @@ var deployPodCmd = &cobra.Command{
 		}
 		configureDeployment(deployment)
 
+		if sign {
+			err := publisher.SignPodImages(pod, publisher.DefaultSignOptions())
+			if err != nil {
+				return fmt.Errorf("failed Signing images: %v", err)
+			}
+		}
+
 		if authorize {
 			// create the keypair that will be accessible for all pods
 			privateKey, err := ecdsa.GenerateKey(crypto.S256(), rand.Reader)

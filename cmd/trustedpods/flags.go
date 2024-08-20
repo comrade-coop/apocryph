@@ -27,6 +27,7 @@ var uploadFlags = &pflag.FlagSet{}
 var ipfsApi string
 var uploadImages bool
 var uploadSecrets bool
+var sign bool
 
 var fundFlags = &pflag.FlagSet{}
 var ethereumRpc string
@@ -65,6 +66,7 @@ var _ = func() error {
 	uploadFlags.StringVar(&ipfsApi, "ipfs", "/ip4/127.0.0.1/tcp/5001", "multiaddr where the ipfs/kubo api can be accessed")
 	uploadFlags.BoolVar(&uploadImages, "upload-images", true, "upload images")
 	uploadFlags.BoolVar(&uploadSecrets, "upload-secrets", true, "upload secrets")
+	uploadFlags.BoolVar(&sign, "sign-images", false, "sign images")
 
 	fundFlags.StringVar(&ethereumRpc, "ethereum-rpc", "http://127.0.0.1:8545", "ethereum rpc node")
 	fundFlags.StringVar(&publisherKey, "ethereum-key", "", "account string (private key | http[s]://clef#account | /keystore#account | account (in default keystore))")

@@ -25,6 +25,13 @@ var uploadPodCmd = &cobra.Command{
 		}
 		configureDeployment(deployment)
 
+		if sign {
+			err := publisher.SignPodImages(pod, publisher.DefaultSignOptions())
+			if err != nil {
+				return fmt.Errorf("failed Signing images: %v", err)
+			}
+		}
+
 		ipfs, _, err := tpipfs.GetIpfsClient(ipfsApi)
 		if err != nil {
 			return fmt.Errorf("Failed connecting to IPFS: %w", err)
