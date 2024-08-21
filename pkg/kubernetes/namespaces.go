@@ -22,11 +22,12 @@ const (
 	AnnotationsTrustedPodsPaymentChannel string = "coop.comrade/apocryph-payment-contract"
 	LabelIpfsP2P                         string = "coop.comrade/apocryph-p2p-helper"
 	AnnotationsIpfsP2P                   string = "coop.comrade/apocryph-p2p-helper"
+	SigstorePolicy                       string = "policy.sigstore.dev/include"
 )
 
 var TrustedPodsNamespaceFilter = client.HasLabels{LabelTrustedPodsNamespace}
 
-func NewTrustedPodsNamespace(name string, paymentChannel *pb.PaymentChannel) *corev1.Namespace {
+func NewTrustedPodsNamespace(name string, pod *pb.Pod, paymentChannel *pb.PaymentChannel) *corev1.Namespace {
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -34,6 +35,10 @@ func NewTrustedPodsNamespace(name string, paymentChannel *pb.PaymentChannel) *co
 				LabelTrustedPodsNamespace: "true",
 			},
 		},
+	}
+	// force container image verification
+	if pod.ImageVerification {
+		namespace.Labels[SigstorePolicy] = "true"
 	}
 	if paymentChannel != nil {
 		namespace.ObjectMeta.Annotations = map[string]string{

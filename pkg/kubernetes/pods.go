@@ -20,9 +20,6 @@ import (
 
 type FetchSecret func(cid []byte) (map[string][]byte, error)
 
-const PRIVATE_KEY = "PRIVATE_KEY"
-const PUBLIC_ADDRESS = "PUBLIC_ADDRESS"
-
 func updateOrCreate(ctx context.Context, resourceName, kind, namespace string, resource interface{}, client k8cl.Client, update bool) error {
 	if update {
 		key := &k8cl.ObjectKey{
