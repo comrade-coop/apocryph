@@ -108,6 +108,10 @@ func VerifyPodImages(pod *proto.Pod, o *options.VerifyOptions, certificateIdenti
 	for _, container := range pod.Containers {
 		images = append(images, container.Image.Url)
 	}
+	return VerifyImages(images, o, certificateIdentity, certificateOidcIssuer)
+}
+
+func VerifyImages(images []string, o *options.VerifyOptions, certificateIdentity, certificateOidcIssuer string) error {
 
 	if o.CommonVerifyOptions.PrivateInfrastructure {
 		o.CommonVerifyOptions.IgnoreTlog = true
@@ -172,4 +176,5 @@ func VerifyPodImages(pod *proto.Pod, o *options.VerifyOptions, certificateIdenti
 	// 	ui.Warnf(ctx, fmt.Sprintf(ignoreTLogMessage, "signature"))
 	// }
 	return v.Exec(context.Background(), images)
+
 }

@@ -31,6 +31,7 @@ var uploadSecrets bool
 var sign bool
 var uploadSignatures bool
 var verify bool
+var signaturePath string
 
 var verifyImagesFlags = &pflag.FlagSet{}
 var certificateIdentity string
@@ -80,6 +81,7 @@ var _ = func() error {
 
 	verifyImagesFlags.StringVar(&certificateIdentity, "certificate-identity", "", "identity used for signing the image")
 	verifyImagesFlags.StringVar(&certificateOidcIssuer, "certificate-oidc-issuer", "", "issuer of the oidc")
+	verifyImagesFlags.StringVar(&signaturePath, "signature", "", "signature path")
 
 	fundFlags.StringVar(&ethereumRpc, "ethereum-rpc", "http://127.0.0.1:8545", "ethereum rpc node")
 	fundFlags.StringVar(&publisherKey, "ethereum-key", "", "account string (private key | http[s]://clef#account | /keystore#account | account (in default keystore))")
