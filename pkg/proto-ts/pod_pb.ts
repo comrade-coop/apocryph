@@ -33,9 +33,9 @@ export class Pod extends Message<Pod> {
   keyPair?: KeyPair;
 
   /**
-   * @generated from field: bool ForceAttestation = 5;
+   * @generated from field: bool ImageVerification = 5;
    */
-  ForceAttestation = false;
+  ImageVerification = false;
 
   constructor(data?: PartialMessage<Pod>) {
     super();
@@ -49,7 +49,7 @@ export class Pod extends Message<Pod> {
     { no: 2, name: "volumes", kind: "message", T: Volume, repeated: true },
     { no: 3, name: "replicas", kind: "message", T: Replicas },
     { no: 4, name: "keyPair", kind: "message", T: KeyPair },
-    { no: 5, name: "ForceAttestation", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "ImageVerification", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Pod {
@@ -175,6 +175,11 @@ export class Container_Image extends Message<Container_Image> {
    */
   url = "";
 
+  /**
+   * @generated from field: string signature = 4;
+   */
+  signature = "";
+
   constructor(data?: PartialMessage<Container_Image>) {
     super();
     proto3.util.initPartial(data, this);
@@ -186,6 +191,7 @@ export class Container_Image extends Message<Container_Image> {
     { no: 1, name: "cid", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
     { no: 2, name: "key", kind: "message", T: Key },
     { no: 3, name: "url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "signature", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Container_Image {

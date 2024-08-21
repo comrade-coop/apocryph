@@ -35,6 +35,7 @@ message UploadedImage {
   string digest = 2;
   bytes cid = 3;
   pod.Key key = 4;
+  string signature = 5; 
 }
 
 message UploadedSecret {

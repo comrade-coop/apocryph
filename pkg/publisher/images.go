@@ -3,18 +3,19 @@ package publisher
 import (
 	"context"
 	"fmt"
-	"time"
+	"os"
+	"strings"
 
+	"github.com/comrade-coop/apocryph/pkg/constants"
 	"github.com/comrade-coop/apocryph/pkg/proto"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/mitchellh/go-homedir"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 	"github.com/spf13/cobra"
 )
-
-const TIMEOUT = 3 * time.Minute
 
 func DefaultSignOptions() *options.SignOptions {
 	cmd := &cobra.Command{}
@@ -30,47 +31,74 @@ func DefaultVerifyOptions() *options.VerifyOptions {
 	return o
 }
 
-func SignPodImages(pod *proto.Pod, o *options.SignOptions) error {
+func SignPodImages(pod *proto.Pod, deployment *proto.Deployment, o *options.SignOptions) error {
 	var images []string
 	for _, container := range pod.Containers {
 		images = append(images, container.Image.Url)
 	}
 
-	ro := &options.RootOptions{Timeout: TIMEOUT}
+	for i, image := range images {
+		ro := &options.RootOptions{Timeout: constants.TIMEOUT}
 
-	oidcClientSecret, err := o.OIDC.ClientSecret()
-	if err != nil {
-		return err
-	}
-	ko := options.KeyOpts{
-		KeyRef:                         o.Key,
-		PassFunc:                       generate.GetPass,
-		Sk:                             o.SecurityKey.Use,
-		Slot:                           o.SecurityKey.Slot,
-		FulcioURL:                      o.Fulcio.URL,
-		IDToken:                        o.Fulcio.IdentityToken,
-		FulcioAuthFlow:                 o.Fulcio.AuthFlow,
-		InsecureSkipFulcioVerify:       o.Fulcio.InsecureSkipFulcioVerify,
-		RekorURL:                       o.Rekor.URL,
-		OIDCIssuer:                     o.OIDC.Issuer,
-		OIDCClientID:                   o.OIDC.ClientID,
-		OIDCClientSecret:               oidcClientSecret,
-		OIDCRedirectURL:                o.OIDC.RedirectURL,
-		OIDCDisableProviders:           o.OIDC.DisableAmbientProviders,
-		OIDCProvider:                   o.OIDC.Provider,
-		SkipConfirmation:               o.SkipConfirmation,
-		TSAClientCACert:                o.TSAClientCACert,
-		TSAClientCert:                  o.TSAClientCert,
-		TSAClientKey:                   o.TSAClientKey,
-		TSAServerName:                  o.TSAServerName,
-		TSAServerURL:                   o.TSAServerURL,
-		IssueCertificateForExistingKey: o.IssueCertificate,
-	}
-	if err := sign.SignCmd(ro, ko, *o, images); err != nil {
-		if o.Attachment == "" {
-			return fmt.Errorf("signing %v: %w", images, err)
+		oidcClientSecret, err := o.OIDC.ClientSecret()
+		if err != nil {
+			return err
 		}
-		return fmt.Errorf("signing attachment %s for image %v: %w", o.Attachment, images, err)
+		ko := options.KeyOpts{
+			KeyRef:                         o.Key,
+			PassFunc:                       generate.GetPass,
+			Sk:                             o.SecurityKey.Use,
+			Slot:                           o.SecurityKey.Slot,
+			FulcioURL:                      o.Fulcio.URL,
+			IDToken:                        o.Fulcio.IdentityToken,
+			FulcioAuthFlow:                 o.Fulcio.AuthFlow,
+			InsecureSkipFulcioVerify:       o.Fulcio.InsecureSkipFulcioVerify,
+			RekorURL:                       o.Rekor.URL,
+			OIDCIssuer:                     o.OIDC.Issuer,
+			OIDCClientID:                   o.OIDC.ClientID,
+			OIDCClientSecret:               oidcClientSecret,
+			OIDCRedirectURL:                o.OIDC.RedirectURL,
+			OIDCDisableProviders:           o.OIDC.DisableAmbientProviders,
+			OIDCProvider:                   o.OIDC.Provider,
+			SkipConfirmation:               o.SkipConfirmation,
+			TSAClientCACert:                o.TSAClientCACert,
+			TSAClientCert:                  o.TSAClientCert,
+			TSAClientKey:                   o.TSAClientKey,
+			TSAServerName:                  o.TSAServerName,
+			TSAServerURL:                   o.TSAServerURL,
+			IssueCertificateForExistingKey: o.IssueCertificate,
+		}
+
+		signaturePath, err := homedir.Expand(constants.OUTPUT_SIGNATURE_PATH)
+		if err != nil {
+			return err
+		}
+
+		err = os.MkdirAll(signaturePath, 0755)
+		if err != nil {
+			return err
+		}
+
+		imageName := strings.ReplaceAll(image, "/", "_")
+		signaturePath = signaturePath + "/" + imageName + ".sig"
+		_, err = os.Create(signaturePath)
+		if err != nil {
+			return err
+		}
+
+		o.OutputSignature = signaturePath
+
+		if err := sign.SignCmd(ro, ko, *o, []string{image}); err != nil {
+			if o.Attachment == "" {
+				return fmt.Errorf("signing %v: %w", images, err)
+			}
+			return fmt.Errorf("signing attachment %s for image %v: %w", o.Attachment, images, err)
+		}
+		signatureBytes, err := os.ReadFile(signaturePath)
+		if err != nil {
+			return err
+		}
+		deployment.Images[i].Signature = string(signatureBytes)
 	}
 	return nil
 }

@@ -10,7 +10,7 @@ cd "$(dirname "$0")"
 sudo chmod o+rw /run/containerd/containerd.sock
 
 trap 'kill $(jobs -p) &>/dev/null' EXIT
-
+ipfs shutdown || true
 ipfs daemon >/dev/null &
 sleep 2
 
@@ -22,6 +22,6 @@ CERTIFICATE_OIDC_ISSUER=$2
 docker tag hello-world ttl.sh/hello-world:1h
 docker push ttl.sh/hello-world:1h
 
-go run ../../../cmd/trustedpods pod upload ./manifest.yaml
+go run ../../../cmd/trustedpods pod upload ../../e2e/common/manifests/manifest-attestation.yaml --sign-images
 
-go run ../../../cmd/trustedpods pod verify ./manifest.yaml --certificate-identity $CERTIFICATE_IDENTITY --certificate-oidc-issuer $CERTIFICATE_OIDC_ISSUER
+go run ../../../cmd/trustedpods pod verify ../../e2e/common/manifests/manifest-attestation.yaml --certificate-identity $CERTIFICATE_IDENTITY --certificate-oidc-issuer $CERTIFICATE_OIDC_ISSUER

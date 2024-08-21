@@ -98,7 +98,11 @@ var deployPodCmd = &cobra.Command{
 		configureDeployment(deployment)
 
 		if sign {
-			err := publisher.SignPodImages(pod, publisher.DefaultSignOptions())
+			signOptions := publisher.DefaultSignOptions()
+			if !uploadSignatures {
+				signOptions.Upload = false
+			}
+			err := publisher.SignPodImages(pod, deployment, signOptions)
 			if err != nil {
 				return fmt.Errorf("failed Signing images: %v", err)
 			}

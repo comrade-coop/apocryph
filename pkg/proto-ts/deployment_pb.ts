@@ -205,6 +205,11 @@ export class UploadedImage extends Message<UploadedImage> {
    */
   key?: Key;
 
+  /**
+   * @generated from field: string signature = 5;
+   */
+  signature = "";
+
   constructor(data?: PartialMessage<UploadedImage>) {
     super();
     proto3.util.initPartial(data, this);
@@ -217,6 +222,7 @@ export class UploadedImage extends Message<UploadedImage> {
     { no: 2, name: "digest", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "cid", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
     { no: 4, name: "key", kind: "message", T: Key },
+    { no: 5, name: "signature", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UploadedImage {

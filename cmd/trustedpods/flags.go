@@ -29,6 +29,7 @@ var uploadImages bool
 var uploadSecrets bool
 
 var sign bool
+var uploadSignatures bool
 var verify bool
 
 var verifyImagesFlags = &pflag.FlagSet{}
@@ -69,11 +70,13 @@ var _ = func() error {
 	deploymentFlags.StringVar(&ipfsApi, "ipfs", "/ip4/127.0.0.1/tcp/5001", "multiaddr where the ipfs/kubo api can be accessed")
 	deploymentFlags.BoolVar(&authorize, "authorize", false, "Create a key pair for the application and authorize the returned addresses to control the payment channel")
 	deploymentFlags.BoolVar(&verify, "verify", false, "verify the pod images (requires certificate-identity & certificate-oidc-issuer flags)")
+	deploymentFlags.BoolVar(&uploadSignatures, "upload-signatures", false, "skip uploading signatures to the registry")
 
 	uploadFlags.StringVar(&ipfsApi, "ipfs", "/ip4/127.0.0.1/tcp/5001", "multiaddr where the ipfs/kubo api can be accessed")
 	uploadFlags.BoolVar(&uploadImages, "upload-images", true, "upload images")
 	uploadFlags.BoolVar(&uploadSecrets, "upload-secrets", true, "upload secrets")
 	uploadFlags.BoolVar(&sign, "sign-images", false, "sign images")
+	uploadFlags.BoolVar(&uploadSignatures, "upload-signatures", false, "skip uploading signatures to the registry")
 
 	verifyImagesFlags.StringVar(&certificateIdentity, "certificate-identity", "", "identity used for signing the image")
 	verifyImagesFlags.StringVar(&certificateOidcIssuer, "certificate-oidc-issuer", "", "issuer of the oidc")
