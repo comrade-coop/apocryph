@@ -72,7 +72,7 @@ func GetResource(kind string) interface{} {
 		return &appsv1.Deployment{}
 	case "HttpSo":
 		return &kedahttpv1alpha1.HTTPScaledObject{}
-	case "SigstorePolicy":
+	case "ClusterImagePolicy":
 		return &policy.ClusterImagePolicy{}
 	}
 	return nil

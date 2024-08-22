@@ -20,13 +20,13 @@ sleep 2
 CERTIFICATE_IDENTITY=$1
 CERTIFICATE_OIDC_ISSUER=$2
 
-# docker tag hello-world ttl.sh/hello-world:1h
-# docker push ttl.sh/hello-world:1h
-#
-# go run ../../../cmd/trustedpods pod upload ../../e2e/common/manifests/manifest-attestation.yaml \
-#   --sign-images --certificate-identity $CERTIFICATE_IDENTITY --certificate-oidc-issuer $CERTIFICATE_OIDC_ISSUER
-#
-# go run ../../../cmd/trustedpods pod verify ../../e2e/common/manifests/manifest-attestation.yaml
+docker tag hello-world ttl.sh/hello-world:1h
+docker push ttl.sh/hello-world:1h
+
+go run ../../../cmd/trustedpods pod upload ../../e2e/common/manifests/manifest-attestation.yaml \
+  --sign-images --certificate-identity $CERTIFICATE_IDENTITY --certificate-oidc-issuer $CERTIFICATE_OIDC_ISSUER
+
+go run ../../../cmd/trustedpods pod verify ../../e2e/common/manifests/manifest-attestation.yaml
 
 go run ../../../cmd/trustedpods verify  ttl.sh/hello-world@sha256:d37ada95d47ad12224c205a938129df7a3e52345828b4fa27b03a98825d1e2e7 \
   --certificate-identity $CERTIFICATE_IDENTITY --certificate-oidc-issuer $CERTIFICATE_OIDC_ISSUER \

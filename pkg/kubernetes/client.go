@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	kedahttpscheme "github.com/kedacore/http-add-on/operator/generated/clientset/versioned/scheme"
+	policy "github.com/sigstore/policy-controller/pkg/apis/policy/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -23,9 +24,13 @@ func GetScheme() (*runtime.Scheme, error) {
 	if err := scheme.AddToScheme(sch); err != nil {
 		return nil, err
 	}
+	if err := policy.AddToScheme(sch); err != nil {
+		return nil, err
+	}
 	if err := kedahttpscheme.AddToScheme(sch); err != nil {
 		return nil, err
 	}
+
 	return sch, nil
 }
 

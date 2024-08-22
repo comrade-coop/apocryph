@@ -1,12 +1,10 @@
 #!/bin/bash
 
-docker build -t comradecoop/apocryph/server:latest ../../.. --target server
+docker build -t comradecoop/apocryph/server:latest ../../../../ --target server
 
-docker build -t comradecoop/apocryph/p2p-helper:latest ../../.. --target p2p-helper
+docker build -t comradecoop/apocryph/p2p-helper:latest ../../../../ --target p2p-helper
 
-docker build -t comradecoop/apocryph/autoscaler:latest ../../.. --target autoscaler
-
-docker run -d -p 5000:5000 --restart=always --name registry registry:2 || echo "Docker registry already running"
+docker build -t comradecoop/apocryph/autoscaler:latest ../../../../ --target autoscaler
 
 docker tag comradecoop/apocryph/server:latest localhost:5000/comradecoop/apocryph/server:latest
 docker push localhost:5000/comradecoop/apocryph/server:latest

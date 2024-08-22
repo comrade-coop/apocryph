@@ -5,14 +5,14 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/comrade-coop/apocryph/pkg/constants"
-	"github.com/comrade-coop/apocryph/pkg/proto"
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	"github.com/ethereum/go-ethereum/common"
 	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
-	policy "github.com/sigstore/policy-controller/pkg/apis/policy/v1alpha1"
+	policy "github.com/sigstore/policy-controller/pkg/apis/policy/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -39,22 +39,22 @@ func updateOrCreate(ctx context.Context, resourceName, kind, namespace string, r
 		err := client.Get(ctx, *key, oldResource.(k8cl.Object))
 		updatedResource.SetResourceVersion(oldResource.(k8cl.Object).GetResourceVersion()) // resource version should be retrieved from the old resource in order for httpSo to work
 		if err != nil {
-			fmt.Printf("Added New Resource: %v \n", resourceName)
+			log.Printf("Added New Resource: %v \n", resourceName)
 			if err := client.Create(ctx, updatedResource); err != nil {
-				return err
+				return fmt.Errorf("Failed creating resource:%v,%v\n", resourceName, err)
 			}
 			return nil
 		}
 
 		err = client.Update(ctx, updatedResource)
 		if err != nil {
-			return err
+			return fmt.Errorf("Failed updating resource:%v, %v\n", resourceName, err)
 		}
-		fmt.Printf("Updated %v \n", resourceName)
+		log.Printf("Updated %v \n", resourceName)
 		return nil
 	}
 	if err := client.Create(ctx, resource.(k8cl.Object)); err != nil {
-		return err
+		return fmt.Errorf("Failed creating resource:%v,%v\n", resourceName, err)
 	}
 	return nil
 }
@@ -104,7 +104,28 @@ func ApplyPodRequest(
 
 	localhostAliases := corev1.HostAlias{IP: "127.0.0.1"}
 
-	var details []*proto.VerificationDetails
+	for i, container := range podManifest.Containers {
+		if container.Image.VerificationDetails != nil {
+			// create a policy give the previously collected VerificationDetails
+			if podManifest.ImageVerification {
+				policyName := fmt.Sprintf("policy-%v-%v", podId, i)
+				sigstorePolicy := &policy.ClusterImagePolicy{
+					TypeMeta: metav1.TypeMeta{Kind: "ClusterImagePolicy"}, ObjectMeta: metav1.ObjectMeta{Name: policyName},
+					Spec: policy.ClusterImagePolicySpec{
+						Images:      []policy.ImagePattern{{Glob: container.Image.Url}},
+						Authorities: []policy.Authority{{Keyless: &policy.KeylessRef{}}},
+					}}
+				identity := policy.Identity{Issuer: container.Image.VerificationDetails.Issuer, Subject: container.Image.VerificationDetails.Identity}
+				sigstorePolicy.Spec.Authorities[0].Keyless.Identities = []policy.Identity{identity}
+				err := updateOrCreate(ctx, policyName, "ClusterImagePolicy", namespace, sigstorePolicy, client, update)
+				if err != nil {
+					return err
+				}
+				log.Println("Policy Created")
+			}
+		}
+	}
+
 	for cIdx, container := range podManifest.Containers {
 		containerSpec := corev1.Container{
 			Name:            container.Name,
@@ -187,9 +208,7 @@ func ApplyPodRequest(
 		} else {
 			depLabels["containers"] = depLabels["containers"] + "_" + containerSpec.Name
 		}
-		if container.Image.VerificationDetails != nil {
-			details = append(details, container.Image.VerificationDetails)
-		}
+
 	}
 	podTemplate.Spec.HostAliases = append(podTemplate.Spec.HostAliases, localhostAliases)
 	for _, volume := range podManifest.Volumes {
@@ -287,21 +306,6 @@ func ApplyPodRequest(
 			return err
 		}
 		activeResource = append(activeResource, httpSoName)
-	}
-	// create a policy give the previously collected VerificationDetails
-	if podManifest.ImageVerification {
-		sigstorePolicy := &policy.ClusterImagePolicy{Spec: policy.ClusterImagePolicySpec{
-			Authorities: []policy.Authority{{Keyless: &policy.KeylessRef{}}},
-		}}
-		identities := []policy.Identity{}
-		for _, detail := range details {
-			identities = append(identities, policy.Identity{Issuer: detail.Issuer, Subject: detail.Identity})
-		}
-		sigstorePolicy.Spec.Authorities[0].Keyless.Identities = identities
-		err := updateOrCreate(ctx, "tpod-policy", "SigstorePolicy", namespace, sigstorePolicy, client, update)
-		if err != nil {
-			return err
-		}
 	}
 
 	if update == true {

@@ -83,9 +83,6 @@ go run ../../../cmd/tpodserver  registry  register \
   --token-contract 0x5FbDB2315678afecb367f032d93F642f64180aa3 \
   --registry-contract 0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0 \
 
-## 1.4: Configure provider/in-cluster IPFS and publisher IPFS ##
-minikube profile c1
-../common/scripts/swarm-connect.sh
 
 ## 2: Deploy example manifest to cluster ##
 

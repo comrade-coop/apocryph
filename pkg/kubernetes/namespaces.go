@@ -5,6 +5,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"log"
 
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
@@ -38,6 +39,7 @@ func NewTrustedPodsNamespace(name string, pod *pb.Pod, paymentChannel *pb.Paymen
 	}
 	// force container image verification
 	if pod.ImageVerification {
+		log.Println("Image verification is Set")
 		namespace.Labels[SigstorePolicy] = "true"
 	}
 	if paymentChannel != nil {
