@@ -8,6 +8,7 @@ import (
 
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
+	policy "github.com/sigstore/policy-controller/pkg/apis/policy/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,6 +72,8 @@ func GetResource(kind string) interface{} {
 		return &appsv1.Deployment{}
 	case "HttpSo":
 		return &kedahttpv1alpha1.HTTPScaledObject{}
+	case "SigstorePolicy":
+		return &policy.ClusterImagePolicy{}
 	}
 	return nil
 }

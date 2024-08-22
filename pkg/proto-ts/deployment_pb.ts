@@ -8,7 +8,7 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3 } from "@bufbuild/protobuf";
 import { ProvisionPodResponse } from "./provision-pod_pb.js";
-import { Key, KeyPair } from "./pod_pb.js";
+import { Key, KeyPair, VerificationDetails } from "./pod_pb.js";
 
 /**
  * @generated from message apocryph.proto.v0.deployment.Deployment
@@ -206,9 +206,9 @@ export class UploadedImage extends Message<UploadedImage> {
   key?: Key;
 
   /**
-   * @generated from field: string signature = 5;
+   * @generated from field: apocryph.proto.v0.pod.VerificationDetails verificationDetails = 5;
    */
-  signature = "";
+  verificationDetails?: VerificationDetails;
 
   constructor(data?: PartialMessage<UploadedImage>) {
     super();
@@ -222,7 +222,7 @@ export class UploadedImage extends Message<UploadedImage> {
     { no: 2, name: "digest", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "cid", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
     { no: 4, name: "key", kind: "message", T: Key },
-    { no: 5, name: "signature", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "verificationDetails", kind: "message", T: VerificationDetails },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UploadedImage {

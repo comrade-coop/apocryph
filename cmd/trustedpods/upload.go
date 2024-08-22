@@ -30,12 +30,16 @@ var uploadPodCmd = &cobra.Command{
 			return fmt.Errorf("Failed connecting to IPFS: %w", err)
 		}
 
-		if sign {
+		if signImages {
+			err := checkCertificateFlags()
+			if err != nil {
+				return err
+			}
 			signOptions := publisher.DefaultSignOptions()
 			if !uploadSignatures {
 				signOptions.Upload = false
 			}
-			err := publisher.SignPodImages(pod, deployment, signOptions)
+			err = publisher.SignPodImages(pod, deployment, signOptions, certificateIdentity, certificateOidcIssuer)
 			if err != nil {
 				return fmt.Errorf("failed Signing images: %v", err)
 			}
@@ -69,4 +73,5 @@ func init() {
 
 	uploadPodCmd.Flags().AddFlagSet(deploymentFlags)
 	uploadPodCmd.Flags().AddFlagSet(uploadFlags)
+	uploadPodCmd.Flags().AddFlagSet(imageCertificateFlags)
 }

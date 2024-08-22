@@ -65,7 +65,7 @@ var initPodCmd = &cobra.Command{
 			Containers: []*pb.Container{
 				{
 					Name: containerName,
-					Image: &pb.Container_Image{
+					Image: &pb.Image{
 						Url: initImageName,
 					},
 					Ports: []*pb.Container_Port{

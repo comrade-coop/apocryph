@@ -79,9 +79,9 @@ export class Container extends Message<Container> {
   name = "";
 
   /**
-   * @generated from field: apocryph.proto.v0.pod.Container.Image image = 2;
+   * @generated from field: apocryph.proto.v0.pod.Image image = 2;
    */
-  image?: Container_Image;
+  image?: Image;
 
   /**
    * @generated from field: repeated string entrypoint = 3;
@@ -129,7 +129,7 @@ export class Container extends Message<Container> {
   static readonly typeName = "apocryph.proto.v0.pod.Container";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "image", kind: "message", T: Container_Image },
+    { no: 2, name: "image", kind: "message", T: Image },
     { no: 3, name: "entrypoint", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "command", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 5, name: "workingDir", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -153,61 +153,6 @@ export class Container extends Message<Container> {
 
   static equals(a: Container | PlainMessage<Container> | undefined, b: Container | PlainMessage<Container> | undefined): boolean {
     return proto3.util.equals(Container, a, b);
-  }
-}
-
-/**
- * @generated from message apocryph.proto.v0.pod.Container.Image
- */
-export class Container_Image extends Message<Container_Image> {
-  /**
-   * @generated from field: bytes cid = 1;
-   */
-  cid = new Uint8Array(0);
-
-  /**
-   * @generated from field: apocryph.proto.v0.pod.Key key = 2;
-   */
-  key?: Key;
-
-  /**
-   * @generated from field: string url = 3;
-   */
-  url = "";
-
-  /**
-   * @generated from field: string signature = 4;
-   */
-  signature = "";
-
-  constructor(data?: PartialMessage<Container_Image>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "apocryph.proto.v0.pod.Container.Image";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "cid", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
-    { no: 2, name: "key", kind: "message", T: Key },
-    { no: 3, name: "url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "signature", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Container_Image {
-    return new Container_Image().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Container_Image {
-    return new Container_Image().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Container_Image {
-    return new Container_Image().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: Container_Image | PlainMessage<Container_Image> | undefined, b: Container_Image | PlainMessage<Container_Image> | undefined): boolean {
-    return proto3.util.equals(Container_Image, a, b);
   }
 }
 
@@ -330,6 +275,110 @@ export class Container_VolumeMount extends Message<Container_VolumeMount> {
 
   static equals(a: Container_VolumeMount | PlainMessage<Container_VolumeMount> | undefined, b: Container_VolumeMount | PlainMessage<Container_VolumeMount> | undefined): boolean {
     return proto3.util.equals(Container_VolumeMount, a, b);
+  }
+}
+
+/**
+ * @generated from message apocryph.proto.v0.pod.Image
+ */
+export class Image extends Message<Image> {
+  /**
+   * @generated from field: bytes cid = 1;
+   */
+  cid = new Uint8Array(0);
+
+  /**
+   * @generated from field: apocryph.proto.v0.pod.Key key = 2;
+   */
+  key?: Key;
+
+  /**
+   * @generated from field: string url = 3;
+   */
+  url = "";
+
+  /**
+   * @generated from field: apocryph.proto.v0.pod.VerificationDetails verificationDetails = 4;
+   */
+  verificationDetails?: VerificationDetails;
+
+  constructor(data?: PartialMessage<Image>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "apocryph.proto.v0.pod.Image";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "cid", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 2, name: "key", kind: "message", T: Key },
+    { no: 3, name: "url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "verificationDetails", kind: "message", T: VerificationDetails },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Image {
+    return new Image().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Image {
+    return new Image().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Image {
+    return new Image().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Image | PlainMessage<Image> | undefined, b: Image | PlainMessage<Image> | undefined): boolean {
+    return proto3.util.equals(Image, a, b);
+  }
+}
+
+/**
+ * @generated from message apocryph.proto.v0.pod.VerificationDetails
+ */
+export class VerificationDetails extends Message<VerificationDetails> {
+  /**
+   * @generated from field: string signature = 1;
+   */
+  signature = "";
+
+  /**
+   * @generated from field: string identity = 2;
+   */
+  identity = "";
+
+  /**
+   * @generated from field: string issuer = 3;
+   */
+  issuer = "";
+
+  constructor(data?: PartialMessage<VerificationDetails>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "apocryph.proto.v0.pod.VerificationDetails";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "signature", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "identity", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "issuer", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerificationDetails {
+    return new VerificationDetails().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): VerificationDetails {
+    return new VerificationDetails().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): VerificationDetails {
+    return new VerificationDetails().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: VerificationDetails | PlainMessage<VerificationDetails> | undefined, b: VerificationDetails | PlainMessage<VerificationDetails> | undefined): boolean {
+    return proto3.util.equals(VerificationDetails, a, b);
   }
 }
 

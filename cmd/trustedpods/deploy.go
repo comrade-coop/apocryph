@@ -24,6 +24,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func checkCertificateFlags() error {
+	if certificateIdentity == "" || certificateOidcIssuer == "" {
+		return fmt.Errorf("Must specify certificate identity & oidc issuer if you signed pod images (you might consider removing --sign-images flag)")
+	}
+	return nil
+}
+
 // if no provider is selected, Fetches providers based on registry args
 func fetchAndFilterProviders(ipfs *rpc.HttpApi, ethClient *ethclient.Client) (publisher.ProviderHostInfoList, error) {
 	registryContract := common.HexToAddress(registryContractAddress)
@@ -96,29 +103,6 @@ var deployPodCmd = &cobra.Command{
 			return err
 		}
 		configureDeployment(deployment)
-
-		if sign {
-			signOptions := publisher.DefaultSignOptions()
-			if !uploadSignatures {
-				signOptions.Upload = false
-			}
-			err := publisher.SignPodImages(pod, deployment, signOptions)
-			if err != nil {
-				return fmt.Errorf("failed Signing images: %v", err)
-			}
-		}
-
-		if verify {
-			// NOTE it would be usefull if we continue with this approach to add
-			// them to the config file
-			if certificateIdentity == "" || certificateOidcIssuer == "" {
-				return fmt.Errorf("Must specify certificate-identity & certificate-oidc-issuer flags")
-			}
-			err = publisher.VerifyPodImages(pod, publisher.DefaultVerifyOptions(), certificateIdentity, certificateOidcIssuer)
-			if err != nil {
-				return fmt.Errorf("Failed verifying Pod Images: %v", err)
-			}
-		}
 
 		if authorize {
 			// create the keypair that will be accessible for all pods
@@ -215,6 +199,28 @@ var deployPodCmd = &cobra.Command{
 			}
 		}
 
+		if signImages {
+			err := checkCertificateFlags()
+			if err != nil {
+				return err
+			}
+			signOptions := publisher.DefaultSignOptions()
+			if !uploadSignatures {
+				signOptions.Upload = false
+			}
+			err = publisher.SignPodImages(pod, deployment, signOptions, certificateIdentity, certificateOidcIssuer)
+			if err != nil {
+				return fmt.Errorf("failed Signing images: %v", err)
+			}
+		}
+
+		if verify {
+			err = publisher.VerifyPodImages(pod, publisher.DefaultVerifyOptions())
+			if err != nil {
+				return fmt.Errorf("Failed verifying Pod Images: %v", err)
+			}
+		}
+
 		err = publisher.SaveDeployment(deploymentFile, deploymentFormat, deployment) // Checkpoint uploads and keys so far
 		if err != nil {
 			fmt.Fprintf(cmd.ErrOrStderr(), "warning: %v\n", err)
@@ -303,7 +309,7 @@ func init() {
 	deployPodCmd.Flags().AddFlagSet(fundFlags)
 	deployPodCmd.Flags().AddFlagSet(syncFlags)
 	deployPodCmd.Flags().AddFlagSet(registryFlags)
-	deployPodCmd.Flags().AddFlagSet(verifyImagesFlags)
+	deployPodCmd.Flags().AddFlagSet(imageCertificateFlags)
 	deletePodCmd.Flags().AddFlagSet(deploymentFlags)
 	deletePodCmd.Flags().AddFlagSet(syncFlags)
 

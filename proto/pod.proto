@@ -23,13 +23,7 @@ message Container {
   map<string, string> env = 7;
   repeated VolumeMount volumes = 8;
   repeated Resource resourceRequests = 9; // "cpu", "memory", custom
-  message Image {
-    bytes cid = 1;
-    Key key = 2;
-    string url = 3;
-    string signature = 4;
-  }
-
+  
   message Port {
     string name = 1;
     uint64 containerPort = 2;
@@ -48,6 +42,18 @@ message Container {
     string mountPath = 2;
     bool readOnly = 3;
   }
+}
+message Image {
+    bytes cid = 1;
+    Key key = 2;
+    string url = 3;
+    VerificationDetails verificationDetails = 4;
+}
+
+message VerificationDetails {
+    string signature = 1;
+    string identity = 2;
+    string issuer = 3;
 }
 
 message Volume {

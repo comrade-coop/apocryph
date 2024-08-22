@@ -61,6 +61,7 @@ func TrustedPodsNamespaceGetChannel(namespace *corev1.Namespace) (*pb.PaymentCha
 	return paymentChannel, nil
 }
 
+// Makes sure only the provided active ressources exist, and removes the rest
 func cleanNamespace(ctx context.Context, namespace string, activeResources []string, client k8cl.Client) error {
 	kindList := []string{"Service", "Volume", "Secret", "Deployment", "HttpSo"}
 	fmt.Printf("Active Resources: %v \n", activeResources)

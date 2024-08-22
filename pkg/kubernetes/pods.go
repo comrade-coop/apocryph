@@ -8,9 +8,11 @@ import (
 	"strings"
 
 	"github.com/comrade-coop/apocryph/pkg/constants"
+	"github.com/comrade-coop/apocryph/pkg/proto"
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	"github.com/ethereum/go-ethereum/common"
 	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
+	policy "github.com/sigstore/policy-controller/pkg/apis/policy/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -20,6 +22,8 @@ import (
 
 type FetchSecret func(cid []byte) (map[string][]byte, error)
 
+// given a k8s resource; it checks the existence of that resource in the
+// cluster, if it exists it Will update it if needed, if not it will create it
 func updateOrCreate(ctx context.Context, resourceName, kind, namespace string, resource interface{}, client k8cl.Client, update bool) error {
 	if update {
 		key := &k8cl.ObjectKey{
@@ -100,6 +104,7 @@ func ApplyPodRequest(
 
 	localhostAliases := corev1.HostAlias{IP: "127.0.0.1"}
 
+	var details []*proto.VerificationDetails
 	for cIdx, container := range podManifest.Containers {
 		containerSpec := corev1.Container{
 			Name:            container.Name,
@@ -181,6 +186,9 @@ func ApplyPodRequest(
 			depLabels["containers"] = containerSpec.Name
 		} else {
 			depLabels["containers"] = depLabels["containers"] + "_" + containerSpec.Name
+		}
+		if container.Image.VerificationDetails != nil {
+			details = append(details, container.Image.VerificationDetails)
 		}
 	}
 	podTemplate.Spec.HostAliases = append(podTemplate.Spec.HostAliases, localhostAliases)
@@ -279,8 +287,23 @@ func ApplyPodRequest(
 			return err
 		}
 		activeResource = append(activeResource, httpSoName)
-
 	}
+	// create a policy give the previously collected VerificationDetails
+	if podManifest.ImageVerification {
+		sigstorePolicy := &policy.ClusterImagePolicy{Spec: policy.ClusterImagePolicySpec{
+			Authorities: []policy.Authority{{Keyless: &policy.KeylessRef{}}},
+		}}
+		identities := []policy.Identity{}
+		for _, detail := range details {
+			identities = append(identities, policy.Identity{Issuer: detail.Issuer, Subject: detail.Identity})
+		}
+		sigstorePolicy.Spec.Authorities[0].Keyless.Identities = identities
+		err := updateOrCreate(ctx, "tpod-policy", "SigstorePolicy", namespace, sigstorePolicy, client, update)
+		if err != nil {
+			return err
+		}
+	}
+
 	if update == true {
 		err := cleanNamespace(ctx, namespace, activeResource, client)
 		if err != nil {

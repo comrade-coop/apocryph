@@ -15,7 +15,7 @@ message Deployment {
   repeated UploadedSecret secrets = 5;
   provisionPod.ProvisionPodResponse deployed = 6;
   pod.KeyPair keyPair = 7;
-  
+   
 }
 
 message ProviderConfig {
@@ -35,7 +35,7 @@ message UploadedImage {
   string digest = 2;
   bytes cid = 3;
   pod.Key key = 4;
-  string signature = 5; 
+  pod.VerificationDetails verificationDetails = 5;
 }
 
 message UploadedSecret {
