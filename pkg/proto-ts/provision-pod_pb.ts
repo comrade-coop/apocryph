@@ -376,9 +376,9 @@ export class ProvisionPodResponse_ExposedHostPort extends Message<ProvisionPodRe
  */
 export class PodLogRequest extends Message<PodLogRequest> {
   /**
-   * @generated from field: string containerName = 1;
+   * @generated from field: string ContainerName = 1;
    */
-  containerName = "";
+  ContainerName = "";
 
   constructor(data?: PartialMessage<PodLogRequest>) {
     super();
@@ -388,7 +388,7 @@ export class PodLogRequest extends Message<PodLogRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "apocryph.proto.v0.provisionPod.PodLogRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "containerName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "ContainerName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PodLogRequest {
@@ -485,6 +485,80 @@ export class LogEntry extends Message<LogEntry> {
 
   static equals(a: LogEntry | PlainMessage<LogEntry> | undefined, b: LogEntry | PlainMessage<LogEntry> | undefined): boolean {
     return proto3.util.equals(LogEntry, a, b);
+  }
+}
+
+/**
+ * @generated from message apocryph.proto.v0.provisionPod.PodInfoRequest
+ */
+export class PodInfoRequest extends Message<PodInfoRequest> {
+  /**
+   * @generated from field: string namespace = 1;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<PodInfoRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "apocryph.proto.v0.provisionPod.PodInfoRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PodInfoRequest {
+    return new PodInfoRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PodInfoRequest {
+    return new PodInfoRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PodInfoRequest {
+    return new PodInfoRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PodInfoRequest | PlainMessage<PodInfoRequest> | undefined, b: PodInfoRequest | PlainMessage<PodInfoRequest> | undefined): boolean {
+    return proto3.util.equals(PodInfoRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message apocryph.proto.v0.provisionPod.PodInfoResponse
+ */
+export class PodInfoResponse extends Message<PodInfoResponse> {
+  /**
+   * @generated from field: string info = 1;
+   */
+  info = "";
+
+  constructor(data?: PartialMessage<PodInfoResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "apocryph.proto.v0.provisionPod.PodInfoResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "info", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PodInfoResponse {
+    return new PodInfoResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PodInfoResponse {
+    return new PodInfoResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PodInfoResponse {
+    return new PodInfoResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PodInfoResponse | PlainMessage<PodInfoResponse> | undefined, b: PodInfoResponse | PlainMessage<PodInfoResponse> | undefined): boolean {
+    return proto3.util.equals(PodInfoResponse, a, b);
   }
 }
 

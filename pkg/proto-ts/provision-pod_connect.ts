@@ -5,7 +5,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { DeletePodRequest, DeletePodResponse, PodLogRequest, PodLogResponse, ProvisionPodRequest, ProvisionPodResponse, UpdatePodRequest } from "./provision-pod_pb.js";
+import { DeletePodRequest, DeletePodResponse, PodInfoRequest, PodInfoResponse, PodLogRequest, PodLogResponse, ProvisionPodRequest, ProvisionPodResponse, UpdatePodRequest } from "./provision-pod_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -39,6 +39,15 @@ export const ProvisionPodService = {
       name: "DeletePod",
       I: DeletePodRequest,
       O: DeletePodResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc apocryph.proto.v0.provisionPod.ProvisionPodService.GetPodInfos
+     */
+    getPodInfos: {
+      name: "GetPodInfos",
+      I: PodInfoRequest,
+      O: PodInfoResponse,
       kind: MethodKind.Unary,
     },
     /**

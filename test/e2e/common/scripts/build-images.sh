@@ -6,6 +6,8 @@ docker build -t comradecoop/apocryph/p2p-helper:latest ../../../../ --target p2p
 
 docker build -t comradecoop/apocryph/autoscaler:latest ../../../../ --target autoscaler
 
+docker build -t comradecoop/apocryph/tpod-proxy:latest ../../../../ --target tpod-proxy
+
 docker tag comradecoop/apocryph/server:latest localhost:5000/comradecoop/apocryph/server:latest
 docker push localhost:5000/comradecoop/apocryph/server:latest
 
@@ -14,4 +16,3 @@ docker push localhost:5000/comradecoop/apocryph/p2p-helper:latest
 
 docker tag comradecoop/apocryph/autoscaler:latest localhost:5000/comradecoop/apocryph/autoscaler:latest
 docker push localhost:5000/comradecoop/apocryph/autoscaler:latest
-

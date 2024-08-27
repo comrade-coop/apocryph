@@ -24,6 +24,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	cl "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type provisionPodServer struct {
@@ -42,6 +43,23 @@ func transformError(err error) (*connect.Response[pb.ProvisionPodResponse], erro
 	return connect.NewResponse(&pb.ProvisionPodResponse{
 		Error: err.Error(),
 	}), nil
+}
+
+func (s *provisionPodServer) GetPodInfos(ctx context.Context, request *connect.Request[pb.PodInfoRequest]) (*connect.Response[pb.PodInfoResponse], error) {
+	log.Printf("Received Request for retreiving info on namespace: %v \n", request.Msg.Namespace)
+	list := &appsv1.DeploymentList{}
+	err := s.k8cl.List(ctx, list, &cl.ListOptions{Namespace: request.Msg.Namespace})
+	if err != nil {
+		return nil, err
+	}
+	var info strings.Builder
+	for _, rsrc := range list.Items {
+		for k, v := range rsrc.Annotations {
+			info.WriteString(k + ":" + v + ",")
+		}
+	}
+	response := &pb.PodInfoResponse{Info: info.String()}
+	return connect.NewResponse(response), nil
 }
 
 func (s *provisionPodServer) DeletePod(ctx context.Context, request *connect.Request[pb.DeletePodRequest]) (*connect.Response[pb.DeletePodResponse], error) {
@@ -137,6 +155,7 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *connect.
 	}
 
 	response := &pb.ProvisionPodResponse{}
+
 	ns := tpk8s.NewTrustedPodsNamespace(namespace, request.Msg.Pod, request.Msg.Payment)
 	err = tpk8s.RunInNamespaceOrRevert(ctx, s.k8cl, ns, s.dryRun, func(cl client.Client) error {
 		return tpk8s.ApplyPodRequest(ctx, cl, ns.ObjectMeta.Name, false, request.Msg.Pod, request.Msg.Payment, images, secrets, response)
@@ -152,6 +171,12 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *connect.
 }
 
 func NewTPodServerHandler(ipfsApi string, ipfs *rpc.HttpApi, dryRun bool, ctrdClient *containerd.Client, k8cl client.Client, localOciRegistry string, validator *ethereum.PaymentChannelValidator, lokiHost string) (string, http.Handler) {
+
+	// create the global tpod-proxy policy
+	err := tpk8s.CreateTpodProxyPolicy(context.Background(), k8cl)
+	if err != nil {
+		log.Printf("warning: failed creating policy: %v\n", err)
+	}
 	return pbcon.NewProvisionPodServiceHandler(&provisionPodServer{
 		ipfs:             ipfs,
 		ipfsApi:          ipfsApi,

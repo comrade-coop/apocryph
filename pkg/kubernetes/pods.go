@@ -17,6 +17,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"knative.dev/pkg/ptr"
 	k8cl "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -32,7 +34,10 @@ func updateOrCreate(ctx context.Context, resourceName, kind, namespace string, r
 		}
 		oldResource := GetResource(kind)
 
-		updatedResource := resource.(k8cl.Object)
+		updatedResource, ok := resource.(k8cl.Object)
+		if !ok {
+			return fmt.Errorf("resource does not implement client.Object")
+		}
 		updatedResource.SetNamespace(namespace)
 		updatedResource.SetName(resourceName)
 
@@ -41,7 +46,7 @@ func updateOrCreate(ctx context.Context, resourceName, kind, namespace string, r
 		if err != nil {
 			log.Printf("Added New Resource: %v \n", resourceName)
 			if err := client.Create(ctx, updatedResource); err != nil {
-				return fmt.Errorf("Failed creating resource:%v,%v\n", resourceName, err)
+				return fmt.Errorf("Failed creating resource:%v: %v\n", resourceName, err)
 			}
 			return nil
 		}
@@ -54,7 +59,7 @@ func updateOrCreate(ctx context.Context, resourceName, kind, namespace string, r
 		return nil
 	}
 	if err := client.Create(ctx, resource.(k8cl.Object)); err != nil {
-		return fmt.Errorf("Failed creating resource:%v,%v\n", resourceName, err)
+		return fmt.Errorf("Failed creating resource %v:%v\n", resourceName, err)
 	}
 	return nil
 }
@@ -104,33 +109,73 @@ func ApplyPodRequest(
 
 	localhostAliases := corev1.HostAlias{IP: "127.0.0.1"}
 
+	if podManifest.PublicVerifiability {
+		// used only to use the routing from keda ingress controller
+		routeHttpsoName := "route-hso"
+		routeHttpso := NewHttpSo(namespace, routeHttpsoName)
+		serviceProxyName := "tpod-svc-proxy"
+		serviceProxy := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: serviceProxyName,
+			},
+			Spec: corev1.ServiceSpec{
+				Type:     corev1.ServiceTypeClusterIP,
+				Ports:    []corev1.ServicePort{{Port: 9999, TargetPort: intstr.FromString("tpod-proxy")}},
+				Selector: labels,
+			},
+		}
+		routeHttpso.Spec.ScaleTargetRef.Service = serviceProxy.ObjectMeta.Name
+		routeHttpso.Spec.ScaleTargetRef.Port = 9999
+		routeHttpso.Spec.ScaleTargetRef.APIVersion = "apps/v1"
+		routeHttpso.Spec.Hosts = []string{podManifest.VerificationHostPath}
+		routeHttpso.Spec.Replicas = &kedahttpv1alpha1.ReplicaStruct{Min: ptr.Int32(1), Max: ptr.Int32(1)}
+		proxyContainer := corev1.Container{
+			Name:  "proxy",
+			Image: proxyImageReference,
+			Ports: []corev1.ContainerPort{{ContainerPort: 9999, Name: "tpod-proxy"}},
+		}
+		err := updateOrCreate(ctx, serviceProxyName, "Service", namespace, serviceProxy, client, update)
+		if err != nil {
+			return err
+		}
+		err = updateOrCreate(ctx, routeHttpsoName, "HttpSo", namespace, routeHttpso, client, update)
+		if err != nil {
+			return err
+		}
+		proxyContainer.Env = append(proxyContainer.Env, corev1.EnvVar{Name: constants.NamespaceKey, Value: namespace})
+		podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, proxyContainer)
+	}
+
+	annotationValues := []string{}
 	for i, container := range podManifest.Containers {
 		if container.Image.VerificationDetails != nil {
-			// create a policy give the previously collected VerificationDetails
-			if podManifest.ImageVerification {
-				policyName := fmt.Sprintf("policy-%v-%v", podId, i)
-				sigstorePolicy := &policy.ClusterImagePolicy{
-					TypeMeta: metav1.TypeMeta{Kind: "ClusterImagePolicy"}, ObjectMeta: metav1.ObjectMeta{Name: policyName},
-					Spec: policy.ClusterImagePolicySpec{
-						Images:      []policy.ImagePattern{{Glob: container.Image.Url}},
-						Authorities: []policy.Authority{{Keyless: &policy.KeylessRef{}}},
-					}}
-				identity := policy.Identity{Issuer: container.Image.VerificationDetails.Issuer, Subject: container.Image.VerificationDetails.Identity}
-				sigstorePolicy.Spec.Authorities[0].Keyless.Identities = []policy.Identity{identity}
-				err := updateOrCreate(ctx, policyName, "ClusterImagePolicy", namespace, sigstorePolicy, client, update)
-				if err != nil {
-					return err
-				}
-				log.Println("Policy Created")
+			policyName := fmt.Sprintf("policy-%v-%v", podId, i)
+			sigstorePolicy := &policy.ClusterImagePolicy{
+				TypeMeta: metav1.TypeMeta{Kind: "ClusterImagePolicy"}, ObjectMeta: metav1.ObjectMeta{Name: policyName},
+				Spec: policy.ClusterImagePolicySpec{
+					Images:      []policy.ImagePattern{{Glob: container.Image.Url}},
+					Authorities: []policy.Authority{{Keyless: &policy.KeylessRef{}}},
+				}}
+			identity := policy.Identity{Issuer: container.Image.VerificationDetails.Issuer, Subject: container.Image.VerificationDetails.Identity}
+			sigstorePolicy.Spec.Authorities[0].Keyless.Identities = []policy.Identity{identity}
+			annotationValue := container.Image.Url + ":" + container.Image.VerificationDetails.Signature
+			annotationValues = append(annotationValues, annotationValue)
+			err := updateOrCreate(ctx, policyName, "ClusterImagePolicy", namespace, sigstorePolicy, client, update)
+			if err != nil && strings.Contains(err.Error(), "already exists") {
+				log.Println("warning: Policies were not deleted properly")
+				continue
+			} else {
+				return err
 			}
 		}
 	}
+	deployment.Annotations = map[string]string{constants.VerificationInfoAnnotationKey: strings.Join(annotationValues, ",")}
 
 	for cIdx, container := range podManifest.Containers {
 		containerSpec := corev1.Container{
 			Name:            container.Name,
 			Image:           images[container.Name],
-			ImagePullPolicy: corev1.PullNever, // make sure images are pulled localy
+			ImagePullPolicy: corev1.PullIfNotPresent, // make sure images are pulled localy (didn't never pull for the tpod-proxy image, for now)
 			Command:         container.Entrypoint,
 			Args:            container.Command,
 			WorkingDir:      container.WorkingDir,

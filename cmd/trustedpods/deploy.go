@@ -176,7 +176,7 @@ var deployPodCmd = &cobra.Command{
 		} else {
 			provisionPodclient, err = publisher.ConnectToProvider(ipfsp2p, deployment, interceptor)
 			if err != nil {
-				return err
+				return fmt.Errorf("Failed connecting to provider: %v", err)
 			}
 		}
 

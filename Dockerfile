@@ -60,4 +60,15 @@ COPY --from=build-autoscaler /usr/local/bin/autoscaler /usr/local/bin/autoscaler
 
 ENTRYPOINT ["autoscaler"]
 
+## tpod-proxy: ##
 
+FROM build-common as build-tpod-proxy
+
+COPY pkg/proxy/ ./proxy
+RUN --mount=type=cache,target=/root/.cache/go-build go build -v -o /usr/local/bin/tpod-proxy ./proxy
+
+FROM run-common as tpod-proxy
+
+COPY --from=build-tpod-proxy /usr/local/bin/tpod-proxy /usr/local/bin/tpod-proxy
+
+ENTRYPOINT ["tpod-proxy"]

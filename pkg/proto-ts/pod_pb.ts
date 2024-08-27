@@ -33,9 +33,14 @@ export class Pod extends Message<Pod> {
   keyPair?: KeyPair;
 
   /**
-   * @generated from field: bool ImageVerification = 5;
+   * @generated from field: bool PublicVerifiability = 5;
    */
-  ImageVerification = false;
+  PublicVerifiability = false;
+
+  /**
+   * @generated from field: string VerificationHostPath = 6;
+   */
+  VerificationHostPath = "";
 
   constructor(data?: PartialMessage<Pod>) {
     super();
@@ -49,7 +54,8 @@ export class Pod extends Message<Pod> {
     { no: 2, name: "volumes", kind: "message", T: Volume, repeated: true },
     { no: 3, name: "replicas", kind: "message", T: Replicas },
     { no: 4, name: "keyPair", kind: "message", T: KeyPair },
-    { no: 5, name: "ImageVerification", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "PublicVerifiability", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 6, name: "VerificationHostPath", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Pod {

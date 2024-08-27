@@ -22,8 +22,6 @@ var registryContractAddress string
 var tokenContractAddress string
 var expirationOffset int64
 var authorize bool
-var debugIdentity string
-var debugIssuer string
 
 var uploadFlags = &pflag.FlagSet{}
 var ipfsApi string

@@ -8,6 +8,7 @@ REGISTRY_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-late
 FUNDS=10000000000000000000000
 
 set +v
+sudo chmod o+rw /run/containerd/containerd.sock
 set -x
 
 ## Configure provider/in-cluster IPFS and publisher IPFS ##

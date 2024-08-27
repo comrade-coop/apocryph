@@ -10,6 +10,7 @@ service ProvisionPodService {
   rpc ProvisionPod(ProvisionPodRequest) returns (ProvisionPodResponse);
   rpc UpdatePod(UpdatePodRequest) returns (ProvisionPodResponse);
   rpc DeletePod(DeletePodRequest) returns (DeletePodResponse);
+  rpc GetPodInfos(PodInfoRequest) returns (PodInfoResponse);
   rpc GetPodLogs(PodLogRequest) returns (stream PodLogResponse);
 }
 
@@ -55,7 +56,7 @@ message ProvisionPodResponse {
 }
 
 message PodLogRequest{
-  string containerName = 1;
+  string ContainerName = 1;
 }
 
 message PodLogResponse{
@@ -65,4 +66,12 @@ message PodLogResponse{
 message LogEntry{
   uint64 NanosecondsUnixEpoch = 1;
   string line= 2;
+}
+
+message PodInfoRequest{
+  string namespace = 1;
+}
+
+message PodInfoResponse{
+  string info = 1;
 }

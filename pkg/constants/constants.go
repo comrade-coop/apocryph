@@ -10,3 +10,7 @@ const PROVIDER_ADDR_KEY = "PROVIDER_ADDRESS"
 const POD_ID_KEY = "POD_ID"
 const TIMEOUT = 3 * time.Minute
 const OUTPUT_SIGNATURE_PATH = "~/.apocryph/signatures/"
+
+const VerificationInfoAnnotationKey = "verification-info"
+
+const NamespaceKey = "NAMESPACE_NAME"

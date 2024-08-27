@@ -38,7 +38,7 @@ func NewTrustedPodsNamespace(name string, pod *pb.Pod, paymentChannel *pb.Paymen
 		},
 	}
 	// force container image verification
-	if pod.ImageVerification {
+	if pod.PublicVerifiability {
 		log.Println("Image verification is Set")
 		namespace.Labels[SigstorePolicy] = "true"
 	}
