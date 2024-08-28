@@ -33,14 +33,9 @@ export class Pod extends Message<Pod> {
   keyPair?: KeyPair;
 
   /**
-   * @generated from field: bool PublicVerifiability = 5;
+   * @generated from field: apocryph.proto.v0.pod.VerificationSettings verificationSettings = 5;
    */
-  PublicVerifiability = false;
-
-  /**
-   * @generated from field: string VerificationHostPath = 6;
-   */
-  VerificationHostPath = "";
+  verificationSettings?: VerificationSettings;
 
   constructor(data?: PartialMessage<Pod>) {
     super();
@@ -54,8 +49,7 @@ export class Pod extends Message<Pod> {
     { no: 2, name: "volumes", kind: "message", T: Volume, repeated: true },
     { no: 3, name: "replicas", kind: "message", T: Replicas },
     { no: 4, name: "keyPair", kind: "message", T: KeyPair },
-    { no: 5, name: "PublicVerifiability", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 6, name: "VerificationHostPath", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "verificationSettings", kind: "message", T: VerificationSettings },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Pod {
@@ -786,6 +780,55 @@ export class KeyPair extends Message<KeyPair> {
 
   static equals(a: KeyPair | PlainMessage<KeyPair> | undefined, b: KeyPair | PlainMessage<KeyPair> | undefined): boolean {
     return proto3.util.equals(KeyPair, a, b);
+  }
+}
+
+/**
+ * @generated from message apocryph.proto.v0.pod.VerificationSettings
+ */
+export class VerificationSettings extends Message<VerificationSettings> {
+  /**
+   * @generated from field: bool ForcePolicy = 1;
+   */
+  ForcePolicy = false;
+
+  /**
+   * @generated from field: bool PublicVerifiability = 2;
+   */
+  PublicVerifiability = false;
+
+  /**
+   * @generated from field: string VerificationHostPath = 3;
+   */
+  VerificationHostPath = "";
+
+  constructor(data?: PartialMessage<VerificationSettings>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "apocryph.proto.v0.pod.VerificationSettings";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "ForcePolicy", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 2, name: "PublicVerifiability", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "VerificationHostPath", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerificationSettings {
+    return new VerificationSettings().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): VerificationSettings {
+    return new VerificationSettings().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): VerificationSettings {
+    return new VerificationSettings().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: VerificationSettings | PlainMessage<VerificationSettings> | undefined, b: VerificationSettings | PlainMessage<VerificationSettings> | undefined): boolean {
+    return proto3.util.equals(VerificationSettings, a, b);
   }
 }
 

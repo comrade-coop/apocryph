@@ -111,7 +111,7 @@ func ApplyPodRequest(
 
 	localhostAliases := corev1.HostAlias{IP: "127.0.0.1"}
 
-	if podManifest.PublicVerifiability {
+	if podManifest.VerificationSettings.PublicVerifiability {
 		// used only to use the routing from keda ingress controller
 		routeHttpsoName := "route-hso"
 		routeHttpso := NewHttpSo(namespace, routeHttpsoName)
@@ -129,7 +129,7 @@ func ApplyPodRequest(
 		routeHttpso.Spec.ScaleTargetRef.Service = serviceProxy.ObjectMeta.Name
 		routeHttpso.Spec.ScaleTargetRef.Port = 9999
 		routeHttpso.Spec.ScaleTargetRef.APIVersion = "apps/v1"
-		routeHttpso.Spec.Hosts = []string{podManifest.VerificationHostPath}
+		routeHttpso.Spec.Hosts = []string{podManifest.VerificationSettings.VerificationHostPath}
 		routeHttpso.Spec.Replicas = &kedahttpv1alpha1.ReplicaStruct{Min: ptr.Int32(1), Max: ptr.Int32(1)}
 		proxyContainer := corev1.Container{
 			Name:  "proxy",
@@ -150,7 +150,7 @@ func ApplyPodRequest(
 
 	annotationValues := []AnnotationValue{}
 	for i, container := range podManifest.Containers {
-		if container.Image.VerificationDetails != nil {
+		if podManifest.VerificationSettings.ForcePolicy == true && container.Image.VerificationDetails != nil {
 			policyName := fmt.Sprintf("policy-%v-%v", podId, i)
 			sigstorePolicy := &policy.ClusterImagePolicy{
 				TypeMeta: metav1.TypeMeta{Kind: "ClusterImagePolicy"}, ObjectMeta: metav1.ObjectMeta{Name: policyName},

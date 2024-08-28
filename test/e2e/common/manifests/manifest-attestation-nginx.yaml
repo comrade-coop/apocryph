@@ -3,7 +3,7 @@ containers:
     image:
       url: ttl.sh/nginx-hello@sha256:631c081135cc6a81ad685f39d107d9eb6140d3a2265b0aa6792346f06936de72
     ports:
-      - containerPort: '9090'
+      - containerPort: '8080'
         hostHttpHost: example.local
         name: internal
     resourceRequests:
@@ -14,4 +14,6 @@ containers:
 replicas:
   min: 1
   max: 1
-PublicVerifiability: true
+verificationSettings:
+  ForcePolicy: true
+  PublicVerifiability: true

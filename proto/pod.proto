@@ -10,8 +10,7 @@ message Pod {
   repeated Volume volumes = 2;
   Replicas replicas = 3;
   KeyPair keyPair = 4;
-  bool PublicVerifiability = 5;
-  string VerificationHostPath = 6;
+  VerificationSettings verificationSettings = 5;
 }
 
 message Container {
@@ -108,4 +107,9 @@ message Key {
 message KeyPair {
     string  privateKey= 2;
     string pubAddress = 3;
+}
+message VerificationSettings{
+  bool ForcePolicy = 1;
+  bool PublicVerifiability = 2;
+  string VerificationHostPath = 3;
 }

@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+	"github.com/comrade-coop/apocryph/pkg/constants"
 	"github.com/comrade-coop/apocryph/pkg/ethereum"
 	tpk8s "github.com/comrade-coop/apocryph/pkg/kubernetes"
 	"github.com/comrade-coop/apocryph/pkg/loki"
@@ -54,10 +55,8 @@ func (s *provisionPodServer) GetPodInfos(ctx context.Context, request *connect.R
 		return nil, err
 	}
 	var info strings.Builder
-	for _, rsrc := range list.Items {
-		for k, v := range rsrc.Annotations {
-			info.WriteString(k + ":" + v + ",")
-		}
+	if len(list.Items) > 0 {
+		info.WriteString(list.Items[0].Annotations[constants.VerificationInfoAnnotationKey])
 	}
 	response := &pb.PodInfoResponse{Info: info.String()}
 	return connect.NewResponse(response), nil
