@@ -16,21 +16,21 @@ fi
 CERTIFICATE_IDENTITY=$1
 CERTIFICATE_OIDC_ISSUER=$2
 
-IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' comradecoop/apocryph/tpod-proxy)
-echo $IMAGE_DIGEST
-
 ## 1: configure the cluster to support image validation
-../common/scripts/redeploy-images.sh --set policy.issuer=$CERTIFICATE_OIDC_ISSUER --set policy.subject=$CERTIFICATE_IDENTITY --set policy.image=$IMAGE_DIGEST
+../common/scripts/redeploy-images.sh --set policy.issuer=$CERTIFICATE_OIDC_ISSUER --set policy.subject=$CERTIFICATE_IDENTITY
 
 ## 2: deploy app
 docker pull nginxdemos/nginx-hello@sha256:2ab1f0bef4461020a1aabee4260a1fe93b03ed69d7f72908acca3a7ec33cb1c0
 docker tag docker.io/nginxdemos/nginx-hello:latest ttl.sh/nginx-hello:1h
 docker push ttl.sh/nginx-hello:1h
 
-./deploy-pod.sh ../common/manifests/manifest-attestation-nginx.yaml --certificate-identity $CERTIFICATE_IDENTITY --certificate-oidc-issuer $CERTIFICATE_OIDC_ISSUER
+./deploy-pod.sh ../common/manifests/manifest-attestation-nginx.yaml --certificate-identity $CERTIFICATE_IDENTITY --certificate-oidc-issuer $CERTIFICATE_OIDC_ISSUER --sign-images --upload-signatures
 
 ## 3: Get Application info
 INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true -p c1 | head -n 1); echo $INGRESS_URL
 MANIFEST_HOST=example.local.tpodinfo # From manifest-nginx.yaml
 
 while ! curl --connect-timeout 40 -H "Host: $MANIFEST_HOST" $INGRESS_URL --fail-with-body; do sleep 10; done
+echo
+
+go run ../../../cmd/trustedpods verify $INGRESS_URL --host-header $MANIFEST_HOST

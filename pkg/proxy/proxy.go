@@ -44,7 +44,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Write the info string to the response
-	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(info))
 }

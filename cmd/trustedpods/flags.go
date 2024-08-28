@@ -34,6 +34,7 @@ var verify bool
 
 var verifyFlags = &pflag.FlagSet{}
 var signaturePath string
+var hostHeader string
 
 var imageCertificateFlags = &pflag.FlagSet{}
 var certificateIdentity string
@@ -87,6 +88,7 @@ var _ = func() error {
 
 	verifyFlags.AddFlagSet(imageCertificateFlags)
 	verifyFlags.StringVar(&signaturePath, "signature", "", "path to the signature you want to verify")
+	verifyFlags.StringVar(&hostHeader, "host-header", "", "the verification host header when passing a tpod ip endpoint to verify")
 
 	fundFlags.StringVar(&ethereumRpc, "ethereum-rpc", "http://127.0.0.1:8545", "ethereum rpc node")
 	fundFlags.StringVar(&publisherKey, "ethereum-key", "", "account string (private key | http[s]://clef#account | /keystore#account | account (in default keystore))")
