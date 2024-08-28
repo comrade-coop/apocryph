@@ -226,6 +226,25 @@ var deployPodCmd = &cobra.Command{
 			fmt.Fprintf(cmd.ErrOrStderr(), "warning: %v\n", err)
 		}
 
+		if pod.PublicVerifiability == true && pod.VerificationHostPath == "" {
+			for _, image := range pod.Containers {
+				for _, p := range image.Ports {
+					switch ep := p.ExposedPort.(type) {
+					case *pb.Container_Port_HostHttpHost:
+						pod.VerificationHostPath = ep.HostHttpHost + ".tpodinfo"
+						break
+					}
+				}
+				if pod.VerificationHostPath != "" {
+					break
+				}
+			}
+			if pod.VerificationHostPath == "" {
+				return fmt.Errorf("Public verifiability is set but no verification host path is available or could be derived")
+			}
+			fmt.Printf("pod manifest verification host path set to:%v\n", pod.VerificationHostPath)
+		}
+
 		err = publisher.FundPaymentChannel(ethClient, publisherAuth, deployment, fundsInt, unlockTimeInt, debugMintFunds)
 		if err != nil {
 			return err

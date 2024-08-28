@@ -31,7 +31,7 @@ docker push ttl.sh/nginx-hello:1h
 
 ## 3: Get Application info
 INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true -p c1 | head -n 1); echo $INGRESS_URL
-MANIFEST_HOST=example.local.info # From manifest-nginx.yaml
+MANIFEST_HOST=example.local.tpodinfo # From manifest-nginx.yaml
 
 while ! curl --connect-timeout 40 -H "Host: $MANIFEST_HOST" $INGRESS_URL --fail-with-body; do sleep 10; done
 curl -H "Host: $MANIFEST_HOST" $INGRESS_URL --fail-with-body
