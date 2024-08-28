@@ -19,6 +19,7 @@ import (
 var ipfsApi string
 var serveAddress string
 var localOciRegistry string
+var proxyImage string
 
 var listenCmd = &cobra.Command{
 	Use:   "listen",
@@ -67,7 +68,7 @@ var listenCmd = &cobra.Command{
 		}
 
 		mux := http.NewServeMux()
-		mux.Handle(provider.NewTPodServerHandler(ipfsApi, ipfs, dryRun, ctrdClient, k8cl, localOciRegistry, validator, "loki.loki.svc.cluster.local:3100"))
+		mux.Handle(provider.NewTPodServerHandler(ipfsApi, ipfs, dryRun, ctrdClient, k8cl, localOciRegistry, validator, "loki.loki.svc.cluster.local:3100", proxyImage))
 		server := &http.Server{Handler: mux}
 
 		go server.Serve(listener)
@@ -91,4 +92,5 @@ func init() {
 	listenCmd.Flags().StringVar(&localOciRegistry, "oci-registry", "", "OCI registry used to resolve IPDR images")
 	listenCmd.Flags().StringVar(&ethereumRpc, "ethereum-rpc", "http://127.0.0.1:8545", "client public address")
 	listenCmd.Flags().StringVar(&providerKey, "ethereum-key", "", "provider account string (private key | http[s]://clef#account | /keystore#account | account (in default keystore))")
+	listenCmd.Flags().StringVar(&proxyImage, "proxy-image", "", "tpod proxy image url (with digest instead of tags)")
 }

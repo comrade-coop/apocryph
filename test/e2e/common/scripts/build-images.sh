@@ -16,3 +16,10 @@ docker push localhost:5000/comradecoop/apocryph/p2p-helper:latest
 
 docker tag comradecoop/apocryph/autoscaler:latest localhost:5000/comradecoop/apocryph/autoscaler:latest
 docker push localhost:5000/comradecoop/apocryph/autoscaler:latest
+
+# TODO tag,sign & push to a proper registry instead of ttl
+# for demenstration purposes, we push tpod-proxy and sign it
+docker tag comradecoop/apocryph/tpod-proxy:latest ttl.sh/comradecoop/apocryph/tpod-proxy:5h
+docker push ttl.sh/comradecoop/apocryph/tpod-proxy:5h
+IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' comradecoop/apocryph/tpod-proxy)
+# cosign sign $IMAGE_DIGEST

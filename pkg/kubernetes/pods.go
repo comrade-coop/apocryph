@@ -74,6 +74,7 @@ func ApplyPodRequest(
 	images map[string]string,
 	secrets map[string][]byte,
 	response *pb.ProvisionPodResponse,
+	proxyImage string,
 ) error {
 	if podManifest == nil {
 		return fmt.Errorf("Expected value for pod")
@@ -131,7 +132,7 @@ func ApplyPodRequest(
 		routeHttpso.Spec.Replicas = &kedahttpv1alpha1.ReplicaStruct{Min: ptr.Int32(1), Max: ptr.Int32(1)}
 		proxyContainer := corev1.Container{
 			Name:  "proxy",
-			Image: proxyImageReference,
+			Image: proxyImage,
 			Ports: []corev1.ContainerPort{{ContainerPort: 9999, Name: "tpod-proxy"}},
 		}
 		err := updateOrCreate(ctx, serviceProxyName, "Service", namespace, serviceProxy, client, update)

@@ -37,6 +37,7 @@ type provisionPodServer struct {
 	paymentValidator *ethereum.PaymentChannelValidator
 	localOciRegistry string
 	dryRun           bool
+	proxyImage       string
 }
 
 func transformError(err error) (*connect.Response[pb.ProvisionPodResponse], error) {
@@ -96,7 +97,7 @@ func (s *provisionPodServer) UpdatePod(ctx context.Context, request *connect.Req
 
 	namespace := pbcon.GetNamespace(request)
 	response := &pb.ProvisionPodResponse{}
-	err = tpk8s.ApplyPodRequest(ctx, s.k8cl, namespace, true, request.Msg.Pod, request.Msg.Payment, images, secrets, response)
+	err = tpk8s.ApplyPodRequest(ctx, s.k8cl, namespace, true, request.Msg.Pod, request.Msg.Payment, images, secrets, response, s.proxyImage)
 	if err != nil {
 		return transformError(err)
 	}
@@ -158,7 +159,7 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *connect.
 
 	ns := tpk8s.NewTrustedPodsNamespace(namespace, request.Msg.Pod, request.Msg.Payment)
 	err = tpk8s.RunInNamespaceOrRevert(ctx, s.k8cl, ns, s.dryRun, func(cl client.Client) error {
-		return tpk8s.ApplyPodRequest(ctx, cl, ns.ObjectMeta.Name, false, request.Msg.Pod, request.Msg.Payment, images, secrets, response)
+		return tpk8s.ApplyPodRequest(ctx, cl, ns.ObjectMeta.Name, false, request.Msg.Pod, request.Msg.Payment, images, secrets, response, s.proxyImage)
 	})
 	if err != nil {
 		return transformError(err)
@@ -170,13 +171,7 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *connect.
 	return connect.NewResponse(response), nil
 }
 
-func NewTPodServerHandler(ipfsApi string, ipfs *rpc.HttpApi, dryRun bool, ctrdClient *containerd.Client, k8cl client.Client, localOciRegistry string, validator *ethereum.PaymentChannelValidator, lokiHost string) (string, http.Handler) {
-
-	// create the global tpod-proxy policy
-	err := tpk8s.CreateTpodProxyPolicy(context.Background(), k8cl)
-	if err != nil {
-		log.Printf("warning: failed creating policy: %v\n", err)
-	}
+func NewTPodServerHandler(ipfsApi string, ipfs *rpc.HttpApi, dryRun bool, ctrdClient *containerd.Client, k8cl client.Client, localOciRegistry string, validator *ethereum.PaymentChannelValidator, lokiHost string, proxyImage string) (string, http.Handler) {
 	return pbcon.NewProvisionPodServiceHandler(&provisionPodServer{
 		ipfs:             ipfs,
 		ipfsApi:          ipfsApi,
@@ -186,6 +181,7 @@ func NewTPodServerHandler(ipfsApi string, ipfs *rpc.HttpApi, dryRun bool, ctrdCl
 		paymentValidator: validator,
 		localOciRegistry: localOciRegistry,
 		dryRun:           dryRun,
+		proxyImage:       proxyImage,
 	}, connect.WithInterceptors(
 		pbcon.NewAuthInterceptor(k8cl),
 	))
