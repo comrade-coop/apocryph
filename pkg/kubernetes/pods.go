@@ -4,6 +4,7 @@ package kubernetes
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -147,7 +148,7 @@ func ApplyPodRequest(
 		podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, proxyContainer)
 	}
 
-	annotationValues := []string{}
+	annotationValues := []AnnotationValue{}
 	for i, container := range podManifest.Containers {
 		if container.Image.VerificationDetails != nil {
 			policyName := fmt.Sprintf("policy-%v-%v", podId, i)
@@ -159,7 +160,12 @@ func ApplyPodRequest(
 				}}
 			identity := policy.Identity{Issuer: container.Image.VerificationDetails.Issuer, Subject: container.Image.VerificationDetails.Identity}
 			sigstorePolicy.Spec.Authorities[0].Keyless.Identities = []policy.Identity{identity}
-			annotationValue := container.Image.Url + ":" + container.Image.VerificationDetails.Signature
+			annotationValue := AnnotationValue{
+				URL:       container.Image.Url,
+				Signature: container.Image.VerificationDetails.Signature,
+				Issuer:    container.Image.VerificationDetails.Issuer,
+				Identity:  container.Image.VerificationDetails.Identity,
+			}
 			annotationValues = append(annotationValues, annotationValue)
 			err := updateOrCreate(ctx, policyName, "ClusterImagePolicy", namespace, sigstorePolicy, client, update)
 			if err != nil && strings.Contains(err.Error(), "already exists") {
@@ -170,7 +176,13 @@ func ApplyPodRequest(
 			}
 		}
 	}
-	deployment.Annotations = map[string]string{constants.VerificationInfoAnnotationKey: strings.Join(annotationValues, ",")}
+	jsonData, err := json.Marshal(annotationValues)
+	if err != nil {
+		return fmt.Errorf("Failed to marshal annotation values: %v", err)
+	}
+	deployment.Annotations = map[string]string{
+		constants.VerificationInfoAnnotationKey: string(jsonData),
+	}
 
 	for cIdx, container := range podManifest.Containers {
 		containerSpec := corev1.Container{
@@ -321,7 +333,7 @@ func ApplyPodRequest(
 		}
 		podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, volumeSpec)
 	}
-	err := updateOrCreate(ctx, deploymentName, "Deployment", namespace, deployment, client, update)
+	err = updateOrCreate(ctx, deploymentName, "Deployment", namespace, deployment, client, update)
 	if err != nil {
 		return err
 	}

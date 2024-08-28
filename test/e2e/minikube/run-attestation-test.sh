@@ -34,4 +34,3 @@ INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true -p c
 MANIFEST_HOST=example.local.tpodinfo # From manifest-nginx.yaml
 
 while ! curl --connect-timeout 40 -H "Host: $MANIFEST_HOST" $INGRESS_URL --fail-with-body; do sleep 10; done
-curl -H "Host: $MANIFEST_HOST" $INGRESS_URL --fail-with-body

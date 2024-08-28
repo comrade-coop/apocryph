@@ -87,3 +87,10 @@ func GetResource(kind string) k8cl.Object {
 	}
 	return nil
 }
+
+type AnnotationValue struct {
+	URL       string `json:"url"`
+	Issuer    string `json:"issuer"`
+	Identity  string `json:"identity"`
+	Signature string `json:"signature"`
+}
