@@ -798,9 +798,9 @@ export class VerificationSettings extends Message<VerificationSettings> {
   PublicVerifiability = false;
 
   /**
-   * @generated from field: string VerificationHostPath = 3;
+   * @generated from field: string VerificationHost = 3;
    */
-  VerificationHostPath = "";
+  VerificationHost = "";
 
   constructor(data?: PartialMessage<VerificationSettings>) {
     super();
@@ -812,7 +812,7 @@ export class VerificationSettings extends Message<VerificationSettings> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "ForcePolicy", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 2, name: "PublicVerifiability", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 3, name: "VerificationHostPath", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "VerificationHost", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerificationSettings {

@@ -111,5 +111,5 @@ message KeyPair {
 message VerificationSettings{
   bool ForcePolicy = 1;
   bool PublicVerifiability = 2;
-  string VerificationHostPath = 3;
+  string VerificationHost = 3;
 }

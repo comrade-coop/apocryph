@@ -129,7 +129,7 @@ func ApplyPodRequest(
 		routeHttpso.Spec.ScaleTargetRef.Service = serviceProxy.ObjectMeta.Name
 		routeHttpso.Spec.ScaleTargetRef.Port = 9999
 		routeHttpso.Spec.ScaleTargetRef.APIVersion = "apps/v1"
-		routeHttpso.Spec.Hosts = []string{podManifest.VerificationSettings.VerificationHostPath}
+		routeHttpso.Spec.Hosts = []string{podManifest.VerificationSettings.VerificationHost}
 		routeHttpso.Spec.Replicas = &kedahttpv1alpha1.ReplicaStruct{Min: ptr.Int32(1), Max: ptr.Int32(1)}
 		proxyContainer := corev1.Container{
 			Name:  "proxy",
