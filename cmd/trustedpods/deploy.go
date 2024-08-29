@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math/big"
 	"path/filepath"
+	"strings"
 
 	"github.com/comrade-coop/apocryph/pkg/abi"
 	"github.com/comrade-coop/apocryph/pkg/ethereum"
@@ -231,7 +232,13 @@ var deployPodCmd = &cobra.Command{
 				for _, p := range image.Ports {
 					switch ep := p.ExposedPort.(type) {
 					case *pb.Container_Port_HostHttpHost:
-						pod.VerificationSettings.VerificationHostPath = ep.HostHttpHost + ".tpodinfo"
+						lastDotIndex := strings.LastIndex(ep.HostHttpHost, ".")
+						var host string
+						if lastDotIndex == -1 {
+							host = ep.HostHttpHost + ".tpodinfo"
+						}
+						host = ep.HostHttpHost[:lastDotIndex] + ".tpodinfo" + ep.HostHttpHost[lastDotIndex:]
+						pod.VerificationSettings.VerificationHostPath = host
 						break
 					}
 				}
