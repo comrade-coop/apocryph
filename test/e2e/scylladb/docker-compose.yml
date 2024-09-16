@@ -1,0 +1,64 @@
+services:
+  scyllat1:
+    container_name: scyllat1
+    image: scylladb/scylla
+    command: [
+      '--memory', '2G',
+      '--smp', '2',
+      '--seeds', '172.123.0.2,172.123.0.3',
+      # '--seeds', '172.123.0.2,172.123.0.3,172.123.0.4',
+      '--overprovisioned', '1',
+      # '--developer-mode', '0',
+    ]
+    volumes:
+      - ./scylla.yaml:/etc/scylla/scylla.yaml
+      - ./cassandra-rackdc-1.properties:/etc/scylla/cassandra-rackdc.properties
+      - scyllat1:/var/lib/scylla
+    networks:
+      scyllanet:
+        ipv4_address: 172.123.0.2
+  scyllat2:
+    container_name: scyllat2
+    image: scylladb/scylla
+    command: [
+      '--memory', '2G',
+      '--smp', '2',
+      '--seeds', '172.123.0.2,172.123.0.3',
+      # '--seeds', '172.123.0.2,172.123.0.3,172.123.0.4',
+      '--overprovisioned', '1',
+      # '--developer-mode', '0',
+    ]
+    volumes:
+      - ./scylla.yaml:/etc/scylla/scylla.yaml
+      - ./cassandra-rackdc-2.properties:/etc/scylla/cassandra-rackdc.properties
+      - scyllat2:/var/lib/scylla
+    networks:
+      scyllanet:
+        ipv4_address: 172.123.0.3
+  # scyllat3:
+  #   container_name: scyllat3
+  #   image: scylladb/scylla
+  #   command: [
+  #     '--memory', '2G',
+  #     '--smp', '2',
+  #     '--seeds', '172.123.0.2,172.123.0.3,172.123.0.4',
+  #     '--overprovisioned', '1',
+  #     # '--developer-mode', '0',
+  #   ]
+  #   volumes:
+  #     - ./scylla.yaml:/etc/scylla/scylla.yaml
+  #     - ./cassandra-rackdc-3.properties:/etc/scylla/cassandra-rackdc.properties
+  #     - scyllat3:/var/lib/scylla
+  #   networks:
+  #     scyllanet:
+  #       ipv4_address: 172.123.0.4
+networks:
+  scyllanet:
+    # driver: bridge
+    ipam:
+      config:
+        - subnet: 172.123.0.0/16
+volumes:
+  scyllat1:
+  scyllat2:
+  # scyllat3:
