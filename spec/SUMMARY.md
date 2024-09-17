@@ -8,9 +8,6 @@
     - [App Registry](REGISTRY.md)
     - [App Deployment](PROTOCOL.md)
 - [Metered Usage and Pricing](PRICING.md)
-- [Service Level Guarantees](STAKING.md)
-    - [Storage](STORAGE.md)
-    - [Uptime & Networking](UPTIME.md)
 
 # Autonomous Layer
 - [Autoscaling](AUTOSCALER.md)
