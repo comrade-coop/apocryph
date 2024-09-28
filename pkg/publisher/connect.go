@@ -85,6 +85,13 @@ func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, depl
 		} else {
 			request := &pb.UpdatePodRequest{
 				Pod: pod,
+				Payment: &pb.PaymentChannel{
+					ChainID:          deployment.Payment.ChainID,
+					ProviderAddress:  deployment.Provider.EthereumAddress,
+					ContractAddress:  deployment.Payment.PaymentContractAddress,
+					PublisherAddress: deployment.Payment.PublisherAddress,
+					PodID:            deployment.Payment.PodID,
+				},
 			}
 
 			response, err = client.UpdatePod(ctx, connect.NewRequest(request))
@@ -106,7 +113,7 @@ func SendToProvider(ctx context.Context, ipfsP2p *ipfs.P2pApi, pod *pb.Pod, depl
 		request := &pb.DeletePodRequest{}
 		response, err := client.DeletePod(ctx, connect.NewRequest(request))
 		if err != nil {
-			return nil, fmt.Errorf("Failed executing update pod request: %w", err)
+			return nil, fmt.Errorf("Failed executing delete pod request: %w", err)
 		}
 		if response.Msg.Error != "" {
 			return nil, fmt.Errorf("Error from provider: %w", errors.New(response.Msg.Error))

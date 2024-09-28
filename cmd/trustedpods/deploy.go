@@ -254,7 +254,7 @@ var deletePodCmd = &cobra.Command{
 	Use:     fmt.Sprintf("delete [%s|deployment.yaml]", publisher.DefaultPodFile),
 	Aliases: []string{"undeploy"},
 	Short:   "Delete a pod from a local deployment",
-	Args:    cobra.MaximumNArgs(1),
+	Args:    cobra.MaximumNArgs(2),
 	GroupID: "main",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_, deploymentFile, _, deployment, err := publisher.ReadPodAndDeployment(args, manifestFormat, deploymentFormat)
