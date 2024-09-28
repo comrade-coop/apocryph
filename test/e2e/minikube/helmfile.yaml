@@ -35,6 +35,8 @@ releases:
         value: 1
       - name: interceptor.waitTimeout
         value: 40s
+      - name: scaler.replicas
+        value: 1
     needs:
       - keda
   - name: prometheus
