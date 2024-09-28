@@ -251,6 +251,11 @@ func ApplyPodRequest(
 		}
 		podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, volumeSpec)
 	}
+	
+	if httpSO.Spec.ScaleTargetRef.Service == "" { // No scaler configured - just deploy min replicas
+		startupReplicas = int32(podManifest.Replicas.GetMin())
+	}
+	
 	err := updateOrCreate(ctx, deploymentName, "Deployment", namespace, deployment, client, update)
 	if err != nil {
 		return err
