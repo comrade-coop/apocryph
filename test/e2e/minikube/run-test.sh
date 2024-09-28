@@ -41,7 +41,7 @@ echo -e "---\e[0m"
 
 set -v
 
-sudo chmod o+rw /run/containerd/containerd.sock
+#sudo chmod o+rw /run/containerd/containerd.sock
 
 ## 0: Set up the external environment
 
@@ -92,7 +92,7 @@ helmfile sync
 
 [ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
 
-go run ../../../cmd/tpodserver  registry  register \
+go run ../../../cmd/tpodserver registry register \
   --config ../common/config.yaml \
   --ipfs /ip4/127.0.0.1/tcp/5004 \
   --ethereum-rpc http://127.0.0.1:8545 \
@@ -110,7 +110,8 @@ export IPFS_PATH=$(mktemp ipfs.XXXX --tmpdir -d)
 [ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
 echo /ip4/127.0.0.1/tcp/5004 > $IPFS_PATH/api
 
-SWARM_ADDRESSES=$(minikube service  -n ipfs ipfs-swarm --url | head -n 1 | sed -E 's|http://(.+):(.+)|["/ip4/\1/tcp/\2", "/ip4/\1/udp/\2/quic", "/ip4/\1/udp/\2/quic-v1", "/ip4/\1/udp/\2/quic-v1/webtransport"]|')
+SWARM_ADDRESSES=$(minikube service -n ipfs ipfs-swarm --url | head -n 1 | sed -E 's|http://(.+):(.+)|["/ip4/\1/tcp/\2", "/ip4/\1/udp/\2/quic", "/ip4/\1/udp/\2/quic-v1", "/ip4/\1/udp/\2/quic-v1/webtransport"]|')
+echo $SWARM_ADDRESSES
 
 PROVIDER_IPFS=$(curl -X POST "http://127.0.0.1:5004/api/v0/id" | jq '.ID' -r); echo $PROVIDER_IPFS
 
@@ -118,7 +119,7 @@ CONFIG_BEFORE=$(ipfs config Addresses.AppendAnnounce)
 ipfs config Addresses.AppendAnnounce --json "$SWARM_ADDRESSES"
 CONFIG_AFTER=$(ipfs config Addresses.AppendAnnounce)
 
-[ "$CONFIG_BEFORE" = "$CONFIG_AFTER"  ] || kubectl delete -n ipfs $(kubectl get po -o name -n ipfs) # Restart ipfs daemon
+[ "$CONFIG_BEFORE" = "$CONFIG_AFTER" ] || kubectl delete -n ipfs $(kubectl get po -o name -n ipfs) # Restart ipfs daemon
 
 export IPFS_PATH=$O_IPFS_PATH
 
@@ -133,8 +134,6 @@ ipfs config --json Experimental.Libp2pStreamMounting true
 echo "$SWARM_ADDRESSES" | jq -r '.[] + "/p2p/'"$PROVIDER_IPFS"'"' | xargs -n 1 ipfs swarm connect || true
 
 sleep 1
-
-
 
 ## 2: Deploy example manifest to cluster ##
 
@@ -151,14 +150,15 @@ FUNDS=10000000000000000000000
 set +v
 set -x
 
+minikube image load docker.io/nginxdemos/nginx-hello:latest
 
 go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-nginx.yaml \
   --ethereum-key "$PUBLISHER_KEY" \
   --payment-contract "$PAYMENT_CONTRACT" \
   --registry-contract "$REGISTRY_CONTRACT" \
   --funds "$FUNDS" \
-  --upload-images=true \
   --mint-funds
+#   --upload-images=true
 
 set +x
 set -v
@@ -167,7 +167,7 @@ set -v
 
 WITHDRAW_ETH=0x90F79bf6EB2c4f870365E785982E1f101E93b906 #TODO copied from trustedpods/tpodserver.yml
 TOKEN_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.token.value')
-INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true | head -n 1); echo $INGRESS_URL
+INGRESS_URL=$(minikube service -n keda ingress-nginx-controller --url=true | head -n 1); echo $INGRESS_URL
 MANIFEST_HOST=example.local # From manifest-nginx.yaml
 
 echo "Provider balance before:" $(cast call "$TOKEN_CONTRACT" "balanceOf(address)" "$WITHDRAW_ETH" | cast to-fixed-point 18)
@@ -205,7 +205,7 @@ export TOKEN_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-
 export PAYMENT_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.payment.value')
 export REGISTRY_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.registry.value')
 export FUNDS=10000000000000000000000
-export INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true | head -n 1); echo $INGRESS_URL
+export INGRESS_URL=$(minikube service -n keda ingress-nginx-controller --url=true | head -n 1); echo $INGRESS_URL
 export MANIFEST_HOST=guestbook.localhost # From manifest-guestbook.yaml
 [ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
 [ -n "$PROVIDER_IPFS" ] || { PROVIDER_IPFS=$(curl -X POST "http://127.0.0.1:5004/api/v0/id" -s | jq '.ID' -r); echo $PROVIDER_IPFS; }
