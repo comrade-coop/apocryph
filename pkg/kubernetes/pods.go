@@ -292,7 +292,7 @@ func ApplyPodRequest(
 		}
 		podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, volumeSpec)
 	}
-	
+
 	if podManifest.VerificationSettings.GetPublicVerifiability() == true {
 		verificationHost := podManifest.VerificationSettings.GetVerificationHost()
 		if verificationHost == "" && len(httpSO.Spec.Hosts) > 0 {
@@ -352,6 +352,10 @@ func ApplyPodRequest(
 		AnnotationVerificationInfo: string(annotationValuesJson),
 	}
 	
+	if httpSO.Spec.ScaleTargetRef.Service == "" { // No scaler configured - just deploy min replicas
+		startupReplicas = int32(podManifest.Replicas.GetMin())
+	}
+
 	err = updateOrCreate(ctx, deploymentName, "Deployment", namespace, deployment, client, update)
 	if err != nil {
 		return err
