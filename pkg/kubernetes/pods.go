@@ -111,6 +111,9 @@ func ApplyPodRequest(
 			Command:         container.Entrypoint,
 			Args:            container.Command,
 			WorkingDir:      container.WorkingDir,
+			SecurityContext: &corev1.SecurityContext{
+				Capabilities: &corev1.Capabilities{},
+			},
 		}
 
 		if podManifest.KeyPair != nil {
@@ -129,14 +132,15 @@ func ApplyPodRequest(
 
 		for _, port := range container.Ports {
 			portName := fmt.Sprintf("p%d-%d", cIdx, port.ContainerPort)
-			containerSpec.Ports = append(containerSpec.Ports, corev1.ContainerPort{
-				ContainerPort: int32(port.ContainerPort),
-				Name:          portName,
-			})
 			service, servicePort, err := NewService(port, portName, httpSO, labels)
 			if err != nil {
 				return err
 			}
+			containerSpec.Ports = append(containerSpec.Ports, corev1.ContainerPort{
+				ContainerPort: int32(port.ContainerPort),
+				Name:          portName,
+				Protocol:      service.Spec.Ports[0].Protocol, // TODO:
+			})
 
 			err = updateOrCreate(ctx, service.GetName(), "Service", namespace, service, client, update)
 			if err != nil {
@@ -155,6 +159,8 @@ func ApplyPodRequest(
 				multiaddrPart = fmt.Sprintf("http/%s", httpSO.Spec.Hosts[0])
 			case *pb.Container_Port_HostTcpPort:
 				multiaddrPart = fmt.Sprintf("tcp/%d", service.Spec.Ports[0].NodePort)
+			case *pb.Container_Port_HostUdpPort:
+				multiaddrPart = fmt.Sprintf("udp/%d", service.Spec.Ports[0].NodePort)
 			}
 			response.Addresses = append(response.Addresses, &pb.ProvisionPodResponse_ExposedHostPort{
 				Multiaddr:     multiaddrPart,
@@ -176,6 +182,16 @@ func ApplyPodRequest(
 			}
 			containerSpec.VolumeMounts = append(containerSpec.VolumeMounts, volumeMount)
 		}
+
+		for _, capability := range container.Capabilities {
+			if capability == pb.Container_CAP_NET_ADMIN {
+				// TODO: Verify NET_ADMIN is safe (we needed it for sidecar containers which configure their own network interfaces)
+				// https://github.com/0xn3va/cheat-sheets/blob/main/Container/Escaping/excessive-capabilities.md#cap_net_admin suggests it's been the target of multiple vulnerabilities in the past.
+				containerSpec.SecurityContext.Capabilities.Add =
+					append(containerSpec.SecurityContext.Capabilities.Add, corev1.Capability("NET_ADMIN"))
+			}
+		}
+		
 		containerSpec.Resources.Requests = convertResourceList(container.ResourceRequests)
 		// TODO: Enforce specifying resources?
 		podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, containerSpec)

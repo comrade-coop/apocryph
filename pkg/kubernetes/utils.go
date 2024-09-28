@@ -46,6 +46,12 @@ func NewService(port *pb.Container_Port, portName string, httpSO *kedahttpv1alph
 		if ep.HostTcpPort != 0 {
 			service.Spec.Ports[0].NodePort = int32(ep.HostTcpPort)
 		}
+	case *pb.Container_Port_HostUdpPort:
+		service.Spec.Type = corev1.ServiceTypeNodePort
+		service.Spec.Ports[0].Protocol = "UDP"
+		if ep.HostUdpPort != 0 {
+			service.Spec.Ports[0].NodePort = int32(ep.HostUdpPort)
+		}
 	}
 	return service, servicePort, nil
 }

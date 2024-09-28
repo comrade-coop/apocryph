@@ -114,6 +114,11 @@ export class Container extends Message<Container> {
    */
   resourceRequests: Resource[] = [];
 
+  /**
+   * @generated from field: repeated apocryph.proto.v0.pod.Container.Capability capabilities = 10;
+   */
+  capabilities: Container_Capability[] = [];
+
   constructor(data?: PartialMessage<Container>) {
     super();
     proto3.util.initPartial(data, this);
@@ -131,6 +136,7 @@ export class Container extends Message<Container> {
     { no: 7, name: "env", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 8, name: "volumes", kind: "message", T: Container_VolumeMount, repeated: true },
     { no: 9, name: "resourceRequests", kind: "message", T: Resource, repeated: true },
+    { no: 10, name: "capabilities", kind: "enum", T: proto3.getEnumType(Container_Capability), repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Container {
@@ -149,6 +155,28 @@ export class Container extends Message<Container> {
     return proto3.util.equals(Container, a, b);
   }
 }
+
+/**
+ * @generated from enum apocryph.proto.v0.pod.Container.Capability
+ */
+export enum Container_Capability {
+  /**
+   * Required by protobufs; meaningless
+   *
+   * @generated from enum value: CAP_NIL = 0;
+   */
+  CAP_NIL = 0,
+
+  /**
+   * @generated from enum value: CAP_NET_ADMIN = 12;
+   */
+  CAP_NET_ADMIN = 12,
+}
+// Retrieve enum metadata with: proto3.getEnumType(Container_Capability)
+proto3.util.setEnumType(Container_Capability, "apocryph.proto.v0.pod.Container.Capability", [
+  { no: 0, name: "CAP_NIL" },
+  { no: 12, name: "CAP_NET_ADMIN" },
+]);
 
 /**
  * @generated from message apocryph.proto.v0.pod.Container.Image
@@ -231,13 +259,18 @@ export class Container_Port extends Message<Container_Port> {
     /**
      * string hostHttpsHost = 4;
      *
-     * uint64 hostUdpPort = 6;
-     * uint64 servicePort = 7;
-     *
      * @generated from field: uint64 hostTcpPort = 5;
      */
     value: bigint;
     case: "hostTcpPort";
+  } | {
+    /**
+     * uint64 servicePort = 7;
+     *
+     * @generated from field: uint64 hostUdpPort = 6;
+     */
+    value: bigint;
+    case: "hostUdpPort";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Container_Port>) {
@@ -253,6 +286,7 @@ export class Container_Port extends Message<Container_Port> {
     { no: 3, name: "servicePort", kind: "scalar", T: 4 /* ScalarType.UINT64 */ },
     { no: 4, name: "hostHttpHost", kind: "scalar", T: 9 /* ScalarType.STRING */, oneof: "exposedPort" },
     { no: 5, name: "hostTcpPort", kind: "scalar", T: 4 /* ScalarType.UINT64 */, oneof: "exposedPort" },
+    { no: 6, name: "hostUdpPort", kind: "scalar", T: 4 /* ScalarType.UINT64 */, oneof: "exposedPort" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Container_Port {

@@ -22,6 +22,7 @@ message Container {
   map<string, string> env = 7;
   repeated VolumeMount volumes = 8;
   repeated Resource resourceRequests = 9; // "cpu", "memory", custom
+  repeated Capability capabilities = 10;
 
   message Image {
     bytes cid = 1;
@@ -37,7 +38,7 @@ message Container {
       string hostHttpHost = 4;
       // string hostHttpsHost = 4;
       uint64 hostTcpPort = 5;
-      // uint64 hostUdpPort = 6;
+      uint64 hostUdpPort = 6;
       // uint64 servicePort = 7;
     }
   }
@@ -46,6 +47,11 @@ message Container {
     string name = 1;
     string mountPath = 2;
     bool readOnly = 3;
+  }
+  
+  enum Capability {
+    CAP_NIL = 0; // Required by protobufs; meaningless
+    CAP_NET_ADMIN = 12;
   }
 }
 
