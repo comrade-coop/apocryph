@@ -5,8 +5,8 @@ services:
     command: [
       '--memory', '2G',
       '--smp', '2',
-      '--seeds', '172.123.0.2,172.123.0.3',
-      # '--seeds', '172.123.0.2,172.123.0.3,172.123.0.4',
+      '--seeds', '172.16.123.2,172.16.123.3',
+      # '--seeds', '172.16.123.2,172.16.123.3,172.16.123.4',
       '--overprovisioned', '1',
       # '--developer-mode', '0',
     ]
@@ -16,15 +16,15 @@ services:
       - scyllat1:/var/lib/scylla
     networks:
       scyllanet:
-        ipv4_address: 172.123.0.2
+        ipv4_address: 172.16.123.2
   scyllat2:
     container_name: scyllat2
     image: scylladb/scylla
     command: [
       '--memory', '2G',
       '--smp', '2',
-      '--seeds', '172.123.0.2,172.123.0.3',
-      # '--seeds', '172.123.0.2,172.123.0.3,172.123.0.4',
+      '--seeds', '172.16.123.2,172.16.123.3',
+      # '--seeds', '172.16.123.2,172.16.123.3,172.16.123.4',
       '--overprovisioned', '1',
       # '--developer-mode', '0',
     ]
@@ -34,14 +34,14 @@ services:
       - scyllat2:/var/lib/scylla
     networks:
       scyllanet:
-        ipv4_address: 172.123.0.3
+        ipv4_address: 172.16.123.3
   # scyllat3:
   #   container_name: scyllat3
   #   image: scylladb/scylla
   #   command: [
   #     '--memory', '2G',
   #     '--smp', '2',
-  #     '--seeds', '172.123.0.2,172.123.0.3,172.123.0.4',
+  #     '--seeds', '172.16.123.2,172.16.123.3,172.16.123.4',
   #     '--overprovisioned', '1',
   #     # '--developer-mode', '0',
   #   ]
@@ -51,13 +51,13 @@ services:
   #     - scyllat3:/var/lib/scylla
   #   networks:
   #     scyllanet:
-  #       ipv4_address: 172.123.0.4
+  #       ipv4_address: 172.16.123.4
 networks:
   scyllanet:
     # driver: bridge
     ipam:
       config:
-        - subnet: 172.123.0.0/16
+        - subnet: 172.16.123.0/8
 volumes:
   scyllat1:
   scyllat2:

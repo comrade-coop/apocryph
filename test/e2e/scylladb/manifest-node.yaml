@@ -1,0 +1,81 @@
+containers:
+  - name: scylla
+    image:
+      url: docker.io/scylladb/scylla:latest
+    command: [
+      '--memory', '1536M',
+      '--smp', '1',
+      '--seeds', '127.0.0.1:',
+      '--overprovisioned', '1',
+      # '--developer-mode', '0',
+    ]
+    resourceRequests:
+      - amountMillis: '900'
+        resource: cpu
+      - amountMebi: '1536'
+        resource: memory
+    volumes:
+      - name: scylla-yaml
+        mountPath: /etc/scylla/scylla.yaml
+      - name: cassandra-rackdc
+        mountPath: /etc/scylla/cassandra-rackdc.properties
+      - name: scylla-db
+        mountPath: /var/lib/scylla
+  - name: nebula
+    image:
+      url: docker.io/nebulaoss/nebula:latest
+    ports:
+      - containerPort: '4242'
+        hostUdpPort: 30002
+        name: nebula
+    resourceRequests:
+      - amountMillis: '10'
+        resource: cpu
+      - amountMebi: '100'
+        resource: memory
+    volumes:
+      - name: nebula-yaml
+        mountPath: /config/config.yml
+      - name: ca-crt
+        mountPath: /config/ca.crt
+      - name: host-key
+        mountPath: /config/host.key
+      - name: host-crt
+        mountPath: /config/host.crt
+    capabilities:
+      - CAP_NET_ADMIN
+volumes:
+  - name: scylla-db
+    type: VOLUME_FILESYSTEM
+    filesystem:
+      resourceRequests:
+        - amountGibi: '1'
+          resource: storage
+  - name: scylla-yaml
+    type: VOLUME_SECRET
+    secret:
+      file: 'scylla.yaml'
+  - name: cassandra-rackdc
+    type: VOLUME_SECRET
+    secret:
+      file: 'scylla.yaml'
+  - name: nebula-yaml
+    type: VOLUME_SECRET
+    secret:
+      file: 'nebula-config/config.yml'
+  - name: ca-crt
+    type: VOLUME_SECRET
+    secret:
+      file: 'nebula-config/ca.crt'
+  - name: host-key
+    type: VOLUME_SECRET
+    secret:
+      file: 'nebula-config/host.key'
+  - name: host-crt
+    type: VOLUME_SECRET
+    secret:
+      file: 'nebula-config/host.crt'
+replicas:
+  min: 1
+  max: 1
+

@@ -1,0 +1,45 @@
+containers:
+  - name: nebula
+    image:
+      url: docker.io/nebulaoss/nebula:latest
+    ports:
+      - containerPort: '4242'
+        hostUdpPort: 0
+        name: nebula
+    resourceRequests:
+      - amountMillis: '10'
+        resource: cpu
+      - amountMebi: '100'
+        resource: memory
+    volumes:
+      - name: nebula-yaml
+        mountPath: /config/config.yml
+      - name: ca-crt
+        mountPath: /config/ca.crt
+      - name: host-key
+        mountPath: /config/host.key
+      - name: host-crt
+        mountPath: /config/host.crt
+    capabilities:
+      - CAP_NET_ADMIN
+volumes:
+  - name: nebula-yaml
+    type: VOLUME_SECRET
+    secret:
+      file: 'nebula-conf-lighthouse.yaml'
+  - name: ca-crt
+    type: VOLUME_SECRET
+    secret:
+      file: 'nebula-config/ca.crt'
+  - name: host-key
+    type: VOLUME_SECRET
+    secret:
+      file: 'nebula-config/lighthouse.key'
+  - name: host-crt
+    type: VOLUME_SECRET
+    secret:
+      file: 'nebula-config/lighthouse.crt'
+replicas:
+  min: 1
+  max: 1
+
