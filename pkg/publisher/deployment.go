@@ -31,7 +31,7 @@ var DefaultPodFile = "manifest.yaml"
 
 const PrivateKeySize = 256 / 8
 
-func GenerateDeploymentFilename(podFile string, deploymentFormat string) (deploymentFile string, relPodFile string, err error) {
+func GenerateDeploymentFilename(podFile string, deploymentFormat string) (deploymentFile string, err error) {
 	if deploymentFormat == "" {
 		deploymentFormat = "yaml"
 	}
@@ -56,18 +56,11 @@ func GenerateDeploymentFilename(podFile string, deploymentFormat string) (deploy
 
 	deploymentFile = filepath.Join(deploymentRoot, deploymentFilename)
 
-	absDeploymentFile, err := filepath.Abs(deploymentFile)
-	if err != nil {
-		return
-	}
-	relPodFile, err = filepath.Rel(filepath.Dir(absDeploymentFile), absPodFile)
-
 	return
 }
 
 func ReadPodAndDeployment(args []string, manifestFormat string, deploymentFormat string) (podFile string, deploymentFile string, pod *pb.Pod, deployment *pb.Deployment, err error) {
 	deployment = &pb.Deployment{}
-	readDeployment := false
 
 	switch len(args) {
 	case 0:
@@ -84,19 +77,32 @@ func ReadPodAndDeployment(args []string, manifestFormat string, deploymentFormat
 
 	// Get the name of the deployment file if it was not passed in the args
 	if deploymentFile == "" {
-		deploymentFile, deployment.PodManifestFile, err = GenerateDeploymentFilename(podFile, deploymentFormat)
+		deploymentFile, err = GenerateDeploymentFilename(podFile, deploymentFormat)
 		if err != nil {
 			err = fmt.Errorf("Failed resolving deployment file path: %w", err)
 			return
 		}
 	}
 
-	if !readDeployment {
-		err = pb.UnmarshalFile(deploymentFile, deploymentFormat, deployment)
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			err = fmt.Errorf("Failed reading deployment file %s: %w", deploymentFile, err)
+	err = pb.UnmarshalFile(deploymentFile, deploymentFormat, deployment)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		err = fmt.Errorf("Failed reading deployment file %s: %w", deploymentFile, err)
+		return
+	}
+	
+	if deployment.PodManifestFile == "" {
+		var absPodFile string
+		var absDeploymentFile string
+		absPodFile, err = filepath.Abs(podFile)
+		if err != nil {
 			return
 		}
+
+		absDeploymentFile, err = filepath.Abs(deploymentFile)
+		if err != nil {
+			return
+		}
+		deployment.PodManifestFile, err = filepath.Rel(filepath.Dir(absDeploymentFile), absPodFile)
 	}
 
 	pod = &pb.Pod{}
