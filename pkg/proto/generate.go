@@ -3,7 +3,7 @@
 // Dependencies:
 // - protoc
 // - google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
-// - connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.12.0
+// - connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.16.2
 
 //go:generate protoc -I=../../proto --go_out=paths=source_relative:. ../../proto/pod.proto
 //go:generate protoc -I=../../proto --go_out=paths=source_relative:. ../../proto/pricing.proto

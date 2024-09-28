@@ -404,6 +404,12 @@ func convertResourceList(resources []*pb.Resource) corev1.ResourceList {
 			quantity = *resource.NewQuantity(int64(q.Amount), resource.BinarySI)
 		case *pb.Resource_AmountMillis:
 			quantity = *resource.NewMilliQuantity(int64(q.AmountMillis), resource.BinarySI)
+		case *pb.Resource_AmountKibi:
+			quantity = *resource.NewQuantity(int64(q.AmountKibi) * 1024, resource.BinarySI)
+		case *pb.Resource_AmountMebi:
+			quantity = *resource.NewQuantity(int64(q.AmountMebi) * 1024 * 1024, resource.BinarySI)
+		case *pb.Resource_AmountGibi:
+			quantity = *resource.NewQuantity(int64(q.AmountGibi) * 1024 * 1024 * 1024, resource.BinarySI)
 		}
 		result[corev1.ResourceName(res.Resource)] = quantity
 	}
