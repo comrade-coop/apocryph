@@ -41,7 +41,7 @@ echo -e "---\e[0m"
 
 set -v
 
-sudo chmod o+rw /run/containerd/containerd.sock
+#sudo chmod o+rw /run/containerd/containerd.sock
 
 ## 0: Set up the external environment
 
@@ -75,14 +75,13 @@ helmfile sync || { while ! kubectl get -n keda endpoints ingress-nginx-controlle
 
 [ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
 
-go run ../../../cmd/tpodserver  registry  register \
+go run ../../../cmd/tpodserver registry register \
   --config ../common/configs/config.yaml \
   --ipfs /ip4/127.0.0.1/tcp/5004 \
   --ethereum-rpc http://127.0.0.1:8545 \
   --ethereum-key 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d \
   --token-contract 0x5FbDB2315678afecb367f032d93F642f64180aa3 \
   --registry-contract 0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0 \
-
 
 ## 2: Deploy example manifest to cluster ##
 
@@ -92,7 +91,7 @@ go run ../../../cmd/tpodserver  registry  register \
 
 WITHDRAW_ETH=0x90F79bf6EB2c4f870365E785982E1f101E93b906 #TODO copied from trustedpods/tpodserver.yml
 TOKEN_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.token.value')
-INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true -p c1 | head -n 1); echo $INGRESS_URL
+INGRESS_URL=$(minikube service -n keda ingress-nginx-controller --url=true -p c1 | head -n 1); echo $INGRESS_URL
 MANIFEST_HOST=example.local # From manifest-nginx.yaml
 
 echo "Provider balance before:" $(cast call "$TOKEN_CONTRACT" "balanceOf(address)" "$WITHDRAW_ETH" | cast to-fixed-point 18)
@@ -130,7 +129,7 @@ export TOKEN_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-
 export PAYMENT_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.payment.value')
 export REGISTRY_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.registry.value')
 export FUNDS=10000000000000000000000
-export INGRESS_URL=$(minikube service  -n keda ingress-nginx-controller --url=true -p c1 | head -n 1); echo $INGRESS_URL
+export INGRESS_URL=$(minikube service -n keda ingress-nginx-controller --url=true -p c1 | head -n 1); echo $INGRESS_URL
 export MANIFEST_HOST=guestbook.localhost # From manifest-guestbook.yaml
 [ "$PORT_5004" == "" ] && { PORT_5004="yes" ; kubectl port-forward --namespace ipfs svc/ipfs-rpc 5004:5001 & sleep 0.5; }
 [ -n "$PROVIDER_IPFS" ] || { PROVIDER_IPFS=$(curl -X POST "http://127.0.0.1:5004/api/v0/id" -s | jq '.ID' -r); echo $PROVIDER_IPFS; }

@@ -187,12 +187,11 @@ var deployPodCmd = &cobra.Command{
 			}
 		}
 
-		ctrdClient, err := ipcr.GetContainerdClient("k8s.io")
-		if err != nil {
-			return err
-		}
-
 		if uploadImages {
+			ctrdClient, err := ipcr.GetContainerdClient("k8s.io")
+			if err != nil {
+				return err
+			}
 			err = publisher.UploadImages(cmd.Context(), ctrdClient, ipfsApi, pod, deployment)
 			if err != nil {
 				return err
