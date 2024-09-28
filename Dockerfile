@@ -2,12 +2,11 @@
 
 ## common: ##
 
-FROM docker.io/library/golang:1.22.6@sha256:367bb5295d3103981a86a572651d8297d6973f2ec8b62f716b007860e22cbc25 as build-common
-# 1.21-bookworm
+FROM docker.io/library/golang:1.23.1-bookworm@sha256:1a5326b07cbab12f4fd7800425f2cf25ff2bd62c404ef41b56cb99669a710a83 as build-common
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y protobuf-compiler libgpgme-dev && rm -rf /var/lib/apt/lists/*
-RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0 && go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0 && go install github.com/ethereum/go-ethereum/cmd/abigen@v1.13.3
+RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0 && go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0 && go install github.com/ethereum/go-ethereum/cmd/abigen@v1.14.9
 
 WORKDIR /app
 
@@ -16,8 +15,8 @@ RUN go mod download && go mod verify
 
 COPY pkg ./pkg
 
-FROM docker.io/debian@sha256:2bc5c236e9b262645a323e9088dfa3bb1ecb16cc75811daf40a23a824d665be9 as run-common
-# bookworm-slim, bookworm-20231120-slim matching golang:1.21-bookworm
+FROM docker.io/debian:bookworm-20240904-slim@sha256:a629e796d77a7b2ff82186ed15d01a493801c020eed5ce6adaa2704356f15a1c as run-common
+#  matching golang:1.23.1-bookworm above
 
 RUN apt-get update && apt-get install -y libgpgme11 curl jq && rm -rf /var/lib/apt/lists/*
 
