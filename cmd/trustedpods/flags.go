@@ -100,7 +100,8 @@ var _ = func() error {
 	fundFlags.Int64Var(&unlockTime, "unlock-time", 5*60, "time for unlocking tokens (in seconds)")
 
 	syncFlags.AddFlag(uploadFlags.Lookup("ipfs"))
-	syncFlags.StringVar(&publisherKey, "ethereum-key", "", "account string (private key | http[s]://clef#account | /keystore#account | account (in default keystore))")
+	syncFlags.AddFlag(fundFlags.Lookup("ethereum-key"))
+	syncFlags.AddFlag(fundFlags.Lookup("pod-id"))
 
 	registryFlags.StringVar(&ipfsApi, "ipfs", "/ip4/127.0.0.1/tcp/5001", "multiaddr where the ipfs/kubo api can be accessed")
 	registryFlags.StringVar(&registryContractAddress, "registry-contract", "", "registry contract address")
@@ -116,6 +117,7 @@ var _ = func() error {
 	registryFlags.StringVar(&tableId, "id", "", "table id")
 	registryFlags.StringVar(&region, "region", "", "filter providers by region, Ex: us-east-8")
 	registryFlags.AddFlag(fundFlags.Lookup("ethereum-key"))
+	registryFlags.AddFlag(fundFlags.Lookup("ethereum-rpc"))
 
 	return nil
 }()

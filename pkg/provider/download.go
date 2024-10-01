@@ -54,6 +54,9 @@ func DownloadImages(ctx context.Context, client *containerd.Client, ipfsAddress,
 			if err != nil {
 				return nil, err
 			}
+			if !exists {
+				log.Printf("Warning: Image %v does not exist locally.\n", c.Image.Url)
+			}
 		}
 		result[c.Name] = c.Image.Url
 	}

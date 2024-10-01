@@ -13,9 +13,9 @@ set -x
 
 ## Configure provider/in-cluster IPFS and publisher IPFS ##
 minikube profile c1
-../common/scripts/swarm-connect.sh
+../test/e2e/common/scripts/swarm-connect.sh
 
-go run ../../../cmd/trustedpods/ pod deploy $POD \
+go run ../cmd/trustedpods/ pod deploy $POD \
   --ethereum-key "$PUBLISHER_KEY" \
   --payment-contract "$PAYMENT_CONTRACT" \
   --registry-contract "$REGISTRY_CONTRACT" \

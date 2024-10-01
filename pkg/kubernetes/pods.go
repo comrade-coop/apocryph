@@ -118,6 +118,9 @@ func ApplyPodRequest(
 			Args:            container.Command,
 			WorkingDir:      container.WorkingDir,
 		}
+		if container.GetImage().GetCid() == nil {
+			containerSpec.ImagePullPolicy = corev1.PullIfNotPresent // HACK: Allow URL-only images for easier testing
+		}
 
 		if podManifest.KeyPair != nil {
 			// save as hex to parse later as hex

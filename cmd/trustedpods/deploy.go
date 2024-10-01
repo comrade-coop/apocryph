@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"os"
 	"path/filepath"
 
 	"github.com/comrade-coop/apocryph/pkg/abi"
@@ -299,6 +300,27 @@ var deletePodCmd = &cobra.Command{
 	},
 }
 
+var podNamespaceCmd = &cobra.Command{
+	Use:     fmt.Sprintf("namespace [%s|deployment.yaml]", publisher.DefaultPodFile),
+	Short:   "Get a pod's expected namespace in kubernetes",
+	Long:    "Temporary command, may be removed once/if namespaces are implemented differently.",
+	GroupID: "lowlevel",
+	Args:    cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		_, _, _, deployment, err := publisher.ReadPodAndDeployment(args, manifestFormat, deploymentFormat)
+		if err != nil {
+			return err
+		}
+		configureDeployment(deployment)
+
+		ns := pbcon.NamespaceFromTokenParts(common.BytesToAddress(deployment.Payment.PublisherAddress), common.Hash(deployment.Payment.PodID))
+
+		_, err = fmt.Fprintln(os.Stdout, ns)
+
+		return err
+	},
+}
+
 func init() {
 	podCmd.AddCommand(deployPodCmd)
 	podCmd.AddCommand(deletePodCmd)
@@ -312,4 +334,7 @@ func init() {
 	deletePodCmd.Flags().AddFlagSet(deploymentFlags)
 	deletePodCmd.Flags().AddFlagSet(syncFlags)
 
+	podCmd.AddCommand(podNamespaceCmd)
+	podNamespaceCmd.Flags().AddFlagSet(deploymentFlags)
+	podNamespaceCmd.Flags().AddFlagSet(fundFlags)
 }

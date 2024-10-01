@@ -71,9 +71,8 @@ spec:
     spec:
       containers:
       - name: tpodserver
-        image: host.minikube.internal:5000/comradecoop/apocryph/server
-        command: [
-          "tpodserver", "listen",
+        image: {{ .Values.image }}
+        args: ["listen",
           "--address", "0.0.0.0:8080",
           "--config", "config.yaml",
           "--ipfs", "/dns4/ipfs-rpc.ipfs.svc.cluster.local/tcp/5001",
@@ -95,9 +94,8 @@ spec:
         - name: containerd-socket
           mountPath: /run/containerd/containerd.sock    
       - name: tpodmonitor
-        image: host.minikube.internal:5000/comradecoop/apocryph/server
-        command: [
-          "tpodserver", "monitor",
+        image: {{ .Values.image }}
+        args: ["monitor",
           "--config", "config.yaml",
           "--prometheus", "http://prometheus-server.prometheus.svc.cluster.local:80/",
           "--ethereum-rpc", "http://eth-rpc.eth.svc.cluster.local:8545",
@@ -121,3 +119,36 @@ spec:
         hostPath:
          path: /run/containerd/containerd.sock
       serviceAccountName: tpodserver-serviceaccount
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: tpodserver-register
+  namespace: trustedpods
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: tpodregister
+        image: {{ .Values.image }}
+        args: ["registry", "register",
+          "--config", "config.yaml",
+          "--ipfs", "/dns4/ipfs-rpc.ipfs.svc.cluster.local/tcp/5001",
+          "--ethereum-rpc", "http://eth-rpc.eth.svc.cluster.local:8545",
+          "--ethereum-key", {{ .Values.ethKey }}, # TODO= anvil.accounts[1] prvkey
+          "--token-contract", {{ .Values.tokenContract }},
+          "--registry-contract", {{ .Values.registryContract }},
+        ]
+        volumeMounts:
+        - name: configs
+          mountPath: /config.yaml
+          subPath: config.yaml
+          readOnly: true
+      volumes:
+      - name: configs
+        configMap:
+          name: trustedpods-configs
+          items:
+          - key: config.yaml
+            path: config.yaml

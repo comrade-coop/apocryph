@@ -1,0 +1,33 @@
+# -*- mode: Python -*-
+# SPDX-License-Identifier: GPL-3.0
+
+load("../../../deploy/Tiltfile", "apocryph_resource")
+
+apocryph_resource(
+    "nginx-example",
+    "./test/e2e/common/manifests/manifest-nginx.yaml",
+    upload_images=False,
+    apply_flags=["--mint-funds"],
+)
+
+"""TODO:
+## 3: Connect and measure balances ##
+
+WITHDRAW_ETH=0x90F79bf6EB2c4f870365E785982E1f101E93b906 #TODO copied from trustedpods/tpodserver.yml
+TOKEN_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.token.value')
+INGRESS_URL=$(minikube service -n keda ingress-nginx-controller --url=true | head -n 1); echo $INGRESS_URL
+MANIFEST_HOST=example.local # From manifest-nginx.yaml
+
+echo "Provider balance before:" $(cast call "$TOKEN_CONTRACT" "balanceOf(address)" "$WITHDRAW_ETH" | cast to-fixed-point 18)
+
+set -x
+
+while ! curl --connect-timeout 40 -H "Host: $MANIFEST_HOST" $INGRESS_URL --fail-with-body; do sleep 10; done
+curl -H "Host: $MANIFEST_HOST" $INGRESS_URL --fail-with-body
+
+set +x
+
+sleep 45
+
+echo "Provider balance after:" $(cast call "$TOKEN_CONTRACT" "balanceOf(address)" "$WITHDRAW_ETH" | cast to-fixed-point 18)
+"""

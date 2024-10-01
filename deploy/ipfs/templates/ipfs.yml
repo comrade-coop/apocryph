@@ -2,7 +2,6 @@ apiVersion: v1
 kind: Service
 metadata:
   name: ipfs-rpc
-  namespace: ipfs
   labels:
     app: ipfs
 spec:
@@ -18,7 +17,6 @@ apiVersion: v1
 kind: Service
 metadata:
   name: ipfs-swarm
-  namespace: ipfs
   labels:
     app: ipfs
 spec:
@@ -27,10 +25,12 @@ spec:
     port: 4001
     protocol: TCP
     targetPort: swarm-tcp
+    nodePort: {{ .Values.swarm.nodePort }}
   - name: swarm-udp
     port: 4001
     protocol: UDP
     targetPort: swarm-udp
+    nodePort: {{ .Values.swarm.nodePort }}
   type: NodePort
   selector:
     app: ipfs
@@ -39,18 +39,18 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: ipfs-config
-  namespace: ipfs
 data:
   configure.sh: |
     #!/bin/sh
     set -ex
     ipfs config --json Experimental.Libp2pStreamMounting true
+    ipfs config --json Addresses.Announce '["/ip4/{{ .Values.swarm.announceIp }}/tcp/{{ .Values.swarm.nodePort }}", "/ip4/{{ .Values.swarm.announceIp }}/udp/{{ .Values.swarm.nodePort }}/quic", "/ip4/{{ .Values.swarm.announceIp }}/udp/{{ .Values.swarm.nodePort }}/quic-v1", "/ip4/{{ .Values.swarm.announceIp }}/udp/{{ .Values.swarm.nodePort }}/quic-v1/webtransport"]'
+
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: ipfs
-  namespace: ipfs
 spec:
   replicas: 1
   selector:
@@ -87,8 +87,8 @@ spec:
         - name: IPFS_PROFILE
           value:
       - name: p2p-helper
-        image: host.minikube.internal:5000/comradecoop/apocryph/p2p-helper
-        command: ["ipfs-p2p-helper", "run", "--ipfs", "/ip4/127.0.0.1/tcp/5001"]
+        image: {{ .Values.p2phelper.image }}
+        args: ["run", "--ipfs", "/ip4/127.0.0.1/tcp/5001"]
       volumes:
       - name: init-scripts
         configMap:
