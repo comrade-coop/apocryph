@@ -44,10 +44,10 @@ message Container {
   }
 }
 message Image {
-    bytes cid = 1;
-    Key key = 2;
-    string url = 3;
-    VerificationDetails verificationDetails = 4;
+  bytes cid = 1;
+  Key key = 2;
+  string url = 3;
+  VerificationDetails verificationDetails = 4;
 }
 
 message VerificationDetails {

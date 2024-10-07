@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"math/big"
 	"path/filepath"
-	"strings"
 
 	"github.com/comrade-coop/apocryph/pkg/abi"
 	"github.com/comrade-coop/apocryph/pkg/ethereum"
@@ -225,31 +224,6 @@ var deployPodCmd = &cobra.Command{
 		err = publisher.SaveDeployment(deploymentFile, deploymentFormat, deployment) // Checkpoint uploads and keys so far
 		if err != nil {
 			fmt.Fprintf(cmd.ErrOrStderr(), "warning: %v\n", err)
-		}
-
-		if pod.VerificationSettings.PublicVerifiability == true && pod.VerificationSettings.VerificationHost == "" {
-			for _, image := range pod.Containers {
-				for _, p := range image.Ports {
-					switch ep := p.ExposedPort.(type) {
-					case *pb.Container_Port_HostHttpHost:
-						lastDotIndex := strings.LastIndex(ep.HostHttpHost, ".")
-						var host string
-						if lastDotIndex == -1 {
-							host = ep.HostHttpHost + ".tpodinfo"
-						}
-						host = ep.HostHttpHost[:lastDotIndex] + ".tpodinfo" + ep.HostHttpHost[lastDotIndex:]
-						pod.VerificationSettings.VerificationHost = host
-						break
-					}
-				}
-				if pod.VerificationSettings.VerificationHost != "" {
-					break
-				}
-			}
-			if pod.VerificationSettings.VerificationHost == "" {
-				return fmt.Errorf("Public verifiability is set but no verification host path is available or could be derived")
-			}
-			fmt.Printf("pod manifest verification host path set to:%v\n", pod.VerificationSettings.VerificationHost)
 		}
 
 		err = publisher.FundPaymentChannel(ethClient, publisherAuth, deployment, fundsInt, unlockTimeInt, debugMintFunds)

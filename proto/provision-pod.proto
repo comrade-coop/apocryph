@@ -48,6 +48,7 @@ message ProvisionPodResponse {
   string error = 1;
   repeated ExposedHostPort addresses = 2;
   string namespace = 3;
+  string verificationHost = 4;
   message ExposedHostPort {
     string multiaddr = 1;
     string containerName = 2;

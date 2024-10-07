@@ -99,6 +99,7 @@ func ApplyPodRequest(
 			},
 		},
 	}
+	deploymentAnnotationValues := []AnnotationValue{}
 
 	podTemplate := &deployment.Spec.Template
 
@@ -107,78 +108,6 @@ func ApplyPodRequest(
 
 	localhostAliases := corev1.HostAlias{IP: "127.0.0.1"}
 
-	if podManifest.VerificationSettings.PublicVerifiability {
-		// used only to use the routing from keda ingress controller
-		routeHttpsoName := "route-hso"
-		routeHttpso := NewHttpSo(namespace, routeHttpsoName)
-		serviceProxyName := "tpod-svc-proxy"
-		serviceProxy := &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: serviceProxyName,
-			},
-			Spec: corev1.ServiceSpec{
-				Type:     corev1.ServiceTypeClusterIP,
-				Ports:    []corev1.ServicePort{{Port: 9999, TargetPort: intstr.FromString("tpod-proxy")}},
-				Selector: labels,
-			},
-		}
-		routeHttpso.Spec.ScaleTargetRef.Service = serviceProxy.ObjectMeta.Name
-		routeHttpso.Spec.ScaleTargetRef.Port = 9999
-		routeHttpso.Spec.ScaleTargetRef.APIVersion = "apps/v1"
-		routeHttpso.Spec.Hosts = []string{podManifest.VerificationSettings.VerificationHost}
-		routeHttpso.Spec.Replicas = &kedahttpv1alpha1.ReplicaStruct{Min: ptr.Int32(1), Max: ptr.Int32(1)}
-		proxyContainer := corev1.Container{
-			Name:  "proxy",
-			Image: proxyImage,
-			Ports: []corev1.ContainerPort{{ContainerPort: 9999, Name: "tpod-proxy"}},
-		}
-		err := updateOrCreate(ctx, serviceProxyName, "Service", namespace, serviceProxy, client, update)
-		if err != nil {
-			return err
-		}
-		err = updateOrCreate(ctx, routeHttpsoName, "HttpSo", namespace, routeHttpso, client, update)
-		if err != nil {
-			return err
-		}
-		proxyContainer.Env = append(proxyContainer.Env, corev1.EnvVar{Name: constants.NamespaceKey, Value: namespace})
-		podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, proxyContainer)
-	}
-
-	annotationValues := []AnnotationValue{}
-	for i, container := range podManifest.Containers {
-		if podManifest.VerificationSettings.ForcePolicy == true && container.Image.VerificationDetails != nil {
-			policyName := fmt.Sprintf("policy-%v-%v", podId, i)
-			sigstorePolicy := &policy.ClusterImagePolicy{
-				TypeMeta: metav1.TypeMeta{Kind: "ClusterImagePolicy"}, ObjectMeta: metav1.ObjectMeta{Name: policyName},
-				Spec: policy.ClusterImagePolicySpec{
-					Images:      []policy.ImagePattern{{Glob: container.Image.Url}},
-					Authorities: []policy.Authority{{Keyless: &policy.KeylessRef{}}},
-				}}
-			identity := policy.Identity{Issuer: container.Image.VerificationDetails.Issuer, Subject: container.Image.VerificationDetails.Identity}
-			sigstorePolicy.Spec.Authorities[0].Keyless.Identities = []policy.Identity{identity}
-			annotationValue := AnnotationValue{
-				URL:       container.Image.Url,
-				Signature: container.Image.VerificationDetails.Signature,
-				Issuer:    container.Image.VerificationDetails.Issuer,
-				Identity:  container.Image.VerificationDetails.Identity,
-			}
-			annotationValues = append(annotationValues, annotationValue)
-			err := updateOrCreate(ctx, policyName, "ClusterImagePolicy", namespace, sigstorePolicy, client, update)
-			if err != nil && strings.Contains(err.Error(), "already exists") {
-				log.Println("warning: Policies were not deleted properly")
-				continue
-			} else {
-				return err
-			}
-		}
-	}
-	jsonData, err := json.Marshal(annotationValues)
-	if err != nil {
-		return fmt.Errorf("Failed to marshal annotation values: %v", err)
-	}
-	deployment.Annotations = map[string]string{
-		constants.VerificationInfoAnnotationKey: string(jsonData),
-	}
 
 	for cIdx, container := range podManifest.Containers {
 		containerSpec := corev1.Container{
@@ -198,6 +127,33 @@ func ApplyPodRequest(
 			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.POD_ID_KEY, Value: common.BytesToHash(paymentChannel.PodID).Hex()})
 			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PUBLIC_ADDRESS_KEY, Value: podManifest.KeyPair.PubAddress})
 			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PRIVATE_KEY, Value: podManifest.KeyPair.PrivateKey})
+		}
+		
+		if podManifest.VerificationSettings.GetForcePolicy() && container.Image.VerificationDetails != nil {
+			policyName := fmt.Sprintf("policy-%v-%v", podId, cIdx) // NOTE: Will break for two-digit container ids (see note around podId)
+			sigstorePolicy := &policy.ClusterImagePolicy{
+				TypeMeta: metav1.TypeMeta{Kind: "ClusterImagePolicy"}, ObjectMeta: metav1.ObjectMeta{Name: policyName},
+				Spec: policy.ClusterImagePolicySpec{
+					Images:      []policy.ImagePattern{{Glob: container.Image.Url}},
+					Authorities: []policy.Authority{{Keyless: &policy.KeylessRef{}}},
+				},
+			}
+			identity := policy.Identity{Issuer: container.Image.VerificationDetails.Issuer, Subject: container.Image.VerificationDetails.Identity}
+			sigstorePolicy.Spec.Authorities[0].Keyless.Identities = []policy.Identity{identity}
+			annotationValue := AnnotationValue{
+				URL:       container.Image.Url,
+				Signature: container.Image.VerificationDetails.Signature,
+				Issuer:    container.Image.VerificationDetails.Issuer,
+				Identity:  container.Image.VerificationDetails.Identity,
+			}
+			deploymentAnnotationValues = append(deploymentAnnotationValues, annotationValue)
+			err := updateOrCreate(ctx, policyName, "ClusterImagePolicy", namespace, sigstorePolicy, client, update)
+			if err != nil && strings.Contains(err.Error(), "already exists") {
+				log.Println("warning: Policies were not deleted properly")
+				continue
+			} else {
+				return err
+			}
 		}
 
 		for field, value := range container.Env {
@@ -262,9 +218,10 @@ func ApplyPodRequest(
 		} else {
 			depLabels["containers"] = depLabels["containers"] + "_" + containerSpec.Name
 		}
-
 	}
+	
 	podTemplate.Spec.HostAliases = append(podTemplate.Spec.HostAliases, localhostAliases)
+	
 	for _, volume := range podManifest.Volumes {
 		volumeSpec := corev1.Volume{
 			Name: volume.Name,
@@ -329,6 +286,66 @@ func ApplyPodRequest(
 		}
 		podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, volumeSpec)
 	}
+	
+	if podManifest.VerificationSettings.GetPublicVerifiability() == true {
+		verificationHost := podManifest.VerificationSettings.GetVerificationHost()
+		if verificationHost == "" {
+			httpHost := httpSO.Spec.Hosts[0]
+			lastDotIndex := strings.LastIndex(httpHost, ".")
+			if lastDotIndex == -1 {
+				verificationHost = httpHost + ".tpodinfo"
+			} else {
+				verificationHost = httpHost[:lastDotIndex] + ".tpodinfo" + httpHost[lastDotIndex:]
+			}
+		}
+		if verificationHost == "" {
+			return fmt.Errorf("Public verifiability is set but no verification host path is available or could be derived")
+		}
+		response.VerificationHost = verificationHost
+		// used only to use the routing from keda ingress controller
+		routeHttpsoName := "route-hso"
+		routeHttpso := NewHttpSo(namespace, routeHttpsoName)
+		serviceProxyName := "tpod-svc-proxy"
+		serviceProxy := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: serviceProxyName,
+			},
+			Spec: corev1.ServiceSpec{
+				Type:     corev1.ServiceTypeClusterIP,
+				Ports:    []corev1.ServicePort{{Port: 9999, TargetPort: intstr.FromString("tpod-proxy")}},
+				Selector: labels,
+			},
+		}
+		routeHttpso.Spec.ScaleTargetRef.Service = serviceProxy.ObjectMeta.Name
+		routeHttpso.Spec.ScaleTargetRef.Port = 9999
+		routeHttpso.Spec.ScaleTargetRef.APIVersion = "apps/v1"
+		routeHttpso.Spec.Hosts = []string{verificationHost}
+		routeHttpso.Spec.Replicas = &kedahttpv1alpha1.ReplicaStruct{Min: ptr.Int32(1), Max: ptr.Int32(1)}
+		proxyContainer := corev1.Container{
+			Name:  "proxy",
+			Image: proxyImage,
+			Ports: []corev1.ContainerPort{{ContainerPort: 9999, Name: "tpod-proxy"}},
+		}
+		err := updateOrCreate(ctx, serviceProxyName, "Service", namespace, serviceProxy, client, update)
+		if err != nil {
+			return err
+		}
+		err = updateOrCreate(ctx, routeHttpsoName, "HttpSo", namespace, routeHttpso, client, update)
+		if err != nil {
+			return err
+		}
+		proxyContainer.Env = append(proxyContainer.Env, corev1.EnvVar{Name: constants.NamespaceKey, Value: namespace})
+		podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, proxyContainer)
+	}
+	
+	annotationValuesJson, err := json.Marshal(deploymentAnnotationValues)
+	if err != nil {
+		return fmt.Errorf("Failed to marshal annotation values: %v", err)
+	}
+	deployment.Annotations = map[string]string{
+		AnnotationVerificationInfo: string(annotationValuesJson),
+	}
+	
 	err = updateOrCreate(ctx, deploymentName, "Deployment", namespace, deployment, client, update)
 	if err != nil {
 		return err
