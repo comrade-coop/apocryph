@@ -77,14 +77,15 @@ var _ = func() error {
 	deploymentFlags.BoolVar(&uploadSignatures, "upload-signatures", false, "skip uploading signatures to the registry")
 	deploymentFlags.BoolVar(&signImages, "sign-images", false, "sign pod images")
 
+	imageCertificateFlags.StringVar(&certificateIdentity, "certificate-identity", "", "identity used for signing the image")
+	imageCertificateFlags.StringVar(&certificateOidcIssuer, "certificate-oidc-issuer", "", "issuer of the oidc")
+
 	uploadFlags.StringVar(&ipfsApi, "ipfs", "/ip4/127.0.0.1/tcp/5001", "multiaddr where the ipfs/kubo api can be accessed")
 	uploadFlags.BoolVar(&uploadImages, "upload-images", true, "upload images")
 	uploadFlags.BoolVar(&uploadSecrets, "upload-secrets", true, "upload secrets")
 	uploadFlags.BoolVar(&signImages, "sign-images", false, "sign pod images (requires certificate identity & issuer flags)")
+	uploadFlags.AddFlagSet(imageCertificateFlags)
 	uploadFlags.BoolVar(&uploadSignatures, "upload-signatures", false, "skip uploading signatures to the registry")
-
-	imageCertificateFlags.StringVar(&certificateIdentity, "certificate-identity", "", "identity used for signing the image")
-	imageCertificateFlags.StringVar(&certificateOidcIssuer, "certificate-oidc-issuer", "", "issuer of the oidc")
 
 	verifyFlags.AddFlagSet(imageCertificateFlags)
 	verifyFlags.StringVar(&signaturePath, "signature", "", "path to the signature you want to verify")

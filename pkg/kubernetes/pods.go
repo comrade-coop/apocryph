@@ -27,7 +27,7 @@ type FetchSecret func(cid []byte) (map[string][]byte, error)
 
 // given a k8s resource; it checks the existence of that resource in the
 // cluster, if it exists it Will update it if needed, if not it will create it
-func updateOrCreate(ctx context.Context, resourceName, kind, namespace string, resource interface{}, client k8cl.Client, update bool) error {
+func updateOrCreate(ctx context.Context, resourceName, kind, namespace string, resource k8cl.Object, client k8cl.Client, update bool) error {
 	if update {
 		key := &k8cl.ObjectKey{
 			Namespace: namespace,
@@ -35,24 +35,20 @@ func updateOrCreate(ctx context.Context, resourceName, kind, namespace string, r
 		}
 		oldResource := GetResource(kind)
 
-		updatedResource, ok := resource.(k8cl.Object)
-		if !ok {
-			return fmt.Errorf("resource does not implement client.Object")
-		}
-		updatedResource.SetNamespace(namespace)
-		updatedResource.SetName(resourceName)
+		resource.SetNamespace(namespace)
+		resource.SetName(resourceName)
 
-		err := client.Get(ctx, *key, oldResource.(k8cl.Object))
-		updatedResource.SetResourceVersion(oldResource.(k8cl.Object).GetResourceVersion()) // resource version should be retrieved from the old resource in order for httpSo to work
+		err := client.Get(ctx, *key, oldResource)
+		resource.SetResourceVersion(oldResource.GetResourceVersion()) // resource version should be retrieved from the old resource in order for httpSo to work
 		if err != nil {
 			log.Printf("Added New Resource: %v \n", resourceName)
-			if err := client.Create(ctx, updatedResource); err != nil {
+			if err := client.Create(ctx, resource); err != nil {
 				return fmt.Errorf("Failed creating resource:%v: %v\n", resourceName, err)
 			}
 			return nil
 		}
 
-		err = client.Update(ctx, updatedResource)
+		err = client.Update(ctx, resource)
 		if err != nil {
 			return fmt.Errorf("Failed updating resource:%v, %v\n", resourceName, err)
 		}
