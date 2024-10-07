@@ -23,7 +23,7 @@ message Container {
   map<string, string> env = 7;
   repeated VolumeMount volumes = 8;
   repeated Resource resourceRequests = 9; // "cpu", "memory", custom
-  
+
   message Port {
     string name = 1;
     uint64 containerPort = 2;
@@ -51,9 +51,9 @@ message Image {
 }
 
 message VerificationDetails {
-    string signature = 1;
-    string identity = 2;
-    string issuer = 3;
+  string signature = 1;
+  string identity = 2;
+  string issuer = 3;
 }
 
 message Volume {
@@ -105,11 +105,11 @@ message Key {
 }
 
 message KeyPair {
-    string  privateKey= 2;
-    string pubAddress = 3;
+  string privateKey = 2;
+  string pubAddress = 3;
 }
-message VerificationSettings{
-  bool ForcePolicy = 1;
-  bool PublicVerifiability = 2;
-  string VerificationHost = 3;
+message VerificationSettings {
+  bool forcePolicy = 1;
+  bool publicVerifiability = 2;
+  string verificationHost = 3;
 }

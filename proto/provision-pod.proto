@@ -3,8 +3,9 @@
 syntax = "proto3";
 package apocryph.proto.v0.provisionPod;
 
-option go_package = "github.com/comrade-coop/apocryph/pkg/proto";
 import "pod.proto";
+
+option go_package = "github.com/comrade-coop/apocryph/pkg/proto";
 
 service ProvisionPodService {
   rpc ProvisionPod(ProvisionPodRequest) returns (ProvisionPodResponse);
@@ -19,12 +20,11 @@ message ProvisionPodRequest {
   PaymentChannel payment = 3;
 }
 
-message DeletePodRequest {
-}
+message DeletePodRequest {}
 
 message DeletePodResponse {
- bool success = 1;
- string error = 2;
+  bool success = 1;
+  string error = 2;
 }
 
 message UpdatePodRequest {
@@ -56,23 +56,23 @@ message ProvisionPodResponse {
   }
 }
 
-message PodLogRequest{
+message PodLogRequest {
   string ContainerName = 1;
 }
 
-message PodLogResponse{
- LogEntry logEntry = 1;
+message PodLogResponse {
+  LogEntry logEntry = 1;
 }
 
-message LogEntry{
+message LogEntry {
   uint64 NanosecondsUnixEpoch = 1;
-  string line= 2;
+  string line = 2;
 }
 
-message PodInfoRequest{
+message PodInfoRequest {
   string namespace = 1;
 }
 
-message PodInfoResponse{
+message PodInfoResponse {
   string info = 1;
 }

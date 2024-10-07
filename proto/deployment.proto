@@ -2,10 +2,11 @@
 
 syntax = "proto3";
 package apocryph.proto.v0.deployment;
-option go_package = "github.com/comrade-coop/apocryph/pkg/proto";
 
-import "provision-pod.proto";
 import "pod.proto";
+import "provision-pod.proto";
+
+option go_package = "github.com/comrade-coop/apocryph/pkg/proto";
 
 message Deployment {
   string podManifestFile = 1;
@@ -15,7 +16,6 @@ message Deployment {
   repeated UploadedSecret secrets = 5;
   provisionPod.ProvisionPodResponse deployed = 6;
   pod.KeyPair keyPair = 7;
-   
 }
 
 message ProviderConfig {

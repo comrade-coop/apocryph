@@ -8,11 +8,10 @@ option go_package = "github.com/comrade-coop/apocryph/pkg/proto";
 message HostInfo {
   repeated string multiaddrs = 1;
   repeated Region regions = 2;
-  
+
   message Region {
     string name = 1;
     string zone = 2;
     uint32 num = 3;
   }
 }
-
