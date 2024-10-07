@@ -295,7 +295,7 @@ func ApplyPodRequest(
 	
 	if podManifest.VerificationSettings.GetPublicVerifiability() == true {
 		verificationHost := podManifest.VerificationSettings.GetVerificationHost()
-		if verificationHost == "" {
+		if verificationHost == "" && len(httpSO.Spec.Hosts) > 0 {
 			httpHost := httpSO.Spec.Hosts[0]
 			lastDotIndex := strings.LastIndex(httpHost, ".")
 			if lastDotIndex == -1 {
