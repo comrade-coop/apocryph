@@ -17,6 +17,7 @@ import (
 	"github.com/comrade-coop/apocryph/pkg/loki"
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	pbcon "github.com/comrade-coop/apocryph/pkg/proto/protoconnect"
+	policy "github.com/sigstore/policy-controller/pkg/apis/policy/v1beta1"
 	"github.com/containerd/containerd"
 	"github.com/ipfs/kubo/client/rpc"
 	"golang.org/x/exp/slices"
@@ -78,6 +79,16 @@ func (s *provisionPodServer) DeletePod(ctx context.Context, request *connect.Req
 		log.Printf("Could not delete namespace: %v\n", request)
 		return nil, err
 	}
+
+	podId := strings.Split(namespace, "-")[1]
+	err = s.k8cl.DeleteAllOf(ctx, &policy.ClusterImagePolicy{}, cl.MatchingLabels{
+		tpk8s.LabelClusterImagePolicy: podId,
+	})
+	if err != nil {
+		log.Printf("Could not delete cluster image policies: %v\n", request)
+		return nil, err
+	}
+	
 	response := &pb.DeletePodResponse{Success: true}
 	return connect.NewResponse(response), nil
 }
