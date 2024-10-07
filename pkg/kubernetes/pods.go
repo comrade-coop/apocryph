@@ -132,7 +132,13 @@ func ApplyPodRequest(
 		if podManifest.VerificationSettings.GetForcePolicy() && container.Image.VerificationDetails != nil {
 			policyName := fmt.Sprintf("policy-%v-%v", podId, cIdx) // NOTE: Will break for two-digit container ids (see note around podId)
 			sigstorePolicy := &policy.ClusterImagePolicy{
-				TypeMeta: metav1.TypeMeta{Kind: "ClusterImagePolicy"}, ObjectMeta: metav1.ObjectMeta{Name: policyName},
+				TypeMeta: metav1.TypeMeta{Kind: "ClusterImagePolicy"},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: policyName,
+					Labels: map[string]string{
+						LabelClusterImagePolicy: podId,
+					},
+				},
 				Spec: policy.ClusterImagePolicySpec{
 					Images:      []policy.ImagePattern{{Glob: container.Image.Url}},
 					Authorities: []policy.Authority{{Keyless: &policy.KeylessRef{}}},

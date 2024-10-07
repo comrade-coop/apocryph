@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/comrade-coop/apocryph/pkg/constants"
 	"github.com/comrade-coop/apocryph/pkg/proto"
@@ -16,6 +17,8 @@ import (
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 	"github.com/spf13/cobra"
 )
+
+const SignatureTimeout = 3 * time.Minute
 
 func DefaultSignOptions() *options.SignOptions {
 	cmd := &cobra.Command{}
@@ -43,7 +46,7 @@ func SignPodImages(pod *proto.Pod, deployment *proto.Deployment, o *options.Sign
 	}
 
 	for _, image := range images {
-		ro := &options.RootOptions{Timeout: constants.TIMEOUT}
+		ro := &options.RootOptions{Timeout: SignatureTimeout}
 
 		oidcClientSecret, err := o.OIDC.ClientSecret()
 		if err != nil {
