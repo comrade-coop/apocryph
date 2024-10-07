@@ -27,6 +27,18 @@ var uploadFlags = &pflag.FlagSet{}
 var ipfsApi string
 var uploadImages bool
 var uploadSecrets bool
+var uploadSignatures bool
+
+var signImages bool
+var verify bool
+
+var verifyFlags = &pflag.FlagSet{}
+var signaturePath string
+var hostHeader string
+
+var imageCertificateFlags = &pflag.FlagSet{}
+var certificateIdentity string
+var certificateOidcIssuer string
 
 var fundFlags = &pflag.FlagSet{}
 var ethereumRpc string
@@ -61,10 +73,23 @@ var _ = func() error {
 	deploymentFlags.Int64Var(&expirationOffset, "token-expiration", 10, "authentication token expires after token-expiration seconds (expired after 10 seconds by default)")
 	deploymentFlags.StringVar(&ipfsApi, "ipfs", "/ip4/127.0.0.1/tcp/5001", "multiaddr where the ipfs/kubo api can be accessed")
 	deploymentFlags.BoolVar(&authorize, "authorize", false, "Create a key pair for the application and authorize the returned addresses to control the payment channel")
+	deploymentFlags.BoolVar(&verify, "verify", false, "verify the pod images (requires certificate-identity & certificate-oidc-issuer flags)")
+	deploymentFlags.BoolVar(&uploadSignatures, "upload-signatures", false, "skip uploading signatures to the registry")
+	deploymentFlags.BoolVar(&signImages, "sign-images", false, "sign pod images")
+
+	imageCertificateFlags.StringVar(&certificateIdentity, "certificate-identity", "", "identity used for signing the image")
+	imageCertificateFlags.StringVar(&certificateOidcIssuer, "certificate-oidc-issuer", "", "issuer of the oidc")
 
 	uploadFlags.StringVar(&ipfsApi, "ipfs", "/ip4/127.0.0.1/tcp/5001", "multiaddr where the ipfs/kubo api can be accessed")
 	uploadFlags.BoolVar(&uploadImages, "upload-images", true, "upload images")
 	uploadFlags.BoolVar(&uploadSecrets, "upload-secrets", true, "upload secrets")
+	uploadFlags.BoolVar(&signImages, "sign-images", false, "sign pod images (requires certificate identity & issuer flags)")
+	uploadFlags.AddFlagSet(imageCertificateFlags)
+	uploadFlags.BoolVar(&uploadSignatures, "upload-signatures", false, "skip uploading signatures to the registry")
+
+	verifyFlags.AddFlagSet(imageCertificateFlags)
+	verifyFlags.StringVar(&signaturePath, "signature", "", "path to the signature you want to verify")
+	verifyFlags.StringVar(&hostHeader, "host-header", "", "the verification host header when passing a tpod ip endpoint to verify")
 
 	fundFlags.StringVar(&ethereumRpc, "ethereum-rpc", "http://127.0.0.1:8545", "ethereum rpc node")
 	fundFlags.StringVar(&publisherKey, "ethereum-key", "", "account string (private key | http[s]://clef#account | /keystore#account | account (in default keystore))")

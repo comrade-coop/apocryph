@@ -12,4 +12,4 @@ sleep 5
 
 # deploy the contracts
 DEPLOYER_KEY=$(docker logs anvil | awk '/Private Keys/ {flag=1; next} flag && /^\(0\)/ {print $2; exit}') # anvil.accounts[0]
-( cd ../../../contracts; forge script script/Deploy.s.sol --private-key "$DEPLOYER_KEY" --rpc-url http://localhost:8545 --broadcast)
+( cd ../../../../contracts; forge script script/Deploy.s.sol --private-key "$DEPLOYER_KEY" --rpc-url http://localhost:8545 --broadcast)

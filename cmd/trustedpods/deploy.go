@@ -24,6 +24,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func checkCertificateFlags() error {
+	if certificateIdentity == "" || certificateOidcIssuer == "" {
+		return fmt.Errorf("Must specify certificate identity & oidc issuer if you signed pod images (you might consider removing --sign-images flag)")
+	}
+	return nil
+}
+
 // if no provider is selected, Fetches providers based on registry args
 func fetchAndFilterProviders(ipfs *rpc.HttpApi, ethClient *ethclient.Client) (publisher.ProviderHostInfoList, error) {
 	registryContract := common.HexToAddress(registryContractAddress)
@@ -169,7 +176,7 @@ var deployPodCmd = &cobra.Command{
 		} else {
 			provisionPodclient, err = publisher.ConnectToProvider(ipfsp2p, deployment, interceptor)
 			if err != nil {
-				return err
+				return fmt.Errorf("Failed connecting to provider: %v", err)
 			}
 		}
 
@@ -189,6 +196,28 @@ var deployPodCmd = &cobra.Command{
 			err = publisher.UploadImages(cmd.Context(), ctrdClient, ipfsApi, pod, deployment)
 			if err != nil {
 				return err
+			}
+		}
+
+		if signImages {
+			err := checkCertificateFlags()
+			if err != nil {
+				return err
+			}
+			signOptions := publisher.DefaultSignOptions()
+			if !uploadSignatures {
+				signOptions.Upload = false
+			}
+			err = publisher.SignPodImages(pod, deployment, signOptions, certificateIdentity, certificateOidcIssuer)
+			if err != nil {
+				return fmt.Errorf("failed Signing images: %v", err)
+			}
+		}
+
+		if verify {
+			err = publisher.VerifyPodImages(pod, publisher.DefaultVerifyOptions())
+			if err != nil {
+				return fmt.Errorf("Failed verifying Pod Images: %v", err)
 			}
 		}
 
@@ -280,6 +309,7 @@ func init() {
 	deployPodCmd.Flags().AddFlagSet(fundFlags)
 	deployPodCmd.Flags().AddFlagSet(syncFlags)
 	deployPodCmd.Flags().AddFlagSet(registryFlags)
+	deployPodCmd.Flags().AddFlagSet(imageCertificateFlags)
 	deletePodCmd.Flags().AddFlagSet(deploymentFlags)
 	deletePodCmd.Flags().AddFlagSet(syncFlags)
 

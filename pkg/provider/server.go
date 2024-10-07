@@ -17,6 +17,7 @@ import (
 	"github.com/comrade-coop/apocryph/pkg/loki"
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	pbcon "github.com/comrade-coop/apocryph/pkg/proto/protoconnect"
+	policy "github.com/sigstore/policy-controller/pkg/apis/policy/v1beta1"
 	"github.com/containerd/containerd"
 	"github.com/ipfs/kubo/client/rpc"
 	"golang.org/x/exp/slices"
@@ -24,6 +25,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	cl "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type provisionPodServer struct {
@@ -36,12 +38,28 @@ type provisionPodServer struct {
 	paymentValidator *ethereum.PaymentChannelValidator
 	localOciRegistry string
 	dryRun           bool
+	proxyImage       string
 }
 
 func transformError(err error) (*connect.Response[pb.ProvisionPodResponse], error) {
 	return connect.NewResponse(&pb.ProvisionPodResponse{
 		Error: err.Error(),
 	}), nil
+}
+
+func (s *provisionPodServer) GetPodInfos(ctx context.Context, request *connect.Request[pb.PodInfoRequest]) (*connect.Response[pb.PodInfoResponse], error) {
+	log.Printf("Received Request for retreiving info on namespace: %v \n", request.Msg.Namespace)
+	list := &appsv1.DeploymentList{}
+	err := s.k8cl.List(ctx, list, &cl.ListOptions{Namespace: request.Msg.Namespace})
+	if err != nil {
+		return nil, err
+	}
+	var info strings.Builder
+	if len(list.Items) > 0 {
+		info.WriteString(list.Items[0].Annotations[tpk8s.AnnotationVerificationInfo])
+	}
+	response := &pb.PodInfoResponse{Info: info.String()}
+	return connect.NewResponse(response), nil
 }
 
 func (s *provisionPodServer) DeletePod(ctx context.Context, request *connect.Request[pb.DeletePodRequest]) (*connect.Response[pb.DeletePodResponse], error) {
@@ -61,6 +79,16 @@ func (s *provisionPodServer) DeletePod(ctx context.Context, request *connect.Req
 		log.Printf("Could not delete namespace: %v\n", request)
 		return nil, err
 	}
+
+	podId := strings.Split(namespace, "-")[1]
+	err = s.k8cl.DeleteAllOf(ctx, &policy.ClusterImagePolicy{}, cl.MatchingLabels{
+		tpk8s.LabelClusterImagePolicy: podId,
+	})
+	if err != nil {
+		log.Printf("Could not delete cluster image policies: %v\n", request)
+		return nil, err
+	}
+	
 	response := &pb.DeletePodResponse{Success: true}
 	return connect.NewResponse(response), nil
 }
@@ -78,7 +106,7 @@ func (s *provisionPodServer) UpdatePod(ctx context.Context, request *connect.Req
 
 	namespace := pbcon.GetNamespace(request)
 	response := &pb.ProvisionPodResponse{}
-	err = tpk8s.ApplyPodRequest(ctx, s.k8cl, namespace, true, request.Msg.Pod, request.Msg.Payment, images, secrets, response)
+	err = tpk8s.ApplyPodRequest(ctx, s.k8cl, namespace, true, request.Msg.Pod, request.Msg.Payment, images, secrets, response, s.proxyImage)
 	if err != nil {
 		return transformError(err)
 	}
@@ -137,9 +165,10 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *connect.
 	}
 
 	response := &pb.ProvisionPodResponse{}
-	ns := tpk8s.NewTrustedPodsNamespace(namespace, request.Msg.Payment)
+
+	ns := tpk8s.NewTrustedPodsNamespace(namespace, request.Msg.Pod, request.Msg.Payment)
 	err = tpk8s.RunInNamespaceOrRevert(ctx, s.k8cl, ns, s.dryRun, func(cl client.Client) error {
-		return tpk8s.ApplyPodRequest(ctx, cl, ns.ObjectMeta.Name, false, request.Msg.Pod, request.Msg.Payment, images, secrets, response)
+		return tpk8s.ApplyPodRequest(ctx, cl, ns.ObjectMeta.Name, false, request.Msg.Pod, request.Msg.Payment, images, secrets, response, s.proxyImage)
 	})
 	if err != nil {
 		return transformError(err)
@@ -151,7 +180,7 @@ func (s *provisionPodServer) ProvisionPod(ctx context.Context, request *connect.
 	return connect.NewResponse(response), nil
 }
 
-func NewTPodServerHandler(ipfsApi string, ipfs *rpc.HttpApi, dryRun bool, ctrdClient *containerd.Client, k8cl client.Client, localOciRegistry string, validator *ethereum.PaymentChannelValidator, lokiHost string) (string, http.Handler) {
+func NewTPodServerHandler(ipfsApi string, ipfs *rpc.HttpApi, dryRun bool, ctrdClient *containerd.Client, k8cl client.Client, localOciRegistry string, validator *ethereum.PaymentChannelValidator, lokiHost string, proxyImage string) (string, http.Handler) {
 	return pbcon.NewProvisionPodServiceHandler(&provisionPodServer{
 		ipfs:             ipfs,
 		ipfsApi:          ipfsApi,
@@ -161,6 +190,7 @@ func NewTPodServerHandler(ipfsApi string, ipfs *rpc.HttpApi, dryRun bool, ctrdCl
 		paymentValidator: validator,
 		localOciRegistry: localOciRegistry,
 		dryRun:           dryRun,
+		proxyImage:       proxyImage,
 	}, connect.WithInterceptors(
 		pbcon.NewAuthInterceptor(k8cl),
 	))

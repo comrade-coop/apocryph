@@ -28,11 +28,11 @@ fi
 ## 0: Set up the external environment
 
 ## 0.1: Build/tag server and p2p-helper and autoscaler images
-./redeploy-images.sh
+./sync-tpodcharts.sh
 
 ## 0.2: Set up a local ethereum node and deploy contracts to it
 
-./redeploy-contracts.sh
+../common/scripts/redeploy-contracts.sh
 
 ## 0.3: start clusters
 ./start-clusters.sh
@@ -42,7 +42,7 @@ minikube profile c1
 helmfile sync -f ../minikube || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile apply -f ../minikube; }
 
 # wait until all the deployments are ready
-./wait-deployments.sh
+../common/scripts/wait-deployments.sh
 
 
 ## 2.0: Starting the second Cluster
@@ -50,7 +50,7 @@ minikube profile c2
 helmfile sync -f ../minikube || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile apply -f ../minikube; }
 
 # wait until all the deployments are ready
-./wait-deployments.sh
+../common/scripts/wait-deployments.sh
 
 
 ## 3.0: Starting the third Cluster
@@ -58,7 +58,7 @@ minikube profile c3
 helmfile sync -f ../minikube || { while ! kubectl get -n keda endpoints ingress-nginx-controller -o json | jq '.subsets[].addresses[].ip' &>/dev/null; do sleep 1; done; helmfile apply -f ../minikube; }
 
 # wait until all the deployments are ready
-./wait-deployments.sh
+../common/scripts/wait-deployments.sh
 
 
 minikube profile list
@@ -126,12 +126,12 @@ PUBLISHER_KEY=$(docker logs anvil | awk '/Private Keys/ {flag=1; next} flag && /
 FUNDS=10000000000000000000000
 
 minikube profile c1
-source swarm-connect.sh
+source ../common/scripts/swarm-connect.sh
 
 PROVIDER_ETH=0x70997970C51812dc3A010C7d01b50e0d17dc79C8 #TODO= anvil.accounts[1]
 echo $PROVIDER_IPFS
 
-go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-autoscaler.yaml \
+go run ../../../cmd/trustedpods/ pod deploy ../common/manifests/manifest-autoscaler.yaml \
   --ethereum-key "$PUBLISHER_KEY" \
   --payment-contract "$PAYMENT_CONTRACT" \
   --registry-contract "$REGISTRY_CONTRACT" \
@@ -145,7 +145,7 @@ sleep 5
 
 ## 5.2: deploy to the second cluster
 minikube profile c2
-source swarm-connect.sh
+source ../common/scripts/swarm-connect.sh
 # for now just remove the deployment file to avoid uploading instead of deploying
 rm -f ~/.apocryph/deployment/*
 
@@ -157,7 +157,7 @@ FUNDS=10000000000000000000000
 PROVIDER_ETH=0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f #TODO= anvil.accounts[7]
 echo $PROVIDER_IPFS
 
-go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-autoscaler.yaml \
+go run ../../../cmd/trustedpods/ pod deploy ../common/manifests/manifest-autoscaler.yaml \
   --ethereum-key "$PUBLISHER_KEY" \
   --payment-contract "$PAYMENT_CONTRACT" \
   --registry-contract "$REGISTRY_CONTRACT" \
@@ -172,7 +172,7 @@ sleep 5
 
 ## 5.3: deploy to the third cluster
 minikube profile c3
-source swarm-connect.sh
+source ../common/scripts/swarm-connect.sh
 rm -f ~/.apocryph/deployment/*
 
 PUBLISHER_KEY=$(docker logs anvil | awk '/Private Keys/ {flag=1; next} flag && /^\(2\)/ {print $2; exit}')
@@ -185,7 +185,7 @@ FUNDS=10000000000000000000000
 
 echo $PROVIDER_IPFS
 
-go run ../../../cmd/trustedpods/ pod deploy ../common/manifest-autoscaler.yaml \
+go run ../../../cmd/trustedpods/ pod deploy ../common/manifests/manifest-autoscaler.yaml \
   --ethereum-key "$PUBLISHER_KEY" \
   --payment-contract "$PAYMENT_CONTRACT" \
   --registry-contract "$REGISTRY_CONTRACT" \

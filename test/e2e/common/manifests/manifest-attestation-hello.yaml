@@ -1,0 +1,14 @@
+containers:
+  - name: hello
+    image:
+      url: ttl.sh/hello-world@sha256:d37ada95d47ad12224c205a938129df7a3e52345828b4fa27b03a98825d1e2e7
+    resourceRequests:
+      - amountMillis: '10'
+        resource: cpu
+      - amount: '100000000'
+        resource: memory
+replicas:
+  min: 1
+  max: 1
+verificationSettings:
+  imageVerification: true

@@ -80,6 +80,7 @@ spec:
           "--oci-registry", "host.minikube.internal:5000",
           "--ethereum-rpc", "http://eth-rpc.eth.svc.cluster.local:8545",
           "--ethereum-key", {{ .Values.ethKey }}, # TODO= anvil.accounts[1] prvkey
+          "--proxy-image",{{.Values.policy.image}},
         ]
         ports:
         - containerPort: 8080

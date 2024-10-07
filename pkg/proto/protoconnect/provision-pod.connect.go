@@ -44,6 +44,9 @@ const (
 	// ProvisionPodServiceDeletePodProcedure is the fully-qualified name of the ProvisionPodService's
 	// DeletePod RPC.
 	ProvisionPodServiceDeletePodProcedure = "/apocryph.proto.v0.provisionPod.ProvisionPodService/DeletePod"
+	// ProvisionPodServiceGetPodInfosProcedure is the fully-qualified name of the ProvisionPodService's
+	// GetPodInfos RPC.
+	ProvisionPodServiceGetPodInfosProcedure = "/apocryph.proto.v0.provisionPod.ProvisionPodService/GetPodInfos"
 	// ProvisionPodServiceGetPodLogsProcedure is the fully-qualified name of the ProvisionPodService's
 	// GetPodLogs RPC.
 	ProvisionPodServiceGetPodLogsProcedure = "/apocryph.proto.v0.provisionPod.ProvisionPodService/GetPodLogs"
@@ -55,6 +58,7 @@ var (
 	provisionPodServiceProvisionPodMethodDescriptor = provisionPodServiceServiceDescriptor.Methods().ByName("ProvisionPod")
 	provisionPodServiceUpdatePodMethodDescriptor    = provisionPodServiceServiceDescriptor.Methods().ByName("UpdatePod")
 	provisionPodServiceDeletePodMethodDescriptor    = provisionPodServiceServiceDescriptor.Methods().ByName("DeletePod")
+	provisionPodServiceGetPodInfosMethodDescriptor  = provisionPodServiceServiceDescriptor.Methods().ByName("GetPodInfos")
 	provisionPodServiceGetPodLogsMethodDescriptor   = provisionPodServiceServiceDescriptor.Methods().ByName("GetPodLogs")
 )
 
@@ -64,6 +68,7 @@ type ProvisionPodServiceClient interface {
 	ProvisionPod(context.Context, *connect.Request[proto.ProvisionPodRequest]) (*connect.Response[proto.ProvisionPodResponse], error)
 	UpdatePod(context.Context, *connect.Request[proto.UpdatePodRequest]) (*connect.Response[proto.ProvisionPodResponse], error)
 	DeletePod(context.Context, *connect.Request[proto.DeletePodRequest]) (*connect.Response[proto.DeletePodResponse], error)
+	GetPodInfos(context.Context, *connect.Request[proto.PodInfoRequest]) (*connect.Response[proto.PodInfoResponse], error)
 	GetPodLogs(context.Context, *connect.Request[proto.PodLogRequest]) (*connect.ServerStreamForClient[proto.PodLogResponse], error)
 }
 
@@ -96,6 +101,12 @@ func NewProvisionPodServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(provisionPodServiceDeletePodMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		getPodInfos: connect.NewClient[proto.PodInfoRequest, proto.PodInfoResponse](
+			httpClient,
+			baseURL+ProvisionPodServiceGetPodInfosProcedure,
+			connect.WithSchema(provisionPodServiceGetPodInfosMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		getPodLogs: connect.NewClient[proto.PodLogRequest, proto.PodLogResponse](
 			httpClient,
 			baseURL+ProvisionPodServiceGetPodLogsProcedure,
@@ -110,6 +121,7 @@ type provisionPodServiceClient struct {
 	provisionPod *connect.Client[proto.ProvisionPodRequest, proto.ProvisionPodResponse]
 	updatePod    *connect.Client[proto.UpdatePodRequest, proto.ProvisionPodResponse]
 	deletePod    *connect.Client[proto.DeletePodRequest, proto.DeletePodResponse]
+	getPodInfos  *connect.Client[proto.PodInfoRequest, proto.PodInfoResponse]
 	getPodLogs   *connect.Client[proto.PodLogRequest, proto.PodLogResponse]
 }
 
@@ -128,6 +140,11 @@ func (c *provisionPodServiceClient) DeletePod(ctx context.Context, req *connect.
 	return c.deletePod.CallUnary(ctx, req)
 }
 
+// GetPodInfos calls apocryph.proto.v0.provisionPod.ProvisionPodService.GetPodInfos.
+func (c *provisionPodServiceClient) GetPodInfos(ctx context.Context, req *connect.Request[proto.PodInfoRequest]) (*connect.Response[proto.PodInfoResponse], error) {
+	return c.getPodInfos.CallUnary(ctx, req)
+}
+
 // GetPodLogs calls apocryph.proto.v0.provisionPod.ProvisionPodService.GetPodLogs.
 func (c *provisionPodServiceClient) GetPodLogs(ctx context.Context, req *connect.Request[proto.PodLogRequest]) (*connect.ServerStreamForClient[proto.PodLogResponse], error) {
 	return c.getPodLogs.CallServerStream(ctx, req)
@@ -139,6 +156,7 @@ type ProvisionPodServiceHandler interface {
 	ProvisionPod(context.Context, *connect.Request[proto.ProvisionPodRequest]) (*connect.Response[proto.ProvisionPodResponse], error)
 	UpdatePod(context.Context, *connect.Request[proto.UpdatePodRequest]) (*connect.Response[proto.ProvisionPodResponse], error)
 	DeletePod(context.Context, *connect.Request[proto.DeletePodRequest]) (*connect.Response[proto.DeletePodResponse], error)
+	GetPodInfos(context.Context, *connect.Request[proto.PodInfoRequest]) (*connect.Response[proto.PodInfoResponse], error)
 	GetPodLogs(context.Context, *connect.Request[proto.PodLogRequest], *connect.ServerStream[proto.PodLogResponse]) error
 }
 
@@ -166,6 +184,12 @@ func NewProvisionPodServiceHandler(svc ProvisionPodServiceHandler, opts ...conne
 		connect.WithSchema(provisionPodServiceDeletePodMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	provisionPodServiceGetPodInfosHandler := connect.NewUnaryHandler(
+		ProvisionPodServiceGetPodInfosProcedure,
+		svc.GetPodInfos,
+		connect.WithSchema(provisionPodServiceGetPodInfosMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	provisionPodServiceGetPodLogsHandler := connect.NewServerStreamHandler(
 		ProvisionPodServiceGetPodLogsProcedure,
 		svc.GetPodLogs,
@@ -180,6 +204,8 @@ func NewProvisionPodServiceHandler(svc ProvisionPodServiceHandler, opts ...conne
 			provisionPodServiceUpdatePodHandler.ServeHTTP(w, r)
 		case ProvisionPodServiceDeletePodProcedure:
 			provisionPodServiceDeletePodHandler.ServeHTTP(w, r)
+		case ProvisionPodServiceGetPodInfosProcedure:
+			provisionPodServiceGetPodInfosHandler.ServeHTTP(w, r)
 		case ProvisionPodServiceGetPodLogsProcedure:
 			provisionPodServiceGetPodLogsHandler.ServeHTTP(w, r)
 		default:
@@ -201,6 +227,10 @@ func (UnimplementedProvisionPodServiceHandler) UpdatePod(context.Context, *conne
 
 func (UnimplementedProvisionPodServiceHandler) DeletePod(context.Context, *connect.Request[proto.DeletePodRequest]) (*connect.Response[proto.DeletePodResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("apocryph.proto.v0.provisionPod.ProvisionPodService.DeletePod is not implemented"))
+}
+
+func (UnimplementedProvisionPodServiceHandler) GetPodInfos(context.Context, *connect.Request[proto.PodInfoRequest]) (*connect.Response[proto.PodInfoResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("apocryph.proto.v0.provisionPod.ProvisionPodService.GetPodInfos is not implemented"))
 }
 
 func (UnimplementedProvisionPodServiceHandler) GetPodLogs(context.Context, *connect.Request[proto.PodLogRequest], *connect.ServerStream[proto.PodLogResponse]) error {

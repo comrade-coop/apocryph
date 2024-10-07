@@ -40,13 +40,11 @@ func DownloadImages(ctx context.Context, client *containerd.Client, ipfsAddress,
 			return nil, err
 		}
 		if !exists {
-			target := string(c.Image.Cid)
+			target := string(c.Image.Url)
 			err = ipcr.PullImage(ctx, client, ipfsAddress, string(c.Image.Cid), target)
 			if err != nil {
 				return nil, err
 			}
-			// Update the url
-			c.Image.Url = target
 			log.Printf("Pulled Image %v Successfully, Decrypting ...\n", c.Image.Url)
 			err = ipcr.DecryptImage(ctx, client, "", target, c.Image.Key.Data)
 			if err != nil {

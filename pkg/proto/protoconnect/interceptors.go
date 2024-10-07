@@ -51,7 +51,9 @@ func NewAuthInterceptor(c client.Client) connect.Interceptor {
 func (i authInterceptor) WrapUnary(handler connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 		fmt.Printf("Authenticating gRPC call: %v \n", req.Spec())
-
+		if req.Spec().Procedure == ProvisionPodServiceGetPodInfosProcedure {
+			return handler(ctx, req)
+		}
 		expectedPublisher, err := i.authenticate(req.Header())
 		if err != nil {
 			return nil, err
@@ -187,6 +189,9 @@ func NewAuthInterceptorClient(deployment *pb.Deployment, expirationOffset int64,
 
 func (a *AuthInterceptorClient) WrapUnary(handler connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+		if req.Spec().Procedure == ProvisionPodServiceGetPodInfosProcedure {
+			return handler(ctx, req)
+		}
 		a.authorize(req.Spec().Procedure, req.Header())
 		return handler(ctx, req)
 	}

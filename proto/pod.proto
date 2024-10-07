@@ -10,6 +10,7 @@ message Pod {
   repeated Volume volumes = 2;
   Replicas replicas = 3;
   KeyPair keyPair = 4;
+  VerificationSettings verificationSettings = 5;
 }
 
 message Container {
@@ -22,12 +23,6 @@ message Container {
   map<string, string> env = 7;
   repeated VolumeMount volumes = 8;
   repeated Resource resourceRequests = 9; // "cpu", "memory", custom
-
-  message Image {
-    bytes cid = 1;
-    Key key = 2;
-    string url = 3;
-  }
 
   message Port {
     string name = 1;
@@ -47,6 +42,18 @@ message Container {
     string mountPath = 2;
     bool readOnly = 3;
   }
+}
+message Image {
+  bytes cid = 1;
+  Key key = 2;
+  string url = 3;
+  VerificationDetails verificationDetails = 4;
+}
+
+message VerificationDetails {
+  string signature = 1;
+  string identity = 2;
+  string issuer = 3;
 }
 
 message Volume {
@@ -98,6 +105,11 @@ message Key {
 }
 
 message KeyPair {
-    string  privateKey= 2;
-    string pubAddress = 3;
+  string privateKey = 2;
+  string pubAddress = 3;
+}
+message VerificationSettings {
+  bool forcePolicy = 1;
+  bool publicVerifiability = 2;
+  string verificationHost = 3;
 }

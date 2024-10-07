@@ -7,7 +7,8 @@ repositories:
     url: https://prometheus-community.github.io/helm-charts
   - name: grafana
     url: https://grafana.github.io/helm-charts
-
+  - name: sigstore
+    url: https://sigstore.github.io/helm-charts
 releases:
   - name: keda
     namespace: keda
@@ -64,3 +65,6 @@ releases:
   - name: eth
     chart: ./eth
     namespace: eth
+  - name: policy-controller
+    chart: sigstore/policy-controller
+    namespace: policy-controller

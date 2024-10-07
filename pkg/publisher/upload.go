@@ -94,7 +94,14 @@ func UploadImages(ctx context.Context, client *containerd.Client, IPFSAddress st
 			return err
 		}
 
-		uploadedImage := &pb.UploadedImage{SourceUrl: image.Url, Cid: []byte(cid), Key: &pb.Key{Data: prvKey}}
+		verificationDetails := &pb.VerificationDetails{}
+		if img, exists := oldUploadedImages[image.Url]; exists {
+			verificationDetails = img.VerificationDetails
+		}
+
+		uploadedImage := &pb.UploadedImage{SourceUrl: image.Url, Cid: []byte(cid),
+			Key:                 &pb.Key{Data: prvKey},
+			VerificationDetails: verificationDetails}
 		deployment.Images = append(deployment.Images, uploadedImage)
 	}
 	return nil
@@ -130,10 +137,15 @@ func LinkUploadsFromDeployment(pod *pb.Pod, deployment *pb.Deployment) *pb.Pod {
 
 	for _, container := range pod.Containers {
 		if uploadedImage, ok := uploadedImages[container.Image.Url]; ok {
-			container.Image = &pb.Container_Image{
+			container.Image = &pb.Image{
 				Cid: uploadedImage.Cid,
 				Url: uploadedImage.SourceUrl,
 				Key: uploadedImage.Key,
+				VerificationDetails: &pb.VerificationDetails{
+					Signature: uploadedImage.VerificationDetails.Signature,
+					Identity: uploadedImage.VerificationDetails.Identity,
+					Issuer:   uploadedImage.VerificationDetails.Issuer,
+				},
 			}
 		}
 	}

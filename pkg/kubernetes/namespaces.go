@@ -5,6 +5,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"log"
 
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
@@ -22,11 +23,14 @@ const (
 	AnnotationsTrustedPodsPaymentChannel string = "coop.comrade/apocryph-payment-contract"
 	LabelIpfsP2P                         string = "coop.comrade/apocryph-p2p-helper"
 	AnnotationsIpfsP2P                   string = "coop.comrade/apocryph-p2p-helper"
+	SigstorePolicy                       string = "policy.sigstore.dev/include"
+	AnnotationVerificationInfo           string = "coop.comrade/apocryph-verification-info"
+	LabelClusterImagePolicy              string = "coop.comrade/apocryph-for-pod"
 )
 
 var TrustedPodsNamespaceFilter = client.HasLabels{LabelTrustedPodsNamespace}
 
-func NewTrustedPodsNamespace(name string, paymentChannel *pb.PaymentChannel) *corev1.Namespace {
+func NewTrustedPodsNamespace(name string, pod *pb.Pod, paymentChannel *pb.PaymentChannel) *corev1.Namespace {
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -34,6 +38,11 @@ func NewTrustedPodsNamespace(name string, paymentChannel *pb.PaymentChannel) *co
 				LabelTrustedPodsNamespace: "true",
 			},
 		},
+	}
+	// force container image verification
+	if pod.VerificationSettings.ForcePolicy {
+		log.Println("Image verification is Set")
+		namespace.Labels[SigstorePolicy] = "true"
 	}
 	if paymentChannel != nil {
 		namespace.ObjectMeta.Annotations = map[string]string{
@@ -56,6 +65,7 @@ func TrustedPodsNamespaceGetChannel(namespace *corev1.Namespace) (*pb.PaymentCha
 	return paymentChannel, nil
 }
 
+// Makes sure only the provided active ressources exist, and removes the rest
 func cleanNamespace(ctx context.Context, namespace string, activeResources []string, client k8cl.Client) error {
 	kindList := []string{"Service", "Volume", "Secret", "Deployment", "HttpSo"}
 	fmt.Printf("Active Resources: %v \n", activeResources)
