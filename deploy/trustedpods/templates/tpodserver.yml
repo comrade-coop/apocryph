@@ -129,6 +129,7 @@ spec:
   template:
     spec:
       restartPolicy: OnFailure
+      ttlSecondsAfterFinished: 10
       containers:
       - name: tpodregister
         image: {{ .Values.image }}

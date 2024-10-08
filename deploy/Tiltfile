@@ -15,15 +15,52 @@ cluster_ip = local(
 deploy_dir = os.getcwd()
 
 
-def cosign_keypair(name, keypair_path="deploy/keys", *args, **kwargs):
+def cosign_keypair(cosign_key="cosign-key", cosign_key_path="deploy/keys", *args, **kwargs):
     local_resource(
-        name,
+        cosign_key,
         "mkdir -p %s; cd %s; [ -f %s.key ] || echo | cosign generate-key-pair --output-key-prefix %s"
-        % (keypair_path, keypair_path, name, name),
+        % (cosign_key_path, cosign_key_path, cosign_key, cosign_key),
         allow_parallel=True,
         *args,
-        **kwargs
+        **kwargs,
     )
+
+
+def cosign_sign_image(
+    result_image,
+    source_image,
+    source_image_is_dep=True,
+    cosign_key="cosign-key",
+    cosign_key_path="deploy/keys",
+    image_deps=[],
+    deps=[],
+    *args,
+    **kwargs,
+):
+    cosign_command = (
+        "echo | cosign sign -y --allow-http-registry=false --key=%s/%s.key $(docker inspect --format='{{index .RepoDigests 0}}' $EXPECTED_REF)"
+        % (cosign_key_path, cosign_key)
+    )
+    if source_image_is_dep:
+        custom_build(
+            result_image,
+            "docker tag $TILT_IMAGE_0 $EXPECTED_REF && docker push $EXPECTED_REF && %s"
+            % cosign_command,
+            disable_push=True,
+            deps=deps + [cosign_key_path],
+            image_deps=[source_image] + image_deps,
+            **kwargs,
+        )
+    else:
+        custom_build(
+            result_image,
+            "docker pull %s && docker tag %s $EXPECTED_REF && docker push $EXPECTED_REF && %s"
+            % (source_image, source_image, cosign_command),
+            disable_push=True,
+            deps=deps + [cosign_key_path],
+            image_deps=image_deps,
+            **kwargs,
+        )
 
 
 # NOTE: Might need to run `chmod o+rw /run/containerd/containerd.sock` for some forms of image upload to work.
@@ -45,6 +82,8 @@ def apocryph_resource(
     delete_flags=[],
     resource_deps=[],
     deploy_script_json=deploy_dir + "/../contracts/broadcast/Deploy.s.sol/31337/run-latest.json",
+    *args,
+    **kwargs,
 ):
     if payment_contract == "":
         payment_contract = "$(jq .returns.payment.value %s -r)" % deploy_script_json
@@ -105,7 +144,13 @@ def apocryph_resource(
         container_selector="",
         # image_deps=image_deps,
     )
-    k8s_resource(name, resource_deps=resource_deps + [builder, docker_ipfs, ethereum_resource])
+    k8s_resource(
+        name,
+        resource_deps=resource_deps + [builder, docker_ipfs, ethereum_resource],
+        pod_readiness="ignore",
+        *args,
+        **kwargs,
+    )
 
 
 def docker_ipfs_resource(
@@ -116,7 +161,7 @@ def docker_ipfs_resource(
     kwargs_dc={},
     kwargs_config={},
     *args,
-    **kwargs
+    **kwargs,
 ):
     # if config.tilt_subcommand != "down":
     services = {
@@ -150,7 +195,7 @@ def docker_ipfs_resource(
         resource_deps=resource_deps + [name],
         allow_parallel=True,
         *args,
-        **(kwargs | kwargs_config)
+        **(kwargs | kwargs_config),
     )
 
 
@@ -164,7 +209,7 @@ def builder_resource(
     volumes_conf={},
     entrypoint=["sleep", "infinity"],
     *args,
-    **kwargs
+    **kwargs,
 ):
     services = {
         name: {
@@ -196,7 +241,7 @@ def local_resource_in_builder(name, cmd, builder, resource_deps=[], *args, **kwa
         cmdline_in_builder(cmd, builder),
         resource_deps=resource_deps + [builder],
         *args,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -259,15 +304,25 @@ def apocryph_build_with_builder(
     )
 
     # https://stackoverflow.com/a/33511811 for $(docker inspect --format ...)
-    custom_build(
-        "comradecoop/apocryph/tpod-proxy",
-        "docker build . --target tpod-proxy-copy-local --push -t $EXPECTED_REF; echo | cosign sign -y --allow-http-registry=false --key=%s/%s.key $(docker inspect --format='{{index .RepoDigests 0}}' $EXPECTED_REF)"
-        % (cosign_key_path, cosign_key),
-        dir=root_dir,
-        disable_push=True,
-        deps=[root_dir + "/bin", cosign_key_path],
+    docker_build_with_restart(
+        "comradecoop/apocryph/tpod-proxy-unsigned",
+        root_dir,
+        dockerfile="./Dockerfile",
+        target="tpod-proxy-copy-local",
+        entrypoint=["/usr/local/bin/tpod-proxy"],
+        only=[root_dir + "/bin"],
         live_update=[
-            sync(root_dir + "/bin/proxy", "/usr/local/bin/tpod-proxy"),
+            sync(root_dir + "/bin", "/usr/local/bin/"),
+        ],
+    )
+
+    cosign_sign_image(
+        "comradecoop/apocryph/tpod-proxy",
+        "comradecoop/apocryph/tpod-proxy-unsigned",
+        cosign_key=cosign_key,
+        cosign_key_path=cosign_key_path,
+        live_update=[
+            sync(root_dir + "/bin", "/usr/local/bin/"),
         ],
     )
 
@@ -402,7 +457,9 @@ def deploy_apocryph_stack(
         image_deps=["comradecoop/apocryph/server", "comradecoop/apocryph/tpod-proxy"],
         flags=[
             "--set-json",
-            "policy.issuer=false,policy.subject=false",
+            "policy.issuer=false",
+            "--set-json",
+            "policy.subject=false",
             "--set-file",
             "policy.key=%s/%s.pub" % (cosign_key_path, cosign_key),
             "--create-namespace",

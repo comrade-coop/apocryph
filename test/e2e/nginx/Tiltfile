@@ -1,33 +1,55 @@
 # -*- mode: Python -*-
 # SPDX-License-Identifier: GPL-3.0
 
-load("../../../deploy/Tiltfile", "apocryph_resource")
+load("../../../deploy/Tiltfile", "apocryph_resource", "cluster_ip")
 
 apocryph_resource(
     "nginx-example",
     "./test/e2e/common/manifests/manifest-nginx.yaml",
     upload_images=False,
     apply_flags=["--mint-funds"],
+    labels=["apocryph-pod"],
 )
 
-"""TODO:
-## 3: Connect and measure balances ##
 
-WITHDRAW_ETH=0x90F79bf6EB2c4f870365E785982E1f101E93b906 #TODO copied from trustedpods/tpodserver.yml
-TOKEN_CONTRACT=$(cat ../../../contracts/broadcast/Deploy.s.sol/31337/run-latest.json | jq -r '.returns.token.value')
-INGRESS_URL=$(minikube service -n keda ingress-nginx-controller --url=true | head -n 1); echo $INGRESS_URL
-MANIFEST_HOST=example.local # From manifest-nginx.yaml
+withdraw_address = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"  # TODO copied from :/deploy/trustedpods/values.yaml
+token_contract = "0x5FbDB2315678afecb367f032d93F642f64180aa3"  # TODO copied from :/contracts/broadcast/Deploy.s.sol/31337/run-latest.json
+manifest_host = (
+    "example.localhost"  # TODO copied from :/test/e2e/common/manifests/manifest-nginx.yaml
+)
 
-echo "Provider balance before:" $(cast call "$TOKEN_CONTRACT" "balanceOf(address)" "$WITHDRAW_ETH" | cast to-fixed-point 18)
+ethereum_namespace = "eth"
+# TODO copied from :/deploy/Tiltfile
+ethereum_rpc = (
+    "http://%s:$(kubectl get svc -n %s eth-rpc -o jsonpath --template '{$.spec.ports[0].nodePort}')"
+    % (cluster_ip, ethereum_namespace)
+)
 
-set -x
+provider_balance_cmd = 'cast call "%s" "balanceOf(address)" "%s" -r %s | cast to-fixed-point 18' % (
+    token_contract,
+    withdraw_address,
+    ethereum_rpc,
+)
+curl_cmd = 'curl --connect-timeout 40 -H "Host: %s" localhost:8004 --fail-with-body' % manifest_host
 
-while ! curl --connect-timeout 40 -H "Host: $MANIFEST_HOST" $INGRESS_URL --fail-with-body; do sleep 10; done
-curl -H "Host: $MANIFEST_HOST" $INGRESS_URL --fail-with-body
-
-set +x
-
-sleep 45
-
-echo "Provider balance after:" $(cast call "$TOKEN_CONTRACT" "balanceOf(address)" "$WITHDRAW_ETH" | cast to-fixed-point 18)
-"""
+k8s_resource(workload="ingress-nginx", port_forwards=["8004:80"])
+local_resource(
+    "nginx-example-measure-and-query",
+    [
+        "bash",
+        "-c",
+        " ".join(
+            [
+                "set -xeuo pipefail;",
+                'echo -n "Provider balance before:"; %s;' % provider_balance_cmd,
+                "while ! %s; do sleep 10; done;" % curl_cmd,
+                "%s;" % curl_cmd,
+                "sleep 100;",
+                'echo -n "Provider balance after:"; %s;' % provider_balance_cmd,
+            ]
+        ),
+    ],
+    labels=["apocryph-pod"],
+    trigger_mode=TRIGGER_MODE_MANUAL,
+    auto_init=False,
+)
