@@ -5,10 +5,10 @@ load("../../../deploy/Tiltfile", "apocryph_resource", "cluster_ip")
 
 apocryph_resource(
     "nginx-example",
-    "./test/e2e/common/manifests/manifest-nginx.yaml",
+    "../common/manifests/manifest-nginx.yaml",
     upload_images=False,
     apply_flags=["--mint-funds"],
-    labels=["apocryph-pod"],
+    labels=["apocryph-pod", "flaky"],
 )
 
 

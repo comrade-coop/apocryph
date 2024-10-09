@@ -30,24 +30,20 @@ def cosign_sign_image(
     result_image,
     source_image,
     source_image_is_dep=True,
-    cosign_key="cosign-key",
-    cosign_key_path="deploy/keys",
+    cosign_flags='',
     image_deps=[],
-    deps=[],
     *args,
     **kwargs,
 ):
     cosign_command = (
-        "echo | cosign sign -y --allow-http-registry=false --key=%s/%s.key $(docker inspect --format='{{index .RepoDigests 0}}' $EXPECTED_REF)"
-        % (cosign_key_path, cosign_key)
+        "echo | cosign sign --allow-http-registry=true %s $(docker inspect --format='{{index .RepoDigests 0}}' $EXPECTED_REF)"
+        % (cosign_flags)
     )
     if source_image_is_dep:
         custom_build(
             result_image,
             "docker tag $TILT_IMAGE_0 $EXPECTED_REF && docker push $EXPECTED_REF && %s"
-            % cosign_command,
-            disable_push=True,
-            deps=deps + [cosign_key_path],
+            % (cosign_command,),
             image_deps=[source_image] + image_deps,
             **kwargs,
         )
@@ -56,17 +52,25 @@ def cosign_sign_image(
             result_image,
             "docker pull %s && docker tag %s $EXPECTED_REF && docker push $EXPECTED_REF && %s"
             % (source_image, source_image, cosign_command),
-            disable_push=True,
-            deps=deps + [cosign_key_path],
             image_deps=image_deps,
             **kwargs,
         )
 
 
+def cosign_sign_image_key(
+    *args,
+    cosign_key="cosign-key",
+    cosign_key_path="deploy/keys",
+    deps=[],
+    **kwargs,
+):
+    cosign_sign_image(cosign_flags="-y --key=%s/%s.key" % (cosign_key_path, cosign_key), deps=deps + [cosign_key_path], *args, **kwargs)
+
+
 # NOTE: Might need to run `chmod o+rw /run/containerd/containerd.sock` for some forms of image upload to work.
 def apocryph_resource(
     name,
-    manifest,  # TODO: Support Blob manifests!
+    manifest_file,
     builder="apocryph-go-builder",
     docker_ipfs="ipfs-local",
     ethereum_resource="anvil",
@@ -81,6 +85,8 @@ def apocryph_resource(
     apply_flags=[],
     delete_flags=[],
     resource_deps=[],
+    image_deps=[],
+    image_containers=[],
     deploy_script_json=deploy_dir + "/../contracts/broadcast/Deploy.s.sol/31337/run-latest.json",
     *args,
     **kwargs,
@@ -95,8 +101,30 @@ def apocryph_resource(
         % ethereum_namespace
     )
 
+    if type(manifest_file) == "string":
+        manifest = read_yaml(manifest_file)
+    elif type(manifest_file) == "blob":
+        manifest = decode_yaml(manifest_file)
+    else:
+        fail("Unsupported type for manifest_file: %s" % type(manifest_file))
+    manifest_json = encode_json(manifest)
+
+    manifest_jq_filter = "."
+    for i, (image, container) in enumerate(zip(image_deps, image_containers)):
+        if type(container) == "int":
+            manifest_jq_filter += "| .containers[%s].image=$TILT_IMAGE_%s " % (container, i)
+        elif type(container) == "string":
+            manifest_jq_filter += (
+                '| (.containers[] | select(.name==\\"%s\\") | .image |= $TILT_IMAGE_%s)'
+                % (container, i)
+            )
+        else:
+            fail("Unsupported type for container: %s" % type(container))
+    manifest_cmd = 'echo "$MANIFEST_JSON" | jq "%s" --indent 0' % (manifest_jq_filter,)
+
     common_flags = [
-        manifest,
+        "--format",
+        "json",
         "--pod-id",
         pod_id,
         "--ethereum-key",
@@ -117,32 +145,45 @@ def apocryph_resource(
     ] + apply_flags
 
     # namespace = local('bash -c "cast keccak (cast concat-hex (cast wallet address %s) (cast to-int256 %s)) | xxd -r -p | base32"' % (private_key, pod_id))
-    namespace_cmd = cmdline_in_builder(
-        " ".join(["./bin/trustedpods", "pod", "namespace"] + common_flags), builder
+    namespace_cmd = "echo {} | " + cmdline_in_builder(
+        " ".join(["./bin/trustedpods", "pod", "namespace", "-"] + common_flags),
+        builder,
+        interactive=True,
     )
 
-    deploy_cmd = cmdline_in_builder(
-        " ".join(["./bin/trustedpods", "pod", "deploy"] + common_flags + apply_flags), builder
+    deploy_cmd = (
+        manifest_cmd
+        + " | "
+        + cmdline_in_builder(
+            " ".join(["./bin/trustedpods", "pod", "deploy", "-"] + common_flags + apply_flags),
+            builder,
+            interactive=True,
+        )
     )
     kubectl_command = "kubectl get all -o yaml -n $(%s)" % namespace_cmd
     apply_cmd = "set -ex; " + deploy_cmd + " 1>&2" + " && " + kubectl_command
-    # NOTE: if upload_images is False: we might need to also upload images manually
-    #  e.g. with kind image load ...
 
-    delete_cmd = cmdline_in_builder(
-        " ".join(["./bin/trustedpods", "pod", "delete"] + common_flags + delete_flags), builder
+    delete_cmd = (
+        manifest_cmd
+        + " | "
+        + cmdline_in_builder(
+            " ".join(["./bin/trustedpods", "pod", "delete", "-"] + common_flags + delete_flags),
+            builder,
+            interactive=True,
+        )
     )
 
-    # TODO: image_deps = [c['image']['url'] for c in read_yaml(manifest)['containers'] if 'url' in c['image']]
     k8s_custom_deploy(
         name,
         apply_cmd=apply_cmd,
+        apply_env={"MANIFEST_JSON": manifest_json},
         delete_cmd=delete_cmd,
-        deps=manifest,
+        delete_env={"MANIFEST_JSON": manifest_json},
         image_selector="",
         live_update=[],
         container_selector="",
-        # image_deps=image_deps,
+        deps=[],  # bin/trustedpods
+        image_deps=image_deps,
     )
     k8s_resource(
         name,
@@ -245,8 +286,14 @@ def local_resource_in_builder(name, cmd, builder, resource_deps=[], *args, **kwa
     )
 
 
-def cmdline_in_builder(cmd, builder):
-    return "docker exec %s %s" % (builder, cmd)
+def cmdline_in_builder(cmd, builder, *, interactive=False):
+    flags = []
+    if interactive:
+        flags += ["-i"]
+    if type(cmd) == "list":
+        return ["docker", "exec"] + flags + [builder] + cmd
+    else:
+        return "docker exec %s %s %s" % (" ".join(flags), builder, cmd)
 
 
 def apocryph_build_with_builder(
@@ -316,7 +363,7 @@ def apocryph_build_with_builder(
         ],
     )
 
-    cosign_sign_image(
+    cosign_sign_image_key(
         "comradecoop/apocryph/tpod-proxy",
         "comradecoop/apocryph/tpod-proxy-unsigned",
         cosign_key=cosign_key,
@@ -383,7 +430,7 @@ def deploy_apocryph_stack(
         "ingress-nginx-chart/ingress-nginx",
         namespace="keda",
         resource_deps=["ingress-nginx-chart"],
-        labels=["apocryph-deps"],
+        labels=["apocryph-deps", "flaky"],
         flags=["--create-namespace"],
     )
     k8s_yaml(root_dir + "/deploy/keda/ingress.yml")
@@ -391,7 +438,7 @@ def deploy_apocryph_stack(
         objects=["keda-ingress:ingress"],
         new_name="keda-ingress",
         resource_deps=["ingress-nginx", "keda-http-addon"],
-        labels=["apocryph-deps"],
+        labels=["apocryph-deps", "flaky"],
     )
 
     helm_resource(
@@ -423,6 +470,7 @@ def deploy_apocryph_stack(
         "loki",
         "grafana/loki-stack",
         namespace="loki",
+        deps=[root_dir + "/deploy/loki/values.yml"],
         resource_deps=["grafana"],
         labels=["apocryph-deps"],
         flags=["-f", root_dir + "/deploy/loki/values.yml", "--create-namespace"],
@@ -437,6 +485,7 @@ def deploy_apocryph_stack(
         "ipfs",
         root_dir + "/deploy/ipfs/",
         namespace="ipfs",
+        deps=[root_dir + "/deploy/ipfs/"],
         labels=["apocryph"],
         flags=["--set=swarm.announceIp=%s" % cluster_ip, "--create-namespace"],
         image_keys=["p2phelper.image"],
@@ -444,13 +493,14 @@ def deploy_apocryph_stack(
     )
 
     docker_ipfs_resource(
-        "ipfs-local", "docker.io/ipfs/kubo:v0.23.0", "ipfs", labels=["apocryph-dev"]
+        "ipfs-local", "docker.io/ipfs/kubo:v0.23.0", "ipfs", labels=["apocryph-dev", "flaky"], resource_deps=['ipfs']
     )
 
     helm_resource(
         "trustedpods",
         root_dir + "/deploy/trustedpods/",
         namespace="trustedpods",
+        deps=[root_dir + "/deploy/trustedpods/", cosign_key_path],
         resource_deps=["anvil", "ipfs", "loki", "anvil-deploy-contracts", "policy-controller"],
         labels=["apocryph"],
         image_keys=["image", "policy.image"],
@@ -462,13 +512,14 @@ def deploy_apocryph_stack(
             "policy.subject=false",
             "--set-file",
             "policy.key=%s/%s.pub" % (cosign_key_path, cosign_key),
+            # "policy.key=%s/%s.pub" % (root_dir, 'cosign'), # TODO: For some reason it still works with this
             "--create-namespace",
         ],
     )
 
     local_resource(  # TODO: Move to container!
         "anvil-deploy-contracts",
-        labels=["apocryph"],
+        labels=["apocryph", "flaky"],
         dir="./contracts/",
         # [ -f ./broadcast/Deploy.s.sol/31337/run-latest.json ] ||
         cmd="forge script script/Deploy.s.sol --rpc-url http://%s:$(kubectl get svc -n eth eth-rpc -o jsonpath --template '{$.spec.ports[0].nodePort}') --private-key %s --broadcast"

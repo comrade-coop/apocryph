@@ -1,0 +1,41 @@
+# -*- mode: Python -*-
+# SPDX-License-Identifier: GPL-3.0
+
+load("../../../deploy/Tiltfile", "apocryph_resource")
+
+# TODO: Untested
+
+cosign_sign_image("comradecoop/example/nginx-hello", "nginxdemos/nginx-hello@sha256:d1484a2f11e5cdf0cd89eae88124c74d6a26a337cbbb7e7db3576386e1bcd49a", False, '-y')
+
+apocryph_resource(
+    "nginx-attestation-example",
+    "../common/manifests/manifest-attestation-nginx.yaml",
+    upload_images=False,
+    apply_flags=["--mint-funds"],
+    labels=["apocryph-pod"],
+    image_deps=["comradecoop/example/nginx-hello"],
+    image_containers=["nginx"],
+)
+
+manifest_host = "example-attest.tpodinfo.localhost"  # TODO copied from :/test/e2e/common/manifests/manifest-attestation-nginx.yaml
+
+curl_cmd = 'curl --connect-timeout 40 -H "Host: %s" localhost:8004 --fail-with-body' % manifest_host
+
+k8s_resource(workload="ingress-nginx", port_forwards=["8004:80"])
+local_resource(
+    "nginx-attestation-example-query",
+    [
+        "bash",
+        "-c",
+        " ".join(
+            [
+                "set -xeuo pipefail;",
+                "while ! %s; do sleep 10; done;" % curl_cmd,
+                "%s;" % curl_cmd,
+            ]
+        ),
+    ],
+    labels=["apocryph-pod"],
+    trigger_mode=TRIGGER_MODE_MANUAL,
+    auto_init=False,
+)

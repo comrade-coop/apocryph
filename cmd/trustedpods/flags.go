@@ -67,7 +67,7 @@ var _ = func() error {
 
 	podFlags.StringVar(&manifestFormat, "format", "", fmt.Sprintf("Manifest format. One of %v (leave empty to auto-detect)", pb.FormatNames))
 
-	deploymentFlags.StringVar(&manifestFormat, "deployment-format", "", fmt.Sprintf("Deployment format. One of %v (leave empty to auto-detect)", pb.FormatNames))
+	deploymentFlags.StringVar(&deploymentFormat, "deployment-format", "", fmt.Sprintf("Deployment format. One of %v (leave empty to auto-detect)", pb.FormatNames))
 	deploymentFlags.StringVar(&providerPeer, "provider", "", "provider peer id")
 	deploymentFlags.StringVar(&providerEthAddress, "provider-eth", "", "provider public address")
 	deploymentFlags.Int64Var(&expirationOffset, "token-expiration", 10, "authentication token expires after token-expiration seconds (expired after 10 seconds by default)")
@@ -101,6 +101,7 @@ var _ = func() error {
 
 	syncFlags.AddFlag(uploadFlags.Lookup("ipfs"))
 	syncFlags.AddFlag(fundFlags.Lookup("ethereum-key"))
+	syncFlags.AddFlag(fundFlags.Lookup("ethereum-rpc"))
 	syncFlags.AddFlag(fundFlags.Lookup("pod-id"))
 
 	registryFlags.StringVar(&ipfsApi, "ipfs", "/ip4/127.0.0.1/tcp/5001", "multiaddr where the ipfs/kubo api can be accessed")

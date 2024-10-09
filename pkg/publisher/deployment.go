@@ -84,7 +84,11 @@ func ReadPodAndDeployment(args []string, manifestFormat string, deploymentFormat
 		}
 	}
 
-	err = pb.UnmarshalFile(deploymentFile, deploymentFormat, deployment)
+	if deploymentFile != "-" {
+		err = pb.UnmarshalFile(deploymentFile, deploymentFormat, deployment)
+	} else {
+		err = pb.UnmarshalStdin(deploymentFormat, deployment)
+	}
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		err = fmt.Errorf("Failed reading deployment file %s: %w", deploymentFile, err)
 		return
@@ -103,10 +107,18 @@ func ReadPodAndDeployment(args []string, manifestFormat string, deploymentFormat
 			return
 		}
 		deployment.PodManifestFile, err = filepath.Rel(filepath.Dir(absDeploymentFile), absPodFile)
+		if err != nil {
+			return
+		}
 	}
 
 	pod = &pb.Pod{}
-	err = pb.UnmarshalFile(podFile, manifestFormat, pod)
+	if podFile != "-" {
+		err = pb.UnmarshalFile(podFile, manifestFormat, pod)
+	} else {
+		err = pb.UnmarshalStdin(manifestFormat, pod)
+	}
+	
 	if err != nil {
 		err = fmt.Errorf("Failed reading manifest file %s: %w", podFile, err)
 	}
@@ -115,7 +127,12 @@ func ReadPodAndDeployment(args []string, manifestFormat string, deploymentFormat
 }
 
 func SaveDeployment(deploymentFile string, deploymentFormat string, deployment *pb.Deployment) error {
-	err := pb.MarshalFile(deploymentFile, deploymentFormat, deployment)
+	var err error
+	if deploymentFile != "-" {
+		err = pb.MarshalFile(deploymentFile, deploymentFormat, deployment)
+	} else {
+		err = pb.MarshalStdout(deploymentFormat, deployment)
+	}
 	if err != nil {
 		return fmt.Errorf("Failed saving deployment file: %w", err)
 	}

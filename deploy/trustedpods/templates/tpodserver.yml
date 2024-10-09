@@ -101,8 +101,6 @@ spec:
           "--ethereum-rpc", "http://eth-rpc.eth.svc.cluster.local:8545",
           "--ethereum-key", {{ .Values.ethKey }}, # TODO= anvil.accounts[1]
         ]
-        ports:
-        - containerPort: 8080
         volumeMounts:
         - name: configs
           mountPath: /config.yaml
@@ -126,10 +124,10 @@ metadata:
   name: tpodserver-register
   namespace: trustedpods
 spec:
+  ttlSecondsAfterFinished: 10
   template:
     spec:
       restartPolicy: OnFailure
-      ttlSecondsAfterFinished: 10
       containers:
       - name: tpodregister
         image: {{ .Values.image }}

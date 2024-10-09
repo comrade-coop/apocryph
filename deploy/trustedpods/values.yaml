@@ -8,3 +8,4 @@ policy:
   issuer: https://github.com/login/oauth
   subject: comrade@email.example
   image: comradecoop/apocryph/tpod-proxy:latest
+  imageGlob: "**apocryph_tpod-proxy**"

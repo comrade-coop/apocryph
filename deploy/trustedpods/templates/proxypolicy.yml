@@ -4,7 +4,7 @@ metadata:
   name: tpod-proxy-policy  
 spec:
   images:
-    - glob: {{.Values.policy.image}}  
+    - glob: {{.Values.policy.imageGlob|quote}}
   authorities:
     {{ if .Values.policy.issuer }}
     - keyless:
