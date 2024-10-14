@@ -1,52 +1,48 @@
 #!/bin/sh
 set -e
+
+which helmfile >/dev/null
+which basel >/dev/null || { echo "Install Bazel, ideally through Bazelisk, https://bazel.build/install/bazelisk"; exit 1; }
+which nix >/dev/null || { echo "Install Nix, https://nixos.org/download/"; exit 1; }
+
 set -v
-CHART_PATH="$1"
 SUFFIX=$RANDOM
-CONSTELLATION_PATH="../../../../constellation"
 WORKSPACE_PATH="$HOME/.apocryph/constellation-$SUFFIX"
 echo "WORKSPACE_PATH:: $WORKSPACE_PATH"
-CURRENT_DIR=$(pwd)
 
-if [ -n "$2" ]; then
-  STEP=${2:-1}
+SCRIPT_DIR=$(realpath $(dirname "$0"))
+HELMFILE_PATH="$SCRIPT_DIR/helmfile.yaml"
+CONSTELLATION_SRC="$SCRIPT_DIR/constellation-src"
+
+if [ -n "$1" ]; then
+  STEP=${1:-1}
   eval "set -v; $(sed -n "/## $STEP: /{:a;n;p;ba};" $0)"
   exit
 fi
 
-# Check the number of arguments
-if [ "$#" -lt 1 ]; then
-  echo "Usage: $0 <CHART_PATH> <STEP(optional)>"
-  exit 1
-fi
-
 if [ "$1" = "teardown" ]; then
-   ( cd $WORKSPACE_PATH; constellation terminate )
+   sudo rm -r "$WORKSPACE_PATH"
    exit 0
 fi
 
-sudo chmod o+rw /run/containerd/containerd.sock
-
 ## 0: Generate helm template and inject it into constellation base image
-helmfile template -f "$CHART_PATH" > "$CONSTELLATION_PATH/image/base/mkosi.skeleton/usr/lib/helmfile-template"
+helmfile template -f "$HELMFILE_PATH" --kube-version 1.30.0 > "$CONSTELLATION_SRC/image/base/mkosi.skeleton/usr/lib/helmfile-template"
 
 ## 1: Build modified image
-cd $CURRENT_DIR
-cd "$CONSTELLATION_PATH"
+pushd "$CONSTELLATION_SRC"
 bazel run //:tidy
+popd
 
 ## 1.1: Build the image
-cd $CURRENT_DIR
-cd "$CONSTELLATION_PATH"
+pushd "$CONSTELLATION_SRC"
 bazel build //image/system:qemu_stable
-
+popd
 
 ## 2: create & configure constellation workspace
 set -e
 set -v
 
-cd "$CURRENT_DIR"
-cd "$CONSTELLATION_PATH"
+pushd "$CONSTELLATION_SRC"
 # Get the new image measurements
 link=$(readlink -f bazel-out/k8-opt/bin/image/system/qemu_qemu-vtpm_stable) 
 output=$(bazel run --run_under="sudo -E" //image/measured-boot/cmd $link/constellation.raw "/tmp/custom-measurements.json" 2>&1) # second arg needed
@@ -60,13 +56,10 @@ echo "PCR4:  $PCR4"
 echo "PCR9:  $PCR9"
 echo "PCR11: $PCR11"
 
-if [ -d "$WORKSPACE_PATH" ]; then
-    cd "$WORKSPACE_PATH" && constellation terminate 2>/dev/null
-    sudo rm -r "$WORKSPACE_PATH"
-fi
+popd
 
 mkdir -p "$WORKSPACE_PATH"
-cd "$WORKSPACE_PATH"
+pushd "$WORKSPACE_PATH"
 
 constellation config generate qemu
 
@@ -84,8 +77,9 @@ version=$(echo "$output" | grep -oP 'Version:\s+\K\S+' | head -n 1)
 
 # Copy the image & rename it to the current constellation version to bypass downloading upstream image
 cp $link/constellation.raw "$version.raw" 
+popd
 
-export KUBECONFIG="$HOME/.apocryph/constellation-$SUFFIX/constellation-admin.conf"
+export KUBECONFIG="$WORKSPACE_PATH/constellation-admin.conf"
 
 
 

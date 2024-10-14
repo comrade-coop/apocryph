@@ -5,7 +5,12 @@ load("../../../deploy/Tiltfile", "apocryph_resource")
 
 # TODO: Untested
 
-cosign_sign_image("comradecoop/example/nginx-hello", "nginxdemos/nginx-hello@sha256:d1484a2f11e5cdf0cd89eae88124c74d6a26a337cbbb7e7db3576386e1bcd49a", False, '-y')
+cosign_sign_image(
+    "comradecoop/example/nginx-hello",
+    "nginxdemos/nginx-hello@sha256:d1484a2f11e5cdf0cd89eae88124c74d6a26a337cbbb7e7db3576386e1bcd49a",
+    False,
+    "-y",
+)
 
 apocryph_resource(
     "nginx-attestation-example",

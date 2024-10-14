@@ -32,7 +32,12 @@ provider_balance_cmd = 'cast call "%s" "balanceOf(address)" "%s" -r %s | cast to
 )
 curl_cmd = 'curl --connect-timeout 40 -H "Host: %s" localhost:8004 --fail-with-body' % manifest_host
 
-k8s_resource(workload="ingress-nginx", port_forwards=["8004:80"])
+local_resource(
+    "ingress-nginx-portforward",
+    serve_cmd="kubectl port-forward -n keda svc/ingress-nginx-controller 8004:80",
+)
+# k8s_resource(workload="ingress-nginx", port_forwards=["8004:80"])
+
 local_resource(
     "nginx-example-measure-and-query",
     [

@@ -1,3 +1,4 @@
+{{ if .Values.policy.enable }}
 apiVersion: policy.sigstore.dev/v1beta1
 kind: ClusterImagePolicy
 metadata:
@@ -16,4 +17,5 @@ spec:
     - key:
         data: |{{ .Values.policy.key | nindent 10 }}
     {{ end }}
-
+{{ end }}
+---
