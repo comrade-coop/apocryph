@@ -4,7 +4,7 @@ containers:
       url: docker.io/nginxdemos/nginx-hello:latest
     ports:
       - containerPort: '8080'
-        hostHttpHost: example.local
+        hostHttpHost: example.localhost
         name: internal
     resourceRequests:
       - amountMillis: '10'

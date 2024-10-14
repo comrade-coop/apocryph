@@ -1,0 +1,153 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tpodserver
+  namespace: trustedpods
+  labels:
+    app: tpodserver
+    coop.comrade/apocryph-p2p-helper: "true"
+  annotations:
+    coop.comrade/apocryph-p2p-helper: "/x/apocryph/provision-pod/0.0.1"
+
+spec:
+  ports:
+  - port: 8080
+  type: ClusterIP
+  selector:
+    app: tpodserver
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trustedpods-configs
+  namespace: trustedpods
+data:
+  config.yaml: |
+    pricing:
+      table:
+        format: yaml
+        # filename: pricing.yaml
+        contents: |
+          tables:
+          - paymentContractAddress: "5/FyXnc0ziiPg2fhuxQ+kLs/BRI="
+            resources:
+            - resource: "cpu"
+              priceForReservation: 200000000000
+            - resource: "ram"
+              priceForReservation: 500
+    withdraw:
+      address: {{ .Values.withdraw.address }}
+      time: 15
+    cpu_model: "Intel Xeon Platinum 8452Y Processor"
+    tee_type: "Secure Enclaves"
+    info:
+      format: yaml
+      contents: |
+        regions:
+          - name: "bul"
+            zone: "east"
+            num: 1
+          - name: "alg"
+            zone: "west"
+            num: 2
+        multiaddrs:
+          - "/dns4/kubo.business"
+  # tokenAddress=$(echo e7f1725E7734CE288F8367e1Bb143E90bb3F0512 | xxd -p -r | base64)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tpodserver
+  namespace: trustedpods
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tpodserver
+  template:
+    metadata:
+      labels:
+        app: tpodserver
+    spec:
+      containers:
+      - name: tpodserver
+        image: {{ .Values.image }}
+        args: ["listen",
+          "--address", "0.0.0.0:8080",
+          "--config", "config.yaml",
+          "--ipfs", "/dns4/ipfs-rpc.ipfs.svc.cluster.local/tcp/5001",
+          "--oci-registry", "host.minikube.internal:5000",
+          "--ethereum-rpc", "http://eth-rpc.eth.svc.cluster.local:8545",
+          "--ethereum-key", {{ .Values.ethKey }}, # TODO= anvil.accounts[1] prvkey
+          "--proxy-image",{{.Values.policy.image}},
+        ]
+        ports:
+        - containerPort: 8080
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 0
+        volumeMounts:
+        - name: configs
+          mountPath: /config.yaml
+          subPath: config.yaml
+          readOnly: true
+        - name: containerd-socket
+          mountPath: /run/containerd/containerd.sock    
+      - name: tpodmonitor
+        image: {{ .Values.image }}
+        args: ["monitor",
+          "--config", "config.yaml",
+          "--prometheus", "http://prometheus-server.prometheus.svc.cluster.local:80/",
+          "--ethereum-rpc", "http://eth-rpc.eth.svc.cluster.local:8545",
+          "--ethereum-key", {{ .Values.ethKey }}, # TODO= anvil.accounts[1]
+        ]
+        volumeMounts:
+        - name: configs
+          mountPath: /config.yaml
+          subPath: config.yaml
+          readOnly: true
+      volumes:
+      - name: configs
+        configMap:
+          name: trustedpods-configs
+          items:
+          - key: config.yaml
+            path: config.yaml
+      - name: containerd-socket
+        hostPath:
+         path: /run/containerd/containerd.sock
+      serviceAccountName: tpodserver-serviceaccount
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: tpodserver-register
+  namespace: trustedpods
+spec:
+  ttlSecondsAfterFinished: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: tpodregister
+        image: {{ .Values.image }}
+        args: ["registry", "register",
+          "--config", "config.yaml",
+          "--ipfs", "/dns4/ipfs-rpc.ipfs.svc.cluster.local/tcp/5001",
+          "--ethereum-rpc", "http://eth-rpc.eth.svc.cluster.local:8545",
+          "--ethereum-key", {{ .Values.ethKey }}, # TODO= anvil.accounts[1] prvkey
+          "--token-contract", {{ .Values.tokenContract }},
+          "--registry-contract", {{ .Values.registryContract }},
+        ]
+        volumeMounts:
+        - name: configs
+          mountPath: /config.yaml
+          subPath: config.yaml
+          readOnly: true
+      volumes:
+      - name: configs
+        configMap:
+          name: trustedpods-configs
+          items:
+          - key: config.yaml
+            path: config.yaml

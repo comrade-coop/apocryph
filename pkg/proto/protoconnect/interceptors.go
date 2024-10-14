@@ -142,7 +142,7 @@ func (a authInterceptor) authenticate(header http.Header) (common.Address, error
 
 	// verify publisherAddress in namespace is same one signed in token
 	ns := header.Get(NamespaceHeader)
-	nsExpected := namespaceFromTokenParts(token.Publisher, token.PodId)
+	nsExpected := NamespaceFromTokenParts(token.Publisher, token.PodId)
 	if ns == "" {
 		header.Set(NamespaceHeader, nsExpected)
 	} else if ns != nsExpected {
@@ -152,7 +152,7 @@ func (a authInterceptor) authenticate(header http.Header) (common.Address, error
 	return token.Publisher, nil
 }
 
-func namespaceFromTokenParts(publisher common.Address, podId common.Hash) string {
+func NamespaceFromTokenParts(publisher common.Address, podId common.Hash) string {
 	namespaceParts := []byte{}
 	namespaceParts = append(namespaceParts, publisher[:]...)
 	namespaceParts = append(namespaceParts, podId[:]...)
