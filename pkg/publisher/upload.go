@@ -143,8 +143,8 @@ func LinkUploadsFromDeployment(pod *pb.Pod, deployment *pb.Deployment) *pb.Pod {
 				Key: uploadedImage.Key,
 				VerificationDetails: &pb.VerificationDetails{
 					Signature: uploadedImage.VerificationDetails.Signature,
-					Identity: uploadedImage.VerificationDetails.Identity,
-					Issuer:   uploadedImage.VerificationDetails.Issuer,
+					Identity:  uploadedImage.VerificationDetails.Identity,
+					Issuer:    uploadedImage.VerificationDetails.Issuer,
 				},
 			}
 		}

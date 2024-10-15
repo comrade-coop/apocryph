@@ -74,21 +74,21 @@ COPY --from=build-autoscaler /usr/local/bin/autoscaler /usr/local/bin/autoscaler
 
 ENTRYPOINT ["autoscaler"]
 
-## tpod-proxy: ##
+## tpodproxy: ##
 
-FROM build-common as build-tpod-proxy
+FROM build-common as build-tpodproxy
 
-COPY pkg/proxy/ ./proxy
-RUN --mount=type=cache,target=/root/.cache/go-build go build -v -o /usr/local/bin/tpod-proxy ./proxy
+COPY cmd/tpodproxy/ ./cmd/tpodproxy
+RUN --mount=type=cache,target=/root/.cache/go-build go build -v -o /usr/local/bin/tpodproxy ./cmd/tpodproxy
 
-FROM run-common as tpod-proxy
+FROM run-common as tpodproxy
 
-COPY --from=build-tpod-proxy /usr/local/bin/tpod-proxy /usr/local/bin/tpod-proxy
+COPY --from=build-tpodproxy /usr/local/bin/tpodproxy /usr/local/bin/tpodproxy
 
-ENTRYPOINT ["tpod-proxy"]
+ENTRYPOINT ["tpodproxy"]
 
-FROM run-common AS tpod-proxy-copy-local
+FROM run-common AS tpodproxy-copy-local
 
-COPY ./bin/proxy /usr/local/bin/tpod-proxy
+COPY ./bin/tpodproxy /usr/local/bin/tpodproxy
 
-ENTRYPOINT ["tpod-proxy"]
+ENTRYPOINT ["tpodproxy"]

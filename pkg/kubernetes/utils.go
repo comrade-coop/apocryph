@@ -41,6 +41,7 @@ func NewService(port *pb.Container_Port, portName string, httpSO *kedahttpv1alph
 	switch ep := port.ExposedPort.(type) {
 	case *pb.Container_Port_HostHttpHost:
 		service.Spec.Type = corev1.ServiceTypeClusterIP
+		service.Spec.Ports[0].Port = servicePort
 		if len(httpSO.Spec.Hosts) > 0 {
 			return nil, 0, errors.New("Multiple HTTP hosts in pod definition")
 		}
@@ -88,7 +89,7 @@ func GetResource(kind string) k8cl.Object {
 	return nil
 }
 
-type AnnotationValue struct {
+type AttestationValue struct {
 	URL       string `json:"url"`
 	Issuer    string `json:"issuer"`
 	Identity  string `json:"identity"`

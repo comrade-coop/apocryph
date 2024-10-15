@@ -37,6 +37,13 @@ var verifyPodCmd = &cobra.Command{
 	},
 }
 
+type AttestationResult struct { // HACK: From ../tpodproxy/main.go
+	AttestationData  []byte                   `json:"attestation"`
+	AttestationError string                   `json:"error"`
+	ExtraData        []tpk8s.AttestationValue `json:"extra"`
+	Header           string                   `json:"header"`
+}
+
 var verifyImageCmd = &cobra.Command{
 	Use:     fmt.Sprintf("verify image"),
 	Short:   "Verify image signature",
@@ -73,14 +80,14 @@ var verifyImageCmd = &cobra.Command{
 				return fmt.Errorf("Failed to read response body: %v", err)
 			}
 
-			var annotationValues []tpk8s.AnnotationValue
-			if err := json.Unmarshal(body, &annotationValues); err != nil {
+			var attestationResult AttestationResult
+			if err := json.Unmarshal(body, &attestationResult); err != nil {
 				return fmt.Errorf("Failed to unmarshal JSON response: %v", err)
 			}
 			// Verify each image from the response
 			verifyOptions := publisher.DefaultVerifyOptions()
 			images := []*proto.Image{}
-			for _, av := range annotationValues {
+			for _, av := range attestationResult.ExtraData {
 				image := &proto.Image{Url: av.URL, VerificationDetails: &proto.VerificationDetails{Signature: av.Signature, Identity: av.Identity, Issuer: av.Issuer}}
 				images = append(images, image)
 			}

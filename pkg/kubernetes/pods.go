@@ -4,6 +4,7 @@ package kubernetes
 
 import (
 	"context"
+	"encoding/base32"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -14,12 +15,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	kedahttpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
 	policy "github.com/sigstore/policy-controller/pkg/apis/policy/v1beta1"
+	"golang.org/x/crypto/sha3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"knative.dev/pkg/ptr"
 	k8cl "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -78,6 +79,10 @@ func ApplyPodRequest(
 	}
 
 	labels := map[string]string{"tpod": "1"}
+	podLabels := map[string]string{}
+	for k, v := range labels {
+		podLabels[k] = v
+	}
 	depLabels := map[string]string{}
 	activeResource := []string{}
 	startupReplicas := int32(0)
@@ -94,12 +99,12 @@ func ApplyPodRequest(
 			Selector: metav1.SetAsLabelSelector(labels),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels: podLabels,
 				},
 			},
 		},
 	}
-	deploymentAnnotationValues := []AnnotationValue{}
+	attestationValues := []AttestationValue{}
 
 	podTemplate := &deployment.Spec.Template
 
@@ -108,6 +113,7 @@ func ApplyPodRequest(
 
 	localhostAliases := corev1.HostAlias{IP: "127.0.0.1"}
 
+	var httpPortName string
 
 	for cIdx, container := range podManifest.Containers {
 		containerSpec := corev1.Container{
@@ -131,7 +137,14 @@ func ApplyPodRequest(
 			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PUBLIC_ADDRESS_KEY, Value: podManifest.KeyPair.PubAddress})
 			containerSpec.Env = append(containerSpec.Env, corev1.EnvVar{Name: constants.PRIVATE_KEY, Value: podManifest.KeyPair.PrivateKey})
 		}
-		
+
+		attestationValues = append(attestationValues, AttestationValue{
+			URL:       container.GetImage().GetUrl(),
+			Signature: container.GetImage().VerificationDetails.GetSignature(),
+			Issuer:    container.GetImage().VerificationDetails.GetIssuer(),
+			Identity:  container.GetImage().VerificationDetails.GetIdentity(),
+		})
+
 		if podManifest.VerificationSettings.GetForcePolicy() && container.Image.VerificationDetails != nil {
 			policyName := fmt.Sprintf("policy-%v-%v", podId, cIdx) // NOTE: Will break for two-digit container ids (see note around podId)
 			sigstorePolicy := &policy.ClusterImagePolicy{
@@ -149,13 +162,6 @@ func ApplyPodRequest(
 			}
 			identity := policy.Identity{Issuer: container.Image.VerificationDetails.Issuer, Subject: container.Image.VerificationDetails.Identity}
 			sigstorePolicy.Spec.Authorities[0].Keyless.Identities = []policy.Identity{identity}
-			annotationValue := AnnotationValue{
-				URL:       container.Image.Url,
-				Signature: container.Image.VerificationDetails.Signature,
-				Issuer:    container.Image.VerificationDetails.Issuer,
-				Identity:  container.Image.VerificationDetails.Identity,
-			}
-			deploymentAnnotationValues = append(deploymentAnnotationValues, annotationValue)
 			err := updateOrCreate(ctx, policyName, "ClusterImagePolicy", namespace, sigstorePolicy, client, update)
 			if err != nil && strings.Contains(err.Error(), "already exists") {
 				log.Println("warning: Policies were not deleted properly")
@@ -170,6 +176,9 @@ func ApplyPodRequest(
 		}
 
 		for _, port := range container.Ports {
+			if int32(port.ContainerPort) == constants.ReservedTpodProxyPort {
+				return fmt.Errorf("Port %d is reserved", port.ContainerPort)
+			}
 			portName := fmt.Sprintf("p%d-%d", cIdx, port.ContainerPort)
 			containerSpec.Ports = append(containerSpec.Ports, corev1.ContainerPort{
 				ContainerPort: int32(port.ContainerPort),
@@ -190,6 +199,7 @@ func ApplyPodRequest(
 
 			switch port.ExposedPort.(type) {
 			case *pb.Container_Port_HostHttpHost:
+				httpPortName = portName
 				httpSO.Spec.ScaleTargetRef.Service = service.ObjectMeta.Name
 				httpSO.Spec.ScaleTargetRef.Port = servicePort
 				httpSO.Spec.ScaleTargetRef.APIVersion = "apps/v1"
@@ -228,9 +238,9 @@ func ApplyPodRequest(
 			depLabels["containers"] = depLabels["containers"] + "_" + containerSpec.Name
 		}
 	}
-	
+
 	podTemplate.Spec.HostAliases = append(podTemplate.Spec.HostAliases, localhostAliases)
-	
+
 	for _, volume := range podManifest.Volumes {
 		volumeSpec := corev1.Volume{
 			Name: volume.Name,
@@ -296,24 +306,57 @@ func ApplyPodRequest(
 		podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, volumeSpec)
 	}
 
+	// Public verifiability configured; deploy the proxy
 	if podManifest.VerificationSettings.GetPublicVerifiability() == true {
-		verificationHost := podManifest.VerificationSettings.GetVerificationHost()
-		if verificationHost == "" && len(httpSO.Spec.Hosts) > 0 {
-			httpHost := httpSO.Spec.Hosts[0]
-			lastDotIndex := strings.LastIndex(httpHost, ".")
-			if lastDotIndex == -1 {
-				verificationHost = httpHost + ".tpodinfo"
-			} else {
-				verificationHost = httpHost[:lastDotIndex] + ".tpodinfo" + httpHost[lastDotIndex:]
-			}
+		if httpPortName == "" {
+			return fmt.Errorf("Public verifiability requires having an HTTP-exposed port")
 		}
-		if verificationHost == "" {
-			return fmt.Errorf("Public verifiability is set but no verification host path is available or could be derived")
+
+		// TODO: Do not delete the previous versionedService(s) until the new deployment is fully rolled out
+		versionedServiceName := getHttpBackingServiceName(attestationValues)
+
+		versionedLabels := map[string]string{"tpod-version": versionedServiceName}
+		for k, v := range versionedLabels {
+			podLabels[k] = v
 		}
-		response.VerificationHost = verificationHost
-		// used only to use the routing from keda ingress controller
-		routeHttpsoName := "route-hso"
-		routeHttpso := NewHttpSo(namespace, routeHttpsoName)
+
+		versionedService := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: versionedServiceName,
+			},
+			Spec: corev1.ServiceSpec{
+				Ports: []corev1.ServicePort{{
+					Port:       80,
+					TargetPort: intstr.FromString(httpPortName),
+				}},
+				Selector: versionedLabels,
+			},
+		}
+		err := updateOrCreate(ctx, versionedServiceName, "Service", namespace, versionedService, client, update)
+		if err != nil {
+			return err
+		}
+		activeResource = append(activeResource, versionedServiceName)
+		attestationValuesJson, err := json.Marshal(attestationValues)
+		if err != nil {
+			return fmt.Errorf("Failed to marshal attestation values: %v", err)
+		}
+
+		proxyContainer := corev1.Container{
+			Name:  "tpodsproxy-sc",
+			Ports: []corev1.ContainerPort{{ContainerPort: constants.ReservedTpodProxyPort, Name: "tpodsproxy-sc"}},
+			Image: proxyImage,
+			Args: []string{
+				versionedServiceName,
+				"." + namespace + ".svc.cluster.local",
+				string(attestationValuesJson),
+				"--address",
+				fmt.Sprintf(":%d", constants.ReservedTpodProxyPort),
+			},
+		}
+		podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, proxyContainer)
+
+		serviceProxyPort := constants.ReservedTpodProxyPort
 		serviceProxyName := "tpod-svc-proxy"
 		serviceProxy := &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
@@ -321,45 +364,24 @@ func ApplyPodRequest(
 			},
 			Spec: corev1.ServiceSpec{
 				Type:     corev1.ServiceTypeClusterIP,
-				Ports:    []corev1.ServicePort{{Port: 9999, TargetPort: intstr.FromString("tpod-proxy")}},
+				Ports:    []corev1.ServicePort{{Port: serviceProxyPort, TargetPort: intstr.FromInt32(constants.ReservedTpodProxyPort)}},
 				Selector: labels,
 			},
 		}
-		routeHttpso.Spec.ScaleTargetRef.Service = serviceProxy.ObjectMeta.Name
-		routeHttpso.Spec.ScaleTargetRef.Port = 9999
-		routeHttpso.Spec.ScaleTargetRef.APIVersion = "apps/v1"
-		routeHttpso.Spec.Hosts = []string{verificationHost}
-		routeHttpso.Spec.Replicas = &kedahttpv1alpha1.ReplicaStruct{Min: ptr.Int32(1), Max: ptr.Int32(1)}
-		proxyContainer := corev1.Container{
-			Name:  "proxy",
-			Image: proxyImage,
-			Ports: []corev1.ContainerPort{{ContainerPort: 9999, Name: "tpod-proxy"}},
-		}
-		err := updateOrCreate(ctx, serviceProxyName, "Service", namespace, serviceProxy, client, update)
+		err = updateOrCreate(ctx, serviceProxyName, "Service", namespace, serviceProxy, client, update)
 		if err != nil {
 			return err
 		}
-		err = updateOrCreate(ctx, routeHttpsoName, "HttpSo", namespace, routeHttpso, client, update)
-		if err != nil {
-			return err
-		}
-		proxyContainer.Env = append(proxyContainer.Env, corev1.EnvVar{Name: constants.NamespaceKey, Value: namespace})
-		podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, proxyContainer)
+		activeResource = append(activeResource, serviceProxyName)
+		httpSO.Spec.ScaleTargetRef.Service = serviceProxyName
+		httpSO.Spec.ScaleTargetRef.Port = serviceProxyPort
 	}
-	
-	annotationValuesJson, err := json.Marshal(deploymentAnnotationValues)
-	if err != nil {
-		return fmt.Errorf("Failed to marshal annotation values: %v", err)
-	}
-	deployment.Annotations = map[string]string{
-		AnnotationVerificationInfo: string(annotationValuesJson),
-	}
-	
+
 	if httpSO.Spec.ScaleTargetRef.Service == "" { // No scaler configured - just deploy min replicas
 		startupReplicas = int32(podManifest.Replicas.GetMin())
 	}
 
-	err = updateOrCreate(ctx, deploymentName, "Deployment", namespace, deployment, client, update)
+	err := updateOrCreate(ctx, deploymentName, "Deployment", namespace, deployment, client, update)
 	if err != nil {
 		return err
 	}
@@ -402,6 +424,16 @@ func ApplyPodRequest(
 	return nil
 }
 
+func getHttpBackingServiceName(attestationValues []AttestationValue) string {
+	hash := sha3.New256()
+	for _, v := range attestationValues {
+		hash.Write([]byte(v.URL))
+		hash.Write([]byte{0})
+	}
+	resultHash := hash.Sum(nil)
+	return "tpod-vh-" + strings.TrimRight(strings.ToLower(base32.StdEncoding.EncodeToString(resultHash)), "=")
+}
+
 func convertResourceList(resources []*pb.Resource) corev1.ResourceList {
 	result := make(corev1.ResourceList, len(resources))
 	for _, res := range resources {
@@ -412,11 +444,11 @@ func convertResourceList(resources []*pb.Resource) corev1.ResourceList {
 		case *pb.Resource_AmountMillis:
 			quantity = *resource.NewMilliQuantity(int64(q.AmountMillis), resource.BinarySI)
 		case *pb.Resource_AmountKibi:
-			quantity = *resource.NewQuantity(int64(q.AmountKibi) * 1024, resource.BinarySI)
+			quantity = *resource.NewQuantity(int64(q.AmountKibi)*1024, resource.BinarySI)
 		case *pb.Resource_AmountMebi:
-			quantity = *resource.NewQuantity(int64(q.AmountMebi) * 1024 * 1024, resource.BinarySI)
+			quantity = *resource.NewQuantity(int64(q.AmountMebi)*1024*1024, resource.BinarySI)
 		case *pb.Resource_AmountGibi:
-			quantity = *resource.NewQuantity(int64(q.AmountGibi) * 1024 * 1024 * 1024, resource.BinarySI)
+			quantity = *resource.NewQuantity(int64(q.AmountGibi)*1024*1024*1024, resource.BinarySI)
 		}
 		result[corev1.ResourceName(res.Resource)] = quantity
 	}
