@@ -21,7 +21,7 @@ const SpecialHeaderName = "X-Apocryph-Expected"
 
 const VerificationServiceURL = "http://verification-service.kube-system.svc.cluster.local:8080"
 
-var ValidServiceNames = regexp.MustCompile("^[a-z][a-z0-9-]{0,62}$")
+var ValidServiceNames = regexp.MustCompile("^tpod-vh-[a-z0-9-]{52}$") //^[a-z][a-z0-9-]{0,62}$
 
 var currentBackingService string                     // e.g. tpod-XXX
 var backingServiceSuffix string                      // e.g. .NS.svc.cluster.local
