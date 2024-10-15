@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: keda
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: policy-controller
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: trustedpods
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: loki
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: eth
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ipfs
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: prometheus
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: local-path-storage

@@ -1,0 +1,5 @@
+swarm:
+  nodePort: 30629
+  announceIp: 127.0.0.1
+p2phelper:
+  image: comradecoop/apocryph/p2p-helper

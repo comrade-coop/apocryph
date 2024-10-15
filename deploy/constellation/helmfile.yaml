@@ -1,0 +1,126 @@
+# NOTE: Code below duplicates deploy_apocryph_stack in ../Tiltfile
+repositories:
+  - name: kedacore
+    url: https://kedacore.github.io/charts
+  - name: ingress-nginx
+    url: https://kubernetes.github.io/ingress-nginx
+  - name: prometheus-community
+    url: https://prometheus-community.github.io/helm-charts
+  - name: grafana
+    url: https://grafana.github.io/helm-charts
+  - name: sigstore
+    url: https://sigstore.github.io/helm-charts
+  - name: local-path-provisioner # Helmfile exclusive, constellation qemu doesn't have PV-s yet 
+    # For url, see also https://github.com/rancher/local-path-provisioner/issues/89
+    url: git+https://github.com/rancher/local-path-provisioner@deploy/chart?ref=master
+
+releases:
+  - name: namespaces # Helmfile exclusive, see https://github.com/helm/helm/issues/9813
+    namespace: default
+    chart: ./namespaces
+    
+  - name: local-path-storage # Helmfile exclusive, constellation qemu/mini doesn't have PV-s yet 
+    namespace: local-path-storage
+    chart: local-path-provisioner/local-path-provisioner
+    set:
+      - name: storageClass.defaultClass
+        value: true
+    needs:
+      - default/namespaces
+  
+  - name: policy-controller
+    namespace: policy-controller
+    chart: sigstore/policy-controller
+    needs:
+      - default/namespaces
+  
+  - name: keda
+    namespace: keda
+    chart: kedacore/keda
+    needs:
+      - default/namespaces
+    
+  - name: ingress-nginx
+    namespace: keda
+    chart: ingress-nginx/ingress-nginx
+    set: # Helmfile exclusive, we don't have LoadBalancer in miniconstellation (TODO)
+      - name: controller.service.type
+        value: NodePort
+      - name: controller.service.nodePorts.http
+        value: 32080
+      - name: controller.service.nodePorts.https
+        value: 32443
+    needs:
+      - default/namespaces
+
+  - name: keda-ingress
+    chart: ../charts/keda
+    namespace: keda
+    needs:
+      - keda-http-addon
+      - ingress-nginx # NOTE: nginx admission controllers typically fails to wait long enough for nginx to start at this step
+      - default/namespaces
+  
+  - name: keda-http-addon
+    namespace: keda
+    chart: kedacore/keda-add-ons-http
+    set:
+      - name: interceptor.replicas.min
+        value: 1
+      - name: scaler.replicas
+        value: 1
+      - name: interceptor.waitTimeout
+        value: 40s
+    needs:
+      - keda
+      - default/namespaces
+  
+  - name: prometheus
+    chart: prometheus-community/prometheus
+    namespace: prometheus
+    set:
+      - name: alertmanager.enabled
+        value: false
+      - name: prometheus-node-exporter.enabled
+        value: false
+      - name: server.persistentVolume.size # Helmfile exclusive, reduce prometheus PV
+        value: 1Gi
+    needs:
+      - default/namespaces
+
+  - name: loki
+    chart: grafana/loki-stack
+    namespace: loki
+    values:
+      - ../charts/loki/values.yml
+    needs:
+      - default/namespaces
+  
+  - name: ipfs
+    chart: ../charts/ipfs
+    namespace: ipfs
+    set:
+      - name: swarm.announceIp # Helmfile exclusive, assume the IP of miniconstellation
+        value: 10.42.1.100
+      - name: p2phelper.image # Helmfile exclusive, use ghcr images
+        value: ghcr.io/comrade-coop/apocryph/p2p-helper:master
+    needs:
+      - default/namespaces
+  
+  - name: eth
+    chart: ../charts/eth
+    namespace: eth
+    needs:
+      - default/namespaces
+  
+  - name: trustedpods
+    chart: ../charts/trustedpods
+    namespace: trustedpods
+    set:
+      - name: policy.enable # Helmfile exclusive, disable policy
+        value: false
+      - name: image # Helmfile exclusive, use ghcr images
+        value: ttl.sh/47edb30b-apocryph-server:1h
+    needs:
+      - default/namespaces
+# NOTE: Code above duplicates deploy_apocryph_stack in ../Tiltfile

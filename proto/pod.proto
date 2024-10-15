@@ -96,7 +96,10 @@ message Resource {
   string resource = 1;
   oneof quantity {
     uint64 amount = 2;
-    uint64 amountMillis = 3;
+    uint64 amountMillis = 3; // /1000
+    uint64 amountKibi = 4; // *1024
+    uint64 amountMebi = 5; // *1024^2
+    uint64 amountGibi = 6; // *1024^3
   }
 }
 

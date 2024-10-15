@@ -51,9 +51,6 @@ func NewAuthInterceptor(c client.Client) connect.Interceptor {
 func (i authInterceptor) WrapUnary(handler connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 		fmt.Printf("Authenticating gRPC call: %v \n", req.Spec())
-		if req.Spec().Procedure == ProvisionPodServiceGetPodInfosProcedure {
-			return handler(ctx, req)
-		}
 		expectedPublisher, err := i.authenticate(req.Header())
 		if err != nil {
 			return nil, err
@@ -142,7 +139,7 @@ func (a authInterceptor) authenticate(header http.Header) (common.Address, error
 
 	// verify publisherAddress in namespace is same one signed in token
 	ns := header.Get(NamespaceHeader)
-	nsExpected := namespaceFromTokenParts(token.Publisher, token.PodId)
+	nsExpected := NamespaceFromTokenParts(token.Publisher, token.PodId)
 	if ns == "" {
 		header.Set(NamespaceHeader, nsExpected)
 	} else if ns != nsExpected {
@@ -152,7 +149,7 @@ func (a authInterceptor) authenticate(header http.Header) (common.Address, error
 	return token.Publisher, nil
 }
 
-func namespaceFromTokenParts(publisher common.Address, podId common.Hash) string {
+func NamespaceFromTokenParts(publisher common.Address, podId common.Hash) string {
 	namespaceParts := []byte{}
 	namespaceParts = append(namespaceParts, publisher[:]...)
 	namespaceParts = append(namespaceParts, podId[:]...)
@@ -189,9 +186,6 @@ func NewAuthInterceptorClient(deployment *pb.Deployment, expirationOffset int64,
 
 func (a *AuthInterceptorClient) WrapUnary(handler connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-		if req.Spec().Procedure == ProvisionPodServiceGetPodInfosProcedure {
-			return handler(ctx, req)
-		}
 		a.authorize(req.Spec().Procedure, req.Header())
 		return handler(ctx, req)
 	}

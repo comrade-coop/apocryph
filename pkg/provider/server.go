@@ -17,9 +17,9 @@ import (
 	"github.com/comrade-coop/apocryph/pkg/loki"
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	pbcon "github.com/comrade-coop/apocryph/pkg/proto/protoconnect"
-	policy "github.com/sigstore/policy-controller/pkg/apis/policy/v1beta1"
 	"github.com/containerd/containerd"
 	"github.com/ipfs/kubo/client/rpc"
+	policy "github.com/sigstore/policy-controller/pkg/apis/policy/v1beta1"
 	"golang.org/x/exp/slices"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -47,21 +47,6 @@ func transformError(err error) (*connect.Response[pb.ProvisionPodResponse], erro
 	}), nil
 }
 
-func (s *provisionPodServer) GetPodInfos(ctx context.Context, request *connect.Request[pb.PodInfoRequest]) (*connect.Response[pb.PodInfoResponse], error) {
-	log.Printf("Received Request for retreiving info on namespace: %v \n", request.Msg.Namespace)
-	list := &appsv1.DeploymentList{}
-	err := s.k8cl.List(ctx, list, &cl.ListOptions{Namespace: request.Msg.Namespace})
-	if err != nil {
-		return nil, err
-	}
-	var info strings.Builder
-	if len(list.Items) > 0 {
-		info.WriteString(list.Items[0].Annotations[tpk8s.AnnotationVerificationInfo])
-	}
-	response := &pb.PodInfoResponse{Info: info.String()}
-	return connect.NewResponse(response), nil
-}
-
 func (s *provisionPodServer) DeletePod(ctx context.Context, request *connect.Request[pb.DeletePodRequest]) (*connect.Response[pb.DeletePodResponse], error) {
 	log.Println("Received request for pod deletion")
 
@@ -74,6 +59,7 @@ func (s *provisionPodServer) DeletePod(ctx context.Context, request *connect.Req
 		},
 	}
 
+	// TODO: Wait for namespace to be deleted
 	err := s.k8cl.Delete(ctx, ns)
 	if err != nil {
 		log.Printf("Could not delete namespace: %v\n", request)
@@ -88,7 +74,7 @@ func (s *provisionPodServer) DeletePod(ctx context.Context, request *connect.Req
 		log.Printf("Could not delete cluster image policies: %v\n", request)
 		return nil, err
 	}
-	
+
 	response := &pb.DeletePodResponse{Success: true}
 	return connect.NewResponse(response), nil
 }
