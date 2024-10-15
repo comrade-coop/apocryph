@@ -15,8 +15,8 @@ import (
 	"github.com/comrade-coop/apocryph/pkg/ipfs"
 	pb "github.com/comrade-coop/apocryph/pkg/proto"
 	pbcon "github.com/comrade-coop/apocryph/pkg/proto/protoconnect"
+	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	"github.com/libp2p/go-libp2p/core/peer"
-	retryablehttp  "github.com/hashicorp/go-retryablehttp"
 
 	tpipfs "github.com/comrade-coop/apocryph/pkg/ipfs"
 )
@@ -47,7 +47,7 @@ func ConnectToProvider(ipfsP2p *ipfs.P2pApi, deployment *pb.Deployment, intercep
 
 	retryClient := retryablehttp.NewClient()
 	retryClient.RetryMax = 8
-	
+
 	client := pbcon.NewProvisionPodServiceClient(
 		retryClient.StandardClient(),
 		url.String(),

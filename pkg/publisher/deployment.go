@@ -93,7 +93,7 @@ func ReadPodAndDeployment(args []string, manifestFormat string, deploymentFormat
 		err = fmt.Errorf("Failed reading deployment file %s: %w", deploymentFile, err)
 		return
 	}
-	
+
 	if deployment.PodManifestFile == "" {
 		var absPodFile string
 		var absDeploymentFile string
@@ -118,7 +118,7 @@ func ReadPodAndDeployment(args []string, manifestFormat string, deploymentFormat
 	} else {
 		err = pb.UnmarshalStdin(manifestFormat, pod)
 	}
-	
+
 	if err != nil {
 		err = fmt.Errorf("Failed reading manifest file %s: %w", podFile, err)
 	}

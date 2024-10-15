@@ -24,7 +24,6 @@ const (
 	LabelIpfsP2P                         string = "coop.comrade/apocryph-p2p-helper"
 	AnnotationsIpfsP2P                   string = "coop.comrade/apocryph-p2p-helper"
 	SigstorePolicy                       string = "policy.sigstore.dev/include"
-	AnnotationVerificationInfo           string = "coop.comrade/apocryph-verification-info"
 	LabelClusterImagePolicy              string = "coop.comrade/apocryph-for-pod"
 )
 
