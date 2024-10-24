@@ -36,10 +36,12 @@ Before running the various tests, Make sure the following dependencies are insta
 - **[kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/)**: The Kubernetes command-line tool for managing Kubernetes clusters.
 - **[docker](https://docs.docker.com/engine/install/)**: platform for developing, shipping, and running applications using containerization.
 - **[jq](https://jqlang.github.io/jq/)**: lightweight and flexible command-line JSON processor.
-- **[minikube](https://minikube.sigs.k8s.io/docs/start/)**: tool that runs a single-node Kubernetes cluster locally.
+- **[kind](https://kind.sigs.k8s.io/docs/user/quick-start/)**: tool that runs a single-node Kubernetes cluster locally.
+- **[ctlptl](https://github.com/tilt-dev/ctlptl/)**: An utility for declaratively setting up local Kubernetes clusters.
+- **[tilt](https://docs.tilt.dev/install.html)**: A toolkit automating the process of setting up a new local development cluster.
 - **[helm](https://helm.sh/)**: package manager for Kubernetes 
 - **[helmfile](https://github.com/helmfile/helmfile)**: declarative configuration tool for Helm.
-- **[forge, cast, anvil](https://github.com/foundry-rs/foundry)**: tools for building Ethereum-based applications.
+- **[forge, cast, anvil](https://github.com/foundry-rs/foundry)**: tools for building Ethereum-based applications. <!-- TODO: Move to container -->
 - **[ipfs](https://docs.ipfs.tech/install/command-line/#install-official-binary-distributions)**: The InterPlanetary File System
 - **[constellation](https://docs.edgeless.systems/constellation/getting-started/first-steps-local)**: Constellation is a Kubernetes engine that provides a secure and confidential way to run Kubernetes clusters. (Needed in `test/e2e/constellation`).
 
@@ -55,29 +57,34 @@ npm i && turbo sync
 ```
 > Rerun `turbo sync` whenever you change files under the `proto/` and `contracts/` folders.
 
-To start a local environment for e.g. integration-testing or evaluating the project, you can use the end-to-end tests in the `test/e2e` folder.
+To start a local environment for e.g. integration-testing or evaluating the project, you can use `tilt` with Tiltfile in the `test/e2e` folder.
 
-Typical development involves running the minikube end-to-end test, which can be done using the following command:
+You can use it, for example, by running the following commands:
 
 ```bash
-./test/e2e/minikube/run-test.sh
+# Create a kind cluster:
+ctlptl create cluster kind --registry=ctlptl-registry --kubernetes-version=v1.31.0
+# Start tilt and run the nginx test:
+tilt up -- --include ./test/e2e/nginx/Tiltfile
 ```
 
-The command, after all dependencies are met, will proceed to start a local docker registry and test ethereum node, build and upload the project to them, then spin up a minikube cluster and deploy all necessary prerequisites into it, and finally deploying a pod from a [manifest file](spec/MANIFEST.md) into the cluster and then querying it over HTTP. It should display the curl command used to query the pod, and you should be able to use it yourself after the script is finished.
+The first command will spin up a kind cluster with a local registry. Then, the second command will, after checking that any additional dependencies are met, then deploy all necessary prerequisites into local cluster, and finally deploying a pod from a [manifest file](spec/MANIFEST.md) into the cluster. <!-- TODO and then querying it over HTTP. It should display the curl command used to query the pod, and you should be able to use it yourself after the script is finished. -->
 
+<!-- TODO
 In addition, once you have started the minikube end-to-end test, you can also run the web UI test, which presents a sample interface that publishers can use to deploy a predefined pod template onto the minikube cluster / provider directly from their web browser.
 
 ```bash
 turbo dev
-```
+``` -->
 
-Once you are done playing around with the tests, simply run the following command to delete and stop the minikube cluster:
+Once you are done playing around with the test, run the following commands to clean up:
 
 ```bash
-test/e2e/minikube/run-test.sh teardown
+# Clean up the local cluster:
+tilt down -- --include ./test/e2e/nginx/Tiltfile
+# Delete up the local cluster:
+ctlptl create delete kind
 ```
-
-(or alternatively, pass `teardown full` to also stop any local docker containers used by the test)
 
   <!-- Note that while committing generated files is foreign to Nodejs/NPM, it's the usual way of life in the Go ecosystem, as packages are directly cloned from git rather than downloaded from the package manager. Here we are committing both in order to not require forge/protoc for JavaScript development when it's optional for Go development. -->
 

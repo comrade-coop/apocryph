@@ -35,13 +35,12 @@ func DownloadSecrets(ctx context.Context, ipfs iface.CoreAPI, pod *pb.Pod) (map[
 func DownloadImages(ctx context.Context, client *containerd.Client, ipfsAddress, localRegistry string, pod *pb.Pod) (map[string]string, error) {
 	result := make(map[string]string)
 	for _, c := range pod.Containers {
-		exists, err := ipcr.ImageExists(ctx, client, c.Image.Url)
-		if err != nil {
-			return nil, err
-		}
-		if !exists {
-			target := string(c.Image.Url)
-			err = ipcr.PullImage(ctx, client, ipfsAddress, string(c.Image.Cid), target)
+		if c.Image.Cid != nil {
+			target := c.Image.Url
+			if target == "" {
+				target = string(c.Image.Cid)
+			}
+			err := ipcr.PullImage(ctx, client, ipfsAddress, string(c.Image.Cid), target)
 			if err != nil {
 				return nil, err
 			}
@@ -49,6 +48,14 @@ func DownloadImages(ctx context.Context, client *containerd.Client, ipfsAddress,
 			err = ipcr.DecryptImage(ctx, client, "", target, c.Image.Key.Data)
 			if err != nil {
 				return nil, err
+			}
+		} else {
+			exists, err := ipcr.ImageExists(ctx, client, c.Image.Url)
+			if err != nil {
+				return nil, err
+			}
+			if !exists {
+				log.Printf("Warning: Image %v does not exist locally.\n", c.Image.Url)
 			}
 		}
 		result[c.Name] = c.Image.Url

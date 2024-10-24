@@ -118,6 +118,9 @@ func ApplyPodRequest(
 			Args:            container.Command,
 			WorkingDir:      container.WorkingDir,
 		}
+		if container.GetImage().GetCid() == nil {
+			containerSpec.ImagePullPolicy = corev1.PullIfNotPresent // HACK: Allow URL-only images for easier testing
+		}
 
 		if podManifest.KeyPair != nil {
 			// save as hex to parse later as hex
@@ -292,7 +295,7 @@ func ApplyPodRequest(
 		}
 		podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, volumeSpec)
 	}
-	
+
 	if podManifest.VerificationSettings.GetPublicVerifiability() == true {
 		verificationHost := podManifest.VerificationSettings.GetVerificationHost()
 		if verificationHost == "" && len(httpSO.Spec.Hosts) > 0 {
@@ -352,6 +355,10 @@ func ApplyPodRequest(
 		AnnotationVerificationInfo: string(annotationValuesJson),
 	}
 	
+	if httpSO.Spec.ScaleTargetRef.Service == "" { // No scaler configured - just deploy min replicas
+		startupReplicas = int32(podManifest.Replicas.GetMin())
+	}
+
 	err = updateOrCreate(ctx, deploymentName, "Deployment", namespace, deployment, client, update)
 	if err != nil {
 		return err
@@ -404,6 +411,12 @@ func convertResourceList(resources []*pb.Resource) corev1.ResourceList {
 			quantity = *resource.NewQuantity(int64(q.Amount), resource.BinarySI)
 		case *pb.Resource_AmountMillis:
 			quantity = *resource.NewMilliQuantity(int64(q.AmountMillis), resource.BinarySI)
+		case *pb.Resource_AmountKibi:
+			quantity = *resource.NewQuantity(int64(q.AmountKibi) * 1024, resource.BinarySI)
+		case *pb.Resource_AmountMebi:
+			quantity = *resource.NewQuantity(int64(q.AmountMebi) * 1024 * 1024, resource.BinarySI)
+		case *pb.Resource_AmountGibi:
+			quantity = *resource.NewQuantity(int64(q.AmountGibi) * 1024 * 1024 * 1024, resource.BinarySI)
 		}
 		result[corev1.ResourceName(res.Resource)] = quantity
 	}

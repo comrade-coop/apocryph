@@ -111,6 +111,15 @@ func UnmarshalFile(path string, format string, m protoreflect.ProtoMessage) erro
 	return Unmarshal(format, bytes, m)
 }
 
+func UnmarshalStdin(format string, m protoreflect.ProtoMessage) error {
+	bytes, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		return err
+	}
+
+	return Unmarshal(format, bytes, m)
+}
+
 func MarshalFile(path string, format string, m protoreflect.ProtoMessage) error {
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
@@ -127,5 +136,15 @@ func MarshalFile(path string, format string, m protoreflect.ProtoMessage) error 
 	}
 
 	_, err = file.Write(bytes)
+	return err
+}
+
+func MarshalStdout(format string, m protoreflect.ProtoMessage) error {
+	bytes, err := Marshal(format, m)
+	if err != nil {
+		return err
+	}
+
+	_, err = os.Stdout.Write(bytes)
 	return err
 }

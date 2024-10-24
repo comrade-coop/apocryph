@@ -1,0 +1,131 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ipfs-rpc
+  labels:
+    app: ipfs
+spec:
+  ports:
+  - name: rpc
+    port: 5001
+    targetPort: rpc
+  clusterIP: None
+  selector:
+    app: ipfs
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ipfs-swarm
+  labels:
+    app: ipfs
+spec:
+  ports:
+  - name: swarm-tcp
+    port: 4001
+    protocol: TCP
+    targetPort: swarm-tcp
+    nodePort: {{ .Values.swarm.nodePort }}
+  - name: swarm-udp
+    port: 4001
+    protocol: UDP
+    targetPort: swarm-udp
+    nodePort: {{ .Values.swarm.nodePort }}
+  type: NodePort
+  selector:
+    app: ipfs
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ipfs-config
+data:
+  configure.sh: |
+    #!/bin/sh
+    set -ex
+    ipfs config --json Experimental.Libp2pStreamMounting true
+    {{ if .Values.swarm.announceIp }}
+    ipfs config --json Addresses.Announce '["/ip4/{{ .Values.swarm.announceIp }}/tcp/{{ .Values.swarm.nodePort }}", "/ip4/{{ .Values.swarm.announceIp }}/udp/{{ .Values.swarm.nodePort }}/quic", "/ip4/{{ .Values.swarm.announceIp }}/udp/{{ .Values.swarm.nodePort }}/quic-v1", "/ip4/{{ .Values.swarm.announceIp }}/udp/{{ .Values.swarm.nodePort }}/quic-v1/webtransport"]'
+    {{ end }}
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ipfs
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ipfs
+  serviceName: ipfs-rpc
+  template:
+    metadata:
+      labels:
+        app: ipfs
+    spec:
+      containers:
+      - name: ipfs
+        image: docker.io/ipfs/kubo:v0.23.0
+        ports:
+        - name: rpc
+          containerPort: 5001
+        - name: swarm-tcp
+          containerPort: 4001
+          protocol: TCP
+        - name: swarm-udp
+          containerPort: 4001
+          protocol: UDP
+        - name: gateway
+          containerPort: 8080
+        volumeMounts:
+        - name: data
+          mountPath: /data/ipfs
+        - name: init-scripts
+          mountPath: /container-init.d/050-configure.sh
+          readOnly: true
+          subPath: 050-configure.sh
+        env:
+        - name: IPFS_PROFILE
+          value:
+      - name: p2p-helper
+        image: {{ .Values.p2phelper.image }}
+        args: ["run", "--ipfs", "/ip4/127.0.0.1/tcp/5001"]
+      volumes:
+      - name: init-scripts
+        configMap:
+          name: ipfs-config
+          items:
+          - key: configure.sh
+            path: 050-configure.sh
+            mode: 0555
+      serviceAccountName: ipfs-p2p-serviceaccount
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 2Gi
+# ---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: ipfs-p2p-helper
+#   namespace: ipfs
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: ipfs-p2p-helper
+#   template:
+#     metadata:
+#       labels:
+#         app: ipfs-p2p-helper
+#     spec:
+#       containers:
+#       - name: p2p-helper
+#         image: host.minikube.internal:5000/comradecoop/apocryph/p2p-helper
+#         command: ["ipfs-p2p-helper", "run", "--ipfs", "/dns4/ipfs-rpc.ipfs.svc.cluster.local/tcp/5001"]
+#       serviceAccountName: ipfs-p2p-serviceaccount

@@ -1,0 +1,22 @@
+name: Check Python code
+
+on:
+  push:
+    paths:
+    - '**/Tiltfile'
+    - '**.py'
+    - '.github/workflows/check-py.yml'
+
+jobs:
+  check-fmt:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Check format
+        uses: psf/black@stable
+        with:
+          options: '--line-length 100 --include Tiltfile --check'

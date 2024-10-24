@@ -667,10 +667,36 @@ export class Resource extends Message<Resource> {
     case: "amount";
   } | {
     /**
+     * /1000
+     *
      * @generated from field: uint64 amountMillis = 3;
      */
     value: bigint;
     case: "amountMillis";
+  } | {
+    /**
+     * *1024
+     *
+     * @generated from field: uint64 amountKibi = 4;
+     */
+    value: bigint;
+    case: "amountKibi";
+  } | {
+    /**
+     * *1024^2
+     *
+     * @generated from field: uint64 amountMebi = 5;
+     */
+    value: bigint;
+    case: "amountMebi";
+  } | {
+    /**
+     * *1024^3
+     *
+     * @generated from field: uint64 amountGibi = 6;
+     */
+    value: bigint;
+    case: "amountGibi";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Resource>) {
@@ -684,6 +710,9 @@ export class Resource extends Message<Resource> {
     { no: 1, name: "resource", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "amount", kind: "scalar", T: 4 /* ScalarType.UINT64 */, oneof: "quantity" },
     { no: 3, name: "amountMillis", kind: "scalar", T: 4 /* ScalarType.UINT64 */, oneof: "quantity" },
+    { no: 4, name: "amountKibi", kind: "scalar", T: 4 /* ScalarType.UINT64 */, oneof: "quantity" },
+    { no: 5, name: "amountMebi", kind: "scalar", T: 4 /* ScalarType.UINT64 */, oneof: "quantity" },
+    { no: 6, name: "amountGibi", kind: "scalar", T: 4 /* ScalarType.UINT64 */, oneof: "quantity" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Resource {

@@ -1,0 +1,107 @@
+# NOTE: Code below duplicates deploy_apocryph_stack in ../Tiltfile
+repositories:
+  - name: kedacore
+    url: https://kedacore.github.io/charts
+  - name: ingress-nginx
+    url: https://kubernetes.github.io/ingress-nginx
+  - name: prometheus-community
+    url: https://prometheus-community.github.io/helm-charts
+  - name: grafana
+    url: https://grafana.github.io/helm-charts
+  - name: sigstore
+    url: https://sigstore.github.io/helm-charts
+
+releases:
+  - name: namespaces # Helmfile exclusive, see https://github.com/helm/helm/issues/9813
+    namespace: default
+    chart: ./namespaces
+  
+  - name: policy-controller
+    namespace: policy-controller
+    chart: sigstore/policy-controller
+    needs:
+      - default/namespaces
+  
+  - name: keda
+    namespace: keda
+    chart: kedacore/keda
+    needs:
+      - default/namespaces
+    
+  - name: ingress-nginx
+    namespace: keda
+    chart: ingress-nginx/ingress-nginx
+    needs:
+      - default/namespaces
+
+  - name: keda-ingress
+    chart: ../charts/keda
+    namespace: keda
+    needs:
+      - keda-http-addon
+      - ingress-nginx # NOTE: nginx admission controllers typically fails to wait long enough for nginx to start at this step
+      - default/namespaces
+  
+  - name: keda-http-addon
+    namespace: keda
+    chart: kedacore/keda-add-ons-http
+    set:
+      - name: interceptor.replicas.min
+        value: 1
+      - name: scaler.replicas
+        value: 1
+      - name: interceptor.waitTimeout
+        value: 40s
+    needs:
+      - keda
+      - default/namespaces
+  
+  - name: prometheus
+    chart: prometheus-community/prometheus
+    namespace: prometheus
+    set:
+      - name: alertmanager.enabled
+        value: false
+      - name: prometheus-node-exporter.enabled
+        value: false
+      - name: server.persistentVolume.size # Helmfile exclusive, reduce prometheus PV
+        value: 1Gi
+    needs:
+      - default/namespaces
+
+  - name: loki
+    chart: grafana/loki-stack
+    namespace: loki
+    values:
+      - ../charts/loki/values.yml
+    needs:
+      - default/namespaces
+  
+  - name: ipfs
+    chart: ../charts/ipfs
+    namespace: ipfs
+    set:
+      - name: swarm.announceIp # Helmfile exclusive, don't change announce IP
+        value: false
+      - name: p2phelper.image # Helmfile exclusive, use ghcr images
+        value: ghcr.io/comrade-coop/apocryph/p2p-helper:master
+    needs:
+      - default/namespaces
+  
+  - name: eth
+    chart: ../charts/eth
+    namespace: eth
+    needs:
+      - default/namespaces
+  
+  - name: trustedpods
+    chart: ../charts/trustedpods
+    namespace: trustedpods
+    set:
+      - name: policy.enable # Helmfile exclusive, disable policy
+        value: false
+      - name: image # Helmfile exclusive, use ghcr images
+        value: ghcr.io/comrade-coop/apocryph/server:master
+    needs:
+      - default/namespaces
+# NOTE: Code above duplicates deploy_apocryph_stack in ../Tiltfile

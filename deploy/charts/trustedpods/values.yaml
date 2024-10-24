@@ -1,0 +1,12 @@
+image: "comradecoop/apocryph/server"
+ethKey: "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+withdraw:
+  address: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+tokenContract: "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+registryContract: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
+policy:
+  enable: false
+  issuer: https://github.com/login/oauth
+  subject: comrade@email.example
+  image: comradecoop/apocryph/tpod-proxy:latest
+  imageGlob: "**apocryph/tpod-proxy**"

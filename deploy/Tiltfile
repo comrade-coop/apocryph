@@ -1,0 +1,568 @@
+# -*- mode: Python -*-
+# SPDX-License-Identifier: GPL-3.0
+
+# For more on Extensions, see: https://docs.tilt.dev/extensions.html
+load("ext://restart_process", "docker_build_with_restart")
+load("ext://namespace", "namespace_create")
+load("ext://helm_resource", "helm_resource", "helm_repo")
+
+local(
+    "which jq forge cast helm kubectl docker cosign >/dev/null", echo_off=True
+)  # Check dependencies
+cluster_ip = local(
+    "kubectl get no -o jsonpath --template '{$.items[0].status.addresses[?(.type==\"InternalIP\")].address}'"
+)
+deploy_dir = os.getcwd()
+
+
+def cosign_keypair(cosign_key="cosign-key", cosign_key_path="deploy/keys", *args, **kwargs):
+    local_resource(
+        cosign_key,
+        "mkdir -p %s; cd %s; [ -f %s.key ] || echo | cosign generate-key-pair --output-key-prefix %s"
+        % (cosign_key_path, cosign_key_path, cosign_key, cosign_key),
+        allow_parallel=True,
+        *args,
+        **kwargs,
+    )
+
+
+def cosign_sign_image(
+    result_image,
+    source_image,
+    source_image_is_dep=True,
+    cosign_flags="",
+    image_deps=[],
+    *args,
+    **kwargs,
+):
+    cosign_command = (
+        "echo | cosign sign --allow-http-registry=true %s $(docker inspect --format='{{index .RepoDigests 0}}' $EXPECTED_REF)"
+        % (cosign_flags)
+    )
+    if source_image_is_dep:
+        custom_build(
+            result_image,
+            "docker tag $TILT_IMAGE_0 $EXPECTED_REF && docker push $EXPECTED_REF && %s"
+            % (cosign_command,),
+            image_deps=[source_image] + image_deps,
+            **kwargs,
+        )
+    else:
+        custom_build(
+            result_image,
+            "docker pull %s && docker tag %s $EXPECTED_REF && docker push $EXPECTED_REF && %s"
+            % (source_image, source_image, cosign_command),
+            image_deps=image_deps,
+            **kwargs,
+        )
+
+
+def cosign_sign_image_key(
+    *args,
+    cosign_key="cosign-key",
+    cosign_key_path="deploy/keys",
+    deps=[],
+    **kwargs,
+):
+    cosign_sign_image(
+        cosign_flags="-y --key=%s/%s.key" % (cosign_key_path, cosign_key),
+        deps=deps + [cosign_key_path],
+        *args,
+        **kwargs,
+    )
+
+
+# NOTE: Might need to run `chmod o+rw /run/containerd/containerd.sock` for some forms of image upload to work.
+def apocryph_resource(
+    name,
+    manifest_file,
+    builder="apocryph-go-builder",
+    docker_ipfs="ipfs-local",
+    ethereum_resource="anvil-deploy-contracts",
+    ethereum_namespace="eth",
+    private_key="0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a",
+    pod_id="0x00",
+    payment_contract="",
+    registry_contract="",
+    funds=10000000000000000000000,
+    upload_images=True,
+    flags=[],
+    apply_flags=[],
+    delete_flags=[],
+    resource_deps=[],
+    image_deps=[],
+    image_containers=[],
+    deploy_script_json=deploy_dir + "/../contracts/broadcast/Deploy.s.sol/31337/run-latest.json",
+    *args,
+    **kwargs,
+):
+    if payment_contract == "":
+        payment_contract = "$(jq .returns.payment.value %s -r)" % deploy_script_json
+    if registry_contract == "":
+        registry_contract = "$(jq .returns.registry.value %s -r)" % deploy_script_json
+
+    # ethereum_port = (
+    #     "$(kubectl get svc -n %s eth-rpc -o jsonpath --template '{$.spec.ports[0].nodePort}')"
+    #     % ethereum_namespace
+    # )
+
+    if type(manifest_file) == "string":
+        manifest = read_yaml(manifest_file)
+    elif type(manifest_file) == "blob":
+        manifest = decode_yaml(manifest_file)
+    else:
+        fail("Unsupported type for manifest_file: %s" % type(manifest_file))
+    manifest_json = encode_json(manifest)
+
+    manifest_jq_filter = "."
+    for i, (image, container) in enumerate(zip(image_deps, image_containers)):
+        if type(container) == "int":
+            manifest_jq_filter += "| .containers[%s].image=$TILT_IMAGE_%s " % (container, i)
+        elif type(container) == "string":
+            manifest_jq_filter += (
+                '| (.containers[] | select(.name==\\"%s\\") | .image |= $TILT_IMAGE_%s)'
+                % (container, i)
+            )
+        else:
+            fail("Unsupported type for container: %s" % type(container))
+    manifest_cmd = 'echo "$MANIFEST_JSON" | jq "%s" --indent 0' % (manifest_jq_filter,)
+
+    common_flags = [
+        "--format",
+        "json",
+        "--pod-id",
+        pod_id,
+        "--ethereum-key",
+        private_key,
+        "--ipfs",
+        "/ip4/127.0.0.1/tcp/5001",  # TODO: use docker's routing! e.g. '/dns4/%s/tcp/5001' % docker_ipfs
+        "--ethereum-rpc",
+        "http://127.0.0.1:8549",
+        # "http://%s:%s" % (cluster_ip, ethereum_port),
+    ] + flags
+    apply_flags = [
+        "--registry-contract",
+        registry_contract,
+        "--payment-contract",
+        payment_contract,
+        "--upload-images=%s" % ("true" if upload_images else "false"),
+        "--funds",
+        str(funds),
+    ] + apply_flags
+
+    # namespace = local('bash -c "cast keccak (cast concat-hex (cast wallet address %s) (cast to-int256 %s)) | xxd -r -p | base32"' % (private_key, pod_id))
+    namespace_cmd = "echo {} | " + cmdline_in_builder(
+        " ".join(["./bin/trustedpods", "pod", "namespace", "-"] + common_flags),
+        builder,
+        interactive=True,
+    )
+
+    deploy_cmd = (
+        manifest_cmd
+        + " | "
+        + cmdline_in_builder(
+            " ".join(["./bin/trustedpods", "pod", "deploy", "-"] + common_flags + apply_flags),
+            builder,
+            interactive=True,
+        )
+    )
+    kubectl_command = "kubectl get all -o yaml -n $(%s)" % namespace_cmd
+    apply_cmd = "set -ex; " + deploy_cmd + " 1>&2" + " && " + kubectl_command
+
+    delete_cmd = (
+        manifest_cmd
+        + " | "
+        + cmdline_in_builder(
+            " ".join(["./bin/trustedpods", "pod", "delete", "-"] + common_flags + delete_flags),
+            builder,
+            interactive=True,
+        )
+    )
+
+    k8s_custom_deploy(
+        name,
+        apply_cmd=apply_cmd,
+        apply_env={"MANIFEST_JSON": manifest_json},
+        delete_cmd=delete_cmd,
+        delete_env={"MANIFEST_JSON": manifest_json},
+        image_selector="",
+        live_update=[],
+        container_selector="",
+        deps=[],  # bin/trustedpods
+        image_deps=image_deps,
+    )
+    k8s_resource(
+        name,
+        resource_deps=resource_deps + [builder, docker_ipfs, ethereum_resource],
+        pod_readiness="ignore",
+        *args,
+        **kwargs,
+    )
+
+
+def docker_ipfs_resource(
+    name,
+    image,
+    remote_ipfs_namespace="ipfs",
+    resource_deps=[],
+    kwargs_dc={},
+    kwargs_config={},
+    *args,
+    **kwargs,
+):
+    # if config.tilt_subcommand != "down":
+    services = {
+        name: {
+            "image": image,
+            "container_name": name,
+            "network_mode": "host",  # TODO: Figure out a way to use docker's routing! (host likely only used for ipfs)
+            "volumes": [
+                "ipfs-data:/data/ipfs",
+                "%s/configure-ipfs.sh:/container-init.d/050-configure.sh:ro" % deploy_dir,
+            ],
+        },
+    }
+    docker_compose(encode_yaml({"services": services, "volumes": {"ipfs-data": {}}}))
+    dc_resource(name, *args, **(kwargs | kwargs_dc))
+    # Ideally there would be a better way to do this (other than hardcoding the ipfs privkey)
+    remote_peerid = (
+        "$(kubectl exec -n ipfs $(kubectl get po -n %s -o name) -- ipfs config Identity.PeerID)"
+        % (remote_ipfs_namespace,)
+    )
+    remote_port = (
+        "$(kubectl get svc -n %s ipfs-swarm -o jsonpath --template '{$.spec.ports[0].nodePort}')"
+        % (remote_ipfs_namespace,)
+    )
+    config_cmd = "ipfs swarm peering add /ip4/%s/udp/%s/quic-v1/webtransport/p2p/%s" % (
+        cluster_ip,
+        remote_port,
+        remote_peerid,
+    )
+    local_resource(
+        name + "-config",
+        "docker exec %s %s" % (name, config_cmd),
+        resource_deps=resource_deps + [name],
+        allow_parallel=True,
+        *args,
+        **(kwargs | kwargs_config),
+    )
+
+
+def builder_resource(
+    name,
+    image,
+    dir=".",
+    write_dir="",
+    builder_dir="/app",
+    volumes=[],
+    volumes_conf={},
+    entrypoint=["sleep", "infinity"],
+    *args,
+    **kwargs,
+):
+    services = {
+        name: {
+            "image": image,
+            "container_name": name,
+            "entrypoint": entrypoint,
+            "working_dir": builder_dir,
+            "network_mode": "host",  # TODO: Figure out a way to use docker's routing! (host likely only used for ipfs)
+            "volumes": (
+                [
+                    "%s:%s" % (dir, builder_dir),
+                ]
+                if write_dir == ""
+                else [
+                    "%s:%s:ro" % (dir, builder_dir),
+                    "%s/%s:%s/%s:rw" % (dir, write_dir, builder_dir, write_dir),
+                ]
+            )
+            + volumes,
+        },
+    }
+    docker_compose(encode_yaml({"services": services, "volumes": volumes_conf}))
+    dc_resource(name, *args, **kwargs)
+
+
+def local_resource_in_builder(name, cmd, builder, resource_deps=[], *args, **kwargs):
+    local_resource(
+        name,
+        cmdline_in_builder(cmd, builder),
+        resource_deps=resource_deps + [builder],
+        *args,
+        **kwargs,
+    )
+
+
+def cmdline_in_builder(cmd, builder, *, interactive=False):
+    flags = []
+    if interactive:
+        flags += ["-i"]
+    if type(cmd) == "list":
+        return ["docker", "exec"] + flags + [builder] + cmd
+    else:
+        return "docker exec %s %s %s" % (" ".join(flags), builder, cmd)
+
+
+def apocryph_build_with_builder(
+    root_dir=deploy_dir + "/..",
+    cosign_key=None,
+    cosign_key_path="deploy/keys/",
+    skip_images=False,
+):
+    if cosign_key == None:
+        cosign_key = "cosign-key"
+        cosign_keypair(cosign_key, cosign_key_path)
+
+    docker_build(
+        "comradecoop/apocryph/go-builder",
+        root_dir,
+        dockerfile=root_dir + "/Dockerfile",
+        target="build-dependencies",
+        only=[root_dir + "/Dockerfile"],
+    )
+    builder_resource(
+        "apocryph-go-builder",
+        "comradecoop/apocryph/go-builder",
+        dir=root_dir,
+        write_dir="bin",
+        volumes=["go-cache:/root/.cache/go-build", "go-mod-cache:/go/pkg/mod"],
+        volumes_conf={"go-cache": {}, "go-mod-cache": {}},
+    )
+
+    local_resource_in_builder(
+        "tpodserver-go-compile",
+        'go build -v -buildvcs=false -ldflags="-s -w" -o bin/ ./cmd/tpodserver ./cmd/ipfs-p2p-helper ./cmd/trustedpods ./pkg/proxy',
+        "apocryph-go-builder",
+        deps=[root_dir + "/cmd", root_dir + "/pkg"],
+        allow_parallel=True,
+    )
+
+    if not skip_images:
+        docker_build_with_restart(
+            "comradecoop/apocryph/server",
+            root_dir,
+            dockerfile="./Dockerfile",
+            target="server-copy-local",
+            entrypoint=["/usr/local/bin/tpodserver"],
+            only=[root_dir + "/bin"],
+            live_update=[
+                sync(root_dir + "/bin", "/usr/local/bin/"),
+            ],
+        )
+        docker_build_with_restart(
+            "comradecoop/apocryph/p2p-helper",
+            root_dir,
+            dockerfile="./Dockerfile",
+            target="p2p-helper-copy-local",
+            entrypoint=["/usr/local/bin/ipfs-p2p-helper"],
+            only=[root_dir + "/bin"],
+            live_update=[
+                sync(root_dir + "/bin", "/usr/local/bin/"),
+            ],
+        )
+
+        # https://stackoverflow.com/a/33511811 for $(docker inspect --format ...)
+        docker_build_with_restart(
+            "comradecoop/apocryph/tpod-proxy-unsigned",
+            root_dir,
+            dockerfile="./Dockerfile",
+            target="tpod-proxy-copy-local",
+            entrypoint=["/usr/local/bin/tpod-proxy"],
+            only=[root_dir + "/bin"],
+            live_update=[
+                sync(root_dir + "/bin", "/usr/local/bin/"),
+            ],
+        )
+
+        cosign_sign_image_key(
+            "comradecoop/apocryph/tpod-proxy",
+            "comradecoop/apocryph/tpod-proxy-unsigned",
+            cosign_key=cosign_key,
+            cosign_key_path=cosign_key_path,
+            live_update=[
+                sync(root_dir + "/bin", "/usr/local/bin/"),
+            ],
+        )
+
+
+""" # TODO: Need to also build a trustedpods image for use with apocryph_resource...
+def apocryph_build_with_dockerfile():
+    docker_build(
+        "comradecoop/apocryph/server",
+        ".",
+        dockerfile="./Dockerfile",
+        target="server",
+        only=["./go.mod", "./go.sum", "./pkg", "./cmd/tpodserver"],
+    )
+    docker_build(
+        "comradecoop/apocryph/p2p-helper",
+        ".",
+        dockerfile="./Dockerfile",
+        target="p2p-helper",
+        only=["./go.mod", "./go.sum", "./pkg", "./cmd/ipfs.p2p-helper"],
+    )
+"""
+
+
+def deploy_apocryph_stack(
+    root_dir=deploy_dir + "/..",
+    deployer_key="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+    cosign_key="cosign-key",
+    cosign_key_path="deploy/keys/",
+):
+    # TODO: Run metrics-server!!
+
+    update_settings(k8s_upsert_timeout_secs=160)
+
+    # NOTE: Code below duplicates ./constellation/helmfile.yaml
+    helm_repo("kedacore", "https://kedacore.github.io/charts")
+    helm_repo("ingress-nginx-chart", "https://kubernetes.github.io/ingress-nginx")
+    helm_repo("prometheus-community", "https://prometheus-community.github.io/helm-charts")
+    helm_repo("grafana", "https://grafana.github.io/helm-charts")
+    helm_repo("sigstore", "https://sigstore.github.io/helm-charts")
+
+    helm_resource(
+        "policy-controller",
+        "sigstore/policy-controller",
+        namespace="policy-controller",
+        resource_deps=["sigstore"],
+        labels=["apocryph-deps"],
+        flags=["--create-namespace"],
+    )
+    helm_resource(
+        "keda",
+        "kedacore/keda",
+        namespace="keda",
+        resource_deps=["kedacore"],
+        labels=["apocryph-deps"],
+        flags=["--create-namespace"],
+    )
+    helm_resource(
+        "ingress-nginx",
+        "ingress-nginx-chart/ingress-nginx",
+        namespace="keda",
+        resource_deps=["ingress-nginx-chart"],
+        labels=["apocryph-deps", "flaky"],
+        flags=["--create-namespace"],
+    )
+    k8s_yaml(root_dir + "/deploy/charts/keda/ingress.yml")
+    k8s_resource(
+        objects=["keda-ingress:ingress"],
+        new_name="keda-ingress",
+        resource_deps=["ingress-nginx", "keda-http-addon"],
+        labels=["apocryph-deps", "flaky"],
+    )
+
+    helm_resource(
+        "keda-http-addon",
+        "kedacore/keda-add-ons-http",
+        namespace="keda",
+        resource_deps=["kedacore", "keda"],
+        labels=["apocryph-deps"],
+        flags=[
+            "--set=interceptor.replicas.min=1",
+            "--set=interceptor.waitTimeout=40s",
+            "--set=scaler.replicas=1",
+            "--create-namespace",
+        ],
+    )
+    helm_resource(
+        "prometheus",
+        "prometheus-community/prometheus",
+        namespace="prometheus",
+        resource_deps=["prometheus-community"],
+        labels=["apocryph-deps"],
+        flags=[
+            "--set=alertmanager.enabled=false",
+            "--set=prometheus-node-exporter.enabled=false",
+            "--create-namespace",
+        ],
+    )
+    helm_resource(
+        "loki",
+        "grafana/loki-stack",
+        namespace="loki",
+        deps=[root_dir + "/deploy/charts/loki/values.yml"],
+        resource_deps=["grafana"],
+        labels=["apocryph-deps"],
+        flags=["-f", root_dir + "/deploy/charts/loki/values.yml", "--create-namespace"],
+    )
+
+    namespace_create("eth")
+    # TODO: Recreate anvil when we have new contracts code
+    k8s_yaml(listdir(root_dir + "/deploy/charts/eth/"))
+    k8s_resource("anvil", labels=["apocryph-dev"])
+
+    helm_resource(
+        "ipfs",
+        root_dir + "/deploy/charts/ipfs/",
+        namespace="ipfs",
+        deps=[root_dir + "/charts/deploy/ipfs/"],
+        labels=["apocryph"],
+        flags=["--set=swarm.announceIp=%s" % cluster_ip, "--create-namespace"],
+        image_keys=["p2phelper.image"],
+        image_deps=["comradecoop/apocryph/p2p-helper"],
+    )
+
+    helm_resource(
+        "trustedpods",
+        root_dir + "/deploy/charts/trustedpods/",
+        namespace="trustedpods",
+        deps=[root_dir + "/deploy/charts/trustedpods/", cosign_key_path],
+        resource_deps=["anvil", "ipfs", "loki", "anvil-deploy-contracts", "policy-controller"],
+        labels=["apocryph"],
+        image_keys=["image", "policy.image"],
+        image_deps=["comradecoop/apocryph/server", "comradecoop/apocryph/tpod-proxy"],
+        flags=[
+            "--set-json",
+            "policy.issuer=false",
+            "--set-json",
+            "policy.subject=false",
+            "--set-file",
+            "policy.key=%s/%s.pub" % (cosign_key_path, cosign_key),
+            # "policy.key=%s/%s.pub" % (root_dir, 'cosign'), # TODO: For some reason it still works with this
+            "--create-namespace",
+        ],
+    )
+    # NOTE: Code above duplicates ./constellation/helmfile.yaml
+
+
+def deploy_apocryph_local(
+    root_dir=deploy_dir + "/..",
+    deployer_key="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+    cosign_key="cosign-key",
+    cosign_key_path="deploy/keys/",
+    resource_deps=["ipfs", "anvil"],
+):
+    if len(resource_deps) == 0:  # HACK
+        local_resource(
+            "ingress-nginx-portforward",
+            serve_cmd="kubectl port-forward -n keda svc/ingress-nginx-controller 8004:80",
+        )
+        local_resource(
+            "anvil-portforward",
+            serve_cmd="kubectl port-forward -n eth svc/eth-rpc 8549:8545",
+        )
+    else:
+        k8s_resource(workload="ingress-nginx", port_forwards=["8004:80"])
+        k8s_resource(workload="anvil", port_forwards=["8549:8545"])
+
+    docker_ipfs_resource(
+        "ipfs-local",
+        "docker.io/ipfs/kubo:v0.23.0",
+        "ipfs",
+        labels=["apocryph-dev", "flaky"],
+        resource_deps=resource_deps,
+    )
+
+    local_resource(  # TODO: Move to container!
+        "anvil-deploy-contracts",
+        labels=["apocryph", "flaky"],
+        dir="./contracts/",
+        # [ -f ./broadcast/Deploy.s.sol/31337/run-latest.json ] ||
+        cmd="forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8549 --private-key %s --broadcast"
+        % (deployer_key,),
+        resource_deps=resource_deps,
+        deps=["./contracts/src", "./contracts/script", "./contracts/lib"],
+    )

@@ -127,7 +127,7 @@ func (a authInterceptor) authenticate(header http.Header) (common.Address, error
 	if err != nil {
 		return common.Address{}, connect.NewError(connect.CodeDataLoss, fmt.Errorf("Failed Unmarshalling token"))
 	}
-	if time.Now().After(token.ExpirationTime) {
+	if time.Now().UTC().After(token.ExpirationTime) {
 		return common.Address{}, connect.NewError(connect.CodeDeadlineExceeded, fmt.Errorf("Token Expired"))
 	}
 
@@ -142,7 +142,7 @@ func (a authInterceptor) authenticate(header http.Header) (common.Address, error
 
 	// verify publisherAddress in namespace is same one signed in token
 	ns := header.Get(NamespaceHeader)
-	nsExpected := namespaceFromTokenParts(token.Publisher, token.PodId)
+	nsExpected := NamespaceFromTokenParts(token.Publisher, token.PodId)
 	if ns == "" {
 		header.Set(NamespaceHeader, nsExpected)
 	} else if ns != nsExpected {
@@ -152,7 +152,7 @@ func (a authInterceptor) authenticate(header http.Header) (common.Address, error
 	return token.Publisher, nil
 }
 
-func namespaceFromTokenParts(publisher common.Address, podId common.Hash) string {
+func NamespaceFromTokenParts(publisher common.Address, podId common.Hash) string {
 	namespaceParts := []byte{}
 	namespaceParts = append(namespaceParts, publisher[:]...)
 	namespaceParts = append(namespaceParts, podId[:]...)
@@ -218,7 +218,7 @@ func (a *AuthInterceptorClient) getOrCreateToken(operation string) (serializedTo
 		tokenData := Token{
 			PodId:          a.podId,
 			Operation:      operation,
-			ExpirationTime: time.Now().Add(a.expirationOffset),
+			ExpirationTime: time.Now().UTC().Add(a.expirationOffset),
 			Publisher:      a.publisher,
 		}
 		tokenDataBytes, err := json.Marshal(tokenData)

@@ -4,7 +4,7 @@ containers:
       url: ttl.sh/nginx-hello@sha256:631c081135cc6a81ad685f39d107d9eb6140d3a2265b0aa6792346f06936de72
     ports:
       - containerPort: '8080'
-        hostHttpHost: example.local
+        hostHttpHost: example-attest.localhost
         name: internal
     resourceRequests:
       - amountMillis: '10'

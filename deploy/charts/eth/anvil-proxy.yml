@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: eth-rpc
+  namespace: eth
+  labels:
+    app: eth
+spec:
+  type: ClusterIP
+  selector:
+    app: anvil
+  ports:
+  - name: jsonrpc
+    port: 8545
+    targetPort: 8545
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: anvil
+  namespace: eth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: anvil
+  template:
+    metadata:
+      labels:
+        app: anvil
+    spec:
+      containers:
+      - name: anvil
+        image: ghcr.io/foundry-rs/foundry:nightly-25f24e677a6a32a62512ad4f561995589ac2c7dc # comradecoop/apocryph/test-anvil
+        ports:
+        - containerPort: 8545
+        command: ["anvil", "--host", "0.0.0.0"]
+        
