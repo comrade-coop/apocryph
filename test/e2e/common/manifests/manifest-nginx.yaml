@@ -1,7 +1,7 @@
 containers:
   - name: test-container
     image:
-      url: docker.io/nginxdemos/nginx-hello:latest
+      url: docker.io/nginxdemos/nginx-hello@sha256:f8a31a47683f7c27497063e6061168290b211f421dfe2bd2b230fac0f3557618
     ports:
       - containerPort: '8080'
         hostHttpHost: example.localhost
@@ -14,3 +14,5 @@ containers:
 replicas:
   min: 0
   max: 1
+verificationSettings:
+  publicVerifiability: true

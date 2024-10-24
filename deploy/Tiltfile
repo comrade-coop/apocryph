@@ -169,7 +169,7 @@ def apocryph_resource(
     kubectl_command = "kubectl get all -o yaml -n $(%s)" % namespace_cmd
     apply_cmd = "set -ex; " + deploy_cmd + " 1>&2" + " && " + kubectl_command
 
-    delete_cmd = (
+    undeploy_cmd = (
         manifest_cmd
         + " | "
         + cmdline_in_builder(
@@ -178,6 +178,8 @@ def apocryph_resource(
             interactive=True,
         )
     )
+    kubectl_wait_command = "kubectl wait --for=delete ns $(%s)" % namespace_cmd
+    delete_cmd = "set -ex; " + undeploy_cmd + " 1>&2" + " && " + kubectl_wait_command
 
     k8s_custom_deploy(
         name,
@@ -332,7 +334,7 @@ def apocryph_build_with_builder(
 
     local_resource_in_builder(
         "tpodserver-go-compile",
-        'go build -v -buildvcs=false -ldflags="-s -w" -o bin/ ./cmd/tpodserver ./cmd/ipfs-p2p-helper ./cmd/trustedpods ./pkg/proxy',
+        'go build -v -buildvcs=false -ldflags="-s -w" -o bin/ ./cmd/tpodserver ./cmd/ipfs-p2p-helper ./cmd/trustedpods ./cmd/tpodproxy',
         "apocryph-go-builder",
         deps=[root_dir + "/cmd", root_dir + "/pkg"],
         allow_parallel=True,
@@ -361,14 +363,22 @@ def apocryph_build_with_builder(
                 sync(root_dir + "/bin", "/usr/local/bin/"),
             ],
         )
-
-        # https://stackoverflow.com/a/33511811 for $(docker inspect --format ...)
-        docker_build_with_restart(
-            "comradecoop/apocryph/tpod-proxy-unsigned",
+        docker_build(
+            "comradecoop/apocryph/tpodproxy",
             root_dir,
             dockerfile="./Dockerfile",
-            target="tpod-proxy-copy-local",
-            entrypoint=["/usr/local/bin/tpod-proxy"],
+            target="tpodproxy-copy-local",
+            entrypoint=["/usr/local/bin/tpodproxy"],
+            only=[root_dir + "/bin"],
+        )
+        """
+        # https://stackoverflow.com/a/33511811 for $(docker inspect --format ...)
+        docker_build_with_restart(
+            "comradecoop/apocryph/tpodproxy-unsigned",
+            root_dir,
+            dockerfile="./Dockerfile",
+            target="tpodproxy-copy-local",
+            entrypoint=["/usr/local/bin/tpodproxy"],
             only=[root_dir + "/bin"],
             live_update=[
                 sync(root_dir + "/bin", "/usr/local/bin/"),
@@ -376,14 +386,15 @@ def apocryph_build_with_builder(
         )
 
         cosign_sign_image_key(
-            "comradecoop/apocryph/tpod-proxy",
-            "comradecoop/apocryph/tpod-proxy-unsigned",
+            "comradecoop/apocryph/tpodproxy",
+            "comradecoop/apocryph/tpodproxy-unsigned",
             cosign_key=cosign_key,
             cosign_key_path=cosign_key_path,
             live_update=[
                 sync(root_dir + "/bin", "/usr/local/bin/"),
             ],
         )
+        """
 
 
 """ # TODO: Need to also build a trustedpods image for use with apocryph_resource...
@@ -513,8 +524,10 @@ def deploy_apocryph_stack(
         resource_deps=["anvil", "ipfs", "loki", "anvil-deploy-contracts", "policy-controller"],
         labels=["apocryph"],
         image_keys=["image", "policy.image"],
-        image_deps=["comradecoop/apocryph/server", "comradecoop/apocryph/tpod-proxy"],
+        image_deps=["comradecoop/apocryph/server", "comradecoop/apocryph/tpodproxy"],
         flags=[
+            "--set-json",
+            "policy.enable=false",
             "--set-json",
             "policy.issuer=false",
             "--set-json",
