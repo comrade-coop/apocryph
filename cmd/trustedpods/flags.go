@@ -70,7 +70,7 @@ var _ = func() error {
 	deploymentFlags.StringVar(&deploymentFormat, "deployment-format", "", fmt.Sprintf("Deployment format. One of %v (leave empty to auto-detect)", pb.FormatNames))
 	deploymentFlags.StringVar(&providerPeer, "provider", "", "provider peer id")
 	deploymentFlags.StringVar(&providerEthAddress, "provider-eth", "", "provider public address")
-	deploymentFlags.Int64Var(&expirationOffset, "token-expiration", 10, "authentication token expires after token-expiration seconds (expired after 10 seconds by default)")
+	deploymentFlags.Int64Var(&expirationOffset, "token-expiration", 60, "authentication token expires after token-expiration seconds (expires after 1 minute by default) (note: might need higher values with providers with out-of-sync clocks)")
 	deploymentFlags.StringVar(&ipfsApi, "ipfs", "/ip4/127.0.0.1/tcp/5001", "multiaddr where the ipfs/kubo api can be accessed")
 	deploymentFlags.BoolVar(&authorize, "authorize", false, "Create a key pair for the application and authorize the returned addresses to control the payment channel")
 	deploymentFlags.BoolVar(&verify, "verify", false, "verify the pod images (requires certificate-identity & certificate-oidc-issuer flags)")

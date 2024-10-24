@@ -6,7 +6,7 @@ metadata:
   labels:
     app: eth
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: anvil
   ports:

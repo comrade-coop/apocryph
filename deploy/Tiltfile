@@ -101,10 +101,10 @@ def apocryph_resource(
     if registry_contract == "":
         registry_contract = "$(jq .returns.registry.value %s -r)" % deploy_script_json
 
-    ethereum_port = (
-        "$(kubectl get svc -n %s eth-rpc -o jsonpath --template '{$.spec.ports[0].nodePort}')"
-        % ethereum_namespace
-    )
+    # ethereum_port = (
+    #     "$(kubectl get svc -n %s eth-rpc -o jsonpath --template '{$.spec.ports[0].nodePort}')"
+    #     % ethereum_namespace
+    # )
 
     if type(manifest_file) == "string":
         manifest = read_yaml(manifest_file)
@@ -137,7 +137,8 @@ def apocryph_resource(
         "--ipfs",
         "/ip4/127.0.0.1/tcp/5001",  # TODO: use docker's routing! e.g. '/dns4/%s/tcp/5001' % docker_ipfs
         "--ethereum-rpc",
-        "http://%s:%s" % (cluster_ip, ethereum_port),
+        "http://127.0.0.1:8549",
+        # "http://%s:%s" % (cluster_ip, ethereum_port),
     ] + flags
     apply_flags = [
         "--registry-contract",
@@ -534,6 +535,19 @@ def deploy_apocryph_local(
     cosign_key_path="deploy/keys/",
     resource_deps=["ipfs", "anvil"],
 ):
+    if len(resource_deps) == 0:  # HACK
+        local_resource(
+            "ingress-nginx-portforward",
+            serve_cmd="kubectl port-forward -n keda svc/ingress-nginx-controller 8004:80",
+        )
+        local_resource(
+            "anvil-portforward",
+            serve_cmd="kubectl port-forward -n eth svc/eth-rpc 8549:8545",
+        )
+    else:
+        k8s_resource(workload="ingress-nginx", port_forwards=["8004:80"])
+        k8s_resource(workload="anvil", port_forwards=["8549:8545"])
+
     docker_ipfs_resource(
         "ipfs-local",
         "docker.io/ipfs/kubo:v0.23.0",
@@ -547,8 +561,8 @@ def deploy_apocryph_local(
         labels=["apocryph", "flaky"],
         dir="./contracts/",
         # [ -f ./broadcast/Deploy.s.sol/31337/run-latest.json ] ||
-        cmd="forge script script/Deploy.s.sol --rpc-url http://%s:$(kubectl get svc -n eth eth-rpc -o jsonpath --template '{$.spec.ports[0].nodePort}') --private-key %s --broadcast"
-        % (cluster_ip, deployer_key),
+        cmd="forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8549 --private-key %s --broadcast"
+        % (deployer_key,),
         resource_deps=resource_deps,
         deps=["./contracts/src", "./contracts/script", "./contracts/lib"],
     )

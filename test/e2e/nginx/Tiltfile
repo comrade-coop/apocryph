@@ -6,7 +6,7 @@ load("../../../deploy/Tiltfile", "apocryph_resource", "cluster_ip")
 apocryph_resource(
     "nginx-example",
     "../common/manifests/manifest-nginx.yaml",
-    upload_images=False,
+    upload_images=True,
     apply_flags=["--mint-funds"],
     labels=["apocryph-pod", "flaky"],
 )
@@ -31,12 +31,6 @@ provider_balance_cmd = 'cast call "%s" "balanceOf(address)" "%s" -r %s | cast to
     ethereum_rpc,
 )
 curl_cmd = 'curl --connect-timeout 40 -H "Host: %s" localhost:8004 --fail-with-body' % manifest_host
-
-local_resource(
-    "ingress-nginx-portforward",
-    serve_cmd="kubectl port-forward -n keda svc/ingress-nginx-controller 8004:80",
-)
-# k8s_resource(workload="ingress-nginx", port_forwards=["8004:80"])
 
 local_resource(
     "nginx-example-measure-and-query",

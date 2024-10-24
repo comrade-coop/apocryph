@@ -44,7 +44,9 @@ data:
     #!/bin/sh
     set -ex
     ipfs config --json Experimental.Libp2pStreamMounting true
+    {{ if .Values.swarm.announceIp }}
     ipfs config --json Addresses.Announce '["/ip4/{{ .Values.swarm.announceIp }}/tcp/{{ .Values.swarm.nodePort }}", "/ip4/{{ .Values.swarm.announceIp }}/udp/{{ .Values.swarm.nodePort }}/quic", "/ip4/{{ .Values.swarm.announceIp }}/udp/{{ .Values.swarm.nodePort }}/quic-v1", "/ip4/{{ .Values.swarm.announceIp }}/udp/{{ .Values.swarm.nodePort }}/quic-v1/webtransport"]'
+    {{ end }}
 
 ---
 apiVersion: apps/v1

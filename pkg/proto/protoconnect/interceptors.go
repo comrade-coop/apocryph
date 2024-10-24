@@ -127,7 +127,7 @@ func (a authInterceptor) authenticate(header http.Header) (common.Address, error
 	if err != nil {
 		return common.Address{}, connect.NewError(connect.CodeDataLoss, fmt.Errorf("Failed Unmarshalling token"))
 	}
-	if time.Now().After(token.ExpirationTime) {
+	if time.Now().UTC().After(token.ExpirationTime) {
 		return common.Address{}, connect.NewError(connect.CodeDeadlineExceeded, fmt.Errorf("Token Expired"))
 	}
 
@@ -218,7 +218,7 @@ func (a *AuthInterceptorClient) getOrCreateToken(operation string) (serializedTo
 		tokenData := Token{
 			PodId:          a.podId,
 			Operation:      operation,
-			ExpirationTime: time.Now().Add(a.expirationOffset),
+			ExpirationTime: time.Now().UTC().Add(a.expirationOffset),
 			Publisher:      a.publisher,
 		}
 		tokenDataBytes, err := json.Marshal(tokenData)
