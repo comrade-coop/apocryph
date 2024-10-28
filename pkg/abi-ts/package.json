@@ -2,6 +2,7 @@
   "name": "apocryph-abi-ts",
   "private": true,
   "type": "module",
+  "version": "0.1.0",
   "scripts": {
     "ts-gen-abi": "wagmi generate",
     "generate": "npm run gen-abi"
