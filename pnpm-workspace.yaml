@@ -1,3 +1,4 @@
 packages:
   - "pkg/*-ts"
   - "test/e2e/webui"
+  - "storage/frontend"

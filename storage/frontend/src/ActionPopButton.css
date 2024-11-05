@@ -1,0 +1,61 @@
+.action-pop-button {
+  overflow: hidden;
+  position: relative;
+}
+.action-pop-button:before {
+  content: attr(data-pop-text) ' ✔';
+  position: absolute;
+  top: calc(-100% - 1.2em);
+  padding: inherit;
+  left: 0;
+  right: 0;
+  height: 100%;
+  text-align: center;
+}
+.action-pop-content {
+  position: relative;
+  top: 0%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .action-pop-animate {
+    animation: 0.6s ease action-pop-button;
+  }
+  .action-pop-animate.action-pop-button:before {
+    animation: 0.6s ease action-pop-before;
+  }
+  .action-pop-animate .action-pop-content {
+    animation: 0.6s ease action-pop-content;
+  }
+}
+
+@keyframes action-pop-button {
+}
+@keyframes action-pop-content {
+  0% {
+    top: 0%;
+  }
+  30% {
+    top: calc(100% + 1.2em);
+  }
+  70% {
+    top: calc(100% + 1.2em);
+  }
+  100% {
+    top: 0%;
+  }
+}
+@keyframes action-pop-before {
+  0% {
+    top: calc(-100% - 1.2em);
+  }
+  30% {
+    top: 0%;
+  }
+  70% {
+    top: 0%;
+  }
+  100% {
+    top: calc(-100% - 1.2em);
+  }
+}

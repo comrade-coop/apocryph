@@ -1,0 +1,164 @@
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255);
+  background-color: #242424;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+:root {
+  --credits: "https://css-pattern.com/cubes-illusion/";
+  --s: 6rem;
+  --c1: #242424;
+  --c2: #202020;
+  --c3: #282828;
+  background:
+    repeating-conic-gradient(from 120deg,#0000 0 120deg,var(--c3) 0 50%)
+     calc(var(--s)*tan(30deg)/2) calc(var(--s)/2),
+    repeating-conic-gradient(from 120deg,var(--c1) 0 60deg,var(--c2) 0 120deg,var(--c3) 0 50%);
+  background-size: calc(var(--s)*tan(30deg)) var(--s) ;
+
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button,
+input,
+select,
+.fake-field {
+  display: inline-block;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+  &:hover {
+    border-color: #646cff;
+  }
+  &:focus,
+  &:focus-visible {
+    outline: 4px auto -webkit-focus-ring-color;
+  }
+}
+
+.fake-field {
+  background-color: #fff1;
+}
+label>span {
+  padding: 0.6em 1.2em;
+}
+
+label>:nth-child(2):not(:last-child), .button-card>:not(:last-child) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  margin-right: 1px;
+}
+label>:nth-child(3), .button-card>:not(:first-child) {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+label>:nth-child(1),
+label>:nth-child(2) {
+  text-align: right;
+}
+label>:nth-child(3) {
+  text-align: left;
+}
+
+.button-card {
+  padding: 0.5em;
+}
+
+section {
+  border-radius: 16px;
+  background-color: #3335;
+  margin: 1em;
+  padding: 1em;
+  padding-top: 0.6em;
+  display: grid;
+  grid-template-columns: 1fr auto auto min-content 1fr;
+}
+
+section>* {
+  grid-column: 2/ -2;
+  grid-row: auto;
+}
+
+label {
+  display: grid;
+  grid-template-columns: subgrid;
+  margin: 0.3em;
+}
+
+pre.code {
+  font-size: 1.2em;
+  text-align: left;
+  border-radius: 8px;
+}
+
+h1, h2 {
+  margin: 0.4em;
+}
+
+.icon {
+  height: 2em;
+  margin: -0.5em;
+  margin-left: 1ex;
+  vertical-align: center;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+.hero {
+  font-size: 1.1em;
+}
+#root {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.read-the-docs {
+  color: #888;
+}

@@ -25,6 +25,14 @@ indent_size = 2
 indent_style = space
 indent_size = 2
 
+[*.{js,jsx,ts,tsx}]
+indent_style = space
+indent_size = 2
+
+[*.css]
+indent_style = space
+indent_size = 2
+
 [Tiltfile]
 indent_style = space
 indent_size = 4
