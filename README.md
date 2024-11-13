@@ -90,11 +90,6 @@ Also, see the [`PUBLISHING.md`](spec/PUBLISHING.md) documentation for more detai
 
 [SPDX-License-Identifier: GPL-3.0](./LICENSE.md)
 
-
 ---
 
-**NOTE**: This repository used to host the code recently moved to https://github.com/comrade-coop/apocryph-chain as part of a repository overhaul and reorganization. With due apologies to any past Github stargazers, we hope they would find this new and more active project well worth their star.
-
-Meanwhile, the main body of code was moved here from https://github.com/comrade-coop/trusted-pods (now gone), and parts of the documentation/code might still refer to the old location. Use `git remote set-url origin git://github.com/comrade-coop/apocryph` (or `git remote set-url origin git@github.com:comrade-coop/apocryph.git`) to update your local clone/s to point to the right repository.
-
-See [this issue](https://github.com/comrade-coop/apocryph/issues/14) for more details.
+**NOTE**: If you're looking for the code for the consensus-based approach used in Apocryph from 2020 to 2022, please see [this issue](https://github.com/comrade-coop/apocryph/issues/14) for more details.
