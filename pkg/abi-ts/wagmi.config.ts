@@ -12,7 +12,11 @@ export default defineConfig({
       forge: {
         build: false
       },
-      include: ['Payment.json', 'MockToken.json']
+      include: [
+        'Payment.json',
+        'MockToken.json',
+        'PaymentV2.json',
+      ]
     })
   ]
 })

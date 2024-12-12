@@ -104,37 +104,11 @@ func (a authInterceptor) authenticate(header http.Header) (common.Address, error
 	if !ok {
 		return common.Address{}, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Expected Bearer Authentication"))
 	}
-	tokenParts := strings.Split(tokenString, ".")
-	if len(tokenParts) != 2 {
-		return common.Address{}, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Invalid token (wrong number of parts)"))
-	}
 
-	tokenData, err := base64.StdEncoding.DecodeString(tokenParts[0])
+	// verify signature and expiration of token
+	token, err := ValidateToken(tokenString)
 	if err != nil {
 		return common.Address{}, err
-	}
-	tokenSignature, err := base64.StdEncoding.DecodeString(tokenParts[1])
-	if err != nil {
-		return common.Address{}, err
-	}
-
-	// verify if token has exired or not
-	token := &Token{}
-	err = json.Unmarshal(tokenData, token)
-	if err != nil {
-		return common.Address{}, connect.NewError(connect.CodeDataLoss, fmt.Errorf("Failed Unmarshalling token"))
-	}
-	if time.Now().UTC().After(token.ExpirationTime) {
-		return common.Address{}, connect.NewError(connect.CodeDeadlineExceeded, fmt.Errorf("Token Expired"))
-	}
-
-	// Verify Signature
-	valid, err := VerifyPayload(token.Publisher, tokenData, tokenSignature)
-	if err != nil {
-		return common.Address{}, fmt.Errorf("Error verifying payload: %w", err)
-	}
-	if !valid {
-		return common.Address{}, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Invalid signature"))
 	}
 
 	// verify publisherAddress in namespace is same one signed in token
@@ -147,6 +121,43 @@ func (a authInterceptor) authenticate(header http.Header) (common.Address, error
 	}
 
 	return token.Publisher, nil
+}
+
+func ValidateToken(tokenString string) (*Token, error) {
+	tokenParts := strings.Split(tokenString, ".")
+	if len(tokenParts) != 2 {
+		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Invalid token (wrong number of parts)"))
+	}
+
+	tokenData, err := base64.StdEncoding.DecodeString(tokenParts[0])
+	if err != nil {
+		return nil, err
+	}
+	tokenSignature, err := base64.StdEncoding.DecodeString(tokenParts[1])
+	if err != nil {
+		return nil, err
+	}
+
+	// verify if token has exired or not
+	token := &Token{}
+	err = json.Unmarshal(tokenData, token)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeDataLoss, fmt.Errorf("Failed Unmarshalling token"))
+	}
+	if time.Now().UTC().After(token.ExpirationTime) {
+		return nil, connect.NewError(connect.CodeDeadlineExceeded, fmt.Errorf("Token Expired"))
+	}
+
+	// Verify Signature
+	valid, err := VerifyPayload(token.Publisher, tokenData, tokenSignature)
+	if err != nil {
+		return nil, fmt.Errorf("Error verifying payload: %w", err)
+	}
+	if !valid {
+		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("Invalid signature"))
+	}
+
+	return token, nil
 }
 
 func NamespaceFromTokenParts(publisher common.Address, podId common.Hash) string {
@@ -215,20 +226,33 @@ func (a *AuthInterceptorClient) getOrCreateToken(operation string) (serializedTo
 			ExpirationTime: time.Now().UTC().Add(a.expirationOffset),
 			Publisher:      a.publisher,
 		}
-		tokenDataBytes, err := json.Marshal(tokenData)
+
+		tokenString, err := SignToken(&tokenData, a.sign)
 		if err != nil {
 			return serializedToken{}, err
 		}
-		signature, err := a.sign(tokenDataBytes)
-		tokenDataEncoded := base64.StdEncoding.EncodeToString(tokenDataBytes)
-		signatureEncoded := base64.StdEncoding.EncodeToString(signature)
+
 		token = serializedToken{
 			expirationTime: tokenData.ExpirationTime,
-			bearer:         fmt.Sprintf("%s.%s", tokenDataEncoded, signatureEncoded),
+			bearer:         tokenString,
 		}
 		a.tokens[operation] = token
 	}
 	return token, nil
+}
+
+func SignToken(tokenData *Token, sign SignFunc) (string, error) {
+	tokenDataBytes, err := json.Marshal(tokenData)
+	if err != nil {
+		return "", err
+	}
+	signature, err := sign(tokenDataBytes)
+	tokenDataEncoded := base64.StdEncoding.EncodeToString(tokenDataBytes)
+	signatureEncoded := base64.StdEncoding.EncodeToString(signature)
+
+	tokenString := fmt.Sprintf("%s.%s", tokenDataEncoded, signatureEncoded)
+
+	return tokenString, nil
 }
 
 func (a *AuthInterceptorClient) authorize(operation string, header http.Header) error {

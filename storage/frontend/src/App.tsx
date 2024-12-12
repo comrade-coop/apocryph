@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useAccount, useConnect } from 'wagmi'
+import { useAccount, useConnect, usePublicClient, useWalletClient } from 'wagmi'
 import { injected } from 'wagmi/connectors'
 import { formatUnits, parseUnits } from 'viem'
 import { outdent } from 'outdent'
@@ -9,13 +9,17 @@ import { tomorrowNight as syntaxStyle } from 'react-syntax-highlighter/dist/esm/
 
 import BlurUpdatedInput from './BlurUpdatedInput'
 import ActionPopButton from './ActionPopButton'
-import apocryphLogo from '../public/apocryph.svg'
-import metamaskLogo from '../public/metamask.svg'
+import { watchAvailableFunds, depositFunds } from './contracts'
+import apocryphLogo from '/apocryph.svg?url'
+import metamaskLogo from '/metamask.svg?url'
+import './App.css'
 
 const documentationLink = "https://comrade-coop.github.io/apocryph/"
 
 function App() {
   const account = useAccount()
+  const publicClient = usePublicClient()
+  const walletClient = useWalletClient()
   const { connect } = useConnect()
 
   const oneGb = parseUnits('1', 6)
@@ -25,12 +29,30 @@ function App() {
   const decimals = 18
   const priceGbSec = parseUnits('0.000004', decimals)
   const [ funds, setFunds ] = useState<bigint>(() => BigInt(durationMultiplier) * amountGb * priceGbSec / oneGb)
-  const [existingDeposit, setExistingDeposit] = useState(0n) // parseUnits('1.32', decimals)
+  const [existingDeposit, setExistingDeposit] = useState<bigint | undefined>(undefined)
+  const [depositInProgress, setDepositInProgress] = useState(false)
+  const [depositError, setDepositError] = useState('')
+  // TODO: const minDeposit = STORAGE_CHANNEL_RESERVATION
   useEffect(() => {
-    setInterval(() => {
-      setExistingDeposit(x => x > 400n ? x - 400n : x)
-    }, 20000)
-  }, [])
+    if (publicClient && account?.address) {
+      return watchAvailableFunds(publicClient, account.address, (availableFunds) => {
+        setExistingDeposit(availableFunds)
+      })
+    }
+  }, [publicClient, account])
+
+  async function topUpDeposit() {
+    if (existingDeposit !== undefined && publicClient && walletClient?.data) {
+      setDepositInProgress(true)
+      setDepositError('')
+      try {
+        await depositFunds(publicClient, walletClient.data, funds - existingDeposit)
+      } catch(err) {
+        setDepositError(err + '')
+      }
+      setDepositInProgress(false)
+    }
+  }
 
 
   const duration: number = Number(funds) / Number(amountGb) / Number(priceGbSec) * Number(oneGb)
@@ -88,6 +110,36 @@ function App() {
             secretAccessKey: "${s3Token ? s3Token.secretKeyId : '...'}",
           },
         })
+      `
+    },
+    'Go': {
+      language: 'go',
+      code: () => outdent`
+        package main
+
+        import (
+          "log"
+
+          "github.com/minio/minio-go/v7"
+          "github.com/minio/minio-go/v7/pkg/credentials"
+        )
+
+        func main() {
+          accessKeyID := "Q3AM3UQ867SPQQA43P2F"
+          secretAccessKey := "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG"
+          useSSL := true
+
+          // Initialize minio client object.
+          minioClient, err := minio.New("${bucketLinkHref}", &minio.Options{
+            Creds:  credentials.NewCustomTokenCredentials("${bucketLinkHref}", "${stsCustomToken}", ""),
+            Secure: useSSL,
+          })
+          if err != nil {
+            log.Fatalln(err)
+          }
+
+          log.Printf("%#v\n", minioClient) // minioClient is now setup
+        }
       `
     }
   }
@@ -161,26 +213,25 @@ function App() {
             onChange={setFunds}/>
           <span className="fake-field"> {currency}</span>
         </label>
-        { existingDeposit > 0n ?
           <label>
             <span>Existing deposit</span>
-            <span className="fake-field">{formatUnits(existingDeposit, decimals)}</span>
+            <span className="fake-field">{existingDeposit === undefined ? 'Loading...' : formatUnits(existingDeposit, decimals)}</span>
             <span className="fake-field">{currency}</span>
           </label>
-          :
-          <></>
-        }
         <div className="button-card">
-          <button onClick={() => setExistingDeposit(funds)}>
+          <button onClick={() => topUpDeposit()}>
             {
+              existingDeposit === undefined ? <>Loading...</> :
+              depositInProgress === undefined ? <>Processing...</> :
               existingDeposit <= 0n ? <>Make deposit! ({formatUnits(existingDeposit - funds, decimals)} {currency})</> :
               funds > existingDeposit ? <>Top-up deposit ({formatUnits(existingDeposit - funds, decimals)} {currency})</> :
               <>Withdraw deposit (+{formatUnits(existingDeposit - funds, decimals)} {currency})</>
             }
           </button>
         </div>
+        {depositError != '' ? <div className='error-toast' key={depositError}>{depositError}</div> : <></>}
       </section>
-      <section style={{display: account.isConnected && existingDeposit > 0n ? '' : 'none'}}>
+      <section style={{display: account.isConnected && existingDeposit && existingDeposit > 0n ? '' : 'none'}}>
         <h2>Step 3: Access</h2>
         <label>
           <span>Console </span>
@@ -217,7 +268,7 @@ function App() {
           </button>
         </div>
       </section>
-      <section style={{display: account.isConnected && existingDeposit > 0n && s3Token ? '' : 'none'}} className="two-columns">
+      <section style={{display: account.isConnected && existingDeposit && existingDeposit > 0n && s3Token ? '' : 'none'}} className="two-columns">
         <h2>Step 4: Hack</h2>
         <div className="button-card">
           <ActionPopButton popText='Copied' onClick={() => {
@@ -231,7 +282,7 @@ function App() {
           {codeExamples[codeExample]?.code()}
         </SyntaxHighlighter>
       </section>
-      <section style={{display: account.isConnected && existingDeposit > 0n && s3Token ? '' : 'none'}}>
+      <section style={{display: account.isConnected && existingDeposit && existingDeposit > 0n && s3Token ? '' : 'none'}}>
         <h2>Step 5: Profit</h2>
         <div className="button-card">
           <button onClick={() => {

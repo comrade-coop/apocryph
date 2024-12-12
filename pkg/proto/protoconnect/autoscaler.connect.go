@@ -20,7 +20,7 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
+const _ = connect.IsAtLeastVersion0_1_0
 
 const (
 	// AutoscalerServiceName is the fully-qualified name of the AutoscalerService service.
@@ -41,13 +41,6 @@ const (
 	// AutoscalerServiceTriggerNodeProcedure is the fully-qualified name of the AutoscalerService's
 	// TriggerNode RPC.
 	AutoscalerServiceTriggerNodeProcedure = "/apocryph.proto.v0.autoscaler.AutoscalerService/TriggerNode"
-)
-
-// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
-var (
-	autoscalerServiceServiceDescriptor              = proto.File_autoscaler_proto.Services().ByName("AutoscalerService")
-	autoscalerServiceConnectClusterMethodDescriptor = autoscalerServiceServiceDescriptor.Methods().ByName("ConnectCluster")
-	autoscalerServiceTriggerNodeMethodDescriptor    = autoscalerServiceServiceDescriptor.Methods().ByName("TriggerNode")
 )
 
 // AutoscalerServiceClient is a client for the apocryph.proto.v0.autoscaler.AutoscalerService
@@ -71,14 +64,12 @@ func NewAutoscalerServiceClient(httpClient connect.HTTPClient, baseURL string, o
 		connectCluster: connect.NewClient[proto.ConnectClusterRequest, proto.ConnectClusterResponse](
 			httpClient,
 			baseURL+AutoscalerServiceConnectClusterProcedure,
-			connect.WithSchema(autoscalerServiceConnectClusterMethodDescriptor),
-			connect.WithClientOptions(opts...),
+			opts...,
 		),
 		triggerNode: connect.NewClient[proto.ConnectClusterRequest, proto.TriggerNodeResponse](
 			httpClient,
 			baseURL+AutoscalerServiceTriggerNodeProcedure,
-			connect.WithSchema(autoscalerServiceTriggerNodeMethodDescriptor),
-			connect.WithClientOptions(opts...),
+			opts...,
 		),
 	}
 }
@@ -115,14 +106,12 @@ func NewAutoscalerServiceHandler(svc AutoscalerServiceHandler, opts ...connect.H
 	autoscalerServiceConnectClusterHandler := connect.NewUnaryHandler(
 		AutoscalerServiceConnectClusterProcedure,
 		svc.ConnectCluster,
-		connect.WithSchema(autoscalerServiceConnectClusterMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
+		opts...,
 	)
 	autoscalerServiceTriggerNodeHandler := connect.NewUnaryHandler(
 		AutoscalerServiceTriggerNodeProcedure,
 		svc.TriggerNode,
-		connect.WithSchema(autoscalerServiceTriggerNodeMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
+		opts...,
 	)
 	return "/apocryph.proto.v0.autoscaler.AutoscalerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {

@@ -1,0 +1,45 @@
+.error-toast {
+  position: fixed;
+  z-index: 10;
+  padding: 1em;
+  bottom: 1em;
+  right: 0.5em;
+  background: #553333ee;
+  max-width: calc(max(50vw, 500px));
+}
+.error-toast:before {
+  content: attr(data-pop-text) '✘ ';
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .error-toast {
+    animation: 0.6s ease error-toast-in;
+  }
+}
+
+@keyframes error-toast-in {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0%);
+  }
+}
+@keyframes action-pop-before {
+  0% {
+    top: calc(-100% - 1.2em);
+  }
+  30% {
+    top: 0%;
+  }
+  70% {
+    top: 0%;
+  }
+  100% {
+    top: calc(-100% - 1.2em);
+  }
+}
