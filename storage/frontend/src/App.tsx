@@ -1,18 +1,20 @@
-import { useEffect, useState } from 'react'
+import { ReactElement, useEffect, useState } from 'react'
 import { useAccount, useConnect, usePublicClient, useWalletClient } from 'wagmi'
 import { injected } from 'wagmi/connectors'
 import { formatUnits, parseUnits } from 'viem'
-import { outdent } from 'outdent'
 
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { tomorrowNight as syntaxStyle } from 'react-syntax-highlighter/dist/esm/styles/hljs'
 
 import BlurUpdatedInput from './BlurUpdatedInput'
 import ActionPopButton from './ActionPopButton'
-import { watchAvailableFunds, depositFunds } from './contracts'
+import { watchAvailableFunds, depositFunds, STORAGE_CHANNEL_RESERVATION } from './contracts'
 import apocryphLogo from '/apocryph.svg?url'
 import metamaskLogo from '/metamask.svg?url'
 import './App.css'
+import { getSiweToken } from './signin'
+import codeExamples, { envExample } from './codeExamples'
+import { ErrorCircle, OpenExternalLink } from './icons'
 
 const documentationLink = "https://comrade-coop.github.io/apocryph/"
 
@@ -32,7 +34,29 @@ function App() {
   const [existingDeposit, setExistingDeposit] = useState<bigint | undefined>(undefined)
   const [depositInProgress, setDepositInProgress] = useState(false)
   const [depositError, setDepositError] = useState('')
-  // TODO: const minDeposit = STORAGE_CHANNEL_RESERVATION
+  const [ showExamples, setShowExamples ] = useState(false)
+  const [ siweToken, setSiweToken ] = useState<string>()
+  const [ profitText, setProfitText ] = useState<string>("Ok?")
+  const [ codeExample, setCodeExample ] = useState<keyof typeof codeExamples>("JavaScript")
+
+  const bucketId = `${account.address?.slice(2)?.toLowerCase()}`
+  const bucketLink = `localhost:9000/${bucketId}` // `${account.address?.slice(2)?.toLowerCase()}.s3.apocryph.io`
+  const bucketLinkHref = `http://${bucketLink}` // `https://${bucketLink}`
+  const consoleHost = `http://localhost:9002` // `https://console.${bucketLink}`
+  const consoleLinkHref = `${consoleHost}/browser/${bucketId}`
+  const minDeposit = STORAGE_CHANNEL_RESERVATION // TODO
+
+  const duration: number = Number(funds) / Number(amountGb) / Number(priceGbSec) * Number(oneGb)
+  function setDuration(newDuration: number) {
+    setFunds(BigInt(newDuration) * amountGb * priceGbSec / oneGb)
+  }
+  function setAmountGb(newAmountGb: bigint) {
+    if (newAmountGb < 1n) newAmountGb = 1n
+
+    setFunds(funds * newAmountGb / amountGb)
+    setAmountGbRaw(newAmountGb)
+  }
+
   useEffect(() => {
     if (publicClient && account?.address) {
       return watchAvailableFunds(publicClient, account.address, (availableFunds) => {
@@ -53,106 +77,40 @@ function App() {
       setDepositInProgress(false)
     }
   }
+  async function openConsole() {
+    if (walletClient?.data) {
+      const token = await getSiweToken(walletClient.data, 3600)
 
-
-  const duration: number = Number(funds) / Number(amountGb) / Number(priceGbSec) * Number(oneGb)
-  function setDuration(newDuration: number) {
-    setFunds(BigInt(newDuration) * amountGb * priceGbSec / oneGb)
-  }
-  function setAmountGb(newAmountGb: bigint) {
-    if (newAmountGb < 1n) newAmountGb = 1n
-
-    setFunds(funds * newAmountGb / amountGb)
-    setAmountGbRaw(newAmountGb)
-  }
-
-  const [ s3Token, setS3Token ] = useState<{accessKeyId: string, secretKeyId: string}>()
-  const [ profitText, setProfitText ] = useState<string>("Ok?")
-
-  function refreshApiTokens() {
-    const r = () => Math.random().toString(36).slice(2)
-    setS3Token({
-      accessKeyId: r().toUpperCase(),
-      secretKeyId: 'zuf+' + r() + r() + r()
-    })
-  }
-
-  const bucketLink = `${account.address?.slice(2)?.toLowerCase()}.s3.apocryph.io`
-  const bucketLinkHref = `https://${bucketLink}`
-  const consoleLink = `console.${bucketLink}`
-  const consoleLinkHref = `https://${consoleLink}`
-
-  const codeExamples = {
-    'JavaScript': {
-      language: 'javascript',
-      code: () => outdent`
-        import * as Minio from 'minio'
-
-        const minioClient = new Minio.Client({
-          endPoint: '${bucketLinkHref}',
-          port: 9000,
-          useSSL: true,
-          accessKey: '${s3Token ? s3Token.accessKeyId : '...'}',
-          secretKey: '${s3Token ? s3Token.secretKeyId : '...'}',
-        })
-      `
-    },
-    'JavaScript (AWS)': {
-      language: 'javascript',
-      code: () => outdent`
-        import { S3Client } from "@aws-sdk/client-s3"
-
-        const client = new S3Client({
-          endPoint: '${bucketLinkHref}',
-          region: "us-east-1", // default for MinIO
-          credentials: {
-            accessKeyId: "${s3Token ? s3Token.accessKeyId : '...'}",
-            secretAccessKey: "${s3Token ? s3Token.secretKeyId : '...'}",
-          },
-        })
-      `
-    },
-    'Go': {
-      language: 'go',
-      code: () => outdent`
-        package main
-
-        import (
-          "log"
-
-          "github.com/minio/minio-go/v7"
-          "github.com/minio/minio-go/v7/pkg/credentials"
-        )
-
-        func main() {
-          accessKeyID := "Q3AM3UQ867SPQQA43P2F"
-          secretAccessKey := "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG"
-          useSSL := true
-
-          // Initialize minio client object.
-          minioClient, err := minio.New("${bucketLinkHref}", &minio.Options{
-            Creds:  credentials.NewCustomTokenCredentials("${bucketLinkHref}", "${stsCustomToken}", ""),
-            Secure: useSSL,
-          })
-          if err != nil {
-            log.Fatalln(err)
-          }
-
-          log.Printf("%#v\n", minioClient) // minioClient is now setup
-        }
-      `
+      open(`${consoleHost}/x/apocryphLogin#${encodeURIComponent(token)}#/browser/${bucketId}`)
+      setShowExamples(true)
     }
   }
-  const [ codeExample, setCodeExample ] = useState<keyof typeof codeExamples>("JavaScript")
+  async function getLonglivedToken() {
+    if (walletClient?.data) {
+      const token = await getSiweToken(walletClient!.data!, undefined)
+      setSiweToken(token)
+      setShowExamples(true)
+    }
+  }
+
+  let showNextStep = true
+  function step(sectionElement: ReactElement, completionCondition: boolean): ReactElement {
+    if (showNextStep) {
+      showNextStep = completionCondition
+      return sectionElement
+    }
+    return <></>
+  }
 
   return (
     <>
+      {depositError != '' ? <div className='error-toast' key={depositError}>{depositError}</div> : <></>}
       <img src={apocryphLogo} alt="Apocryph Logo" />
       <h1>Get your S3-compatible bucket!</h1>
       <section>
-      <p className="hero">Hosting your S3-compatible data buckets in the Apocryph S3 network allows for the ultimate privacy peace of mind, through trasparent encryption at-rest and cryptocurrency-enabled payments.<br/><a href={documentationLink}>Read more.</a></p>
+        <p className="hero">Hosting your S3-compatible data buckets in the Apocryph S3 network allows for the ultimate privacy peace of mind, through trasparent encryption at-rest and cryptocurrency-enabled payments.<br/><a href={documentationLink}>Read more.</a></p>
       </section>
-      <section>
+      {step(<section>
         <h2>Step 1: Connect</h2>
         <div className="button-card">
           <button onClick={() => connect({connector: injected()})}>
@@ -167,8 +125,8 @@ function App() {
             <img src={metamaskLogo} alt="Metamask Logo" className='icon' />
           </button>
         </div>
-      </section>
-      <section style={{display: account.isConnected ? '' : 'none'}}>
+      </section>, account.isConnected)}
+      {step(<section>
         <h2>Step 2: Fund</h2>
         <label>
           <span>Data you want to store in S3</span>
@@ -225,17 +183,17 @@ function App() {
               depositInProgress === undefined ? <>Processing...</> :
               existingDeposit <= 0n ? <>Make deposit! ({formatUnits(existingDeposit - funds, decimals)} {currency})</> :
               funds > existingDeposit ? <>Top-up deposit ({formatUnits(existingDeposit - funds, decimals)} {currency})</> :
+              funds < minDeposit ? <>Unlock and withdraw deposit (+{formatUnits(existingDeposit - funds, decimals)} {currency}, once unlocked)</> :
               <>Withdraw deposit (+{formatUnits(existingDeposit - funds, decimals)} {currency})</>
             }
           </button>
         </div>
-        {depositError != '' ? <div className='error-toast' key={depositError}>{depositError}</div> : <></>}
-      </section>
-      <section style={{display: account.isConnected && existingDeposit && existingDeposit > 0n ? '' : 'none'}}>
+      </section>, existingDeposit !== undefined && existingDeposit > 0n)}
+      {step(<section>
         <h2>Step 3: Access</h2>
         <label>
           <span>Console </span>
-          <a className="fake-field" href={consoleLinkHref}>{consoleLink}</a>
+          <a className="fake-field" href={consoleLinkHref}>{consoleLinkHref}</a>
           <ActionPopButton onClick={() => navigator.clipboard.writeText(bucketLinkHref)}>Copy</ActionPopButton>
         </label>
         <label>
@@ -243,46 +201,38 @@ function App() {
           <a className="fake-field" href={bucketLinkHref}>{bucketLinkHref}</a>
           <ActionPopButton onClick={() => navigator.clipboard.writeText(bucketLinkHref)}>Copy</ActionPopButton>
         </label>
-        {s3Token != undefined ?
-          <>
-          <label>
-            <span>S3 Access Key </span>
-            <span className="fake-field">{s3Token.accessKeyId}</span>
-            <ActionPopButton disabled={s3Token == undefined} onClick={() => s3Token && navigator.clipboard.writeText(s3Token.accessKeyId)}>Copy</ActionPopButton>
-          </label>
-          <label>
-            <span>S3 Secret Key </span>
-            <span className="fake-field">{s3Token.secretKeyId}</span>
-            <ActionPopButton disabled={s3Token == undefined} onClick={() => s3Token && navigator.clipboard.writeText(s3Token.secretKeyId)}>Copy</ActionPopButton>
-          </label>
-          </>
-          : <>
-          </>
-        }
         <div className="button-card">
-          <button onClick={refreshApiTokens}>
-            {
-              s3Token == undefined ? <>Get S3 access tokens</> :
-              <>Refresh S3 access tokens</>
-            }
+          <button onClick={() => openConsole()}>
+            Launch Console <OpenExternalLink/>
+          </button>
+          <button onClick={() => getLonglivedToken()}>
+            Use long-lived token <ErrorCircle/>
           </button>
         </div>
-      </section>
-      <section style={{display: account.isConnected && existingDeposit && existingDeposit > 0n && s3Token ? '' : 'none'}} className="two-columns">
+      </section>, showExamples)}
+      {step(<section className="two-columns">
         <h2>Step 4: Hack</h2>
         <div className="button-card">
-          <ActionPopButton popText='Copied' onClick={() => {
-            navigator.clipboard.writeText(codeExamples[codeExample].code())
-          }}>Start hacking!</ActionPopButton>
           <select value={codeExample} onChange={e => setCodeExample(e.target.value as keyof typeof codeExamples)}>
             {Object.keys(codeExamples).map(x => <option key={x}>{x}</option>)}
           </select>
         </div>
-        <SyntaxHighlighter language={codeExamples[codeExample]?.language} style={syntaxStyle} className="code">
-          {codeExamples[codeExample]?.code()}
+        <div className="button-over-code">
+          <ActionPopButton onClick={() => navigator.clipboard.writeText(envExample(bucketLink, siweToken))}>Copy!</ActionPopButton>
+        </div>
+        <SyntaxHighlighter language={'bash'} style={syntaxStyle} className="code" wrapLines={true}>
+          {envExample(bucketLink, siweToken)}
         </SyntaxHighlighter>
-      </section>
-      <section style={{display: account.isConnected && existingDeposit && existingDeposit > 0n && s3Token ? '' : 'none'}}>
+        <div className="button-over-code">
+          <ActionPopButton onClick={() => {
+            navigator.clipboard.writeText(codeExamples[codeExample].code(!!siweToken))
+          }}>Copy!</ActionPopButton>
+        </div>
+        <SyntaxHighlighter language={codeExamples[codeExample]?.language} style={syntaxStyle} className="code">
+          {codeExamples[codeExample]?.code(!!siweToken)}
+        </SyntaxHighlighter>
+      </section>, true)}
+      {step(<section>
         <h2>Step 5: Profit</h2>
         <div className="button-card">
           <button onClick={() => {
@@ -293,8 +243,8 @@ function App() {
             }
           }}>{profitText}</button>
         </div>
-      </section>
-      <a href={documentationLink} className="read-the-docs">Documentation</a>
+      </section>, true)}
+      <a href={documentationLink} className="read-the-docs" target="_blank">Documentation <OpenExternalLink/></a>
     </>
   )
 }

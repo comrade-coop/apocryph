@@ -1,0 +1,22 @@
+services:
+  minio_1:
+    image: minio/minio
+    volumes:
+      - minio_1_data_1:/mnt/data
+      - ./minio-entrypoint.sh:/minio-entrypoint.sh
+    ports:
+      - 9000:9000
+      - 9001:9001
+    network_mode: host
+    entrypoint: /minio-entrypoint.sh
+    command: server --console-address 127.0.0.1:9001 --address 127.0.0.1:9000
+  nginx_console:
+    image: nginx
+    volumes:
+      - ./nginx-config:/etc/nginx/conf.d/default.conf
+      - ./apocryphLogin.html:/usr/share/nginx/html/x/apocryphLogin/index.html
+    ports:
+      - 9002:9002
+    network_mode: host
+volumes:
+  minio_1_data_1:

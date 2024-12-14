@@ -99,6 +99,21 @@ label>:nth-child(3) {
   padding: 0.5em;
 }
 
+.button-over-code {
+  height: 0;
+  text-align: right;
+}
+.button-over-code button {
+  margin: 0.2em;
+  padding: 0.2em 0.5em;
+  opacity: 0.5;
+  transition: opacity 0.5s;
+}
+.button-over-code button:hover {
+  opacity: 1;
+  transition: opacity 0.1s;
+}
+
 section {
   border-radius: 16px;
   background-color: #3335;
@@ -106,7 +121,7 @@ section {
   padding: 1em;
   padding-top: 0.6em;
   display: grid;
-  grid-template-columns: 1fr auto auto min-content 1fr;
+  grid-template-columns: 1fr auto auto auto 1fr;
 }
 
 section>* {
@@ -124,6 +139,7 @@ pre.code {
   font-size: 1.2em;
   text-align: left;
   border-radius: 8px;
+  margin: 0.2em;
 }
 
 h1, h2 {
@@ -153,7 +169,7 @@ h1, h2 {
   font-size: 1.1em;
 }
 #root {
-  max-width: 900px;
+  max-width: 950px;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
@@ -161,4 +177,5 @@ h1, h2 {
 
 .read-the-docs {
   color: #888;
+  font-size: 0.9em;
 }
