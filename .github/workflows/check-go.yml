@@ -1,0 +1,29 @@
+name: Check Go code
+
+on:
+  push:
+    paths:
+    - '**.go'
+    - '.github/workflows/check-go.yml'
+
+jobs:
+  build-and-fmt:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '^1.22.5'
+      - name: Dependencies
+        run: go mod verify
+      - name: Build
+        run: go build -o bin/ $(find -name main.go | xargs -n 1 dirname)
+        shell: bash
+      - name: Format
+        run: go fmt ./... && git diff --exit-code
+        shell: bash

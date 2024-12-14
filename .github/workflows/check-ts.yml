@@ -1,0 +1,27 @@
+name: Check Typescript code
+
+on:
+  push:
+    paths:
+    - '**.ts'
+    - '**/package.json'
+    - '**/package-lock.json'
+    - '.github/workflows/check-ts.yml'
+
+jobs:
+  build-and-fmt:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: |
+            - recursive: true
+              args: [--frozen-lockfile, --strict-peer-dependencies]
+      - name: Lint
+        run: pnpm run -C frontend lint
