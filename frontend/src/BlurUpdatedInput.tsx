@@ -20,11 +20,11 @@ function BlurUpdatedInput<T>(props: BlurUpdatedInputProps<T>) {
           setValueString(e.target.value)
           props.onChange(props.parse(e.target.value))
         }}
-        onFocus={_ => {
+        onFocus={() => {
           setValueString(props.stringify(props.value))
           setFocused(true)
         }}
-        onBlur={_ => {
+        onBlur={() => {
           setFocused(false)
           setValueString("")
         }}/>
