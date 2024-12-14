@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { ReactNode, useState } from 'react'
 import './ActionPopButton.css'
 
 interface ActionPopButton {
   className?: string,
-  children: any,
-  onClick: () => any,
-  popText?: any,
+  children: ReactNode,
+  onClick: () => unknown,
+  popText?: string,
   disabled?: boolean,
 }
 
@@ -15,11 +15,11 @@ function ActionPopButton(props: ActionPopButton) {
   return (
       <button
         className={"action-pop-button " + (animating ? 'action-pop-animate ' : '') + (props.className || '')}
-        onClick={_ => {
+        onClick={() => {
           setAnimating(true)
           props.onClick()
         }}
-        onAnimationEnd={_ => {
+        onAnimationEnd={() => {
           // https://stackoverflow.com/a/34700273
           setAnimating(false)
         }}

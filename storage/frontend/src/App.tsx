@@ -31,9 +31,9 @@ function App() {
   const decimals = 18
   const priceGbSec = parseUnits('0.000004', decimals)
   const [ funds, setFunds ] = useState<bigint>(() => BigInt(durationMultiplier) * amountGb * priceGbSec / oneGb)
-  const [existingDeposit, setExistingDeposit] = useState<bigint | undefined>(undefined)
-  const [depositInProgress, setDepositInProgress] = useState(false)
-  const [depositError, setDepositError] = useState('')
+  const [ existingDeposit, setExistingDeposit ] = useState<bigint | undefined>(undefined)
+  const [ depositInProgress, setDepositInProgress ] = useState(false)
+  const [ depositError, setDepositError ] = useState('')
   const [ showExamples, setShowExamples ] = useState(false)
   const [ siweToken, setSiweToken ] = useState<string>()
   const [ profitText, setProfitText ] = useState<string>("Ok?")

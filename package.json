@@ -8,7 +8,7 @@
   },
   "scripts": {
     "lint": "eslint pkg/**/*.\\{ts,js\\} test/**/*.\\{ts,js\\} --ignore-pattern **/*.config.ts",
-    "fmt": "eslint --fix pkg/**/*.\\{ts,js\\} test/**/*.\\{ts,js\\} --ignore-pattern **/*.config.ts",
+    "fmt": "eslint --fix pkg/**/*.\\{ts,js\\} test/**/*.\\{ts,js\\} storage/**/*.\\{ts,js,tsx\\} --ignore-pattern **/*.config.ts",
     "build-contracts": "forge build --root contracts",
     "build-tpodserver": "docker build -t comradecoop/apocryph/server:latest . --target server",
     "build-p2p-helper": "docker build -t comradecoop/apocryph/p2p-helper:latest . --target p2p-helper",

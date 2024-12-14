@@ -27,7 +27,7 @@ export function getStorageChannelId(address: Address) {
 }
 
 export function watchAvailableFunds(publicClient: PublicClient, accountAddress: Address, callback: (available?: bigint, reserved?: bigint) => void): Unsubscribe {
-  let channelId = getStorageChannelId(accountAddress)
+  const channelId = getStorageChannelId(accountAddress)
   async function refresh() {
     callback(undefined, undefined) // We are refreshing, blur out
     const channelInfo = await publicClient.readContract({
@@ -44,7 +44,7 @@ export function watchAvailableFunds(publicClient: PublicClient, accountAddress: 
     abi: paymentV2Abi,
     address: paymentV2Address,
     args: { channelId: channelId },
-    onLogs(_logs) {
+    onLogs() {
       refresh()
     }
   })
@@ -133,7 +133,8 @@ export async function depositFunds(publicClient: PublicClient, walletClient: Wal
     const shouldUnreserve = (withdrawAmount > available - reserved)
     if (shouldUnreserve) {
       const storageAuthorization = await paymentV2.read.channelAuthorizations([channelId, storageSystemAddress])
-      let [storageReserved, , storageUnlockAt, ] = storageAuthorization
+      const storageReserved = storageAuthorization[0]
+      let storageUnlockAt = storageAuthorization[2]
       const currentTime = (await publicClient.getBlock()).timestamp
       const shouldUnlock = storageUnlockAt == 0n
       if (shouldUnlock) {
@@ -145,7 +146,7 @@ export async function depositFunds(publicClient: PublicClient, walletClient: Wal
         storageUnlockAt = updatedStorageAuthorization[2]
       }
       if (currentTime < storageUnlockAt) {
-        let unlockDate = new Date(Number(storageUnlockAt) * 1000)
+        const unlockDate = new Date(Number(storageUnlockAt) * 1000)
         throw new TransientError(`Storage system authorization is currenly being unlocked; please wait until ${unlockDate} before continuing with the withdrawal.`)
       }
       // NOTE: Could also leave a leftoverReservation = withdrawAmount - (available - reserved + storageReserved)
