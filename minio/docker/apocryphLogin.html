@@ -1,0 +1,65 @@
+<html style="background: #333;">
+<head>
+</head>
+<body style="transform: translate(-50%, -50%); top: 50%; left: 50%; position: absolute; color: #aaa; font-family: monospace;">
+  <span>Logging you in...</span>
+  <script>
+  ;!async function() {
+    async function getStsToken(siweToken) {
+      const response = await fetch(minioUrl + "?" + new URLSearchParams({
+        "Action": "AssumeRoleWithCustomToken",
+        "Version": "2011-06-15",
+        "Token": siweToken,
+        "RoleArn": 'arn:minio:iam:::role/idmp-ethauth'
+      }), {
+        method: "POST",
+        mode: "cors",
+      });
+      var resultXml = new window.DOMParser().parseFromString(await response.text(), "text/xml")
+      var errorEl = resultXml.querySelector('Error>Message')
+      if (errorEl != null) {
+        throw new Error(errorEl.textContent)
+      } else {
+        var accessKey = resultXml.querySelector('AccessKeyId').textContent
+        var secretKey = resultXml.querySelector('SecretAccessKey').textContent
+        var sts = resultXml.querySelector('SessionToken').textContent
+        return {accessKey, secretKey, sts}
+      }
+    }
+
+    var minioUrl = 'http://localhost:9000' // ...
+
+    try {
+
+      var hashParts = location.hash.split('#').map(function(x) {return decodeURIComponent(x)})
+      var token = hashParts[1]
+      var nextUrl = hashParts[2]
+      if (!token) {
+        throw new Error('No token present in URL (try logging in again)')
+      }
+
+      // Remove the sensitive token from browser history
+      history.replaceState(null, "", "#")
+
+      // Convert it to an STS token // TODO: Copied from signin.ts, getStsToken
+      var {accessKey, secretKey, sts} = await getStsToken(token)
+
+      // HACK: Login directly into the console (using a proxy to serve this HTML on the same origin)
+      await fetch("/api/v1/login", {
+          "headers": {
+              "Content-Type": "application/json",
+          },
+          "body": JSON.stringify({accessKey, secretKey, sts}),
+          "method": "POST"
+      })
+
+      // Go into the Console
+      location.replace(nextUrl ? nextUrl.replace(/\/\/+/, '/') : '/')
+    } catch (e) {
+      document.querySelector('span').innerText = 'Failed to log in. (' + e + ')'
+    }
+
+  }();
+  </script>
+</body>
+</html>
