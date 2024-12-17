@@ -1,0 +1,38 @@
+root = true
+
+[*]
+charset = utf-8
+insert_final_newline = true
+end_of_line = lf
+indent_style = space
+indent_size = 4
+max_line_length = 80
+
+[*.go]
+indent_style = tab
+indent_size = 4
+
+[*.md]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false
+
+[*.{proto,sh}]
+indent_style = space
+indent_size = 2
+
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+[*.{js,jsx,ts,tsx}]
+indent_style = space
+indent_size = 2
+
+[*.css]
+indent_style = space
+indent_size = 2
+
+[Tiltfile]
+indent_style = space
+indent_size = 4
