@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: GPL-3.0
+
+## Base images
+
+FROM docker.io/library/golang:1.23.4-bookworm@sha256:5c3223fcb23efeccf495739c9fd9bbfe76cee51caea90591860395057eab3113 as go-build-base
+
+RUN go install github.com/hashicorp/serf/cmd/serf@v0.10.1
+
+EXPOSE 7373
+
+ENTRYPOINT ["serf"]

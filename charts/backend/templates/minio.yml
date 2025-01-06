@@ -1,0 +1,48 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-configure-policies-{{randNumeric 4}}
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: backend
+        image: {{ .Values.minio.image }}
+        imagePullPolicy: IfNotPresent
+        command:
+          - bash
+          - -c
+          - |{{ .Files.Get "files/minio.config.sh" | nindent 12 }}
+        env:
+          - name: _MINIO_ADDRESS
+            value: 'http://minio.{{ .Release.Namespace }}.svc.cluster.local'
+        volumeMounts:
+        - name: policies
+          mountPath: /policies
+          readOnly: true
+        - name: config
+          mountPath: /config.env
+          subPath: config.env
+          readOnly: true
+        - name: backend-config
+          mountPath: /backend.env
+          subPath: .env
+          readOnly: true
+      volumes:
+      - name: policies
+        configMap:
+          name: minio-policies
+      - name: config
+        secret:
+          secretName: minio-config
+      - name: backend-config
+        secret:
+          secretName: backend-access-secret
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: minio-policies
+data:
+{{ (.Files.Glob "files/*.policy.json").AsConfig | indent 2 }}

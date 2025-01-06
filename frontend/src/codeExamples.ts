@@ -29,7 +29,7 @@ export default {
       const s3Client = new S3Client({
         endPoint: process.env.S3_BUCKET,
         region: "${'us-east-1' /* Minio Default */}",
-        credentials: {${withToken ? `// The AWS SDK doesn't support` : ''}
+        credentials: {${withToken ? `// The AWS SDK doesn't support custom tokens` : ''}
           accessKeyId: process.env.ACCESS_KEY,
           secretAccessKey: process.env.SECRET_KEY,
         },
@@ -52,12 +52,13 @@ export default {
       )
 
       func main() {
+        ${withToken ?
+        `creds, _ := credentials.NewCustomTokenCredentials(\n    os.Getenv("S3_BUCKET"),\n    os.Getenv("CUSTOM_TOKEN"),\n  )` :
+        `creds := credentials.NewStaticV4(\n    os.Getenv("ACCESS_KEY"),\n    os.Getenv("SECRET_KEY"),\n  )`
+        }
         minioClient, err := minio.New(os.Getenv("S3_BUCKET"), &minio.Options{
           Secure: true,
-          ${withToken ?
-            `Creds:  credentials.NewCustomTokenCredentials(\n      os.Getenv("S3_BUCKET"),\n      os.Getenv("CUSTOM_TOKEN"),\n    ),` :
-            `Creds:  credentials.NewStaticV4(\n      os.Getenv("ACCESS_KEY"),\n      os.Getenv("SECRET_KEY"),\n    ),`
-          }
+          Creds:  creds,
         })
         if err != nil {
           log.Fatalln(err)

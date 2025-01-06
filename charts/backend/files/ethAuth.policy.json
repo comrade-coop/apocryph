@@ -1,0 +1,21 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "EnableBucketAccess",
+      "Effect": "Allow",
+      "Action": [
+        "s3:*"
+      ],
+      "Resource": [
+        "arn:aws:s3:::${jwt:preferred_username}",
+        "arn:aws:s3:::${jwt:preferred_username}/*"
+      ],
+      "Condition": {
+        "ForAnyValue:StringEquals": {
+          "jwt:scope": "user"
+        }
+      }
+    }
+  ]
+}

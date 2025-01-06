@@ -40,7 +40,7 @@ func (s *Swarm) Join(existingNode string) error {
 	return err
 }
 
-func (s *Swarm) FindBucket(bucketId string) ([]net.IP, error) {
+func (s *Swarm) FindBucketBestNodes(bucketId string) ([]net.IP, error) {
 	bucketKey := BucketPrefix + bucketId
 	members, err := s.serf.MembersFiltered(map[string]string{
 		bucketKey: string(Ready),
@@ -63,6 +63,21 @@ func (s *Swarm) FindBucket(bucketId string) ([]net.IP, error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+	resultAddresses := make([]net.IP, len(members))
+	for i := range members {
+		resultAddresses[i] = members[i].Addr
+	}
+	return resultAddresses, nil
+}
+
+func (s *Swarm) FindBucketReplicas(bucketId string) ([]net.IP, error) {
+	bucketKey := BucketPrefix + bucketId
+	members, err := s.serf.MembersFiltered(map[string]string{
+		bucketKey: string(Syncing) + "|" + string(Ready),
+	}, "Alive", "")
+	if err != nil {
+		return nil, err
 	}
 	resultAddresses := make([]net.IP, len(members))
 	for i := range members {

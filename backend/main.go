@@ -2,18 +2,23 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
-	"encoding/json"
-	"net/http"
+	"errors"
+	"log"
 	"os"
 	"os/signal"
 
+	_ "github.com/joho/godotenv/autoload"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/spf13/cobra"
-	swie "github.com/spruceid/siwe-go"
 )
 
-var AuthDomain string = "localhost:5173" // 's3.apocryph.io'
-var serveAddress string
+var minioAddress string
+var serfAddress string
+var identityServeAddress string
+var dnsServeAddress string
+var privateKey string
+var minioAccessKey string
+var minioSecretKey string
 
 func main() {
 	ctx := context.Background()
@@ -26,103 +31,54 @@ func main() {
 		cancel()
 	}()
 
+	log.Printf("%v", os.Args)
+
 	if err := backendCmd.ExecuteContext(ctx); err != nil {
 		os.Exit(1)
 	}
 }
 
 var backendCmd = &cobra.Command{
-	Use: "tpodstoragebackend",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		mux := http.NewServeMux()
-		mux.HandleFunc("POST /", authenticateHandler)
-		s := &http.Server{
-			Addr:    serveAddress,
-			Handler: mux,
+	Use: "apocryph-s3-backend",
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		swarm, err := NewSwarm(serfAddress)
+		if err != nil {
+			return
 		}
-		go func() {
-			<-cmd.Context().Done()
-			err := s.Shutdown(context.TODO())
-			cmd.PrintErr(err)
-		}()
 
-		cmd.PrintErrln("Server is listening on ", serveAddress)
-		err := s.ListenAndServe()
-		cmd.PrintErrln(err)
+		replicationSigner, err := NewTokenSigner(privateKey)
+		if err != nil {
+			return
+		}
 
-		return err
+		if minioAccessKey == "" {
+			minioAccessKey = os.Getenv("ACCESS_KEY")
+		}
+		if minioSecretKey == "" {
+			minioSecretKey = os.Getenv("SECRET_KEY")
+		}
+		minioCreds := credentials.NewStaticV4(minioAccessKey, minioSecretKey, "")
+
+		replication, err := NewReplicationManager(minioAddress, minioCreds, swarm, replicationSigner)
+		if err != nil {
+			return
+		}
+
+		err = errors.Join(
+			RunDNS(cmd.Context(), dnsServeAddress, serfAddress), //, swarm
+			replication.Run(cmd.Context()),
+			RunIdentityServer(cmd.Context(), identityServeAddress, replicationSigner.GetPublicAddress()),
+		)
+		return
 	},
 }
 
 func init() {
-	backendCmd.Flags().StringVar(&serveAddress, "address", ":8593", "port to serve on")
-}
-
-type AuthenticationFailure struct {
-	Reason string `json:"reason"`
-}
-
-type AuthenticationResult struct {
-	User               string                 `json:"user"`
-	MaxValiditySeconds int                    `json:"maxValiditySeconds"`
-	Claims             map[string]interface{} `json:"claims"`
-}
-
-type Token struct {
-	Message   string `json:"message"`
-	Signature string `json:"signature"`
-}
-
-func authenticateHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	tokenString := r.URL.Query().Get("token")
-
-	token := &Token{}
-	err := json.Unmarshal([]byte(tokenString), token)
-	if err != nil {
-		w.WriteHeader(http.StatusForbidden)
-		_ = json.NewEncoder(w).Encode(AuthenticationFailure{
-			Reason: err.Error(),
-		})
-		return
-	}
-	message, err := swie.ParseMessage(token.Message)
-	if err != nil {
-		w.WriteHeader(http.StatusForbidden)
-		_ = json.NewEncoder(w).Encode(AuthenticationFailure{
-			Reason: err.Error(),
-		})
-		return
-	}
-	println(message.String())
-
-	/*if token.Message.GetResources() != crypto.Keccak256Hash(...) {
-		w.WriteHeader(http.StatusForbidden)
-		_ = json.NewEncoder(w).Encode(AuthenticationFailure {
-			Reason: "Token is for the wrong Bucket!",
-		})
-		return
-	}*/ // TODO
-
-	_, err = message.Verify(token.Signature, &AuthDomain, nil, nil)
-	if err != nil {
-		w.WriteHeader(http.StatusForbidden)
-		_ = json.NewEncoder(w).Encode(AuthenticationFailure{
-			Reason: err.Error(),
-		})
-		return
-	}
-
-	address := message.GetAddress()
-	println(hex.EncodeToString(address[:]))
-
-	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(AuthenticationResult{
-		User:               address.Hex(),
-		MaxValiditySeconds: 3600, // token.ExpirationTime.Unix() - time.Now().Unix()
-		Claims: map[string]interface{}{
-			"preferred_username": hex.EncodeToString(address[:]),
-		},
-	})
+	backendCmd.Flags().StringVar(&identityServeAddress, "bind", ":8593", "Bind address to serve the minio identity plugin on")
+	backendCmd.Flags().StringVar(&dnsServeAddress, "bind-dns", ":5353", "Bind address to serve DNS on")
+	backendCmd.Flags().StringVar(&minioAddress, "minio", "localhost:9000", "Address to query minio on")
+	backendCmd.Flags().StringVar(&minioAccessKey, "minio-access", "", "Access key for Minio")
+	backendCmd.Flags().StringVar(&minioSecretKey, "minio-secret", "", "Secret key for Minio")
+	backendCmd.Flags().StringVar(&serfAddress, "serf", "localhost:7373", "Address to query serf on")
+	backendCmd.Flags().StringVar(&privateKey, "private-key", "", "Private key to use for replication token signing")
 }

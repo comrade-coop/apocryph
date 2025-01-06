@@ -3,29 +3,48 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/minio/minio-go/v7/pkg/replication"
 )
 
+var ReplicationCustomTokenIamArn = "arn:minio:iam:::role/idmp-ethauth"
+
 type ReplicationManager struct {
-	minio      *minio.Client
-	minioAdmin *madmin.AdminClient
-	swarm      *Swarm
+	minio       *minio.Client
+	minioAdmin  *madmin.AdminClient
+	swarm       *Swarm
+	tokenSigner *TokenSigner
 }
 
-func NewReplicationManager(minioClient *minio.Client, minioAdmin *madmin.AdminClient, swarm *Swarm) *ReplicationManager {
-	return &ReplicationManager{
-		minio:      minioClient,
-		minioAdmin: minioAdmin,
-		swarm:      swarm,
+func NewReplicationManager(minioAddress string, minioCreds *credentials.Credentials, swarm *Swarm, tokenSigner *TokenSigner) (*ReplicationManager, error) {
+	minioClient, err := minio.New(minioAddress, &minio.Options{
+		Creds: minioCreds,
+	})
+	if err != nil {
+		return nil, err
 	}
+	minioAdmin, err := madmin.NewWithOptions(minioAddress, &madmin.Options{
+		Creds: minioCreds,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &ReplicationManager{
+		minio:       minioClient,
+		minioAdmin:  minioAdmin,
+		swarm:       swarm,
+		tokenSigner: tokenSigner,
+	}, nil
 }
 
-func (r *ReplicationManager) Start(ctx context.Context) {
+func (r *ReplicationManager) Run(ctx context.Context) error {
 	go func() {
 		for {
 			err := r.reconcilationLoop(ctx)
@@ -36,6 +55,7 @@ func (r *ReplicationManager) Start(ctx context.Context) {
 			time.Sleep(1 * time.Minute) // TODO: Maybe change to 5 minutes?
 		}
 	}()
+	return nil
 }
 
 func (r *ReplicationManager) reconcilationLoop(ctx context.Context) error {
@@ -61,11 +81,18 @@ func (r *ReplicationManager) reconcilationLoop(ctx context.Context) error {
 	return errors.Join(errs...)
 }
 
+type ReplicaStatus int
+
+const (
+	Unknown ReplicaStatus = 0
+	Alive   ReplicaStatus = 1
+	Failing ReplicaStatus = 2
+)
+
 // TODO: call UpdateBucket whenever the swarm detects that the peer is down
 // TODO: call UpdateBucket whenever we get a new bucket
 func (r *ReplicationManager) UpdateBucket(ctx context.Context, bucketId string) error {
 	// Get object
-
 	replicationConfig, err := r.minio.GetBucketReplication(ctx, bucketId)
 	if err != nil {
 		return err
@@ -79,33 +106,63 @@ func (r *ReplicationManager) UpdateBucket(ctx context.Context, bucketId string) 
 		return err
 	}
 
-	aliveReplicas := 1 // 1, counting ourselves
-	syncedReplicas := 0
-	deadReplicas := []string{}
+	replicaStatus := map[string]ReplicaStatus{}
+	statusCounts := map[ReplicaStatus]int{}
+	statusCounts[Alive]++ // ++, Counting ourselves
+	syncedReplicas := 1   // 1, Counting ourselves
 	for id, stats := range metrics.Stats {
 		if stats.Failed.LastHour.Count > 10 {
-			deadReplicas = append(deadReplicas, id)
+			replicaStatus[id] = Failing
+			statusCounts[Failing]++
 		} else {
-			aliveReplicas += 1
+			replicaStatus[id] = Alive
+			statusCounts[Alive]++
 		}
 		if stats.PendingCount < 10 {
 			syncedReplicas += 1
 		}
 	}
 
+	expectedReplicas, err := r.swarm.FindBucketReplicas(bucketId)
+	if err != nil {
+		return err
+	}
+
 	// Reconcile
 	// TODO: Make sure this does what it's supposed to
-	if aliveReplicas < targetTotalReplicas {
-		for i := aliveReplicas; i < targetTotalReplicas; i += 1 {
+	for _, node := range expectedReplicas {
+		id := node.String()
+		if replicaStatus[id] == Unknown {
+			replicaStatus[id] = Alive
+			statusCounts[Alive]++
+			// TODO: Create the remote bucket
+			// TODO: Properly authenticate to the remote
+			replicationConfig.AddRule(replication.Options{
+				ID:                      id,
+				ExistingObjectReplicate: "enable",
+				ReplicateDeletes:        "enable",
+				ReplicateDeleteMarkers:  "enable",
+				DestBucket:              "http://" + node.String() + "/" + bucketId,
+			})
+		}
+	}
+	if statusCounts[Alive] < targetTotalReplicas {
+		for statusCounts[Alive] < targetTotalReplicas {
 			node, err := r.swarm.FindFreeNode()
 			if err != nil {
 				return err
 			}
+			id := node.String()
+			if replicaStatus[id] != Unknown {
+				break // TODO: avoids infinite loop
+			}
+			replicaStatus[id] = Alive
+			statusCounts[Alive]++
 
 			// TODO: Create the remote bucket
 			// TODO: Properly authenticate to the remote
 			replicationConfig.AddRule(replication.Options{
-				ID:                      node.String(),
+				ID:                      id,
 				ExistingObjectReplicate: "enable",
 				ReplicateDeletes:        "enable",
 				ReplicateDeleteMarkers:  "enable",
@@ -113,17 +170,57 @@ func (r *ReplicationManager) UpdateBucket(ctx context.Context, bucketId string) 
 			})
 		}
 
-	} else { // Cleanup
-		for _, deadReplicationId := range deadReplicas {
-			replicationConfig.RemoveRule(replication.Options{
-				ID: deadReplicationId,
-			})
+	} else if syncedReplicas > targetTotalReplicas/2+1 { // Cleanup - we have enough alive and synced to start prunning failed
+		// TODO: Double-check condition correctness
+		for failedId, status := range replicaStatus {
+			if status == Failing {
+				replicationConfig.RemoveRule(replication.Options{
+					ID: failedId,
+				})
+			}
 		}
 	}
 
 	r.minio.SetBucketReplication(ctx, bucketId, replicationConfig)
 
 	return nil
+}
+func (r *ReplicationManager) getReplicationRuleForNode(ctx context.Context, nodeAddress string, bucketId string, serviceAccountName string) (opt replication.Options, err error) {
+	id := nodeAddress
+
+	token, err := r.tokenSigner.GetReplicationToken(bucketId)
+	if err != nil {
+		return
+	}
+	cred, err := credentials.NewCustomTokenCredentials(nodeAddress, token, ReplicationCustomTokenIamArn)
+	if err != nil {
+		return
+	}
+	adminClient, err := madmin.NewWithOptions(nodeAddress, &madmin.Options{
+		Secure: false, // TODO: true
+		Creds:  cred,
+	})
+	if err != nil {
+		return
+	}
+	result, err := adminClient.AddServiceAccount(ctx, madmin.AddServiceAccountReq{
+		Name:        serviceAccountName,
+		Description: "Access key used for replicating this bucket to other instances of Apocryph S3, keeping your data safe from any single node failures!",
+	})
+	if err != nil {
+		return
+	}
+	accessKey := result.AccessKey
+	secretKey := result.SecretKey
+
+	opt = replication.Options{
+		ID:                      id,
+		ExistingObjectReplicate: "enable",
+		ReplicateDeletes:        "enable",
+		ReplicateDeleteMarkers:  "enable",
+		DestBucket:              fmt.Sprintf("http://%s:%s@%s/%s", accessKey, secretKey, nodeAddress, bucketId),
+	}
+	return
 }
 
 func (r *ReplicationManager) UpdateCapacity(ctx context.Context) error {

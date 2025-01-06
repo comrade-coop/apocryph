@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: serf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: serf
+  template:
+    metadata:
+      labels:
+        app: serf
+    spec:
+      setHostnameAsFQDN: true
+      containers:
+      - name: backend
+        image: {{ .Values.serf.image }}
+        args: [
+          "agent",
+          "-node", {{ .Release.Namespace | quote }},
+          "-retry-join", {{ .Values.serf.bootstrap | quote }},
+          "-rpc-addr=0.0.0.0:7373",
+          "-bind=0.0.0.0:7946"
+        ]
+        ports:
+        - containerPort: 7373
+        - containerPort: 7946
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: serf-rpc
+spec:
+  selector:
+    app: serf
+  ports:
+  - name: rpc
+    port: 7373
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: serf-bind
+spec:
+  selector:
+    app: serf
+  ports:
+  - name: serf
+    port: 7946

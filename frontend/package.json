@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.19",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "apocryph-abi-ts": "../../apocryph/pkg/abi-ts",
     "outdent": "^0.8.0",
     "react": "^18.3.1",
@@ -30,6 +31,7 @@
     "globals": "^15.11.0",
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.10.0",
-    "vite": "^5.4.9"
-  }
+    "vite": "^6.0.7"
+  },
+  "packageManager": "pnpm@9.15.3"
 }

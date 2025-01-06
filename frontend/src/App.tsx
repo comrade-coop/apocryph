@@ -104,7 +104,7 @@ function App() {
 
   return (
     <>
-      {depositError != '' ? <div className='error-toast' key={depositError}>{depositError}</div> : <></>}
+      {depositError != '' ? <div className='error-toast' key={depositError} onClick={() => setDepositError('')}>{depositError}</div> : <></>}
       <img src={apocryphLogo} alt="Apocryph Logo" />
       <h1>Get your S3-compatible bucket!</h1>
       <section>

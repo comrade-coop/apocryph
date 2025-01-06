@@ -25,7 +25,7 @@ func (e DNS) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (in
 	answer.SetReply(r)
 	answer.Authoritative = true
 
-	resultIps, err := e.swarm.FindBucket(state.QName())
+	resultIps, err := e.swarm.FindBucketBestNodes(state.QName())
 	if err != nil {
 		return 0, err
 	}
@@ -94,16 +94,10 @@ func setup(c *caddy.Controller) error {
 	return nil
 }
 
-func RunDNS(ctx context.Context, dnsAddress string, swarm *Swarm) error {
-	server, err := dnsserver.NewServer(dnsAddress, []*dnsserver.Config{
-		{
-			Zone: ".",
-			Plugin: []plugin.Plugin{
-				func(next plugin.Handler) plugin.Handler {
-					return DNS{swarm}
-				},
-			},
-		},
+func RunDNS(ctx context.Context, dnsAddress string, serfAddress string) error {
+
+	server, err := dnsserver.NewServer("dns://"+dnsAddress, []*dnsserver.Config{
+		dnsserver.GetConfig(caddy.NewTestController("dns", `apocryphS3DNS `+serfAddress)),
 	})
 	if err != nil {
 		return err
@@ -113,9 +107,17 @@ func RunDNS(ctx context.Context, dnsAddress string, swarm *Swarm) error {
 	if err != nil {
 		return err
 	}
+
+	lp, err := server.ListenPacket()
+	if err != nil {
+		l.Close()
+		return err
+	}
+
 	go func() {
 		<-ctx.Done()
 		l.Close()
+		lp.Close()
 	}()
 
 	return nil
