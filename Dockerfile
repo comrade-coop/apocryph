@@ -30,7 +30,7 @@ COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/root/.cache/go-build go mod download && go mod verify
 
 COPY backend/ ./backend
-RUN --mount=type=cache,target=/root/.cache/go-build go build -v -o /usr/local/bin/apocryph-s3-backend ./cmd/apocryph-s3-backend
+RUN --mount=type=cache,target=/root/.cache/go-build go build -v -o /usr/local/bin/apocryph-s3-backend ./backend/minio-manager
 
 
 FROM go-run-base AS run-backend
@@ -44,6 +44,31 @@ FROM go-run-base AS run-backend-copy-local
 COPY ./bin/apocryph-s3-backend /usr/local/bin/apocryph-s3-backend
 
 ENTRYPOINT ["/usr/local/bin/apocryph-s3-backend"]
+
+## Backend
+
+FROM go-build-base AS build-backend
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/root/.cache/go-build go mod download && go mod verify
+
+COPY backend/ ./backend
+RUN --mount=type=cache,target=/root/.cache/go-build go build -v -o /usr/local/bin/apocryph-s3-dns ./backend/dns-build
+
+
+FROM go-run-base AS run-dns
+
+COPY --from=build /usr/local/bin/apocryph-s3-dns /usr/local/bin/apocryph-s3-dns
+
+ENTRYPOINT ["/usr/local/bin/apocryph-s3-dns"]
+
+FROM go-run-base AS run-dns-copy-local
+
+COPY ./bin/apocryph-s3-dns /usr/local/bin/apocryph-s3-dns
+
+ENTRYPOINT ["/usr/local/bin/apocryph-s3-dns"]
 
 ## Frontend
 

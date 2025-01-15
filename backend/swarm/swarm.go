@@ -1,8 +1,7 @@
-package main
+package swarm
 
 import (
 	"math/rand"
-	"net"
 	"sort"
 	"strconv"
 
@@ -20,10 +19,11 @@ const BucketPrefix = "b_"
 const CapacityTag = "meta_capacity"
 
 type Swarm struct {
-	serf *client.RPCClient
+	serf    *client.RPCClient
+	OwnName string
 }
 
-func NewSwarm(serfAddress string) (*Swarm, error) {
+func NewSwarm(serfAddress string, ownNodeName string) (*Swarm, error) {
 	serf, err := client.ClientFromConfig(&client.Config{
 		Addr: serfAddress,
 	})
@@ -31,7 +31,8 @@ func NewSwarm(serfAddress string) (*Swarm, error) {
 		return nil, err
 	}
 	return &Swarm{
-		serf: serf,
+		serf:    serf,
+		OwnName: ownNodeName,
 	}, nil
 }
 
@@ -40,7 +41,7 @@ func (s *Swarm) Join(existingNode string) error {
 	return err
 }
 
-func (s *Swarm) FindBucketBestNodes(bucketId string) ([]net.IP, error) {
+func (s *Swarm) FindBucketBestNodes(bucketId string) ([]string, error) {
 	bucketKey := BucketPrefix + bucketId
 	members, err := s.serf.MembersFiltered(map[string]string{
 		bucketKey: string(Ready),
@@ -64,14 +65,14 @@ func (s *Swarm) FindBucketBestNodes(bucketId string) ([]net.IP, error) {
 			return nil, err
 		}
 	}
-	resultAddresses := make([]net.IP, len(members))
+	resultAddresses := make([]string, len(members))
 	for i := range members {
-		resultAddresses[i] = members[i].Addr
+		resultAddresses[i] = members[i].Name
 	}
 	return resultAddresses, nil
 }
 
-func (s *Swarm) FindBucketReplicas(bucketId string) ([]net.IP, error) {
+func (s *Swarm) FindBucketReplicas(bucketId string) ([]string, error) {
 	bucketKey := BucketPrefix + bucketId
 	members, err := s.serf.MembersFiltered(map[string]string{
 		bucketKey: string(Syncing) + "|" + string(Ready),
@@ -79,9 +80,9 @@ func (s *Swarm) FindBucketReplicas(bucketId string) ([]net.IP, error) {
 	if err != nil {
 		return nil, err
 	}
-	resultAddresses := make([]net.IP, len(members))
+	resultAddresses := make([]string, len(members))
 	for i := range members {
-		resultAddresses[i] = members[i].Addr
+		resultAddresses[i] = members[i].Name
 	}
 	return resultAddresses, nil
 }
@@ -98,12 +99,12 @@ func (s *Swarm) UpdateBucket(bucketId string, status BucketStatus) error {
 }
 
 // TODO: Make sure to fliter ourselves out of the list
-func (s *Swarm) FindFreeNode() (net.IP, error) {
+func (s *Swarm) FindFreeNode() (string, error) {
 	members, err := s.serf.MembersFiltered(map[string]string{
 		CapacityTag: "",
 	}, "Alive", "")
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	parsedCapacities := make([]uint64, len(members))
@@ -116,7 +117,7 @@ func (s *Swarm) FindFreeNode() (net.IP, error) {
 	// Arbitrarily pick a server in the top half
 	// TODO: there probably are better load-balancing algorithms
 	picked := rand.Intn((len(members) + 1) / 2)
-	return members[picked].Addr, nil
+	return members[picked].Name, nil
 }
 
 func (s *Swarm) UpdateCapacity(capacityLeft uint64) error {

@@ -1,3 +1,4 @@
+{{ if .Values.minio.enable }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -46,3 +47,4 @@ metadata:
   name: minio-policies
 data:
 {{ (.Files.Glob "files/*.policy.json").AsConfig | indent 2 }}
+{{ end }}

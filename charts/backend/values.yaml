@@ -1,15 +1,25 @@
+
+minio:
+  enable: true
+  image: "quay.io/minio/minio"
 backend:
-  image: "comradecoop/apocryph/server"
+  image: "comradecoop/s3-aapp/backend"
   ethKey: "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
   replication:
     accessKey: "oopsdefaultkey"
     accessSecret: "oopsdefaultsecret"
 nginx:
   image: "nginx"
-ingress:
-  host: "s3.apocryph.local"
-minio:
-  image: "quay.io/minio/minio"
+  globalHost: "apocryph.local"
+  host: "s3-zero.apocryph.local"
+
+dns:
+  enable: false
+  image: "comradecoop/s3-aapp/dns"
+  clusterIp: 10.96.111.111
+proxy:
+  image: "httptoolkit/docker-socks-tunnel"
+
 serf:
   image: "comradecoop/s3-aapp/serf"
   bootstrap: "serf.serf.svc.cluster.local"

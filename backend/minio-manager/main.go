@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/comrade-coop/apocryph/backend/swarm"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/spf13/cobra"
@@ -14,6 +15,7 @@ import (
 
 var minioAddress string
 var serfAddress string
+var hostname string
 var identityServeAddress string
 var dnsServeAddress string
 var privateKey string
@@ -41,7 +43,7 @@ func main() {
 var backendCmd = &cobra.Command{
 	Use: "apocryph-s3-backend",
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		swarm, err := NewSwarm(serfAddress)
+		swarm, err := swarm.NewSwarm(serfAddress, hostname)
 		if err != nil {
 			return
 		}
@@ -65,7 +67,6 @@ var backendCmd = &cobra.Command{
 		}
 
 		err = errors.Join(
-			RunDNS(cmd.Context(), dnsServeAddress, serfAddress), //, swarm
 			replication.Run(cmd.Context()),
 			RunIdentityServer(cmd.Context(), identityServeAddress, replicationSigner.GetPublicAddress()),
 		)
@@ -75,10 +76,10 @@ var backendCmd = &cobra.Command{
 
 func init() {
 	backendCmd.Flags().StringVar(&identityServeAddress, "bind", ":8593", "Bind address to serve the minio identity plugin on")
-	backendCmd.Flags().StringVar(&dnsServeAddress, "bind-dns", ":5353", "Bind address to serve DNS on")
 	backendCmd.Flags().StringVar(&minioAddress, "minio", "localhost:9000", "Address to query minio on")
 	backendCmd.Flags().StringVar(&minioAccessKey, "minio-access", "", "Access key for Minio")
 	backendCmd.Flags().StringVar(&minioSecretKey, "minio-secret", "", "Secret key for Minio")
 	backendCmd.Flags().StringVar(&serfAddress, "serf", "localhost:7373", "Address to query serf on")
+	backendCmd.Flags().StringVar(&hostname, "hostname", "localhost", "Hostname & local serf node name")
 	backendCmd.Flags().StringVar(&privateKey, "private-key", "", "Private key to use for replication token signing")
 }

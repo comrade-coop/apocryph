@@ -6,12 +6,10 @@ load("ext://restart_process", "docker_build_with_restart")
 load("ext://namespace", "namespace_create")
 load("ext://helm_resource", "helm_resource", "helm_repo")
 
-local(
-    "which jq forge cast helm kubectl docker >/dev/null", echo_off=True
-)  # Check dependencies
-cluster_ip = local(
-    "kubectl get no -o jsonpath --template '{$.items[0].status.addresses[?(.type==\"InternalIP\")].address}'"
-)
+local("which jq forge cast helm kubectl docker >/dev/null", echo_off=True)  # Check dependencies
+# cluster_ip = local(
+#    "kubectl get no -o jsonpath --template '{$.items[0].status.addresses[?(.type==\"InternalIP\")].address}'"
+# )
 root_dir = os.getcwd()
 apocryph_dir = root_dir + "/.." + "/apocryph"
 
@@ -53,7 +51,7 @@ def builder_resource(
     dc_resource(name, *args, **kwargs)
 
 
-def local_resource_in_builder(name, cmd, builder, resource_deps=[], serve_cmd='', *args, **kwargs):
+def local_resource_in_builder(name, cmd, builder, resource_deps=[], serve_cmd="", *args, **kwargs):
     local_resource(
         name,
         cmdline_in_builder(cmd, builder),
@@ -65,8 +63,8 @@ def local_resource_in_builder(name, cmd, builder, resource_deps=[], serve_cmd=''
 
 
 def cmdline_in_builder(cmd, builder, *, interactive=False):
-    if cmd == '':
-        return ''
+    if cmd == "":
+        return ""
     flags = []
     if interactive:
         flags += ["-i"]
@@ -97,7 +95,11 @@ def s3_aapp_build_with_builder():
 
     local_resource_in_builder(
         "apocryph-s3-backend-go-compile",
-        'go build -v -buildvcs=false -ldflags="-s -w" -o bin/apocryph-s3-backend ./backend',
+        [
+            "sh",
+            "-c",
+            'go build -v -buildvcs=false -ldflags="-s -w" -o /tmp ./backend/minio-manager ./backend/dns-build && cp /tmp/minio-manager bin/apocryph-s3-backend && cp /tmp/dns-build bin/apocryph-s3-dns',
+        ],
         "apocryph-s3-go-builder",
         deps=[root_dir + "/backend"],
         allow_parallel=True,
@@ -116,12 +118,25 @@ def s3_aapp_build_with_builder():
         ],
     )
 
+    docker_build_with_restart(
+        "comradecoop/s3-aapp/dns",
+        root_dir,
+        dockerfile="./Dockerfile",
+        target="run-dns-copy-local",
+        entrypoint=["/usr/local/bin/apocryph-s3-dns"],
+        only=[root_dir + "/bin"],
+        live_update=[
+            sync(root_dir + "/bin", "/usr/local/bin/"),
+        ],
+    )
+
     docker_build(
         "comradecoop/s3-aapp/serf",
         root_dir,
         dockerfile=root_dir + "/Dockerfile.serf",
         only=[root_dir + "/Dockerfile.serf"],
     )
+
 
 def s3_aapp_serve_with_builder():
     docker_build(
@@ -140,24 +155,23 @@ def s3_aapp_serve_with_builder():
             "pnpm-cache:/pnpm/store",
             "../apocryph/pkg/abi-ts:/apocryph/pkg/abi-ts:ro",
         ],
-        #TODO: ports=[5173],
+        # TODO: ports=[5173],
         volumes_conf={"pnpm-cache": {}},
         labels=["build"],
     )
 
     local_resource_in_builder(
         "apocryph-s3-js-serve",
-        '',
+        "",
         "apocryph-s3-js-builder",
-        serve_cmd=['sh', '-c', 'cd frontend/ && pnpm install --frozen-lockfile && pnpm run dev'],
+        serve_cmd=["sh", "-c", "cd frontend/ && pnpm install --frozen-lockfile && pnpm run dev"],
         deps=[],
         allow_parallel=True,
         labels=["system"],
     )
 
-def s3_aapp_deploy(
-    cluster_names=["one", "two"]
-):
+
+def s3_aapp_deploy(cluster_names=["one", "two"]):
     update_settings(k8s_upsert_timeout_secs=160)
 
     helm_repo("minio-operator-chart", "https://operator.min.io")
@@ -181,7 +195,7 @@ def s3_aapp_deploy(
         flags=[
             "--create-namespace",
             "--set=operator.replicaCount=1",
-        ]
+        ],
     )
 
     for name in cluster_names:
@@ -200,7 +214,7 @@ def s3_aapp_deploy(
             "minio-%s-tenant" % name,
             "minio-operator-chart/tenant",
             namespace="s3-%s" % name,
-            resource_deps=["minio-operator", "minio-operator-chart", "minio-%s-config" % name],
+            resource_deps=["minio-operator", "minio-operator-chart"],  # , "minio-%s-config" % name
             labels=["s3-%s" % name],
             flags=[
                 "--create-namespace",
@@ -217,16 +231,41 @@ def s3_aapp_deploy(
             root_dir + "/charts/backend",
             namespace="s3-%s" % name,
             deps=[root_dir + "/charts/backend"],
-            resource_deps=["minio-%s-tenant" % name],
+            resource_deps=[],  # , "minio-%s-tenant" % name
             labels=["s3-%s" % name],
             flags=[
                 "--create-namespace",
-                "--set=ingress.host=%s.s3.localhost" % name,
-                "--set=serf.bootstrap=serf-bind.s3-%s.svc.cluster.local" % cluster_names[0],
+                "--set=ingress.host=%s.localhost" % name,
+                "--set=serf.bootstrap=serf-bind.s3-zero.svc.cluster.local",
             ],
-            image_deps=["comradecoop/s3-aapp/backend", "comradecoop/s3-aapp/serf"],
-            image_keys=["backend.image", "serf.image"],
+            image_deps=[
+                "comradecoop/s3-aapp/backend",
+                "comradecoop/s3-aapp/dns",
+                "comradecoop/s3-aapp/serf",
+            ],
+            image_keys=["backend.image", "dns.image", "serf.image"],
         )
+
+    helm_resource(
+        "minio-zero-dns",
+        root_dir + "/charts/backend",
+        namespace="s3-zero",
+        deps=[root_dir + "/charts/backend"],
+        labels=["s3-zero"],
+        flags=[
+            "--create-namespace",
+            "--set-json=minio.enable=false",
+            "--set-json=dns.enable=true",
+            "--set=serf.bootstrap=serf-bind.s3-%s.svc.cluster.local" % cluster_names[0],
+        ],
+        image_deps=[
+            "comradecoop/s3-aapp/backend",
+            "comradecoop/s3-aapp/dns",
+            "comradecoop/s3-aapp/serf",
+        ],
+        image_keys=["backend.image", "dns.image", "serf.image"],
+    )
+    k8s_resource(workload="minio-zero-dns", port_forwards=["1080:1080"])
 
     namespace_create("eth")
     # TODO: Recreate anvil when we have new contracts code
@@ -258,9 +297,14 @@ def s3_aapp_deploy_local(
             cmd="forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8549 --private-key %s --broadcast || true"
             % (deployer_key,),
             resource_deps=["anvil"],
-            deps=[apocryph_dir + "/contracts/src", apocryph_dir + "/contracts/script", apocryph_dir + "/contracts/lib"],
+            deps=[
+                apocryph_dir + "/contracts/src",
+                apocryph_dir + "/contracts/script",
+                apocryph_dir + "/contracts/lib",
+            ],
             allow_parallel=True,
         )
+
 
 s3_aapp_build_with_builder()
 s3_aapp_deploy()

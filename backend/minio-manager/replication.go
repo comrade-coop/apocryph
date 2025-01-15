@@ -7,22 +7,24 @@ import (
 	"log"
 	"time"
 
+	"github.com/comrade-coop/apocryph/backend/swarm"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/minio/minio-go/v7/pkg/replication"
 )
 
+var ReplicationServiceAccountPrefix = "Replicator-"
 var ReplicationCustomTokenIamArn = "arn:minio:iam:::role/idmp-ethauth"
 
 type ReplicationManager struct {
 	minio       *minio.Client
 	minioAdmin  *madmin.AdminClient
-	swarm       *Swarm
+	swarm       *swarm.Swarm
 	tokenSigner *TokenSigner
 }
 
-func NewReplicationManager(minioAddress string, minioCreds *credentials.Credentials, swarm *Swarm, tokenSigner *TokenSigner) (*ReplicationManager, error) {
+func NewReplicationManager(minioAddress string, minioCreds *credentials.Credentials, swarm *swarm.Swarm, tokenSigner *TokenSigner) (*ReplicationManager, error) {
 	minioClient, err := minio.New(minioAddress, &minio.Options{
 		Creds: minioCreds,
 	})
@@ -95,12 +97,17 @@ func (r *ReplicationManager) UpdateBucket(ctx context.Context, bucketId string) 
 	// Get object
 	replicationConfig, err := r.minio.GetBucketReplication(ctx, bucketId)
 	if err != nil {
-		return err
+		response := minio.ToErrorResponse(err)
+		if response.Code != "" {
+			println("!!!", response.Code)
+			replicationConfig = replication.Config{}
+		} else {
+			return err
+		}
 	}
 	targetTotalReplicas := 2 // TODO: Make this configurable
 
 	// Get current status
-
 	metrics, err := r.minio.GetBucketReplicationMetrics(ctx, bucketId)
 	if err != nil {
 		return err
@@ -108,8 +115,12 @@ func (r *ReplicationManager) UpdateBucket(ctx context.Context, bucketId string) 
 
 	replicaStatus := map[string]ReplicaStatus{}
 	statusCounts := map[ReplicaStatus]int{}
-	statusCounts[Alive]++ // ++, Counting ourselves
-	syncedReplicas := 1   // 1, Counting ourselves
+
+	// Count ourselves
+	replicaStatus[r.swarm.OwnName] = Alive
+	statusCounts[Alive]++
+	syncedReplicas := 1
+
 	for id, stats := range metrics.Stats {
 		if stats.Failed.LastHour.Count > 10 {
 			replicaStatus[id] = Failing
@@ -131,45 +142,37 @@ func (r *ReplicationManager) UpdateBucket(ctx context.Context, bucketId string) 
 	// Reconcile
 	// TODO: Make sure this does what it's supposed to
 	for _, node := range expectedReplicas {
-		id := node.String()
+		id := node
 		if replicaStatus[id] == Unknown {
+			rule, err := r.getReplicationRuleForNode(ctx, node, bucketId)
+			if err != nil {
+				//return err
+				continue
+			}
 			replicaStatus[id] = Alive
 			statusCounts[Alive]++
-			// TODO: Create the remote bucket
-			// TODO: Properly authenticate to the remote
-			replicationConfig.AddRule(replication.Options{
-				ID:                      id,
-				ExistingObjectReplicate: "enable",
-				ReplicateDeletes:        "enable",
-				ReplicateDeleteMarkers:  "enable",
-				DestBucket:              "http://" + node.String() + "/" + bucketId,
-			})
+			replicationConfig.AddRule(rule)
 		}
 	}
+
 	if statusCounts[Alive] < targetTotalReplicas {
 		for statusCounts[Alive] < targetTotalReplicas {
 			node, err := r.swarm.FindFreeNode()
 			if err != nil {
 				return err
 			}
-			id := node.String()
-			if replicaStatus[id] != Unknown {
+			if replicaStatus[node] != Unknown {
 				break // TODO: avoids infinite loop
 			}
-			replicaStatus[id] = Alive
+			rule, err := r.getReplicationRuleForNode(ctx, node, bucketId)
+			if err != nil {
+				//return err
+				continue
+			}
+			replicaStatus[node] = Alive
 			statusCounts[Alive]++
-
-			// TODO: Create the remote bucket
-			// TODO: Properly authenticate to the remote
-			replicationConfig.AddRule(replication.Options{
-				ID:                      id,
-				ExistingObjectReplicate: "enable",
-				ReplicateDeletes:        "enable",
-				ReplicateDeleteMarkers:  "enable",
-				DestBucket:              "http://" + node.String() + "/" + bucketId,
-			})
+			replicationConfig.AddRule(rule)
 		}
-
 	} else if syncedReplicas > targetTotalReplicas/2+1 { // Cleanup - we have enough alive and synced to start prunning failed
 		// TODO: Double-check condition correctness
 		for failedId, status := range replicaStatus {
@@ -185,18 +188,18 @@ func (r *ReplicationManager) UpdateBucket(ctx context.Context, bucketId string) 
 
 	return nil
 }
-func (r *ReplicationManager) getReplicationRuleForNode(ctx context.Context, nodeAddress string, bucketId string, serviceAccountName string) (opt replication.Options, err error) {
-	id := nodeAddress
+func (r *ReplicationManager) getReplicationRuleForNode(ctx context.Context, node string, bucketId string) (opt replication.Options, err error) {
+	hostname := node
 
 	token, err := r.tokenSigner.GetReplicationToken(bucketId)
 	if err != nil {
 		return
 	}
-	cred, err := credentials.NewCustomTokenCredentials(nodeAddress, token, ReplicationCustomTokenIamArn)
+	cred, err := credentials.NewCustomTokenCredentials(hostname, token, ReplicationCustomTokenIamArn)
 	if err != nil {
 		return
 	}
-	adminClient, err := madmin.NewWithOptions(nodeAddress, &madmin.Options{
+	adminClient, err := madmin.NewWithOptions(hostname, &madmin.Options{
 		Secure: false, // TODO: true
 		Creds:  cred,
 	})
@@ -204,7 +207,7 @@ func (r *ReplicationManager) getReplicationRuleForNode(ctx context.Context, node
 		return
 	}
 	result, err := adminClient.AddServiceAccount(ctx, madmin.AddServiceAccountReq{
-		Name:        serviceAccountName,
+		Name:        ReplicationServiceAccountPrefix + r.swarm.OwnName,
 		Description: "Access key used for replicating this bucket to other instances of Apocryph S3, keeping your data safe from any single node failures!",
 	})
 	if err != nil {
@@ -213,12 +216,14 @@ func (r *ReplicationManager) getReplicationRuleForNode(ctx context.Context, node
 	accessKey := result.AccessKey
 	secretKey := result.SecretKey
 
+	// TODO: Create the remote bucket?
+
 	opt = replication.Options{
-		ID:                      id,
+		ID:                      node,
 		ExistingObjectReplicate: "enable",
 		ReplicateDeletes:        "enable",
 		ReplicateDeleteMarkers:  "enable",
-		DestBucket:              fmt.Sprintf("http://%s:%s@%s/%s", accessKey, secretKey, nodeAddress, bucketId),
+		DestBucket:              fmt.Sprintf("http://%s:%s@%s/%s", accessKey, secretKey, hostname, bucketId), // TODO: https
 	}
 	return
 }

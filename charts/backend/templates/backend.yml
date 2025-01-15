@@ -1,3 +1,4 @@
+{{ if .Values.minio.enable }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,14 +18,12 @@ spec:
         image: {{ .Values.backend.image }}
         args: [
           "--bind", ":8593",
-          "--bind-dns", ":5353",
           "--minio", "minio.{{ .Release.Namespace }}.svc.cluster.local:80",
           "--serf", "serf-rpc.{{ .Release.Namespace }}.svc.cluster.local:7373",
           "--private-key", {{ .Values.backend.ethKey }}
         ]
         ports:
         - containerPort: 8593
-        - containerPort: 5353
         volumeMounts:
         - name: access-secret
           mountPath: /.env
@@ -45,14 +44,4 @@ spec:
   ports:
   - name: minio-auth
     port: 8593
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: dns-backend
-spec:
-  selector:
-    app: s3-backend
-  ports:
-  - name: dns
-    port: 5353
+{{ end }}

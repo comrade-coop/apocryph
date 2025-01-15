@@ -1,88 +1,95 @@
+{{ if .Values.minio.enable }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: s3-nginx-config
+  name: aapp-nginx-config
 data:
   apocryphLogin.html: |-{{ .Files.Get "files/apocryphLogin.html" | nindent 4 }}
+  nginx.conf: |-{{ tpl (.Files.Get "files/nginx.conf") . | nindent 4 }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: s3-nginx-static-override
+  name: aapp-nginx
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: s3-nginx-static-override
+      app: aapp-nginx
   template:
     metadata:
       labels:
-        app: s3-nginx-static-override
+        app: aapp-nginx
     spec:
       containers:
       - name: nginx
         image: {{ .Values.nginx.image }}
         volumeMounts:
-        # - name: configs
-        #   mountPath: /etc/nginx/conf.d/default.conf
-        #   subPath: nginx.conf
-        #   readOnly: true
+        - name: configs
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: nginx.conf
+          readOnly: true
         - name: htmls
           mountPath: /usr/share/nginx/html/x/
           readOnly: true
         ports:
         - containerPort: 80
       volumes:
+      - name: configs
+        configMap:
+          name: aapp-nginx-config
+          items:
+          - key: nginx.conf
+            path: nginx.conf
       - name: htmls
         configMap:
-          name: s3-nginx-config
+          name: aapp-nginx-config
           items:
-          # - key: nginx.conf
-          #   path: nginx.conf
           - key: apocryphLogin.html
             path: apocryphLogin/index.html
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: s3-nginx-static-override
+  name: aapp-nginx
 spec:
   selector:
-    app: s3-nginx-static-override
+    app: aapp-nginx
   ports:
   - name: http
     port: 80
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: s3-nginx-ingress
-spec:
-  rules:
-  - host: console.{{ .Values.ingress.host }}
-    http:
-      paths:
-      - path: /x/
-        pathType: Prefix
-        backend:
-          service:
-            name: apocryph-override
-            port:
-              number: 80
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: myminio-console
-            port:
-              number: 80
-  - host: {{ .Values.ingress.host }}
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: minio
-            port:
-              number: 80
+# ---
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: s3-nginx-ingress
+# spec:
+#   rules:
+#   - host: console.{{ .Values.ingress.host }}
+#     http:
+#       paths:
+#       - path: /x/
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: apocryph-override
+#             port:
+#               number: 80
+#       - path: /
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: myminio-console
+#             port:
+#               number: 80
+#   - host: {{ .Values.ingress.host }}
+#     http:
+#       paths:
+#       - path: /
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: minio
+#             port:
+#               number: 80
+{{ end }}

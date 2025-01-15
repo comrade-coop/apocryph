@@ -18,7 +18,7 @@ spec:
         image: {{ .Values.serf.image }}
         args: [
           "agent",
-          "-node", {{ .Release.Namespace | quote }},
+          "-node", aapp-nginx.{{ .Release.Namespace }}.svc.cluster.local,
           "-retry-join", {{ .Values.serf.bootstrap | quote }},
           "-rpc-addr=0.0.0.0:7373",
           "-bind=0.0.0.0:7946"
