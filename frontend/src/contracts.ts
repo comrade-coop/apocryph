@@ -1,4 +1,4 @@
-import { mockTokenAbi, paymentV2Abi } from 'apocryph-abi-ts'
+import { erc20Abi, mockTokenAbi, paymentV2Abi } from 's3-aapp-abi'
 import { PublicClient, WalletClient, parseUnits, Address, stringToHex, keccak256, encodeAbiParameters, parseAbiParameters, getContract, zeroAddress } from 'viem'
 
 // TODO: result from forge script script/Deploy.sol
@@ -73,7 +73,7 @@ export async function depositFunds(publicClient: PublicClient, walletClient: Wal
   const tokenAddress = await paymentV2.read.token()
   const token = getContract({
     address: tokenAddress,
-    abi: mockTokenAbi,
+    abi: erc20Abi,
     client,
   })
 
@@ -84,7 +84,12 @@ export async function depositFunds(publicClient: PublicClient, walletClient: Wal
     const balance = (await token.read.balanceOf([wallet.address]))
     const debugMintTokens = balance < depositAmount
     if (debugMintTokens) {
-      await token.write.mint([depositAmount], writeOptions)
+      const mockToken = getContract({
+        address: tokenAddress,
+        abi: mockTokenAbi,
+        client,
+      })
+      await mockToken.write.mint([depositAmount], writeOptions)
     }
 
     const allowance = (await token.read.allowance([wallet.address, paymentV2.address]))

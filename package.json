@@ -1,0 +1,7 @@
+{
+  "scripts": {
+    "generate-all": "pushd backend/abi/; go generate; popd; pushd frontend/abi/; pnpm run generate; popd",
+    "lint-all": "go vet ./...; pushd frontend/; pnpm run lint; popd"
+  },
+  "packageManager": "pnpm@9.15.3"
+}

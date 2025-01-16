@@ -1,0 +1,12 @@
+{
+  "name": "s3-aapp-abi",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "generate": "wagmi generate"
+  },
+  "dependencies": {
+    "@wagmi/cli": "^2.1.7"
+  }
+}
