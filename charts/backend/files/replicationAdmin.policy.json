@@ -2,6 +2,18 @@
   "Version": "2012-10-17",
   "Statement": [
     {
+      "Sid": "EnableNewUserBucketCreation",
+      "Effect": "Allow",
+      "Action": [
+        "s3:CreateBucket",
+        "s3:DeleteBucket",
+        "s3:PutBucketVersioning"
+      ],
+      "Resource": [
+        "arn:aws:s3:::*"
+      ]
+    },
+    {
       "Sid": "EnableRemoteBucketConfiguration",
       "Effect": "Allow",
       "Action": [
@@ -9,8 +21,8 @@
         "admin:GetBucketTarget",
         "admin:StorageInfo"
       ]
-  },
-  {
+    },
+    {
       "Sid": "EnableReplicationRuleConfiguration",
       "Effect": "Allow",
       "Action": [

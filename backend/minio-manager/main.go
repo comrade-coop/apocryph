@@ -71,7 +71,7 @@ var backendCmd = &cobra.Command{
 
 		err = errors.Join(
 			replication.Run(cmd.Context()),
-			RunIdentityServer(cmd.Context(), identityServeAddress, replicationSigner.GetPublicAddress()),
+			RunIdentityServer(cmd.Context(), identityServeAddress, replicationSigner.GetPublicAddress(), minioCreds),
 		)
 		return
 	},

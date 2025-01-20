@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/base32"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -89,9 +90,10 @@ func (r *ReplicationManager) reconcilationLoop(ctx context.Context) error {
 type ReplicaStatus int
 
 const (
-	Unknown ReplicaStatus = 0
-	Alive   ReplicaStatus = 1
-	Failing ReplicaStatus = 2
+	Unknown    ReplicaStatus = 0
+	Configured ReplicaStatus = 1
+	Alive      ReplicaStatus = 2
+	Failing    ReplicaStatus = 3
 )
 
 // TODO: call UpdateBucket whenever the swarm detects that the peer is down
@@ -127,6 +129,8 @@ func (r *ReplicationManager) UpdateBucket(ctx context.Context, bucketId string) 
 				return fmt.Errorf("GetBucketReplicationMetrics: %w", err)
 			}
 		}
+		a,_:=json.Marshal(metrics)
+		println(string(a))
 		for _, rule := range replicationConfig.Rules {
 			highestPriority = max(highestPriority, rule.Priority)
 		}
@@ -140,6 +144,12 @@ func (r *ReplicationManager) UpdateBucket(ctx context.Context, bucketId string) 
 	statusCounts[Alive]++
 	syncedReplicas := 1
 
+	for _, rule := range replicationConfig.Rules {
+		replicaStatus[rule.ID] = Configured
+		statusCounts[Alive]++ // HACK: Don't assume everyone is down while metrics below are not yet fixed
+	}
+	// TODO: metrics.Stats is nil for some reason
+	/*
 	for id, stats := range metrics.Stats {
 		if stats.Failed.LastHour.Count > 10 {
 			replicaStatus[id] = Failing
@@ -151,7 +161,7 @@ func (r *ReplicationManager) UpdateBucket(ctx context.Context, bucketId string) 
 		if stats.PendingCount < 10 {
 			syncedReplicas += 1
 		}
-	}
+	}*/
 
 	expectedReplicas, err := r.swarm.FindBucketReplicas(bucketId)
 	if err != nil {
@@ -177,7 +187,7 @@ func (r *ReplicationManager) UpdateBucket(ctx context.Context, bucketId string) 
 
 			err = replicationConfig.AddRule(rule)
 			if err != nil {
-				return fmt.Errorf("AddRule: %w", err)
+				return fmt.Errorf("AddRule (expected): %w", err)
 			}
 		}
 	}
@@ -204,7 +214,7 @@ func (r *ReplicationManager) UpdateBucket(ctx context.Context, bucketId string) 
 
 			err = replicationConfig.AddRule(rule)
 			if err != nil {
-				return fmt.Errorf("AddRule: %w", err)
+				return fmt.Errorf("AddRule (free): %w", err)
 			}
 		}
 	} else if syncedReplicas > targetTotalReplicas/2+1 { // Cleanup - we have enough alive and synced to start prunning failed
@@ -240,29 +250,8 @@ func (r *ReplicationManager) getReplicationRuleForNode(ctx context.Context, node
 	if err != nil {
 		return
 	}
-
-	minioClient, err := minio.New(hostname, &minio.Options{
-		Secure: false, // TODO: true
-		Creds:  cred,
-	})
-	if err != nil {
-		return
-	}
-	err = minioClient.MakeBucket(ctx, bucketId, minio.MakeBucketOptions{})
-	if err != nil {
-		response := minio.ToErrorResponse(err)
-		if response.Code == "BucketAlreadyOwnedByYou" {
-			// Expected error, keep going
-		} else {
-			err = fmt.Errorf("MakeBucket: %w", err)
-			return
-		}
-	}
-	err = minioClient.EnableVersioning(ctx, bucketId)
-	if err != nil {
-		err = fmt.Errorf("EnableVersioning: %w", err)
-		return
-	}
+	
+	// Creating a bucket is handled by the identity plugin.
 
 	// TODO: Find a way to sync bucket policies (below won't work due to only being triggered for/on new nodes)
 	// ownPolicy, err := r.minio.GetBucketPolicy(ctx, bucketId)

@@ -2,22 +2,6 @@
     "Version": "2012-10-17",
     "Statement": [
         {
-            "Sid": "CreateBucket",
-            "Effect": "Allow",
-            "Action": [
-                "s3:CreateBucket",
-                "s3:PutBucketVersioning"
-            ],
-            "Resource": [
-                "arn:aws:s3:::*"
-            ],
-            "Condition": {
-              "ForAnyValue:StringEquals": {
-                "jwt:groups": "remoteReplicant"
-              }
-            }
-        },
-        {
             "Sid": "EnableReplicationOnBucket",
             "Effect": "Allow",
             "Action": [

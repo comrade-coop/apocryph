@@ -265,7 +265,13 @@ def s3_aapp_deploy(cluster_names=["one", "two"]):
         ],
         image_keys=["backend.image", "dns.image", "serf.image"],
     )
-    k8s_resource(workload="minio-zero-dns", port_forwards=["1080:1080"])
+    # k8s_resource(workload="minio-zero-dns", port_forwards=["1080:1080"])
+    local_resource(
+        "minio-zero-dns-portforward",
+        resource_deps=["minio-zero-dns"],
+        labels=["s3-zero"],
+        serve_cmd="kubectl port-forward -n s3-zero svc/proxy 1080:1080",
+    )
 
     namespace_create("eth")
     # TODO: Recreate anvil when we have new contracts code

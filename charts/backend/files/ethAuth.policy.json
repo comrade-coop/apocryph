@@ -16,6 +16,23 @@
           "jwt:groups": "user"
         }
       }
+    },
+    {
+      "Sid": "DisableBucketRecreation",
+      "Effect": "Deny",
+      "Action": [
+        "s3:CreateBucket",
+        "s3:DeleteBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::${jwt:preferred_username}",
+        "arn:aws:s3:::${jwt:preferred_username}/*"
+      ],
+      "Condition": {
+        "ForAnyValue:StringEquals": {
+          "jwt:groups": "user"
+        }
+      }
     }
   ]
 }

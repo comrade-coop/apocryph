@@ -14,6 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	swie "github.com/spruceid/siwe-go"
 )
 
@@ -36,12 +38,22 @@ type Token struct {
 }
 
 type identityServer struct {
+	ctx context.Context
 	replicationPublicKeyAddress common.Address
+	minio                       *minio.Client
 }
 
-func RunIdentityServer(ctx context.Context, serveAddress string, replicationPublicKeyAddress common.Address) error {
+func RunIdentityServer(ctx context.Context, serveAddress string, replicationPublicKeyAddress common.Address, minioCreds *credentials.Credentials) error {
+	minioClient, err := minio.New(minioAddress, &minio.Options{
+		Creds: minioCreds,
+	})
+	if err != nil {
+		return err
+	}
 	server := identityServer{
-		replicationPublicKeyAddress: replicationPublicKeyAddress,
+		ctx,
+		replicationPublicKeyAddress,
+		minioClient,
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /", server.authenticateHandler)
@@ -56,7 +68,7 @@ func RunIdentityServer(ctx context.Context, serveAddress string, replicationPubl
 	}()
 
 	log.Println("Identity plugin provider listening on ", serveAddress)
-	err := s.ListenAndServe()
+	err = s.ListenAndServe()
 	log.Println(err)
 
 	return err
@@ -126,6 +138,15 @@ func (s identityServer) authenticateHelper(tokenString string) (result Authentic
 	}
 
 	log.Printf("Bucket is %s; group: %s\n", bucketId, group)
+	
+	// Try creating a bucket for the user, but don't wait around forever for it
+	makeBucketContext, _ := context.WithTimeout(s.ctx, time.Minute)
+	err = s.createBucketIfNotExists(makeBucketContext, bucketId)
+	if err != nil {
+		log.Printf("Error creating bucket %s: %v", bucketId, err)
+		return
+	}
+	
 	result = AuthenticationResult{
 		User:               address.Hex(),
 		MaxValiditySeconds: 3600, // token.ExpirationTime.Unix() - time.Now().Unix()
@@ -133,6 +154,25 @@ func (s identityServer) authenticateHelper(tokenString string) (result Authentic
 			"preferred_username": bucketId,
 			"groups":             []string{group},
 		},
+	}
+	return
+}
+
+func (s identityServer) createBucketIfNotExists(ctx context.Context, bucketId string) (err error) {
+	err = s.minio.MakeBucket(ctx, bucketId, minio.MakeBucketOptions{})
+	if err != nil {
+		response := minio.ToErrorResponse(err)
+		if response.Code == "BucketAlreadyOwnedByYou" {
+			// Expected error, keep going
+		} else {
+			err = fmt.Errorf("MakeBucket: %w", err)
+			return
+		}
+	}
+	err = s.minio.EnableVersioning(ctx, bucketId)
+	if err != nil {
+		err = fmt.Errorf("EnableVersioning: %w", err)
+		return
 	}
 	return
 }
