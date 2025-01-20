@@ -5,12 +5,16 @@
   <span>Logging you in...</span>
   <script>
   ;!async function() {
+    const s3AappHost = "s3.apocryph.local" // `s3.apocryph.io`
+    const s3consoleAappHost = "s3console.apocryph.local"  // `s3console.apocryph.io`
+    const minioUrl = location.protocol + "//" + location.host.replace(s3consoleAappHost, s3AappHost)
+    
     async function getStsToken(siweToken) {
       const response = await fetch(minioUrl + "?" + new URLSearchParams({
         "Action": "AssumeRoleWithCustomToken",
         "Version": "2011-06-15",
         "Token": siweToken,
-        "RoleArn": 'arn:minio:iam:::role/idmp-ethauth'
+        "RoleArn": 'arn:minio:iam:::role/idmp-swieauth'
       }), {
         method: "POST",
         mode: "cors",
@@ -26,8 +30,6 @@
         return {accessKey, secretKey, sts}
       }
     }
-
-    var minioUrl = 'http://localhost:9000' // ...
 
     try {
 

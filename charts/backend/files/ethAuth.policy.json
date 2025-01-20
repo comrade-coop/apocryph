@@ -13,7 +13,7 @@
       ],
       "Condition": {
         "ForAnyValue:StringEquals": {
-          "jwt:scope": "user"
+          "jwt:groups": "user"
         }
       }
     }

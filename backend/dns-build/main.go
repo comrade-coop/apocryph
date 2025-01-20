@@ -1,8 +1,6 @@
 package main
 
 import (
-	"slices"
-
 	_ "github.com/comrade-coop/apocryph/backend/aapp-dns"
 	_ "github.com/coredns/coredns/plugin/cache"
 	_ "github.com/coredns/coredns/plugin/errors"
@@ -10,6 +8,8 @@ import (
 	_ "github.com/coredns/coredns/plugin/health"
 	_ "github.com/coredns/coredns/plugin/log"
 	_ "github.com/coredns/coredns/plugin/ready"
+	_ "github.com/coredns/coredns/plugin/reload"
+	_ "github.com/coredns/coredns/plugin/rewrite"
 
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/coremain"
@@ -24,7 +24,31 @@ import (
 // }
 
 func init() {
-	dnsserver.Directives = slices.Concat([]string{"aapp_dns"}, dnsserver.Directives)
+	dnsserver.Directives = []string{
+		"root",
+		"metadata",
+		"geoip",
+		"cancel",
+		"tls",
+		"timeouts",
+		"multisocket",
+		"reload",
+		"nsid",
+		"bufsize",
+		"bind",
+		"debug",
+		"trace",
+		"ready",
+		"health",
+		"pprof",
+		"prometheus",
+		"errors",
+		"log",
+		"rewrite",
+		"cache",
+		"aapp_dns",
+		"forward",
+	}
 }
 
 func main() {

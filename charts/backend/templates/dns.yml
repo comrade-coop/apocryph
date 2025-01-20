@@ -6,16 +6,20 @@ metadata:
 data:
   Corefile: |
     . {
+        reload
         errors
         health {
             lameduck 5s
         }
         ready
-        cache
-        aapp_dns s3.{{ .Values.nginx.globalHost }}. serf-rpc.{{ .Release.Namespace }}.svc.cluster.local:7373
-        aapp_dns s3console.{{ .Values.nginx.globalHost }}. serf-rpc.{{ .Release.Namespace }}.svc.cluster.local:7373
-        forward . /etc/resolv.conf
         log
+        cache
+        rewrite name suffix s3console.{{ .Values.nginx.globalHost }}. s3.{{ .Values.nginx.globalHost }}. answer auto
+        aapp_dns {
+          base s3.{{ .Values.nginx.globalHost }}.
+          serf serf-rpc.{{ .Release.Namespace }}.svc.cluster.local:7373
+        }
+        forward . /etc/resolv.conf
     }
 ---
 apiVersion: apps/v1
@@ -33,12 +37,12 @@ spec:
         app: aapp-dns
     spec:
       containers:
-      - name: nginx
+      - name: dns
         image: {{ .Values.dns.image }}
+        workingDir: /config
         volumeMounts:
         - name: configs
-          mountPath: /Corefile
-          subPath: Corefile
+          mountPath: /config
           readOnly: true
         ports:
         - containerPort: 53
@@ -88,7 +92,7 @@ spec:
       dnsConfig:
         nameservers:
         - {{ .Values.dns.clusterIp }}
-        dnsPolicy: ClusterFirstWithHostNet
+      dnsPolicy: None
 ---
 apiVersion: v1
 kind: Service

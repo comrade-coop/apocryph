@@ -284,17 +284,17 @@ def s3_aapp_deploy_local(
         )
         local_resource(
             "anvil-portforward",
-            serve_cmd="kubectl port-forward -n eth svc/eth-rpc 8549:8545",
+            serve_cmd="kubectl port-forward -n eth svc/eth-rpc 8545:8545",
         )
     else:
         k8s_resource(workload="ingress-nginx", port_forwards=["8004:80"])
-        k8s_resource(workload="anvil", port_forwards=["8549:8545"])
+        k8s_resource(workload="anvil", port_forwards=["8545:8545"])
 
         local_resource(  # TODO: Move to container!
             "anvil-deploy-contracts",
             labels=["z_contracts"],
             dir=apocryph_dir + "/contracts",
-            cmd="forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8549 --private-key %s --broadcast || true"
+            cmd="forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 --private-key %s --broadcast || true"
             % (deployer_key,),
             resource_deps=["anvil"],
             deps=[
@@ -310,3 +310,10 @@ s3_aapp_build_with_builder()
 s3_aapp_deploy()
 s3_aapp_deploy_local()
 s3_aapp_serve_with_builder()
+local_resource(
+    "launch_firefox",
+    cmd=[],
+    labels=["s3-zero", "a_launch"],
+    trigger_mode=TRIGGER_MODE_MANUAL,
+    auto_init=False,
+    serve_cmd=["./launch-proxy-firefox.sh"])

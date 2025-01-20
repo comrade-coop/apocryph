@@ -93,7 +93,7 @@ func (s identityServer) authenticateHelper(tokenString string) (result Authentic
 	}
 
 	var bucketId string
-	var scope string
+	var group string
 
 	for _, resource := range message.GetResources() {
 		if resource.Scheme == ApocryphS3Scheme {
@@ -112,7 +112,7 @@ func (s identityServer) authenticateHelper(tokenString string) (result Authentic
 			return
 		}
 		// TODO: All bucket ids are allowed here, for now, without checking if the message is coming from the expected replica
-		scope = "remoteReplicant"
+		group = "remoteReplicant"
 	} else {
 		expectedBucketId := hex.EncodeToString(address[:])
 		if bucketId == "" {
@@ -122,16 +122,16 @@ func (s identityServer) authenticateHelper(tokenString string) (result Authentic
 			err = fmt.Errorf("Invalid bucket specified in resources!")
 			return
 		}
-		scope = ""
+		group = "user"
 	}
 
-	log.Printf("Bucket is %s; role: %s\n", bucketId, scope)
+	log.Printf("Bucket is %s; group: %s\n", bucketId, group)
 	result = AuthenticationResult{
 		User:               address.Hex(),
 		MaxValiditySeconds: 3600, // token.ExpirationTime.Unix() - time.Now().Unix()
 		Claims: map[string]interface{}{
 			"preferred_username": bucketId,
-			"scope":              []string{scope},
+			"groups":             []string{group},
 		},
 	}
 	return
@@ -158,7 +158,7 @@ func (s *TokenSigner) GetPublicAddress() common.Address {
 func (s *TokenSigner) GetReplicationToken(bucketId string) (token string, err error) {
 	message, err := swie.InitMessage(
 		SwieDomain,
-		"localhost",
+		s.GetPublicAddress().String(),
 		"localhost",
 		swie.GenerateNonce(),
 		map[string]interface{}{

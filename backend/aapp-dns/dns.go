@@ -3,6 +3,7 @@ package dns
 import (
 	"context"
 	"net"
+	"strconv"
 
 	"github.com/comrade-coop/apocryph/backend/swarm"
 	"github.com/coredns/caddy"
@@ -17,68 +18,86 @@ import (
 var log = clog.NewWithPlugin("aapp_dns")
 
 type AappDNS struct {
-	Next       plugin.Handler
-	swarm      *swarm.Swarm
-	baseDomain string
+	Next        plugin.Handler
+	swarm       *swarm.Swarm
+	baseDomains []string
 }
 
 func (e AappDNS) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	state := request.Request{W: w, Req: r}
 
+	var subNames []string
+	found := false
+
+	for _, baseDomain := range e.baseDomains {
+		domainName := state.QName()
+		if dns.IsSubDomain(baseDomain, domainName) {
+			found = true
+			names := dns.SplitDomainName(domainName)
+			subNames = names[:len(names)-dns.CountLabel(baseDomain)]
+		}
+	}
+	if !found {
+		return plugin.NextOrFailure(e.Name(), e.Next, ctx, w, r)
+	}
+
+	log.Debug("Subnames are:", subNames)
+
+	// if len(subNames) != 1 {
+	// 	return plugin.NextOrFailure(e.Name(), e.Next, ctx, w, r)
+	// }
+
+	bucketId := subNames[len(subNames)-1]
+	log.Debug("bucketId is:", bucketId)
+
 	answer := &dns.Msg{}
 	answer.SetReply(r)
 	answer.Authoritative = true
-
-	domainName := state.QName()
-	if !dns.IsSubDomain(e.baseDomain, domainName) {
-		return plugin.NextOrFailure(e.Name(), e.Next, ctx, w, r)
-	}
-
-	names := dns.SplitDomainName(domainName)
-
-	subNames := names[:len(names)-dns.CountLabel(e.baseDomain)]
-	log.Info("Subnames are:", len(subNames), subNames)
-
-	if len(subNames) != 1 {
-		return plugin.NextOrFailure(e.Name(), e.Next, ctx, w, r)
-	}
-
-	bucketId := subNames[len(subNames)-1]
-	log.Info("bucketId is:", bucketId)
+	answer.Compress = true
 
 	resultHostnames, err := e.swarm.FindBucketBestNodes(bucketId)
 	if err != nil {
-		return 0, err
+		log.Warningf("Failed to find node: %v", err)
+		return dns.RcodeServerFailure, err
 	}
-
-	answer.Extra = []dns.RR{}
 
 	for _, hostname := range resultHostnames {
 		switch state.Family() {
 		case 1:
-			ip4, err := net.ResolveIPAddr("ip4", hostname)
+			ip4, err := net.ResolveIPAddr("ip4", hostname) // TODO: Ugly recursion
 			if err != nil {
+				log.Warningf("Failed to resolve node %s: %v", hostname, err)
 				continue
 			}
-			answer.Extra = append(answer.Extra, &dns.A{
-				Hdr: dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeA, Class: state.QClass()},
+			log.Infof("Success A! %s: %v", hostname, ip4.IP)
+			answer.Answer = append(answer.Answer, &dns.A{
+				Hdr: dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeA, Class: state.QClass(), Ttl: 100},
 				A:   ip4.IP,
 			})
 		case 2:
-			ip6, err := net.ResolveIPAddr("ip6", hostname)
+			ip6, err := net.ResolveIPAddr("ip6", hostname) // TODO: Ugly recursion
 			if err != nil {
+				log.Warningf("Failed to resolve node %s: %v", hostname, err)
 				continue
 			}
-			answer.Extra = append(answer.Extra, &dns.AAAA{
-				Hdr:  dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeAAAA, Class: state.QClass()},
+			log.Infof("Success AAAA! %s: %v", hostname, ip6.IP)
+			answer.Answer = append(answer.Answer, &dns.AAAA{
+				Hdr:  dns.RR_Header{Name: state.QName(), Rrtype: dns.TypeAAAA, Class: state.QClass(), Ttl: 100},
 				AAAA: ip6.IP,
 			})
 		}
 	}
 
-	w.WriteMsg(answer)
+	port, _ := strconv.ParseUint(state.Port(), 10, 16)
+	answer.Extra = append(answer.Extra, &dns.SRV{
+		Hdr:    dns.RR_Header{Name: "_" + state.Proto() + "." + state.QName(), Rrtype: dns.TypeSRV, Class: state.QClass()},
+		Port:   uint16(port),
+		Target: ".",
+	})
 
-	return 0, nil
+	err = w.WriteMsg(answer)
+
+	return dns.RcodeSuccess, err
 }
 func (e AappDNS) Name() string { return "aapp_dns" }
 
@@ -86,16 +105,30 @@ func init() { plugin.Register("aapp_dns", setup) }
 
 func setup(c *caddy.Controller) error {
 	c.Next()
-	if !c.NextArg() {
-		return plugin.Error("aapp_dns", c.ArgErr())
-	}
-	baseDomain := c.Val()
-	if !c.NextArg() {
-		return plugin.Error("aapp_dns", c.ArgErr())
-	}
-	serfAddress := c.Val()
-	if c.NextArg() {
-		return plugin.Error("aapp_dns", c.ArgErr())
+	baseDomains := []string{}
+	var serfAddress string
+	for c.NextBlock() {
+		switch c.Val() {
+		case "base":
+			if !c.NextArg() {
+				print(1)
+				return plugin.Error("aapp_dns", c.ArgErr())
+			}
+			baseDomains = append(baseDomains, c.Val())
+			if c.NextArg() {
+				return plugin.Error("aapp_dns", c.ArgErr())
+			}
+		case "serf":
+			if !c.NextArg() {
+				return plugin.Error("aapp_dns", c.ArgErr())
+			}
+			serfAddress = c.Val()
+			if c.NextArg() {
+				return plugin.Error("aapp_dns", c.ArgErr())
+			}
+		default:
+			return plugin.Error("aapp_dns", c.ArgErr())
+		}
 	}
 
 	swarm, err := swarm.NewSwarm(serfAddress, "")
@@ -105,7 +138,7 @@ func setup(c *caddy.Controller) error {
 
 	// Add the Plugin to CoreDNS, so Servers can use it in their plugin chain.
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
-		return AappDNS{next, swarm, baseDomain}
+		return AappDNS{next, swarm, baseDomains}
 	})
 
 	return nil

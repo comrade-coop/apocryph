@@ -1,8 +1,10 @@
 package swarm
 
 import (
+	"cmp"
+	"fmt"
 	"math/rand"
-	"sort"
+	"slices"
 	"strconv"
 
 	"github.com/hashicorp/serf/client"
@@ -45,14 +47,14 @@ func (s *Swarm) FindBucketBestNodes(bucketId string) ([]string, error) {
 	bucketKey := BucketPrefix + bucketId
 	members, err := s.serf.MembersFiltered(map[string]string{
 		bucketKey: string(Ready),
-	}, "Alive", "")
+	}, "alive", "")
 	if err != nil {
 		return nil, err
 	}
 	if len(members) == 0 { // No ready members, try looking for syncing ones
 		members, err = s.serf.MembersFiltered(map[string]string{
 			bucketKey: string(Syncing) + "|" + string(Ready),
-		}, "Alive", "")
+		}, "alive", "")
 		if err != nil {
 			return nil, err
 		}
@@ -65,6 +67,13 @@ func (s *Swarm) FindBucketBestNodes(bucketId string) ([]string, error) {
 			return nil, err
 		}
 	}
+	if len(members) == 0 { // No dead members either, return a random node (assume it's a new bucket) (that's okay because the node we return will be cached)
+		member, err := s.FindFreeNode()
+		if err != nil {
+			return nil, err
+		}
+		return []string{member}, nil
+	}
 	resultAddresses := make([]string, len(members))
 	for i := range members {
 		resultAddresses[i] = members[i].Name
@@ -76,7 +85,7 @@ func (s *Swarm) FindBucketReplicas(bucketId string) ([]string, error) {
 	bucketKey := BucketPrefix + bucketId
 	members, err := s.serf.MembersFiltered(map[string]string{
 		bucketKey: string(Syncing) + "|" + string(Ready),
-	}, "Alive", "")
+	}, "alive", "")
 	if err != nil {
 		return nil, err
 	}
@@ -98,26 +107,45 @@ func (s *Swarm) UpdateBucket(bucketId string, status BucketStatus) error {
 	}
 }
 
+type node struct {
+	hostName string
+	capacity uint64
+}
+
 // TODO: Make sure to fliter ourselves out of the list
 func (s *Swarm) FindFreeNode() (string, error) {
 	members, err := s.serf.MembersFiltered(map[string]string{
-		CapacityTag: "",
-	}, "Alive", "")
+		CapacityTag: ".+",
+	}, "alive", "")
 	if err != nil {
 		return "", err
 	}
 
-	parsedCapacities := make([]uint64, len(members))
+	freeNodes := make([]node, 0, len(members))
 	for i := range members {
-		parsedCapacities[i], _ = strconv.ParseUint(members[i].Tags[CapacityTag], 10, 16)
+		if members[i].Name == s.OwnName {
+			continue
+		}
+		capacity, parseErr := strconv.ParseUint(members[i].Tags[CapacityTag], 10, 64)
+		if parseErr != nil {
+			continue
+		}
+
+		freeNodes = append(freeNodes, node{
+			hostName: members[i].Name,
+			capacity: capacity,
+		})
 	}
-	sort.Slice(members, func(i, j int) bool {
-		return parsedCapacities[i] > parsedCapacities[j]
+	if len(freeNodes) == 0 {
+		return "", fmt.Errorf("No connected S3 nodes found.")
+	}
+	slices.SortFunc(freeNodes, func(a, b node) int {
+		return -cmp.Compare(a.capacity, b.capacity)
 	})
 	// Arbitrarily pick a server in the top half
 	// TODO: there probably are better load-balancing algorithms
-	picked := rand.Intn((len(members) + 1) / 2)
-	return members[picked].Name, nil
+	picked := rand.Intn((len(freeNodes) + 1) / 2)
+	return freeNodes[picked].hostName, nil
 }
 
 func (s *Swarm) UpdateCapacity(capacityLeft uint64) error {

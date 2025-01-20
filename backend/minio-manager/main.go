@@ -59,6 +59,9 @@ var backendCmd = &cobra.Command{
 		if minioSecretKey == "" {
 			minioSecretKey = os.Getenv("SECRET_KEY")
 		}
+		if privateKey == "" {
+			privateKey = os.Getenv("PRIVATE_KEY")
+		}
 		minioCreds := credentials.NewStaticV4(minioAccessKey, minioSecretKey, "")
 
 		replication, err := NewReplicationManager(minioAddress, minioCreds, swarm, replicationSigner)
@@ -77,9 +80,9 @@ var backendCmd = &cobra.Command{
 func init() {
 	backendCmd.Flags().StringVar(&identityServeAddress, "bind", ":8593", "Bind address to serve the minio identity plugin on")
 	backendCmd.Flags().StringVar(&minioAddress, "minio", "localhost:9000", "Address to query minio on")
-	backendCmd.Flags().StringVar(&minioAccessKey, "minio-access", "", "Access key for Minio")
-	backendCmd.Flags().StringVar(&minioSecretKey, "minio-secret", "", "Secret key for Minio")
+	backendCmd.Flags().StringVar(&minioAccessKey, "minio-access", "", "Access key for Minio (defaults to $ACCESS_KEY from .env)")
+	backendCmd.Flags().StringVar(&minioSecretKey, "minio-secret", "", "Secret key for Minio (defaults to $SECRET_KEY from .env)")
 	backendCmd.Flags().StringVar(&serfAddress, "serf", "localhost:7373", "Address to query serf on")
 	backendCmd.Flags().StringVar(&hostname, "hostname", "localhost", "Hostname & local serf node name")
-	backendCmd.Flags().StringVar(&privateKey, "private-key", "", "Private key to use for replication token signing")
+	backendCmd.Flags().StringVar(&privateKey, "private-key", "", "Private key to use for replication token signing (defaults to $PRIVATE_KEY from .env)")
 }

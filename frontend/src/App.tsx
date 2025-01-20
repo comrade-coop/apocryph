@@ -17,6 +17,8 @@ import codeExamples, { envExample } from './codeExamples'
 import { ErrorCircle, OpenExternalLink } from './icons'
 
 const documentationLink = "https://comrade-coop.github.io/apocryph/"
+const s3AappHost = "s3.apocryph.local" // `s3.apocryph.io`
+const s3consoleAappHost = "s3console.apocryph.local"  // `s3console.apocryph.io`
 
 function App() {
   const account = useAccount()
@@ -40,9 +42,9 @@ function App() {
   const [ codeExample, setCodeExample ] = useState<keyof typeof codeExamples>("JavaScript")
 
   const bucketId = `${account.address?.slice(2)?.toLowerCase()}`
-  const bucketLink = `localhost:9000/${bucketId}` // `${account.address?.slice(2)?.toLowerCase()}.s3.apocryph.io`
-  const bucketLinkHref = `http://${bucketLink}` // `https://${bucketLink}`
-  const consoleHost = `http://localhost:9002` // `https://console.${bucketLink}`
+  const bucketLink = `${bucketId}.${s3AappHost}`
+  const bucketLinkHref = `http://${bucketId}.${s3AappHost}`
+  const consoleHost = `http://${bucketId}.${s3consoleAappHost}`
   const consoleLinkHref = `${consoleHost}/browser/${bucketId}`
   const minDeposit = STORAGE_CHANNEL_RESERVATION // TODO
 

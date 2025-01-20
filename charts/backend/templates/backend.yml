@@ -20,6 +20,7 @@ spec:
           "--bind", ":8593",
           "--minio", "minio.{{ .Release.Namespace }}.svc.cluster.local:80",
           "--serf", "serf-rpc.{{ .Release.Namespace }}.svc.cluster.local:7373",
+          "--hostname", "aapp-nginx.{{ .Release.Namespace }}.svc.cluster.local",
           "--private-key", {{ .Values.backend.ethKey }}
         ]
         ports:
