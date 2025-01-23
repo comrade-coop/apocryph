@@ -129,7 +129,7 @@ func (r *ReplicationManager) UpdateBucket(ctx context.Context, bucketId string) 
 				return fmt.Errorf("GetBucketReplicationMetrics: %w", err)
 			}
 		}
-		a,_:=json.Marshal(metrics)
+		a, _ := json.Marshal(metrics)
 		println(string(a))
 		for _, rule := range replicationConfig.Rules {
 			highestPriority = max(highestPriority, rule.Priority)
@@ -150,18 +150,18 @@ func (r *ReplicationManager) UpdateBucket(ctx context.Context, bucketId string) 
 	}
 	// TODO: metrics.Stats is nil for some reason
 	/*
-	for id, stats := range metrics.Stats {
-		if stats.Failed.LastHour.Count > 10 {
-			replicaStatus[id] = Failing
-			statusCounts[Failing]++
-		} else {
-			replicaStatus[id] = Alive
-			statusCounts[Alive]++
-		}
-		if stats.PendingCount < 10 {
-			syncedReplicas += 1
-		}
-	}*/
+		for id, stats := range metrics.Stats {
+			if stats.Failed.LastHour.Count > 10 {
+				replicaStatus[id] = Failing
+				statusCounts[Failing]++
+			} else {
+				replicaStatus[id] = Alive
+				statusCounts[Alive]++
+			}
+			if stats.PendingCount < 10 {
+				syncedReplicas += 1
+			}
+		}*/
 
 	expectedReplicas, err := r.swarm.FindBucketReplicas(bucketId)
 	if err != nil {
@@ -250,7 +250,7 @@ func (r *ReplicationManager) getReplicationRuleForNode(ctx context.Context, node
 	if err != nil {
 		return
 	}
-	
+
 	// Creating a bucket is handled by the identity plugin.
 
 	// TODO: Find a way to sync bucket policies (below won't work due to only being triggered for/on new nodes)

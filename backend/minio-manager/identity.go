@@ -38,7 +38,7 @@ type Token struct {
 }
 
 type identityServer struct {
-	ctx context.Context
+	ctx                         context.Context
 	replicationPublicKeyAddress common.Address
 	minio                       *minio.Client
 }
@@ -136,11 +136,11 @@ func (s identityServer) authenticateHelper(tokenString string) (result Authentic
 		}
 		group = "user"
 	}
-	
+
 	// TODO: Use PaymentManager.IsAuthorized here
 
 	log.Printf("Bucket is %s; group: %s\n", bucketId, group)
-	
+
 	// Try creating a bucket for the user, but don't wait around forever for it
 	makeBucketContext, cancelBucketContext := context.WithTimeout(s.ctx, time.Minute)
 	defer cancelBucketContext()
@@ -149,7 +149,7 @@ func (s identityServer) authenticateHelper(tokenString string) (result Authentic
 		log.Printf("Error creating bucket %s: %v", bucketId, err)
 		return
 	}
-	
+
 	result = AuthenticationResult{
 		User:               address.Hex(),
 		MaxValiditySeconds: 3600, // token.ExpirationTime.Unix() - time.Now().Unix()

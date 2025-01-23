@@ -63,24 +63,24 @@ var backendCmd = &cobra.Command{
 		if privateKeyString == "" {
 			privateKeyString = os.Getenv("PRIVATE_KEY")
 		}
-		
+
 		privateKey, err := crypto.HexToECDSA(privateKeyString)
 		if err != nil {
 			return
 		}
-	
+
 		replicationSigner, err := NewTokenSigner(privateKey)
 		if err != nil {
 			return
 		}
 		minioCreds := credentials.NewStaticV4(minioAccessKey, minioSecretKey, "")
-		
+
 		if !disableReplication {
 			swarm, err := swarm.NewSwarm(serfAddress, hostname)
 			if err != nil {
 				return err
 			}
-			
+
 			replication, err := NewReplicationManager(minioAddress, minioCreds, swarm, replicationSigner)
 			if err != nil {
 				return err
@@ -90,7 +90,7 @@ var backendCmd = &cobra.Command{
 				return err
 			}
 		}
-		
+
 		if !disablePayments {
 			prometheusClient, err := prometheus.GetPrometheusClient(prometheusAddress)
 			if err != nil {
@@ -107,7 +107,7 @@ var backendCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			
+
 			payment, err := NewPaymentManager(minioAddress, minioCreds, ethereumAddress, paymentAddress, transactOpts, withdrawTo, prometheusClient)
 			if err != nil {
 				return err
@@ -117,7 +117,7 @@ var backendCmd = &cobra.Command{
 				return err
 			}
 		}
-		
+
 		err = RunIdentityServer(cmd.Context(), identityServeAddress, replicationSigner.GetPublicAddress(), minioCreds)
 		if err != nil {
 			return err
@@ -129,18 +129,18 @@ var backendCmd = &cobra.Command{
 func init() {
 	backendCmd.Flags().StringVar(&identityServeAddress, "bind", ":8593", "Bind address to serve the minio identity plugin on")
 	backendCmd.Flags().StringVar(&minioAddress, "minio", "localhost:9000", "Address to query minio on")
-	
+
 	backendCmd.Flags().StringVar(&minioAccessKey, "minio-access", "", "Access key for Minio (defaults to $ACCESS_KEY from .env)")
 	backendCmd.Flags().StringVar(&minioSecretKey, "minio-secret", "", "Secret key for Minio (defaults to $SECRET_KEY from .env)")
 	backendCmd.Flags().StringVar(&privateKeyString, "private-key", "", "Private key to use for replication token signing (defaults to $PRIVATE_KEY from .env)")
-	
+
 	backendCmd.Flags().BoolVar(&disablePayments, "disable-payments", false, "Disable payments")
 	backendCmd.Flags().StringVar(&prometheusAddress, "prometheus", "http://localhost:9090", "Address to query prometheus on")
 	backendCmd.Flags().StringVar(&ethereumAddress, "ethereum", "http://localhost:8545", "Address to query ethereum on")
 	backendCmd.Flags().StringVar(&paymentContractAddress, "payment-contract", "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9", "Address of the payment contract")
 	backendCmd.Flags().StringVar(&withdrawAddress, "withdraw-address", "", "Address to withdraw to")
 	backendCmd.Flags().StringVar(&chainIdString, "chain-id", "31337", "Ethereum Chain ID")
-	
+
 	backendCmd.Flags().BoolVar(&disableReplication, "disable-replication", false, "Disable replication")
 	backendCmd.Flags().StringVar(&serfAddress, "serf", "localhost:7373", "Address to query serf on")
 	backendCmd.Flags().StringVar(&hostname, "hostname", "localhost", "Hostname & local serf node name")

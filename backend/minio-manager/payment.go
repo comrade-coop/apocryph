@@ -18,24 +18,26 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-const PERMISSION_WITHDRAW uint16 = 4;
-const PERMISSION_NO_LIMIT uint16 = 8;
+const PERMISSION_WITHDRAW uint16 = 4
+const PERMISSION_NO_LIMIT uint16 = 8
+
 var RequiredReservation = &big.Int{}
 
 var ChannelDiscriminator = [32]byte{}
+
 func init() {
 	discriminatorString := []byte("storage.apocryph.io")
 	for i := range discriminatorString {
 		ChannelDiscriminator[i] = discriminatorString[i]
 	}
-	
+
 	_, _ = RequiredReservation.SetString("10000000000000000000", 10) // 10e18
 }
 
 type paymentChannelWatch struct {
-	channelId      [32]byte
-	totalPaid      atomic.Int64
-	waitingForTx   atomic.Value
+	channelId    [32]byte
+	totalPaid    atomic.Int64
+	waitingForTx atomic.Value
 }
 
 type PaymentManager struct {
@@ -48,8 +50,8 @@ type PaymentManager struct {
 	transactOpts *bind.TransactOpts
 	withdrawTo   common.Address
 	prometheus   *prometheus.PrometheusAPI
-	
-	watches      map[common.Address]*paymentChannelWatch
+
+	watches map[common.Address]*paymentChannelWatch
 }
 
 func NewPaymentManager(minioAddress string, minioCreds *credentials.Credentials, ethereumAddress string, paymentAddress common.Address, transactOpts *bind.TransactOpts, withdrawTo common.Address, prometheusClient *prometheus.PrometheusAPI) (*PaymentManager, error) {
@@ -71,12 +73,12 @@ func NewPaymentManager(minioAddress string, minioCreds *credentials.Credentials,
 	if err != nil {
 		return nil, err
 	}
-	
+
 	ethereumClient, err := ethclient.Dial(ethereumAddress)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	paymentV2, err := abi.NewPaymentV2(paymentAddress, ethereumClient)
 	if err != nil {
 		return nil, err
@@ -130,24 +132,24 @@ func (p *PaymentManager) reconcilationLoop(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	
+
 	priceGbMin := big.NewInt(int64(0.000004e18) * 60)
 	minPayment := big.NewInt(int64(0.004e18))
-	
+
 	for bucketId, byteMinutes := range bucketByteMinutes {
 		if !common.IsHexAddress(bucketId) {
 			continue
 		}
-		
+
 		totalToPay := &big.Int{}
 		totalToPay = totalToPay.Mul(byteMinutes, priceGbMin)
-		totalToPay = totalToPay.Div(totalToPay, big.NewInt(1024 * 1024))
-		
+		totalToPay = totalToPay.Div(totalToPay, big.NewInt(1024*1024))
+
 		watch, err := p.getWatch(ctx, common.HexToAddress(bucketId))
 		if err != nil {
 			return err
 		}
-		
+
 		if watch.waitingForTx.Load() == (common.Hash{}) {
 			totalPaid := big.NewInt(watch.totalPaid.Load())
 			paymentAmount := &big.Int{}
@@ -163,11 +165,10 @@ func (p *PaymentManager) reconcilationLoop(ctx context.Context) (err error) {
 		} else {
 			fmt.Printf("For bucket %s: total bill so far is %s, paid is <loading>\n", bucketId, totalToPay)
 		}
-		
+
 		// TODO: Handle unlocking
 		// authorized, err := p.IsAuthorized()
 	}
-	
 
 	log.Printf("Finished reconciling bucket payments\n")
 	return nil
@@ -183,22 +184,21 @@ func (p *PaymentManager) IsAuthorized(ctx context.Context, bucketId string) (boo
 	if err != nil {
 		return false, err
 	}
-	
-	hasWithdrawPermission := authorization.Permissions & PERMISSION_WITHDRAW == PERMISSION_WITHDRAW
+
+	hasWithdrawPermission := authorization.Permissions&PERMISSION_WITHDRAW == PERMISSION_WITHDRAW
 	hasSufficientReservation := authorization.Reservation.Cmp(RequiredReservation) >= 0
-	
+
 	return hasWithdrawPermission && hasSufficientReservation, nil
 }
 
-
 func (p *PaymentManager) getWatch(ctx context.Context, bucketId common.Address) (watch *paymentChannelWatch, err error) {
 	ownAddress := p.transactOpts.From
-	
+
 	if existing, ok := p.watches[bucketId]; ok {
 		watch = existing
 		return
 	}
-	
+
 	channelId, err := p.paymentV2.GetChannelId(&bind.CallOpts{}, bucketId, ChannelDiscriminator)
 	if err != nil {
 		return
@@ -255,7 +255,6 @@ func (p *PaymentManager) getWatch(ctx context.Context, bucketId common.Address) 
 			}
 		}
 	}()
-	
 
 	return
 }

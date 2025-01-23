@@ -11,8 +11,6 @@ import (
 	"net/url"
 )
 
-
-
 const resourceQuotaSecondsQuery = "sum by (bucket)(sum_over_time(minio_bucket_usage_total_bytes[150000000m]))" // TODO: 250000m might be too short?
 
 type QueryStatus string
