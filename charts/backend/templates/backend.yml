@@ -19,8 +19,17 @@ spec:
         args: [
           "--bind", ":8593",
           "--minio", "minio.{{ .Release.Namespace }}.svc.cluster.local:80",
+          "--ethereum", "ws://eth-rpc.eth.svc.cluster.local:8545",
+          "--prometheus", "http://prometheus.{{ .Release.Namespace }}.svc.cluster.local:80/",
+          "--payment-contract", "{{ .Values.eth.paymentContract }}",
+          "--withdraw-address", "{{ .Values.eth.withdrawAddress }}",
+          "--chain-id", "31337",
+          {{ if .Values.serf.enable }}
           "--serf", "serf-rpc.{{ .Release.Namespace }}.svc.cluster.local:7373",
           "--hostname", "aapp-nginx.{{ .Release.Namespace }}.svc.cluster.local",
+          {{ else }}
+          "--disable-replication",
+          {{ end }}
           "--private-key", {{ .Values.backend.ethKey }}
         ]
         ports:

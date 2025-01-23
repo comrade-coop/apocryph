@@ -38,6 +38,13 @@
       "Resource": [
         "arn:aws:s3:::*"
       ]
+    },
+    {
+      "Sid": "EnableBucketMetrics",
+      "Effect": "Allow",
+      "Action": [
+        "admin:Prometheus"
+      ]
     }
   ]
 }

@@ -176,6 +176,7 @@ def s3_aapp_deploy(cluster_names=["one", "two"]):
 
     helm_repo("minio-operator-chart", "https://operator.min.io")
     helm_repo("ingress-nginx-chart", "https://kubernetes.github.io/ingress-nginx")
+    helm_repo("prometheus-community", "https://prometheus-community.github.io/helm-charts")
 
     helm_resource(
         "ingress-nginx",
@@ -198,11 +199,16 @@ def s3_aapp_deploy(cluster_names=["one", "two"]):
         ],
     )
 
-    for name in cluster_names:
+    namespace_create("eth")
+    # TODO: Recreate anvil when we have new contracts code
+    k8s_yaml(listdir(apocryph_dir + "/deploy/charts/eth"))
+    k8s_resource("anvil", labels=["z_contracts"])
+    
+    def minio_resource(name, namespace):
         helm_resource(
             "minio-%s-config" % name,
             root_dir + "/charts/config",
-            namespace="s3-%s" % name,
+            namespace=namespace,
             deps=[root_dir + "/charts/config"],
             resource_deps=[],
             labels=["s3-%s" % name],
@@ -211,9 +217,23 @@ def s3_aapp_deploy(cluster_names=["one", "two"]):
             ],
         )
         helm_resource(
+            "prometheus-%s" % name,
+            "prometheus-community/prometheus",
+            namespace=namespace,
+            resource_deps=["prometheus-community"],
+            labels=["s3-%s" % name],
+            flags=[
+                "--create-namespace",
+                "--set=alertmanager.enabled=false",
+                "--set=server.fullnameOverride=prometheus",
+                "--set=prometheus-node-exporter.enabled=false",
+                "--set-json=server.releaseNamespace=true",
+            ],
+        )
+        helm_resource(
             "minio-%s-tenant" % name,
             "minio-operator-chart/tenant",
-            namespace="s3-%s" % name,
+            namespace=namespace,
             resource_deps=["minio-operator", "minio-operator-chart"],  # , "minio-%s-config" % name
             labels=["s3-%s" % name],
             flags=[
@@ -224,59 +244,91 @@ def s3_aapp_deploy(cluster_names=["one", "two"]):
                 "--set=tenant.pools[0].volumesPerServer=1",
                 "--set=tenant.pools[0].size=5Gi",
                 "--set=tenant.configuration.name=minio-config",
+                "--set=tenant.pools[0].annotations.prometheus\\.io/path=/minio/v2/metrics/bucket",
+                "--set-string=tenant.pools[0].annotations.prometheus\\.io/port=9000",
+                "--set-string=tenant.pools[0].annotations.prometheus\\.io/scrape=true",
+                "--set=tenant.pools[0].annotations.prometheus\\.io/scheme=http",
             ],
         )
+    
+    if len(cluster_names) == 0:
+        return
+    elif len(cluster_names) == 1:
+        name = cluster_names[0]
+        namespace = "s3-%s" % name
+        minio_resource(name, namespace=namespace)
         helm_resource(
             "minio-%s-backend" % name,
             root_dir + "/charts/backend",
-            namespace="s3-%s" % name,
+            namespace=namespace,
             deps=[root_dir + "/charts/backend"],
             resource_deps=[],  # , "minio-%s-tenant" % name
             labels=["s3-%s" % name],
             flags=[
                 "--create-namespace",
-                "--set=ingress.host=%s.localhost" % name,
-                "--set=serf.bootstrap=serf-bind.s3-zero.svc.cluster.local",
+                "--set-json=serf.enable=false",
+                "--set-json=dns.enable=true",
             ],
             image_deps=[
                 "comradecoop/s3-aapp/backend",
                 "comradecoop/s3-aapp/dns",
+            ],
+            image_keys=["backend.image", "dns.image"],
+        )
+        # k8s_resource(workload="minio-%s-backend" % name, port_forwards=["1080:1080"])
+        local_resource(
+            "minio-%s-proxy-portforward" % name,
+            resource_deps=["minio-%s-backend" % name],
+            labels=["s3-%s" % name],
+            serve_cmd="kubectl port-forward -n %s svc/proxy 1080:1080" % namespace,
+        )
+    else: # len(cluster_names) > 1:
+        for name in cluster_names:
+            minio_resource(name, namespace="s3-%s" % name)
+            helm_resource(
+                "minio-%s-backend" % name,
+                root_dir + "/charts/backend",
+                namespace="s3-%s" % name,
+                deps=[root_dir + "/charts/backend"],
+                resource_deps=[],  # , "minio-%s-tenant" % name
+                labels=["s3-%s" % name],
+                flags=[
+                    "--create-namespace",
+                    "--set=serf.bootstrap=serf-bind.s3-zero.svc.cluster.local",
+                    "--set-json=dns.enable=false",
+                ],
+                image_deps=[
+                    "comradecoop/s3-aapp/backend",
+                    "comradecoop/s3-aapp/serf",
+                ],
+                image_keys=["backend.image", "serf.image"],
+            )
+
+        helm_resource(
+            "minio-zero-dns",
+            root_dir + "/charts/backend",
+            namespace="s3-zero",
+            deps=[root_dir + "/charts/backend"],
+            labels=["s3-zero"],
+            flags=[
+                "--create-namespace",
+                "--set-json=minio.enable=false",
+                "--set-json=dns.enable=true",
+                "--set=serf.bootstrap=serf-bind.s3-%s.svc.cluster.local" % cluster_names[0],
+            ],
+            image_deps=[
+                "comradecoop/s3-aapp/dns",
                 "comradecoop/s3-aapp/serf",
             ],
-            image_keys=["backend.image", "dns.image", "serf.image"],
+            image_keys=["dns.image", "serf.image"],
         )
-
-    helm_resource(
-        "minio-zero-dns",
-        root_dir + "/charts/backend",
-        namespace="s3-zero",
-        deps=[root_dir + "/charts/backend"],
-        labels=["s3-zero"],
-        flags=[
-            "--create-namespace",
-            "--set-json=minio.enable=false",
-            "--set-json=dns.enable=true",
-            "--set=serf.bootstrap=serf-bind.s3-%s.svc.cluster.local" % cluster_names[0],
-        ],
-        image_deps=[
-            "comradecoop/s3-aapp/backend",
-            "comradecoop/s3-aapp/dns",
-            "comradecoop/s3-aapp/serf",
-        ],
-        image_keys=["backend.image", "dns.image", "serf.image"],
-    )
-    # k8s_resource(workload="minio-zero-dns", port_forwards=["1080:1080"])
-    local_resource(
-        "minio-zero-dns-portforward",
-        resource_deps=["minio-zero-dns"],
-        labels=["s3-zero"],
-        serve_cmd="kubectl port-forward -n s3-zero svc/proxy 1080:1080",
-    )
-
-    namespace_create("eth")
-    # TODO: Recreate anvil when we have new contracts code
-    k8s_yaml(listdir(apocryph_dir + "/deploy/charts/eth"))
-    k8s_resource("anvil", labels=["z_contracts"])
+        # k8s_resource(workload="minio-zero-dns", port_forwards=["1080:1080"])
+        local_resource(
+            "minio-zero-dns-portforward",
+            resource_deps=["minio-zero-dns"],
+            labels=["s3-zero"],
+            serve_cmd="kubectl port-forward -n s3-zero svc/proxy 1080:1080",
+        )
 
 
 def s3_aapp_deploy_local(
@@ -312,10 +364,21 @@ def s3_aapp_deploy_local(
         )
 
 
+config.define_string("scenario", args=True, usage="One of single-cluster, multi-cluster")
+cfg = config.parse()
+scenario = cfg.get("scenario", "single-cluster")
+
+
 s3_aapp_build_with_builder()
-s3_aapp_deploy()
-s3_aapp_deploy_local()
+
+if scenario == "single-cluster" or scenario == "sc":
+    s3_aapp_deploy(["zero"])
+elif scenario == "multi-cluster" or scenario == "mc":
+    s3_aapp_deploy(["one", "two"])
+else:
+    fail("Unexpected scenario value", scenario)
 s3_aapp_serve_with_builder()
+s3_aapp_deploy_local()
 local_resource(
     "launch_firefox",
     cmd=[],

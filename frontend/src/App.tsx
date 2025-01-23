@@ -17,8 +17,8 @@ import codeExamples, { envExample } from './codeExamples'
 import { ErrorCircle, OpenExternalLink } from './icons'
 
 const documentationLink = "https://comrade-coop.github.io/apocryph/"
-const s3AappHost = "s3.apocryph.local" // `s3.apocryph.io`
-const s3consoleAappHost = "s3console.apocryph.local"  // `s3console.apocryph.io`
+const s3AappHost = "s3-aapp.kubocloud.io" // `s3.apocryph.io`
+const s3consoleAappHost = "s3console-aapp.kubocloud.io"  // `s3console.apocryph.io`
 
 function App() {
   const account = useAccount()
@@ -43,9 +43,9 @@ function App() {
 
   const bucketId = `${account.address?.slice(2)?.toLowerCase()}`
   const bucketLink = `${bucketId}.${s3AappHost}`
-  const bucketLinkHref = `http://${bucketId}.${s3AappHost}`
-  const consoleHost = `http://${bucketId}.${s3consoleAappHost}`
-  const consoleLinkHref = `${consoleHost}/browser/${bucketId}`
+  const bucketLinkHref = `http://${bucketLink}`
+  const consoleLink = `${bucketId}.${s3consoleAappHost}`
+  const consoleLinkHref = `http://${consoleLink}/browser/${bucketId}`
   const minDeposit = STORAGE_CHANNEL_RESERVATION // TODO
 
   const duration: number = Number(funds) / Number(amountGb) / Number(priceGbSec) * Number(oneGb)
@@ -83,7 +83,7 @@ function App() {
     if (walletClient?.data) {
       const token = await getSiweToken(walletClient.data, 3600)
 
-      open(`${consoleHost}/x/apocryphLogin#${encodeURIComponent(token)}#/browser/${bucketId}`)
+      open(`http://${consoleLink}/x/apocryphLogin#${encodeURIComponent(token)}#/browser/${bucketId}`)
       setShowExamples(true)
     }
   }
@@ -195,12 +195,12 @@ function App() {
         <h2>Step 3: Access</h2>
         <label>
           <span>Console </span>
-          <a className="fake-field" href={consoleLinkHref}>{consoleLinkHref}</a>
+          <a className="fake-field" href={consoleLinkHref}>{consoleLink}</a>
           <ActionPopButton onClick={() => navigator.clipboard.writeText(bucketLinkHref)}>Copy</ActionPopButton>
         </label>
         <label>
           <span>S3 endpoint URL </span>
-          <a className="fake-field" href={bucketLinkHref}>{bucketLinkHref}</a>
+          <a className="fake-field" href={bucketLinkHref}>{bucketLink}</a>
           <ActionPopButton onClick={() => navigator.clipboard.writeText(bucketLinkHref)}>Copy</ActionPopButton>
         </label>
         <div className="button-card">

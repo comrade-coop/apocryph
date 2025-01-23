@@ -1,2 +1,2 @@
 nginx:
-  globalHost: "apocryph.local"
+  globalHost: "s3-aapp.kubocloud.io"

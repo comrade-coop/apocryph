@@ -58,7 +58,7 @@ func (r *ReplicationManager) Run(ctx context.Context) error {
 				log.Printf("Error while reconciling replications: %v", err)
 			}
 
-			time.Sleep(1 * time.Minute) // TODO: Maybe change to 5 minutes?
+			time.Sleep(5 * time.Minute)
 		}
 	}()
 	return nil

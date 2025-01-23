@@ -4,7 +4,7 @@ kind: ConfigMap
 metadata:
   name: aapp-nginx-config
 data:
-  apocryphLogin.html: |-{{ .Files.Get "files/apocryphLogin.html" | nindent 4 }}
+  apocryphLogin.html: |-{{ tpl (.Files.Get "files/apocryphLogin.html") . | nindent 4 }}
   nginx.conf: |-{{ tpl (.Files.Get "files/nginx.conf") . | nindent 4 }}
 ---
 apiVersion: apps/v1
@@ -58,38 +58,31 @@ spec:
   ports:
   - name: http
     port: 80
-# ---
-# apiVersion: networking.k8s.io/v1
-# kind: Ingress
-# metadata:
-#   name: s3-nginx-ingress
-# spec:
-#   rules:
-#   - host: console.{{ .Values.ingress.host }}
-#     http:
-#       paths:
-#       - path: /x/
-#         pathType: Prefix
-#         backend:
-#           service:
-#             name: apocryph-override
-#             port:
-#               number: 80
-#       - path: /
-#         pathType: Prefix
-#         backend:
-#           service:
-#             name: myminio-console
-#             port:
-#               number: 80
-#   - host: {{ .Values.ingress.host }}
-#     http:
-#       paths:
-#       - path: /
-#         pathType: Prefix
-#         backend:
-#           service:
-#             name: minio
-#             port:
-#               number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: s3-nginx-ingress
+spec:
+  rules:
+  - host: "*.{{ .Values.nginx.globalHostConsole }}"
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: aapp-nginx
+            port:
+              number: 80
+  - host: "*.{{ .Values.nginx.globalHost }}"
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: aapp-nginx
+            port:
+              number: 80
 {{ end }}

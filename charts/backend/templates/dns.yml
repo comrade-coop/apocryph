@@ -4,6 +4,7 @@ kind: ConfigMap
 metadata:
   name: dns-config
 data:
+  {{ if .Values.serf.enable }}
   Corefile: |
     . {
         reload
@@ -14,13 +15,28 @@ data:
         ready
         log
         cache
-        rewrite name suffix s3console.{{ .Values.nginx.globalHost }}. s3.{{ .Values.nginx.globalHost }}. answer auto
+        rewrite name suffix {{ .Values.nginx.globalHostConsole }}. {{ .Values.nginx.globalHost }}. answer auto
         aapp_dns {
-          base s3.{{ .Values.nginx.globalHost }}.
+          base s{{ .Values.nginx.globalHost }}.
           serf serf-rpc.{{ .Release.Namespace }}.svc.cluster.local:7373
         }
         forward . /etc/resolv.conf
     }
+  {{ else }}
+  Corefile: |
+    . {
+        reload
+        errors
+        health {
+            lameduck 5s
+        }
+        ready
+        log
+        cache
+        rewrite stop name regex (.*)\.({{ .Values.nginx.globalHost }}|{{ .Values.nginx.globalHostConsole }})\.$ aapp-nginx.{{ .Release.Namespace }}.svc.cluster.local answer auto
+        forward . /etc/resolv.conf
+    }
+  {{ end }}
 ---
 apiVersion: apps/v1
 kind: Deployment

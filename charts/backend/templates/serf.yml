@@ -1,3 +1,4 @@
+{{ if .Values.serf.enable }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -48,3 +49,4 @@ spec:
   ports:
   - name: serf
     port: 7946
+{{ end }}

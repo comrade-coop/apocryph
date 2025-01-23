@@ -1,7 +1,7 @@
 import { erc20Abi, mockTokenAbi, paymentV2Abi } from 's3-aapp-abi'
 import { PublicClient, WalletClient, parseUnits, Address, stringToHex, keccak256, encodeAbiParameters, parseAbiParameters, getContract, zeroAddress } from 'viem'
 
-// TODO: result from forge script script/Deploy.sol
+// TODO: result from forge script script/Deploy.s.sol
 export const paymentV2Address: Address = '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9'
 // TODO: HACK Insecure!! address pulled from anvil[7], until we get a real deployment rolling
 export const storageSystemAddress: Address = '0x14dC79964da2C08b23698B3D3cc7Ca32193d9955'

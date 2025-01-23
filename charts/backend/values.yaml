@@ -1,25 +1,30 @@
+eth:
+  paymentContract: "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9" # HACK: result of scripts/Deploy.s.sol
+  withdrawAddress: "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f" # HACK: anvil[8]
 
 minio:
   enable: true
   image: "quay.io/minio/minio"
 backend:
   image: "comradecoop/s3-aapp/backend"
-  ethKey: "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+  ethKey: "4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356" # HACK: anvil[7]
   replication:
     accessKey: "oopsdefaultkey"
     accessSecret: "oopsdefaultsecret"
 nginx:
   image: "nginx"
-  globalHost: "apocryph.local"
-  host: "s3-zero.apocryph.local"
+  globalHost: "s3-aapp.kubocloud.io"
+  globalHostConsole: "s3console-aapp.kubocloud.io"
 
 dns:
   enable: false
   image: "comradecoop/s3-aapp/dns"
   clusterIp: 10.96.111.111
 proxy:
+  enable: false
   image: "nmaguiar/socksd" # "httptoolkit/docker-socks-tunnel"
 
 serf:
+  enable: true
   image: "comradecoop/s3-aapp/serf"
   bootstrap: "serf.serf.svc.cluster.local"

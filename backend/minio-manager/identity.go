@@ -136,11 +136,14 @@ func (s identityServer) authenticateHelper(tokenString string) (result Authentic
 		}
 		group = "user"
 	}
+	
+	// TODO: Use PaymentManager.IsAuthorized here
 
 	log.Printf("Bucket is %s; group: %s\n", bucketId, group)
 	
 	// Try creating a bucket for the user, but don't wait around forever for it
-	makeBucketContext, _ := context.WithTimeout(s.ctx, time.Minute)
+	makeBucketContext, cancelBucketContext := context.WithTimeout(s.ctx, time.Minute)
+	defer cancelBucketContext()
 	err = s.createBucketIfNotExists(makeBucketContext, bucketId)
 	if err != nil {
 		log.Printf("Error creating bucket %s: %v", bucketId, err)
@@ -181,11 +184,7 @@ type TokenSigner struct {
 	privateKey *ecdsa.PrivateKey
 }
 
-func NewTokenSigner(privateKeyString string) (*TokenSigner, error) {
-	privateKey, err := crypto.HexToECDSA(privateKeyString)
-	if err != nil {
-		return nil, err
-	}
+func NewTokenSigner(privateKey *ecdsa.PrivateKey) (*TokenSigner, error) {
 	return &TokenSigner{
 		privateKey: privateKey,
 	}, nil
