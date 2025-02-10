@@ -1,11 +1,12 @@
 import { createConfig, http } from 'wagmi'
-import { foundry } from 'wagmi/chains'
+import { baseSepolia } from 'wagmi/chains'
 import { metaMask } from 'wagmi/connectors'
 
+ 
 export const config = createConfig({
-  chains: [foundry],
+  chains: [baseSepolia],
   connectors: [metaMask()],
   transports: {
-    [foundry.id]: http(),
+    [baseSepolia.id]: http(),
   },
 })

@@ -5,6 +5,8 @@
 load("ext://restart_process", "docker_build_with_restart")
 load("ext://namespace", "namespace_create")
 load("ext://helm_resource", "helm_resource", "helm_repo")
+load('ext://dotenv', 'dotenv')
+dotenv()
 
 local("which jq forge cast helm kubectl docker >/dev/null", echo_off=True)  # Check dependencies
 # cluster_ip = local(
@@ -24,6 +26,7 @@ def builder_resource(
     volumes=[],
     volumes_conf={},
     entrypoint=["sleep", "infinity"],
+    env={},
     *args,
     **kwargs,
 ):
@@ -45,6 +48,7 @@ def builder_resource(
                 ]
             )
             + volumes,
+            "environment": env,
         },
     }
     docker_compose(encode_yaml({"services": services, "volumes": volumes_conf}))
@@ -158,6 +162,11 @@ def s3_aapp_serve_with_builder():
         # TODO: ports=[5173],
         volumes_conf={"pnpm-cache": {}},
         labels=["build"],
+        env={
+            'VITE_TOKEN': os.getenv('BACKEND_ETH_TOKEN'),
+            'VITE_STORAGE_SYSTEM': (os.getenv('BACKEND_ETH_PRIVATE_KEY') and str(local('cast wallet a %s' % os.getenv('BACKEND_ETH_PRIVATE_KEY'), echo_off=True))),
+            'COREPACK_INTEGRITY_KEYS': '0'
+        }
     )
 
     local_resource_in_builder(
@@ -167,8 +176,24 @@ def s3_aapp_serve_with_builder():
         serve_cmd=["sh", "-c", "cd frontend/ && pnpm install --frozen-lockfile && pnpm run dev"],
         deps=[],
         allow_parallel=True,
-        labels=["system"],
+        labels=["frontend"],
     )
+
+
+
+def s3_aapp_serve_with_image():
+    docker_build(
+        "comradecoop/s3-aapp/frontend",
+        root_dir,
+        dockerfile=root_dir + "/Dockerfile",
+        target="serve-frontend",
+        build_args={
+            'VITE_TOKEN': os.getenv('BACKEND_ETH_TOKEN'),
+            'VITE_STORAGE_SYSTEM': (os.getenv('BACKEND_ETH_PRIVATE_KEY') and local('cast wallet a %s' % os.getenv('BACKEND_ETH_PRIVATE_KEY'), echo_off=True)),
+        }
+    )
+    k8s_yaml(listdir(root_dir + "/charts/frontend"))
+    # k8s_resource("anvil", labels=["frontend"])
 
 
 def s3_aapp_deploy(cluster_names=["one", "two"]):
@@ -268,6 +293,10 @@ def s3_aapp_deploy(cluster_names=["one", "two"]):
                 "--create-namespace",
                 "--set-json=serf.enable=false",
                 "--set-json=dns.enable=true",
+                "--set=eth.privateKey=%s" % os.getenv("BACKEND_ETH_PRIVATE_KEY", "4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356"),
+                "--set=eth.rpc=%s" % os.getenv("BACKEND_ETH_RPC", "ws://eth-rpc.eth.svc.cluster.local:8545"),
+                "--set=eth.tokenContract=%s" % os.getenv("BACKEND_ETH_TOKEN", "0x5FbDB2315678afecb367f032d93F642f64180aa3"),
+                "--set=eth.withdrawAddress=%s" % os.getenv("BACKEND_ETH_WITHDRAW", "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f"),
             ],
             image_deps=[
                 "comradecoop/s3-aapp/backend",
@@ -378,6 +407,7 @@ elif scenario == "multi-cluster" or scenario == "mc":
 else:
     fail("Unexpected scenario value", scenario)
 s3_aapp_serve_with_builder()
+s3_aapp_serve_with_image()
 s3_aapp_deploy_local()
 local_resource(
     "launch_firefox",

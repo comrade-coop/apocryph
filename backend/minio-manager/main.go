@@ -29,7 +29,7 @@ var disablePayments bool
 var prometheusAddress string
 var ethereumAddress string
 var chainIdString string
-var paymentContractAddress string
+var tokenContractAddress string
 var withdrawAddress string
 
 func main() {
@@ -96,7 +96,7 @@ var backendCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			paymentAddress := common.HexToAddress(paymentContractAddress)
+			tokenAddress := common.HexToAddress(tokenContractAddress)
 			withdrawTo := common.HexToAddress(withdrawAddress)
 			chainId := &big.Int{}
 			chainId, ok := chainId.SetString(chainIdString, 10)
@@ -108,7 +108,7 @@ var backendCmd = &cobra.Command{
 				return err
 			}
 
-			payment, err := NewPaymentManager(minioAddress, minioCreds, ethereumAddress, paymentAddress, transactOpts, withdrawTo, prometheusClient)
+			payment, err := NewPaymentManager(minioAddress, minioCreds, ethereumAddress, tokenAddress, transactOpts, withdrawTo, prometheusClient)
 			if err != nil {
 				return err
 			}
@@ -137,7 +137,7 @@ func init() {
 	backendCmd.Flags().BoolVar(&disablePayments, "disable-payments", false, "Disable payments")
 	backendCmd.Flags().StringVar(&prometheusAddress, "prometheus", "http://localhost:9090", "Address to query prometheus on")
 	backendCmd.Flags().StringVar(&ethereumAddress, "ethereum", "http://localhost:8545", "Address to query ethereum on")
-	backendCmd.Flags().StringVar(&paymentContractAddress, "payment-contract", "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9", "Address of the payment contract")
+	backendCmd.Flags().StringVar(&tokenContractAddress, "token-contract", "", "Address of the token contract")
 	backendCmd.Flags().StringVar(&withdrawAddress, "withdraw-address", "", "Address to withdraw to")
 	backendCmd.Flags().StringVar(&chainIdString, "chain-id", "31337", "Ethereum Chain ID")
 

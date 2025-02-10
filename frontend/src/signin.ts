@@ -2,9 +2,8 @@
 import { WalletClient } from 'viem'
 import { createSiweMessage } from 'viem/siwe'
 
-export const authenticationDomain = 'localhost:5173' // 's3.apocryph.io'
-export const consoleUrl = 'http://localhost:9002'
-export const minioUrl = 'http://localhost:9000'
+export const authenticationDomain = 's3-aapp.kubocloud.io' // 's3.apocryph.io'
+export const consoleUrl = 'https://console-s3-aapp.kubocloud.io'
 
 export async function getSiweToken(walletClient: WalletClient, tokenExpirationSeconds?: number) {
   const wallet = walletClient.account!

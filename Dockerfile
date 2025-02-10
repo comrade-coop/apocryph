@@ -2,18 +2,18 @@
 
 ## Base images
 
-FROM docker.io/library/golang:1.23.4-bookworm@sha256:5c3223fcb23efeccf495739c9fd9bbfe76cee51caea90591860395057eab3113 AS go-build-base
+FROM docker.io/library/golang:1.23-bookworm@sha256:441f59f8a2104b99320e1f5aaf59a81baabbc36c81f4e792d5715ef09dd29355 AS go-build-base
 #RUN go install github.com/ethereum/go-ethereum/cmd/abigen@v1.14.9 # ...
 
-FROM docker.io/debian:bookworm-20241202-slim@sha256:7a81508cbf1a03e25076ea3ba9f0800321bad64c2a757defa320475dc09d3ec2 AS go-run-base
-# version should match golang:1.23.4-bookworm above
+FROM docker.io/debian:bookworm-20250203-slim@sha256:40b107342c492725bc7aacbe93a49945445191ae364184a6d24fedb28172f6f7 AS go-run-base
 
+RUN apt update && apt install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
-FROM docker.io/library/node:22-bookworm-slim@sha256:cc993f948cbd77c7cdfa0a9cc5b05e9ec9554c6ecf8cf98b90a2012156a4b998 AS js-build-base
+FROM docker.io/library/node:lts-bookworm-slim@sha256:83fdfa2a4de32d7f8d79829ea259bd6a4821f8b2d123204ac467fbe3966450fc AS js-build-base
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+RUN corepack enable && corepack use pnpm@9.15.3
 
 FROM docker.io/library/nginx:latest@sha256:0a399eb16751829e1af26fea27b20c3ec28d7ab1fb72182879dcae1cca21206a AS js-serve-base
 
@@ -72,10 +72,18 @@ ENTRYPOINT ["/usr/local/bin/apocryph-s3-dns"]
 FROM js-build-base AS build-frontend
 
 COPY ./pnpm-lock.yaml ./pnpm-workspace.yaml ./package.json /app/
-COPY ./frontend /app/frontend
+COPY ./frontend/package.json /app/frontend/package.json
+COPY ./frontend/abi/package.json /app/frontend/abi/package.json
 WORKDIR /app
 
+# HACK! https://github.com/nodejs/corepack/issues/612
+ENV COREPACK_INTEGRITY_KEYS=0
+
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+
+ARG VITE_TOKEN=""
+ARG VITE_STORAGE_SYSTEM=""
+COPY ./frontend/ /app/frontend/
 RUN cd /app/frontend && pnpm run build
 
 FROM js-serve-base AS serve-frontend

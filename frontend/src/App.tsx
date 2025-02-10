@@ -8,7 +8,7 @@ import { tomorrowNight as syntaxStyle } from 'react-syntax-highlighter/dist/esm/
 
 import BlurUpdatedInput from './BlurUpdatedInput'
 import ActionPopButton from './ActionPopButton'
-import { watchAvailableFunds, depositFunds, STORAGE_CHANNEL_RESERVATION } from './contracts'
+import { watchAvailableFunds, depositFunds } from './contracts'
 import apocryphLogo from '/apocryph.svg?url'
 import metamaskLogo from '/metamask.svg?url'
 import './App.css'
@@ -18,7 +18,7 @@ import { ErrorCircle, OpenExternalLink } from './icons'
 
 const documentationLink = "https://comrade-coop.github.io/apocryph/"
 const s3AappHost = "s3-aapp.kubocloud.io" // `s3.apocryph.io`
-const s3consoleAappHost = "s3console-aapp.kubocloud.io"  // `s3console.apocryph.io`
+const s3consoleAappHost = "console-s3-aapp.kubocloud.io"  // `s3console.apocryph.io`
 
 function App() {
   const account = useAccount()
@@ -42,11 +42,11 @@ function App() {
   const [ codeExample, setCodeExample ] = useState<keyof typeof codeExamples>("JavaScript")
 
   const bucketId = `${account.address?.slice(2)?.toLowerCase()}`
-  const bucketLink = `${bucketId}.${s3AappHost}`
-  const bucketLinkHref = `http://${bucketLink}`
-  const consoleLink = `${bucketId}.${s3consoleAappHost}`
-  const consoleLinkHref = `http://${consoleLink}/browser/${bucketId}`
-  const minDeposit = STORAGE_CHANNEL_RESERVATION // TODO
+  const bucketLink = `${s3AappHost}/${bucketId}` // ${bucketId}.${s3AappHost}
+  const bucketLinkHref = `https://${bucketLink}`
+  const consoleLink = `${s3consoleAappHost}` // `${bucketId}.${s3consoleAappHost}`
+  const consoleLinkHref = `https://${consoleLink}/browser/${bucketId}`
+  const minDeposit = parseUnits('10', 18) // TODO
 
   const duration: number = Number(funds) / Number(amountGb) / Number(priceGbSec) * Number(oneGb)
   function setDuration(newDuration: number) {
@@ -165,7 +165,7 @@ function App() {
           <span className="fake-field"> {currency}/GB/s</span>
         </label>
         <label>
-          <span>Total required deposit</span>
+          <span>Total required authorization</span>
           <BlurUpdatedInput
             value={funds}
             stringify={v => formatUnits(v, decimals)}
@@ -174,7 +174,7 @@ function App() {
           <span className="fake-field"> {currency}</span>
         </label>
           <label>
-            <span>Existing deposit</span>
+            <span>Existing authorization</span>
             <span className="fake-field">{existingDeposit === undefined ? 'Loading...' : formatUnits(existingDeposit, decimals)}</span>
             <span className="fake-field">{currency}</span>
           </label>
@@ -182,11 +182,11 @@ function App() {
           <button onClick={() => topUpDeposit()}>
             {
               existingDeposit === undefined ? <>Loading...</> :
-              depositInProgress === undefined ? <>Processing...</> :
-              existingDeposit <= 0n ? <>Make deposit! ({formatUnits(existingDeposit - funds, decimals)} {currency})</> :
-              funds > existingDeposit ? <>Top-up deposit ({formatUnits(existingDeposit - funds, decimals)} {currency})</> :
-              funds < minDeposit ? <>Unlock and withdraw deposit (+{formatUnits(existingDeposit - funds, decimals)} {currency}, once unlocked)</> :
-              <>Withdraw deposit (+{formatUnits(existingDeposit - funds, decimals)} {currency})</>
+              depositInProgress ? <>Processing...</> :
+              existingDeposit <= 0n ? <>Authorize! ({formatUnits(existingDeposit - funds, decimals)} {currency})</> :
+              funds > existingDeposit ? <>Top-up authorization ({formatUnits(existingDeposit - funds, decimals)} {currency})</> :
+              funds < minDeposit ? <>Reduce authorization (+{formatUnits(existingDeposit - funds, decimals)} {currency}, once unlocked)</> :
+              <>Update authorization (+{formatUnits(existingDeposit - funds, decimals)} {currency})</>
             }
           </button>
         </div>
@@ -204,11 +204,11 @@ function App() {
           <ActionPopButton onClick={() => navigator.clipboard.writeText(bucketLinkHref)}>Copy</ActionPopButton>
         </label>
         <div className="button-card">
-          <button onClick={() => openConsole()}>
-            Launch Console <OpenExternalLink/>
-          </button>
           <button onClick={() => getLonglivedToken()}>
             Use long-lived token <ErrorCircle/>
+          </button>
+          <button onClick={() => openConsole()}>
+            Launch Console <OpenExternalLink/>
           </button>
         </div>
       </section>, showExamples)}

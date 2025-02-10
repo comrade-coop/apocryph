@@ -33,7 +33,7 @@ data:
         ready
         log
         cache
-        rewrite stop name regex (.*)\.({{ .Values.nginx.globalHost }}|{{ .Values.nginx.globalHostConsole }})\.$ aapp-nginx.{{ .Release.Namespace }}.svc.cluster.local answer auto
+        rewrite stop name regex (.*)({{ .Values.nginx.globalHost }}|{{ .Values.nginx.globalHostConsole }})\.$ aapp-nginx.{{ .Release.Namespace }}.svc.cluster.local answer auto
         forward . /etc/resolv.conf
     }
   {{ end }}

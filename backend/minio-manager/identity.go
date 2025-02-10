@@ -20,7 +20,7 @@ import (
 )
 
 var ApocryphS3Scheme string = "apocryph-s3"
-var SwieDomain string = "localhost:5173" // 's3.apocryph.io'
+var SwieDomain string = "s3-aapp.kubocloud.io" // 's3.apocryph.io'
 
 type AuthenticationFailure struct {
 	Reason string `json:"reason"`

@@ -21,7 +21,7 @@ import (
 const PERMISSION_WITHDRAW uint16 = 4
 const PERMISSION_NO_LIMIT uint16 = 8
 
-var RequiredReservation = &big.Int{}
+var RequiredAllowance = &big.Int{}
 
 var ChannelDiscriminator = [32]byte{}
 
@@ -31,12 +31,12 @@ func init() {
 		ChannelDiscriminator[i] = discriminatorString[i]
 	}
 
-	_, _ = RequiredReservation.SetString("10000000000000000000", 10) // 10e18
+	_, _ = RequiredAllowance.SetString("10000000000000000000", 10) // 10e18
 }
 
 type paymentChannelWatch struct {
-	channelId    [32]byte
-	totalPaid    atomic.Int64
+	totalPaid    atomic.Value
+	allowance    atomic.Value
 	waitingForTx atomic.Value
 }
 
@@ -44,7 +44,6 @@ type PaymentManager struct {
 	minio        *minio.Client
 	minioAdmin   *madmin.AdminClient
 	minioMetrics *madmin.MetricsClient
-	paymentV2    *abi.PaymentV2
 	ethereum     *ethclient.Client
 	tokenErc20   *abi.IERC20
 	transactOpts *bind.TransactOpts
@@ -54,7 +53,7 @@ type PaymentManager struct {
 	watches map[common.Address]*paymentChannelWatch
 }
 
-func NewPaymentManager(minioAddress string, minioCreds *credentials.Credentials, ethereumAddress string, paymentAddress common.Address, transactOpts *bind.TransactOpts, withdrawTo common.Address, prometheusClient *prometheus.PrometheusAPI) (*PaymentManager, error) {
+func NewPaymentManager(minioAddress string, minioCreds *credentials.Credentials, ethereumAddress string, tokenAddress common.Address, transactOpts *bind.TransactOpts, withdrawTo common.Address, prometheusClient *prometheus.PrometheusAPI) (*PaymentManager, error) {
 	minioClient, err := minio.New(minioAddress, &minio.Options{
 		Creds: minioCreds,
 	})
@@ -79,14 +78,6 @@ func NewPaymentManager(minioAddress string, minioCreds *credentials.Credentials,
 		return nil, err
 	}
 
-	paymentV2, err := abi.NewPaymentV2(paymentAddress, ethereumClient)
-	if err != nil {
-		return nil, err
-	}
-	tokenAddress, err := paymentV2.Token(&bind.CallOpts{})
-	if err != nil {
-		return nil, err
-	}
 	tokenErc20, err := abi.NewIERC20(tokenAddress, ethereumClient)
 	if err != nil {
 		return nil, err
@@ -96,7 +87,6 @@ func NewPaymentManager(minioAddress string, minioCreds *credentials.Credentials,
 		minio:        minioClient,
 		minioAdmin:   minioAdmin,
 		minioMetrics: minioMetrics,
-		paymentV2:    paymentV2,
 		tokenErc20:   tokenErc20,
 		ethereum:     ethereumClient,
 		transactOpts: transactOpts,
@@ -134,40 +124,49 @@ func (p *PaymentManager) reconcilationLoop(ctx context.Context) (err error) {
 	}
 
 	priceGbMin := big.NewInt(int64(0.000004e18) * 60)
-	minPayment := big.NewInt(int64(0.004e18))
+	minPayment := big.NewInt(int64(0.1e18))
 
 	for bucketId, byteMinutes := range bucketByteMinutes {
 		if !common.IsHexAddress(bucketId) {
 			continue
 		}
 
+		bucketOwnerAddress := common.HexToAddress(bucketId)
+
 		totalToPay := &big.Int{}
 		totalToPay = totalToPay.Mul(byteMinutes, priceGbMin)
 		totalToPay = totalToPay.Div(totalToPay, big.NewInt(1024*1024))
 
-		watch, err := p.getWatch(ctx, common.HexToAddress(bucketId))
+		watch, err := p.getWatch(ctx, bucketOwnerAddress)
 		if err != nil {
 			return err
 		}
 
+		authorized, err := p.IsAuthorized(ctx, bucketId)
+		if err != nil {
+			return err
+		}
+		if !authorized {
+			fmt.Printf("For bucket %s: we are not authorized (has: %s, required: %s)!\n", bucketId, watch.allowance.Load(), RequiredAllowance)
+			continue // TODO: should remove bucket
+		}
+
 		if watch.waitingForTx.Load() == (common.Hash{}) {
-			totalPaid := big.NewInt(watch.totalPaid.Load())
+			totalPaid := watch.totalPaid.Load().(*big.Int)
 			paymentAmount := &big.Int{}
 			paymentAmount = paymentAmount.Sub(totalToPay, totalPaid)
-			fmt.Printf("For bucket %s: total bill so far is %s, paid is %s, difference: %s\n", bucketId, totalToPay, totalPaid, paymentAmount)
+			fmt.Printf("For bucket %s: total bill so far is %s, paid is %s, difference: %s | min: %s\n", bucketId, totalToPay, totalPaid, paymentAmount, minPayment)
 			if paymentAmount.Cmp(minPayment) > 0 && p.withdrawTo != (common.Address{}) {
-				tx, err := p.paymentV2.Withdraw(p.transactOpts, watch.channelId, p.withdrawTo, paymentAmount)
+				tx, err := p.tokenErc20.TransferFrom(p.transactOpts, bucketOwnerAddress, p.withdrawTo, paymentAmount)
 				if err != nil {
-					return err
+					return err // TODO: Single error blocks all payments to latter buckets
 				}
 				watch.waitingForTx.Store(tx.Hash())
+				fmt.Printf("For bucket %s: processing payment of %s, tx %s\n", bucketId, paymentAmount, tx.Hash())
 			}
 		} else {
 			fmt.Printf("For bucket %s: total bill so far is %s, paid is <loading>\n", bucketId, totalToPay)
 		}
-
-		// TODO: Handle unlocking
-		// authorized, err := p.IsAuthorized()
 	}
 
 	log.Printf("Finished reconciling bucket payments\n")
@@ -176,19 +175,17 @@ func (p *PaymentManager) reconcilationLoop(ctx context.Context) (err error) {
 
 func (p *PaymentManager) IsAuthorized(ctx context.Context, bucketId string) (bool, error) {
 	bucketOwnerAddress := common.HexToAddress(bucketId)
-	channelId, err := p.paymentV2.GetChannelId(&bind.CallOpts{}, bucketOwnerAddress, ChannelDiscriminator)
-	if err != nil {
-		return false, err
-	}
-	authorization, err := p.paymentV2.ChannelAuthorizations(&bind.CallOpts{}, channelId, p.transactOpts.From)
+
+	watch, err := p.getWatch(ctx, bucketOwnerAddress)
 	if err != nil {
 		return false, err
 	}
 
-	hasWithdrawPermission := authorization.Permissions&PERMISSION_WITHDRAW == PERMISSION_WITHDRAW
-	hasSufficientReservation := authorization.Reservation.Cmp(RequiredReservation) >= 0
+	if watch.allowance.Load().(*big.Int).Cmp(RequiredAllowance) < 0 {
+		return false, nil
+	}
 
-	return hasWithdrawPermission && hasSufficientReservation, nil
+	return true, nil
 }
 
 func (p *PaymentManager) getWatch(ctx context.Context, bucketId common.Address) (watch *paymentChannelWatch, err error) {
@@ -199,54 +196,86 @@ func (p *PaymentManager) getWatch(ctx context.Context, bucketId common.Address) 
 		return
 	}
 
-	channelId, err := p.paymentV2.GetChannelId(&bind.CallOpts{}, bucketId, ChannelDiscriminator)
-	if err != nil {
-		return
-	}
 	startingBlockNumber, err := p.ethereum.BlockNumber(ctx)
 	if err != nil {
 		return
 	}
-	iterator, err := p.paymentV2.FilterWithdraw(
+
+	allowance, err := p.tokenErc20.Allowance(&bind.CallOpts{
+		BlockNumber: big.NewInt(int64(startingBlockNumber)),
+	}, bucketId, p.transactOpts.From)
+	if err != nil {
+		return
+	}
+
+	iterator, err := p.tokenErc20.FilterTransfer(
 		&bind.FilterOpts{Start: 0, End: &startingBlockNumber},
-		[][32]byte{channelId},
-		[]common.Address{ownAddress},
+		[]common.Address{bucketId},
+		[]common.Address{p.withdrawTo}, // NOTE: Multiple managers with the same withdraw address _will_ get confused about payments
 	)
 	if err != nil {
 		return
 	}
-	events := make(chan *abi.PaymentV2Withdraw)
-	subscription, err := p.paymentV2.WatchWithdraw(
+
+	events := make(chan *abi.IERC20Transfer)
+	subscription, err := p.tokenErc20.WatchTransfer(
 		&bind.WatchOpts{Start: &startingBlockNumber, Context: ctx},
 		events,
-		[][32]byte{channelId},
+		[]common.Address{bucketId},
+		[]common.Address{p.withdrawTo},
+	)
+	if err != nil {
+		return
+	}
+
+	allowanceEvents := make(chan *abi.IERC20Approval)
+	allowanceSubscription, err := p.tokenErc20.WatchApproval(
+		&bind.WatchOpts{Start: &startingBlockNumber, Context: ctx},
+		allowanceEvents,
+		[]common.Address{bucketId},
 		[]common.Address{ownAddress},
 	)
 	if err != nil {
 		return
 	}
-	watch = &paymentChannelWatch{
-		channelId: channelId,
-	}
+	watch = &paymentChannelWatch{}
+	watch.allowance.Store(allowance)         // Block payments until we've synced to current time
 	watch.waitingForTx.Store(common.MaxHash) // Block payments until we've synced to current time
 	p.watches[bucketId] = watch
+
+	totalPaid := &big.Int{}
+
 	go func() {
 		for iterator.Next() {
 			event := iterator.Event
-			watch.totalPaid.Add(event.Amount.Int64()) // TODO: Ensure this doesn't overflow!
+			newTotalPaid := &big.Int{}
+			newTotalPaid.Add(totalPaid, event.Value)
+			totalPaid = newTotalPaid
+			watch.totalPaid.Store(totalPaid)
 		}
 		watch.waitingForTx.CompareAndSwap(common.MaxHash, common.Hash{}) // Done with initial sync
 		for {
 			select {
 			case event := <-events:
-				if event.Recipient == ownAddress && event.ChannelId == channelId {
-					// TODO: ensure that Add happens before CompareAndSwap here
-					watch.totalPaid.Add(event.Amount.Int64())
+				if event.To == p.withdrawTo && event.From == bucketId {
+					newTotalPaid := &big.Int{}
+					newTotalPaid.Add(totalPaid, event.Value)
+					totalPaid = newTotalPaid
+					watch.totalPaid.Store(totalPaid)
 					watch.waitingForTx.CompareAndSwap(event.Raw.TxHash, common.Hash{})
+				}
+			case event := <-allowanceEvents:
+				if event.Spender == ownAddress && event.Owner == bucketId {
+					watch.allowance.Store(event.Value)
 				}
 			case err := <-subscription.Err():
 				log.Println("Error in subscription:", err)
 				// Will be recreated next reconcilation - TODO use thread-safe map for this
+				p.watches[bucketId] = nil
+				return
+			case err := <-allowanceSubscription.Err():
+				log.Println("Error in allowance subscription:", err)
+				// TODO: same as above
 				p.watches[bucketId] = nil
 				return
 			case <-ctx.Done():

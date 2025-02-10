@@ -1,20 +1,19 @@
 eth:
-  paymentContract: "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9" # HACK: result of scripts/Deploy.s.sol
-  withdrawAddress: "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f" # HACK: anvil[8]
+  tokenContract: "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+  withdrawAddress: "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f" # anvil(8)
+  privateKey: "4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356" # anvil(7)
+  rpc: "https://sepolia.base.org"
+  chainId: 84532
 
 minio:
   enable: true
   image: "quay.io/minio/minio"
 backend:
   image: "comradecoop/s3-aapp/backend"
-  ethKey: "4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356" # HACK: anvil[7]
-  replication:
-    accessKey: "oopsdefaultkey"
-    accessSecret: "oopsdefaultsecret"
 nginx:
   image: "nginx"
   globalHost: "s3-aapp.kubocloud.io"
-  globalHostConsole: "s3console-aapp.kubocloud.io"
+  globalHostConsole: "console-s3-aapp.kubocloud.io"
 
 dns:
   enable: false
