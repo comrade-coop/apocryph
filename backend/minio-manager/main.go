@@ -91,6 +91,8 @@ var backendCmd = &cobra.Command{
 			}
 		}
 
+		var payment *PaymentManager = nil
+
 		if !disablePayments {
 			prometheusClient, err := prometheus.GetPrometheusClient(prometheusAddress)
 			if err != nil {
@@ -108,7 +110,7 @@ var backendCmd = &cobra.Command{
 				return err
 			}
 
-			payment, err := NewPaymentManager(minioAddress, minioCreds, ethereumAddress, tokenAddress, transactOpts, withdrawTo, prometheusClient)
+			payment, err = NewPaymentManager(minioAddress, minioCreds, ethereumAddress, tokenAddress, transactOpts, withdrawTo, prometheusClient)
 			if err != nil {
 				return err
 			}
@@ -118,7 +120,7 @@ var backendCmd = &cobra.Command{
 			}
 		}
 
-		err = RunIdentityServer(cmd.Context(), identityServeAddress, replicationSigner.GetPublicAddress(), minioCreds)
+		err = RunIdentityServer(cmd.Context(), identityServeAddress, replicationSigner.GetPublicAddress(), minioCreds, payment)
 		if err != nil {
 			return err
 		}

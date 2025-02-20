@@ -41,9 +41,10 @@ type identityServer struct {
 	ctx                         context.Context
 	replicationPublicKeyAddress common.Address
 	minio                       *minio.Client
+	payment                     *PaymentManager
 }
 
-func RunIdentityServer(ctx context.Context, serveAddress string, replicationPublicKeyAddress common.Address, minioCreds *credentials.Credentials) error {
+func RunIdentityServer(ctx context.Context, serveAddress string, replicationPublicKeyAddress common.Address, minioCreds *credentials.Credentials, payment *PaymentManager) error {
 	minioClient, err := minio.New(minioAddress, &minio.Options{
 		Creds: minioCreds,
 	})
@@ -54,6 +55,7 @@ func RunIdentityServer(ctx context.Context, serveAddress string, replicationPubl
 		ctx,
 		replicationPublicKeyAddress,
 		minioClient,
+		payment,
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /", server.authenticateHandler)
@@ -137,7 +139,17 @@ func (s identityServer) authenticateHelper(tokenString string) (result Authentic
 		group = "user"
 	}
 
-	// TODO: Use PaymentManager.IsAuthorized here
+	if s.payment != nil {
+		var authorized bool
+		authorized, err = s.payment.IsAuthorized(context.TODO(), address)
+		if err != nil {
+			return
+		}
+		if !authorized {
+			err = fmt.Errorf("Address has not allowed the minimum required balance!")
+			return
+		}
+	}
 
 	log.Printf("Bucket is %s; group: %s\n", bucketId, group)
 

@@ -211,15 +211,34 @@ func (p *PaymentManager) reconcilationLoop(ctx context.Context) (err error) {
 	return nil
 }
 
-func (p *PaymentManager) IsAuthorized(ctx context.Context, bucketId string) (bool, error) {
-	bucketOwnerAddress := common.HexToAddress(bucketId)
-
-	watch, err := p.getWatch(ctx, bucketOwnerAddress)
+func (p *PaymentManager) IsAuthorized(ctx context.Context, bucketId common.Address) (bool, error) {
+	// NOTE: Duplicating the logic of getWatch and getAuthorizedAmount here to avoid filling up the watches map.
+	currentBlockNumber, err := p.ethereum.BlockNumber(ctx)
 	if err != nil {
 		return false, err
 	}
 
-	authorizedFor := watch.getAuthorizedAmount()
+	allowance, err := p.tokenErc20.Allowance(&bind.CallOpts{
+		BlockNumber: big.NewInt(int64(currentBlockNumber)),
+	}, bucketId, p.transactOpts.From)
+	if err != nil {
+		return false, err
+	}
+
+	balance, err := p.tokenErc20.BalanceOf(&bind.CallOpts{
+		BlockNumber: big.NewInt(int64(currentBlockNumber)),
+	}, bucketId)
+	if err != nil {
+		return false, err
+	}
+
+	var authorizedFor *big.Int
+
+	if allowance.Cmp(balance) < 0 {
+		authorizedFor = allowance
+	} else {
+		authorizedFor = balance
+	}
 
 	if authorizedFor.Cmp(RequiredAllowance) < 0 {
 		return false, nil
