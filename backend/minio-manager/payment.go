@@ -144,6 +144,10 @@ func (p *PaymentManager) reconcilationLoop(ctx context.Context) (err error) {
 	errs := []error{}
 
 	for bucketId, byteMinutes := range bucketByteMinutes {
+		exists, existsErr := p.minio.BucketExists(ctx, bucketId)
+		if existsErr == nil && !exists {
+			continue
+		}
 		if !common.IsHexAddress(bucketId) {
 			continue
 		}
