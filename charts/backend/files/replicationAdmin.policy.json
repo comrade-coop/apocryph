@@ -7,6 +7,7 @@
       "Action": [
         "s3:CreateBucket",
         "s3:DeleteBucket",
+        "s3:ForceDeleteBucket",
         "s3:PutBucketVersioning"
       ],
       "Resource": [
