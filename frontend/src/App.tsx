@@ -17,8 +17,8 @@ import codeExamples, { envExample } from './codeExamples'
 import { ErrorCircle, OpenExternalLink } from './icons'
 
 const documentationLink = "https://comrade-coop.github.io/apocryph/"
-const s3AappHost = "s3-aapp.kubocloud.io" // `s3.apocryph.io`
-const s3consoleAappHost = "console-s3-aapp.kubocloud.io"  // `s3console.apocryph.io`
+const s3AappHost = (import.meta.env.VITE_GLOBAL_HOST || "s3-aapp.kubocloud.io").trim()
+const s3consoleAappHost = (import.meta.env.VITE_GLOBAL_HOST_CONSOLE || "console-s3-aapp.kubocloud.io").trim()
 
 function App() {
   const account = useAccount()

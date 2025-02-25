@@ -5,8 +5,8 @@
   <span>Logging you in...</span>
   <script>
   ;!async function() {
-    const s3AappHost = "{{ .Values.nginx.globalHost }}"
-    const s3consoleAappHost = "{{ .Values.nginx.globalHostConsole }}"
+    const s3AappHost = "$GLOBAL_HOST"
+    const s3consoleAappHost = "$GLOBAL_HOST_CONSOLE"
     const minioUrl = location.protocol + "//" + location.host.replace(s3consoleAappHost, s3AappHost)
     
     async function getStsToken(siweToken) {

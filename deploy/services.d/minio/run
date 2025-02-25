@@ -1,5 +1,13 @@
+#!/command/with-contenv sh
+
+unset BACKEND_ETH_PRIVATE_KEY # TODO: Secure things better
+
+set -e
+
+. /secrets/minio.env
+
 export MINIO_VOLUMES="/mnt/data"
-export MINIO_IDENTITY_PLUGIN_URL="http://policy-backend.{{ .Release.Namespace }}.svc.cluster.local:8593/auth"
+export MINIO_IDENTITY_PLUGIN_URL="http://localhost:8593/auth"
 export MINIO_IDENTITY_PLUGIN_ROLE_POLICY="ethAuth,remoteReplicant"
 export MINIO_IDENTITY_PLUGIN_TOKEN="Bearer TOKEN"
 export MINIO_IDENTITY_PLUGIN_ROLE_ID="swieauth"
@@ -7,8 +15,8 @@ export MINIO_IDENTITY_PLUGIN_COMMENT="External Identity Management using SWIE to
 
 export MINIO_ROOT_ACCESS="on"
 export MINIO_BROWSER_REDIRECT="false"
-export MINIO_ROOT_USER="{{randAlphaNum 32}}"
-export MINIO_ROOT_PASSWORD="{{randAlphaNum 32}}"
-export MINIO_DOMAIN="{{.Values.nginx.globalHost}}"
+export MINIO_DOMAIN="$GLOBAL_HOST"
 
 export MINIO_PROMETHEUS_AUTH_TYPE="public"
+
+minio server --anonymous --console-address 127.0.0.1:9001 --address 127.0.0.1:9000 /data/minio

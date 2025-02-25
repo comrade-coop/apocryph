@@ -1,0 +1,17 @@
+#!/command/with-contenv sh
+
+set -e
+
+export PRIVATE_KEY="$BACKEND_ETH_PRIVATE_KEY"
+
+. /secrets/backend.env
+
+apocryph-s3-backend \
+    --bind 127.0.0.1:8593 \
+    --minio 127.0.0.1:9000 \
+    --ethereum "$BACKEND_ETH_RPC" \
+    --prometheus http://127.0.0.1:9090/ \
+    --token-contract "$BACKEND_ETH_TOKEN" \
+    --withdraw-address "$BACKEND_ETH_WITHDRAW" \
+    --chain-id "$BACKEND_ETH_CHAIN_ID" \
+    --disable-replication

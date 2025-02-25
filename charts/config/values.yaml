@@ -1,2 +1,0 @@
-nginx:
-  globalHost: "s3-aapp.kubocloud.io"

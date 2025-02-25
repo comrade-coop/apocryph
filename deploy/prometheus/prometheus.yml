@@ -1,0 +1,12 @@
+global:
+  scrape_interval:     1m
+  evaluation_interval: 1m
+
+scrape_configs:
+  # https://min.io/docs/minio/kubernetes/upstream/operations/monitoring/collect-minio-metrics-using-prometheus.html#generate-the-scrape-configuration
+  - job_name: minio-job-bucket
+    metrics_path: /minio/v2/metrics/bucket
+    scheme: http
+    static_configs:
+    - targets: 
+      - 127.0.0.1:9000

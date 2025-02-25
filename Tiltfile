@@ -4,16 +4,11 @@
 # For more on Extensions, see: https://docs.tilt.dev/extensions.html
 load("ext://restart_process", "docker_build_with_restart")
 load("ext://namespace", "namespace_create")
-load("ext://helm_resource", "helm_resource", "helm_repo")
 load('ext://dotenv', 'dotenv')
 dotenv()
 
-local("which jq forge cast helm kubectl docker >/dev/null", echo_off=True)  # Check dependencies
-# cluster_ip = local(
-#    "kubectl get no -o jsonpath --template '{$.items[0].status.addresses[?(.type==\"InternalIP\")].address}'"
-# )
+local("which jq forge cast docker >/dev/null", echo_off=True)  # Check dependencies
 root_dir = os.getcwd()
-apocryph_dir = root_dir + "/.." + "/apocryph"
 
 
 # Via https://github.com/comrade-coop/apocryph/blob/9cbf7e87200216a41619f7f40cda3bca56fe03e8/deploy/Tiltfile
@@ -80,10 +75,10 @@ def cmdline_in_builder(cmd, builder, *, interactive=False):
 
 def s3_aapp_build_with_builder():
     docker_build(
-        "comradecoop/s3-aapp/go-builder",
+        "comradecoop/s3-aapp/builder-go",
         root_dir,
         dockerfile=root_dir + "/Dockerfile",
-        target="go-build-base",
+        target="builder-go",
         only=[root_dir + "/Dockerfile"],
     )
 
@@ -94,7 +89,6 @@ def s3_aapp_build_with_builder():
         write_dir="bin",
         volumes=["go-cache:/root/.cache/go-build", "go-mod-cache:/go/pkg/mod"],
         volumes_conf={"go-cache": {}, "go-mod-cache": {}},
-        labels=["build"],
     )
 
     local_resource_in_builder(
@@ -107,42 +101,8 @@ def s3_aapp_build_with_builder():
         "apocryph-s3-go-builder",
         deps=[root_dir + "/backend"],
         allow_parallel=True,
-        labels=["build"],
     )
-
-    docker_build_with_restart(
-        "comradecoop/s3-aapp/backend",
-        root_dir,
-        dockerfile="./Dockerfile",
-        target="run-backend-copy-local",
-        entrypoint=["/usr/local/bin/apocryph-s3-backend"],
-        only=[root_dir + "/bin"],
-        live_update=[
-            sync(root_dir + "/bin", "/usr/local/bin/"),
-        ],
-    )
-
-    docker_build_with_restart(
-        "comradecoop/s3-aapp/dns",
-        root_dir,
-        dockerfile="./Dockerfile",
-        target="run-dns-copy-local",
-        entrypoint=["/usr/local/bin/apocryph-s3-dns"],
-        only=[root_dir + "/bin"],
-        live_update=[
-            sync(root_dir + "/bin", "/usr/local/bin/"),
-        ],
-    )
-
-    docker_build(
-        "comradecoop/s3-aapp/serf",
-        root_dir,
-        dockerfile=root_dir + "/Dockerfile.serf",
-        only=[root_dir + "/Dockerfile.serf"],
-    )
-
-
-def s3_aapp_serve_with_builder():
+        
     docker_build(
         "comradecoop/s3-aapp/js-builder",
         root_dir,
@@ -161,7 +121,6 @@ def s3_aapp_serve_with_builder():
         ],
         # TODO: ports=[5173],
         volumes_conf={"pnpm-cache": {}},
-        labels=["build"],
         env={
             'VITE_TOKEN': os.getenv('BACKEND_ETH_TOKEN'),
             'VITE_STORAGE_SYSTEM': (os.getenv('BACKEND_ETH_PRIVATE_KEY') and str(local('cast wallet a %s' % os.getenv('BACKEND_ETH_PRIVATE_KEY'), echo_off=True))),
@@ -171,248 +130,109 @@ def s3_aapp_serve_with_builder():
 
     local_resource_in_builder(
         "apocryph-s3-js-serve",
-        "",
+        ["sh", "-c", "cd frontend/ && pnpm install --frozen-lockfile && pnpm run build"],
         "apocryph-s3-js-builder",
-        serve_cmd=["sh", "-c", "cd frontend/ && pnpm install --frozen-lockfile && pnpm run dev"],
         deps=[],
         allow_parallel=True,
-        labels=["frontend"],
     )
 
-
-
-def s3_aapp_serve_with_image():
     docker_build(
-        "comradecoop/s3-aapp/frontend",
+        "comradecoop/s3-aapp",
         root_dir,
         dockerfile=root_dir + "/Dockerfile",
-        target="serve-frontend",
+        target="run-all-singlenode",
         build_args={
+            'BACKEND_MODE': 'copy',
+            'FRONTEND_MODE': 'copy',
             'VITE_TOKEN': os.getenv('BACKEND_ETH_TOKEN'),
-            'VITE_STORAGE_SYSTEM': (os.getenv('BACKEND_ETH_PRIVATE_KEY') and local('cast wallet a %s' % os.getenv('BACKEND_ETH_PRIVATE_KEY'), echo_off=True)),
+            'VITE_STORAGE_SYSTEM': (os.getenv('BACKEND_ETH_PRIVATE_KEY') and str(local('cast wallet a %s' % os.getenv('BACKEND_ETH_PRIVATE_KEY'), echo_off=True))),
+            'GLOBAL_HOST': os.getenv('GLOBAL_HOST', 's3-aapp.localhost'),
+            'GLOBAL_CONSOLE_HOST': os.getenv('GLOBAL_CONSOLE_HOST', 'console-s3-aapp.localhost'),
         }
     )
-    k8s_yaml(listdir(root_dir + "/charts/frontend"))
-    # k8s_resource("anvil", labels=["frontend"])
 
 
-def s3_aapp_deploy(cluster_names=["one", "two"]):
-    update_settings(k8s_upsert_timeout_secs=160)
-
-    helm_repo("minio-operator-chart", "https://operator.min.io")
-    helm_repo("ingress-nginx-chart", "https://kubernetes.github.io/ingress-nginx")
-    helm_repo("prometheus-community", "https://prometheus-community.github.io/helm-charts")
-
-    helm_resource(
-        "ingress-nginx",
-        "ingress-nginx-chart/ingress-nginx",
-        namespace="ingress",
-        resource_deps=["ingress-nginx-chart"],
-        labels=["system"],
-        flags=["--create-namespace"],
+def s3_aapp_build():
+    docker_build(
+        "comradecoop/s3-aapp",
+        root_dir,
+        dockerfile=root_dir + "/Dockerfile",
+        target="run-all-singlenode",
+        build_args={
+            'VITE_TOKEN': os.getenv('BACKEND_ETH_TOKEN'),
+            'VITE_STORAGE_SYSTEM': (os.getenv('BACKEND_ETH_PRIVATE_KEY') and str(local('cast wallet a %s' % os.getenv('BACKEND_ETH_PRIVATE_KEY'), echo_off=True))),
+            'GLOBAL_HOST': os.getenv('GLOBAL_HOST', 's3-aapp.localhost'),
+            'GLOBAL_CONSOLE_HOST': os.getenv('GLOBAL_CONSOLE_HOST', 'console-s3-aapp.localhost'),
+        }
     )
 
-    helm_resource(
-        "minio-operator",
-        "minio-operator-chart/operator",
-        namespace="minio-operator",
-        labels=["system"],
-        resource_deps=["minio-operator-chart"],
-        flags=[
-            "--create-namespace",
-            "--set=operator.replicaCount=1",
-        ],
-    )
 
-    namespace_create("eth")
-    # TODO: Recreate anvil when we have new contracts code
-    k8s_yaml(listdir(apocryph_dir + "/deploy/charts/eth"))
-    k8s_resource("anvil", labels=["z_contracts"])
-    
-    def minio_resource(name, namespace):
-        helm_resource(
-            "minio-%s-config" % name,
-            root_dir + "/charts/config",
-            namespace=namespace,
-            deps=[root_dir + "/charts/config"],
-            resource_deps=[],
-            labels=["s3-%s" % name],
-            flags=[
-                "--create-namespace",
-            ],
-        )
-        helm_resource(
-            "prometheus-%s" % name,
-            "prometheus-community/prometheus",
-            namespace=namespace,
-            resource_deps=["prometheus-community"],
-            labels=["s3-%s" % name],
-            flags=[
-                "--create-namespace",
-                "--set=alertmanager.enabled=false",
-                "--set=server.fullnameOverride=prometheus",
-                "--set=prometheus-node-exporter.enabled=false",
-                "--set-json=server.releaseNamespace=true",
-            ],
-        )
-        helm_resource(
-            "minio-%s-tenant" % name,
-            "minio-operator-chart/tenant",
-            namespace=namespace,
-            resource_deps=["minio-operator", "minio-operator-chart"],  # , "minio-%s-config" % name
-            labels=["s3-%s" % name],
-            flags=[
-                "--create-namespace",
-                "--set=tenant.pools[0].name=minio-%s" % name,
-                "--set-json=tenant.certificate.requestAutoCert=false",
-                "--set=tenant.pools[0].servers=1",
-                "--set=tenant.pools[0].volumesPerServer=1",
-                "--set=tenant.pools[0].size=5Gi",
-                "--set=tenant.configuration.name=minio-config",
-                "--set=tenant.pools[0].annotations.prometheus\\.io/path=/minio/v2/metrics/bucket",
-                "--set-string=tenant.pools[0].annotations.prometheus\\.io/port=9000",
-                "--set-string=tenant.pools[0].annotations.prometheus\\.io/scrape=true",
-                "--set=tenant.pools[0].annotations.prometheus\\.io/scheme=http",
-            ],
-        )
-    
-    if len(cluster_names) == 0:
-        return
-    elif len(cluster_names) == 1:
-        name = cluster_names[0]
-        namespace = "s3-%s" % name
-        minio_resource(name, namespace=namespace)
-        helm_resource(
-            "minio-%s-backend" % name,
-            root_dir + "/charts/backend",
-            namespace=namespace,
-            deps=[root_dir + "/charts/backend"],
-            resource_deps=[],  # , "minio-%s-tenant" % name
-            labels=["s3-%s" % name],
-            flags=[
-                "--create-namespace",
-                "--set-json=serf.enable=false",
-                "--set-json=dns.enable=true",
-                "--set=eth.privateKey=%s" % os.getenv("BACKEND_ETH_PRIVATE_KEY", "4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356"),
-                "--set=eth.rpc=%s" % os.getenv("BACKEND_ETH_RPC", "ws://eth-rpc.eth.svc.cluster.local:8545"),
-                "--set=eth.tokenContract=%s" % os.getenv("BACKEND_ETH_TOKEN", "0x5FbDB2315678afecb367f032d93F642f64180aa3"),
-                "--set=eth.withdrawAddress=%s" % os.getenv("BACKEND_ETH_WITHDRAW", "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f"),
-            ],
-            image_deps=[
-                "comradecoop/s3-aapp/backend",
-                "comradecoop/s3-aapp/dns",
-            ],
-            image_keys=["backend.image", "dns.image"],
-        )
-        # k8s_resource(workload="minio-%s-backend" % name, port_forwards=["1080:1080"])
-        local_resource(
-            "minio-%s-proxy-portforward" % name,
-            resource_deps=["minio-%s-backend" % name],
-            labels=["s3-%s" % name],
-            serve_cmd="kubectl port-forward -n %s svc/proxy 1080:1080" % namespace,
-        )
-    else: # len(cluster_names) > 1:
-        for name in cluster_names:
-            minio_resource(name, namespace="s3-%s" % name)
-            helm_resource(
-                "minio-%s-backend" % name,
-                root_dir + "/charts/backend",
-                namespace="s3-%s" % name,
-                deps=[root_dir + "/charts/backend"],
-                resource_deps=[],  # , "minio-%s-tenant" % name
-                labels=["s3-%s" % name],
-                flags=[
-                    "--create-namespace",
-                    "--set=serf.bootstrap=serf-bind.s3-zero.svc.cluster.local",
-                    "--set-json=dns.enable=false",
-                ],
-                image_deps=[
-                    "comradecoop/s3-aapp/backend",
-                    "comradecoop/s3-aapp/serf",
-                ],
-                image_keys=["backend.image", "serf.image"],
-            )
-
-        helm_resource(
-            "minio-zero-dns",
-            root_dir + "/charts/backend",
-            namespace="s3-zero",
-            deps=[root_dir + "/charts/backend"],
-            labels=["s3-zero"],
-            flags=[
-                "--create-namespace",
-                "--set-json=minio.enable=false",
-                "--set-json=dns.enable=true",
-                "--set=serf.bootstrap=serf-bind.s3-%s.svc.cluster.local" % cluster_names[0],
-            ],
-            image_deps=[
-                "comradecoop/s3-aapp/dns",
-                "comradecoop/s3-aapp/serf",
-            ],
-            image_keys=["dns.image", "serf.image"],
-        )
-        # k8s_resource(workload="minio-zero-dns", port_forwards=["1080:1080"])
-        local_resource(
-            "minio-zero-dns-portforward",
-            resource_deps=["minio-zero-dns"],
-            labels=["s3-zero"],
-            serve_cmd="kubectl port-forward -n s3-zero svc/proxy 1080:1080",
-        )
+def s3_aapp_deploy(cluster_names=["zero"], deploy_local_eth=False):
+    compose_config = {
+        "services": {},
+        "volumes": {},
+    }
+    if deploy_local_eth:
+        compose_config["services"]["anvil"] = {
+            "container_name": "eth-anvil",
+            "image": "ghcr.io/foundry-rs/foundry:nightly-25f24e677a6a32a62512ad4f561995589ac2c7dc",
+            "entrypoint": ["anvil", "--host", "0.0.0.0"]
+        }
+    for name in cluster_names:
+        # TODO: Fix networking with serf
+        # TODO: Redo dns and firefox proxy
+        compose_config["services"][name] = {
+            "container_name": "s3-%s" % name,
+            "image": "comradecoop/s3-aapp",
+            "volumes": ["s3-%s-data:/data" % name],
+            "environment": {
+                "BACKEND_ETH_PRIVATE_KEY": os.getenv("BACKEND_ETH_PRIVATE_KEY", "4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356"),
+                "BACKEND_ETH_RPC": ("ws://anvil:8545" if deploy_local_eth else os.getenv("BACKEND_ETH_RPC", "https://sepolia.base.org/")),
+                "BACKEND_ETH_TOKEN": os.getenv("BACKEND_ETH_TOKEN", "0x5FbDB2315678afecb367f032d93F642f64180aa3"),
+                "BACKEND_ETH_WITHDRAW": os.getenv("BACKEND_ETH_WITHDRAW", "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f"),
+            },
+        }
+        compose_config["volumes"]["s3-%s-data" % name] = {}
+    docker_compose(encode_yaml(compose_config))
 
 
 def s3_aapp_deploy_local(
     deployer_key="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-    resource_deps=["anvil", "ingress-nginx"],
 ):
-    if len(resource_deps) == 0:
-        local_resource(
-            "ingress-nginx-portforward",
-            serve_cmd="kubectl port-forward -n keda svc/ingress-nginx-controller 8004:80",
-        )
-        local_resource(
-            "anvil-portforward",
-            serve_cmd="kubectl port-forward -n eth svc/eth-rpc 8545:8545",
-        )
-    else:
-        k8s_resource(workload="ingress-nginx", port_forwards=["8004:80"])
-        k8s_resource(workload="anvil", port_forwards=["8545:8545"])
-
-        local_resource(  # TODO: Move to container!
-            "anvil-deploy-contracts",
-            labels=["z_contracts"],
-            dir=apocryph_dir + "/contracts",
-            cmd="forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 --private-key %s --broadcast || true"
-            % (deployer_key,),
-            resource_deps=["anvil"],
-            deps=[
-                apocryph_dir + "/contracts/src",
-                apocryph_dir + "/contracts/script",
-                apocryph_dir + "/contracts/lib",
-            ],
-            allow_parallel=True,
-        )
+    local_resource(  # TODO: Move to container!
+        "anvil-deploy-contracts",
+        dir=root_dir + "/contracts",
+        cmd="forge script script/Deploy.s.sol --rpc-url http://$(docker inspect eth-anvil -f '{{range $x := .NetworkSettings.Networks}}{{$x.IPAddress}}{{end}}'                                                   ):8545 --private-key %s --broadcast || true"
+        % (deployer_key,),
+        resource_deps=["anvil"],
+        deps=[
+            root_dir + "/contracts/src",
+            root_dir + "/contracts/script",
+            root_dir + "/contracts/lib",
+        ],
+        allow_parallel=True,
+    )
 
 
 config.define_string("scenario", args=True, usage="One of single-cluster, multi-cluster")
 cfg = config.parse()
 scenario = cfg.get("scenario", "single-cluster")
 
-
-s3_aapp_build_with_builder()
-
-if scenario == "single-cluster" or scenario == "sc":
-    s3_aapp_deploy(["zero"])
-elif scenario == "multi-cluster" or scenario == "mc":
-    s3_aapp_deploy(["one", "two"])
-else:
-    fail("Unexpected scenario value", scenario)
-s3_aapp_serve_with_builder()
-s3_aapp_serve_with_image()
+s3_aapp_build()
+s3_aapp_deploy(["zero"], True)
 s3_aapp_deploy_local()
-local_resource(
-    "launch_firefox",
-    cmd=[],
-    labels=["s3-zero", "a_launch"],
-    trigger_mode=TRIGGER_MODE_MANUAL,
-    auto_init=False,
-    serve_cmd=["./launch-proxy-firefox.sh"])
+
+# s3_aapp_build_with_builder()
+# 
+# if scenario == "single-cluster" or scenario == "sc":
+#     s3_aapp_deploy(["zero"])
+# elif scenario == "multi-cluster" or scenario == "mc":
+#     s3_aapp_deploy(["one", "two"])
+# else:
+#     fail("Unexpected scenario value", scenario)
+# local_resource(
+#     "launch_firefox",
+#     cmd=[],
+#     trigger_mode=TRIGGER_MODE_MANUAL,
+#     auto_init=False,
+#     serve_cmd=["./launch-proxy-firefox.sh"])
