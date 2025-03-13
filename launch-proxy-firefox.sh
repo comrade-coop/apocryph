@@ -2,7 +2,7 @@
 
 set -e
 
-LAUNCH_URL="http://localhost:5173/"
+LAUNCH_URL="http://s3-aapp.local/app/"
 FIREFOX_PROFILE="/tmp/apocryph-firefox-profile" ##$(mktemp -d)
 mkdir -p "$FIREFOX_PROFILE"
 
