@@ -6,7 +6,7 @@ set -e
 
 . /secrets/minio.env
 
-export MINIO_VOLUMES="/mnt/data"
+export MINIO_VOLUMES="/data/minio"
 export MINIO_IDENTITY_PLUGIN_URL="http://localhost:8593/auth"
 export MINIO_IDENTITY_PLUGIN_ROLE_POLICY="ethAuth,remoteReplicant"
 export MINIO_IDENTITY_PLUGIN_TOKEN="Bearer TOKEN"

@@ -228,15 +228,19 @@ COPY --from=backend /bin/minio-manager /usr/local/bin/apocryph-s3-backend
 COPY --from=prometheus /prometheus/prometheus /usr/local/bin/
 COPY --from=minio /usr/local/bin/minio /usr/local/bin/mc /usr/local/bin/
 
+ENTRYPOINT ["/init"]
+CMD ["sleep", "infinity"]
+
+ARG VITE_GLOBAL_HOST
+ARG VITE_GLOBAL_HOST_CONSOLE
 ENV GLOBAL_HOST=$VITE_GLOBAL_HOST
 ENV GLOBAL_HOST_CONSOLE=$VITE_GLOBAL_HOST_CONSOLE
 ENV BACKEND_ETH_TOKEN=$VITE_TOKEN
 ENV BACKEND_ETH_RPC=https://sepolia.base.org
 ENV BACKEND_ETH_CHAIN_ID=84532
+ENV BACKEND_EXTERNAL_URL=http://example.invalid
+ENV BACKEND_REPLICATE_SITES=""
 VOLUME /data
-
-ENTRYPOINT ["/init"]
-CMD ["sleep", "infinity"]
 
 ## Default output
 

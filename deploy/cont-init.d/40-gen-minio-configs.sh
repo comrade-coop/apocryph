@@ -7,8 +7,8 @@ gensecret() {
 mkdir -p /secrets/; # TODO: Secure better?
 
 cat <<EOF >/secrets/backend.env
-ACCESS_KEY=$(gensecret)
-SECRET_KEY=$(gensecret)
+export ACCESS_KEY="$(gensecret)"
+export SECRET_KEY="$(gensecret)"
 EOF
 
 cat <<EOF >/secrets/minio.env

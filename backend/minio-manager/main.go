@@ -4,11 +4,12 @@ import (
 	"context"
 	"log"
 	"math/big"
+	"net/url"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/comrade-coop/apocryph/backend/prometheus"
-	"github.com/comrade-coop/apocryph/backend/swarm"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -22,15 +23,16 @@ var minioAddress string
 var minioAccessKey string
 var minioSecretKey string
 var privateKeyString string
-var disableReplication bool
-var serfAddress string
-var hostname string
+
 var disablePayments bool
 var prometheusAddress string
 var ethereumAddress string
 var chainIdString string
 var tokenContractAddress string
 var withdrawAddress string
+
+var replicateSites []string
+var externalUrl string
 
 func main() {
 	ctx := context.Background()
@@ -69,26 +71,37 @@ var backendCmd = &cobra.Command{
 			return
 		}
 
-		replicationSigner, err := NewTokenSigner(privateKey)
+		replicationTokenSigner, err := NewTokenSigner(privateKey)
 		if err != nil {
 			return
 		}
+		
 		minioCreds := credentials.NewStaticV4(minioAccessKey, minioSecretKey, "")
 
-		if !disableReplication {
-			swarm, err := swarm.NewSwarm(serfAddress, hostname)
+		ownUrl, err := url.Parse(externalUrl)
+		if err != nil {
+			return
+		}
+		
+		for _, site := range replicateSites {
+			siteUrl, err := url.Parse(site)
 			if err != nil {
 				return err
 			}
-
-			replication, err := NewReplicationManager(minioAddress, minioCreds, swarm, replicationSigner)
-			if err != nil {
-				return err
-			}
-			err = replication.Run(cmd.Context())
-			if err != nil {
-				return err
-			}
+			go func() {
+				for range 3 {
+					// Sleep right away, since bucket replication will need the token signer, and thus identity server running
+					time.Sleep(time.Second * 10)
+					err = ConfigureAllBucketsReplication(cmd.Context(), ownUrl, siteUrl, replicationTokenSigner)
+					if err != nil {
+						log.Println("Error configuring all-bucket replication", err)
+					} else {
+						log.Println("Succefully configured all-bucket replication!")
+						return
+					}
+				}
+				log.Fatalln("Failed configuring all-bucket replication!")
+			}()
 		}
 
 		var payment *PaymentManager = nil
@@ -120,7 +133,7 @@ var backendCmd = &cobra.Command{
 			}
 		}
 
-		err = RunIdentityServer(cmd.Context(), identityServeAddress, replicationSigner.GetPublicAddress(), minioCreds, payment)
+		err = RunIdentityServer(cmd.Context(), identityServeAddress, replicationTokenSigner.GetPublicAddress(), minioCreds, payment)
 		if err != nil {
 			return err
 		}
@@ -143,7 +156,6 @@ func init() {
 	backendCmd.Flags().StringVar(&withdrawAddress, "withdraw-address", "", "Address to withdraw to")
 	backendCmd.Flags().StringVar(&chainIdString, "chain-id", "31337", "Ethereum Chain ID")
 
-	backendCmd.Flags().BoolVar(&disableReplication, "disable-replication", false, "Disable replication")
-	backendCmd.Flags().StringVar(&serfAddress, "serf", "localhost:7373", "Address to query serf on")
-	backendCmd.Flags().StringVar(&hostname, "hostname", "localhost", "Hostname & local serf node name")
+	backendCmd.Flags().StringSliceVar(&replicateSites, "replicate-sites", []string{}, "Replicate to a given site running with the same private key (expects comma-separated http(s):// URLs)")
+	backendCmd.Flags().StringVar(&externalUrl, "external-url", "http://localhost", "URL remotes sites can use to reach us")
 }

@@ -2,6 +2,41 @@
     "Version": "2012-10-17",
     "Statement": [
         {
+            "Sid": "EnableBucketReplicationConfiguration",
+            "Effect": "Allow",
+            "Action": [
+                "admin:SetBucketTarget",
+                "admin:GetBucketTarget"
+            ],
+            "Condition": {
+              "ForAnyValue:StringEquals": {
+                "jwt:groups": "remoteReplicant"
+              }
+            }
+        },
+        {
+            "Sid": "EnableBucketReplicationConfiguration",
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetBucketPolicy",
+                "s3:DeleteBucketPolicy",
+                "s3:GetReplicationConfiguration",
+                "s3:GetObjectRetention",
+                "s3:GetObjectLegalHold",
+                "s3:PutReplicationConfiguration",
+                "s3:CreateBucket",
+                "s3:PutBucketVersioning"
+            ],
+            "Resource": [
+                "arn:aws:s3:::*"
+            ],
+            "Condition": {
+              "ForAnyValue:StringEquals": {
+                "jwt:groups": "remoteReplicant"
+              }
+            }
+        },
+        {
             "Sid": "EnableReplicationOnBucket",
             "Effect": "Allow",
             "Action": [

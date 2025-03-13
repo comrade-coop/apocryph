@@ -3,14 +3,11 @@ package main
 import (
 	"context"
 	"encoding/base32"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
-	"strconv"
-	"time"
+	"net/url"
 
-	"github.com/comrade-coop/apocryph/backend/swarm"
 	"github.com/minio/madmin-go/v3"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -21,258 +18,157 @@ import (
 var ReplicationServiceAccountPrefix = "Replicator-"
 var ReplicationCustomTokenIamArn = "arn:minio:iam:::role/idmp-swieauth"
 
-type ReplicationManager struct {
-	minio       *minio.Client
-	minioAdmin  *madmin.AdminClient
-	swarm       *swarm.Swarm
-	tokenSigner *TokenSigner
+type replicationNode struct {
+	url *url.URL
+	minio *minio.Client
+	admin *madmin.AdminClient
+	serviceAccount madmin.Credentials
 }
 
-func NewReplicationManager(minioAddress string, minioCreds *credentials.Credentials, swarm *swarm.Swarm, tokenSigner *TokenSigner) (*ReplicationManager, error) {
-	minioClient, err := minio.New(minioAddress, &minio.Options{
-		Creds: minioCreds,
+func newReplicationNode(ctx context.Context, url *url.URL, tokenSigner *TokenSigner, accountDescription string) (result *replicationNode, err error) {
+	token, err := tokenSigner.GetReplicationToken("all")
+	if err != nil {
+		return
+	}
+	cred, err := credentials.NewCustomTokenCredentials(url.String(), token, ReplicationCustomTokenIamArn)
+	if err != nil {
+		return
+	}
+	minio, err := minio.New(url.Host, &minio.Options{
+		Secure: url.Scheme == "https",
+		Creds:  cred,
 	})
 	if err != nil {
-		return nil, err
+		return
 	}
-	minioAdmin, err := madmin.NewWithOptions(minioAddress, &madmin.Options{
-		Creds: minioCreds,
+	admin, err := madmin.NewWithOptions(url.Host, &madmin.Options{
+		Secure: url.Scheme == "https",
+		Creds:  cred,
 	})
 	if err != nil {
-		return nil, err
+		return
 	}
-
-	return &ReplicationManager{
-		minio:       minioClient,
-		minioAdmin:  minioAdmin,
-		swarm:       swarm,
-		tokenSigner: tokenSigner,
-	}, nil
+	accountDescriptionHash := base32.StdEncoding.EncodeToString(sha3.New256().Sum([]byte(accountDescription)))
+	replicationCredential, err := admin.AddServiceAccount(ctx, madmin.AddServiceAccountReq{
+		Name:        (ReplicationServiceAccountPrefix + accountDescriptionHash)[:32],
+		Description: accountDescription,
+	})
+	result = &replicationNode{
+		url,
+		minio,
+		admin,
+		replicationCredential,
+	}
+	return
 }
 
-func (r *ReplicationManager) Run(ctx context.Context) error {
-	go func() {
-		for {
-			err := r.reconcilationLoop(ctx)
-			if err != nil {
-				log.Printf("Error while reconciling replications: %v", err)
-			}
+func ConfigureAllBucketsReplication(
+	ctx context.Context,
+	ownUrl *url.URL,
+	remoteUrl *url.URL,
+	tokenSigner *TokenSigner,
+) (err error) {
+	source, err := newReplicationNode(ctx, remoteUrl, tokenSigner, fmt.Sprintf("Used for replication to %s", remoteUrl))
+	if err != nil {
+		return
+	}
+	destination, err := newReplicationNode(ctx, ownUrl, tokenSigner, fmt.Sprintf("Used for replication to %s", remoteUrl))
+	if err != nil {
+		return
+	}
+	
+	remoteBuckets, err := source.minio.ListBuckets(ctx)
+	if err != nil {
+		return err
+	}
 
-			time.Sleep(5 * time.Minute)
+	errorList := []error{}
+	for _, bucket := range remoteBuckets {
+		err := configureBucketReplication(ctx, bucket.Name, source, destination)
+
+		if err != nil {
+			log.Printf("Setting replication failed for %s: %v\n", bucket.Name, err)
+			errorList = append(errorList, err)
+		} else {
+			log.Printf("Setting replication success for %s!\n", bucket.Name)
 		}
-	}()
+	}
+	
+	return errors.Join(errorList...)
+}
+
+func configureBucketReplication(
+	ctx context.Context,
+	bucketId string,
+	source *replicationNode,
+	destination *replicationNode,
+) (err error) {
+	_ = source.minio.EnableVersioning(ctx, bucketId)
+	
+	err = destination.minio.MakeBucket(ctx, bucketId, minio.MakeBucketOptions{})
+	if err != nil {
+		if minio.ToErrorResponse(err).Code != "BucketAlreadyOwnedByYou" {
+			err = fmt.Errorf("MakeBucket: %w", err)
+			return
+		}
+	}
+	_ = destination.minio.EnableVersioning(ctx, bucketId)
+		
+	err = syncBucketPolicy(ctx, bucketId, source, destination)
+	if err != nil {
+		return
+	}
+	
+	err = addBucketReplicationRule(ctx, bucketId, source, destination)
+	if err != nil {
+		return
+	}
+
 	return nil
 }
 
-func (r *ReplicationManager) reconcilationLoop(ctx context.Context) error {
-	errs := []error{}
-	buckets, err := r.minio.ListBuckets(ctx)
+func syncBucketPolicy(ctx context.Context, bucketId string, source *replicationNode, destination *replicationNode) (err error) {
+	ownPolicy, err := source.minio.GetBucketPolicy(ctx, bucketId)
 	if err != nil {
-		errs = append(errs, err)
-	} else {
-		for _, bucket := range buckets {
-			err = r.UpdateBucket(ctx, bucket.Name)
-			if err != nil {
-				errs = append(errs, err)
-				continue
-			}
-		}
+		return fmt.Errorf("GetBucketPolicy: %w", err)
 	}
-
-	err = r.UpdateCapacity(ctx)
+	err = destination.minio.SetBucketPolicy(ctx, bucketId, ownPolicy)
 	if err != nil {
-		errs = append(errs, err)
+		return fmt.Errorf("SetBucketPolicy: %w", err)
 	}
-
-	return errors.Join(errs...)
+	return
 }
 
-type ReplicaStatus int
-
-const (
-	Unknown    ReplicaStatus = 0
-	Configured ReplicaStatus = 1
-	Alive      ReplicaStatus = 2
-	Failing    ReplicaStatus = 3
-)
-
-// TODO: call UpdateBucket whenever the swarm detects that the peer is down
-// TODO: call UpdateBucket whenever we get a new bucket
-func (r *ReplicationManager) UpdateBucket(ctx context.Context, bucketId string) error {
-	_ = r.swarm.UpdateBucket(bucketId, swarm.Syncing) // TODO: Update syncing/ready correctly
-	_ = r.minio.EnableVersioning(ctx, bucketId)       // TODO: Move to frontend/etc.?
-
-	// Get object
-	replicationConfig, err := r.minio.GetBucketReplication(ctx, bucketId)
+func addBucketReplicationRule(ctx context.Context, bucketId string, source *replicationNode, destination *replicationNode) (err error) {
+	replicationConfig, err := source.minio.GetBucketReplication(ctx, bucketId)
 	if err != nil {
 		response := minio.ToErrorResponse(err)
 		if response.Code != "" {
-			println("!!!", response.Code)
+			println("If this is not an error, this code to replication.go:", response.Code)
 			replicationConfig = replication.Config{}
 		} else {
 			return fmt.Errorf("GetBucketReplication: %w", err)
 		}
 	}
-	targetTotalReplicas := 2 // TODO: Make this configurable
+
+	arn, err := getRemoteTargetArn(ctx, bucketId, source, destination)
+	if err != nil {
+		return
+	}
+	
+	exists := false
 	highestPriority := 0
-
-	var metrics replication.Metrics
-	if len(replicationConfig.Rules) > 0 {
-		// Get current status
-		metrics, err = r.minio.GetBucketReplicationMetrics(ctx, bucketId)
-		if err != nil {
-			response := minio.ToErrorResponse(err)
-			if response.Code != "" {
-				println("!!!!", response.Code)
-				replicationConfig = replication.Config{}
-			} else {
-				return fmt.Errorf("GetBucketReplicationMetrics: %w", err)
-			}
-		}
-		a, _ := json.Marshal(metrics)
-		println(string(a))
-		for _, rule := range replicationConfig.Rules {
-			highestPriority = max(highestPriority, rule.Priority)
-		}
-	}
-
-	replicaStatus := map[string]ReplicaStatus{}
-	statusCounts := map[ReplicaStatus]int{}
-
-	// Count ourselves
-	replicaStatus[r.swarm.OwnName] = Alive
-	statusCounts[Alive]++
-	syncedReplicas := 1
-
 	for _, rule := range replicationConfig.Rules {
-		replicaStatus[rule.ID] = Configured
-		statusCounts[Alive]++ // HACK: Don't assume everyone is down while metrics below are not yet fixed
-	}
-	// TODO: metrics.Stats is nil for some reason
-	/*
-		for id, stats := range metrics.Stats {
-			if stats.Failed.LastHour.Count > 10 {
-				replicaStatus[id] = Failing
-				statusCounts[Failing]++
-			} else {
-				replicaStatus[id] = Alive
-				statusCounts[Alive]++
-			}
-			if stats.PendingCount < 10 {
-				syncedReplicas += 1
-			}
-		}*/
-
-	expectedReplicas, err := r.swarm.FindBucketReplicas(bucketId)
-	if err != nil {
-		return err
-	}
-
-	// Reconcile
-	// TODO: Make sure this does what it's supposed to
-	for _, node := range expectedReplicas {
-		id := node
-
-		if replicaStatus[id] == Unknown {
-			rule, err := r.getReplicationRuleForNode(ctx, node, bucketId)
-			if err != nil {
-				// continue
-				return fmt.Errorf("getReplicationRuleForNode: %w", err)
-			}
-			highestPriority++
-			rule.Priority = strconv.FormatInt(int64(highestPriority), 10)
-
-			replicaStatus[id] = Alive
-			statusCounts[Alive]++
-
-			err = replicationConfig.AddRule(rule)
-			if err != nil {
-				return fmt.Errorf("AddRule (expected): %w", err)
-			}
+		if rule.ID == destination.url.Host {
+			exists = true
+		}
+		if highestPriority < rule.Priority {
+			highestPriority = rule.Priority
 		}
 	}
-
-	if statusCounts[Alive] < targetTotalReplicas {
-		for statusCounts[Alive] < targetTotalReplicas {
-			node, err := r.swarm.FindFreeNode()
-			if err != nil {
-				return fmt.Errorf("FindFreeNode: %w", err)
-			}
-			if replicaStatus[node] != Unknown {
-				break // TODO: avoids infinite loop
-			}
-			rule, err := r.getReplicationRuleForNode(ctx, node, bucketId)
-			if err != nil {
-				// continue
-				return fmt.Errorf("getReplicationRuleForNode: %w", err)
-			}
-			highestPriority++
-			rule.Priority = strconv.FormatInt(int64(highestPriority), 10)
-
-			replicaStatus[node] = Alive
-			statusCounts[Alive]++
-
-			err = replicationConfig.AddRule(rule)
-			if err != nil {
-				return fmt.Errorf("AddRule (free): %w", err)
-			}
-		}
-	} else if syncedReplicas > targetTotalReplicas/2+1 { // Cleanup - we have enough alive and synced to start prunning failed
-		// TODO: Double-check condition correctness
-		for failedId, status := range replicaStatus {
-			if status == Failing {
-				replicationConfig.RemoveRule(replication.Options{
-					ID: failedId,
-				})
-			}
-		}
-	}
-	fmt.Println("Set replication:", replicationConfig)
-
-	err = r.minio.SetBucketReplication(ctx, bucketId, replicationConfig)
-	if err != nil {
-		return fmt.Errorf("SetBucketReplication: %w", err)
-	}
-	fmt.Println("Set replication success wohoo!")
-
-	return nil
-}
-func (r *ReplicationManager) getReplicationRuleForNode(ctx context.Context, node string, bucketId string) (opt replication.Options, err error) {
-	hostname := node
-
-	token, err := r.tokenSigner.GetReplicationToken(bucketId)
-	if err != nil {
-		err = fmt.Errorf("GetReplicationToken: %w", err)
-		return
-	}
-	stsEndpoint := "http://" + hostname // TODO: https
-	cred, err := credentials.NewCustomTokenCredentials(stsEndpoint, token, ReplicationCustomTokenIamArn)
-	if err != nil {
-		return
-	}
-
-	// Creating a bucket is handled by the identity plugin.
-
-	// TODO: Find a way to sync bucket policies (below won't work due to only being triggered for/on new nodes)
-	// ownPolicy, err := r.minio.GetBucketPolicy(ctx, bucketId)
-	// if err != nil {
-	// 	err = fmt.Errorf("GetBucketPolicy: %w", err)
-	// 	return
-	// }
-	// err = minioClient.SetBucketPolicy(ctx, bucketId, ownPolicy)
-	// if err != nil {
-	// 	err = fmt.Errorf("SetBucketPolicy: %w", err)
-	// 	return
-	// }
-
-	arn, err := r.getRemoteTargetArn(ctx, cred, hostname, bucketId)
-	if err != nil {
-		err = fmt.Errorf("getRemoteTargetArn: %w", err)
-		return
-	}
-
-	opt = replication.Options{
-		ID:                      node,
+	
+	replicationRule := replication.Options{
+		ID:                      destination.url.Host,
 		RuleStatus:              "enable",
 		ExistingObjectReplicate: "enable",
 		ReplicateDeletes:        "enable",
@@ -280,69 +176,55 @@ func (r *ReplicationManager) getReplicationRuleForNode(ctx context.Context, node
 		ReplicaSync:             "enable",
 		DestBucket:              arn,
 	}
-	fmt.Println("Add replication:", opt)
-	return
-}
-func (r *ReplicationManager) getRemoteTargetArn(ctx context.Context, cred *credentials.Credentials, hostname string, bucketId string) (arn string, err error) {
-	targets, err := r.minioAdmin.ListRemoteTargets(ctx, bucketId, string(madmin.ReplicationService)) // TODO: O(n^2)
+	
+	if exists {
+		err = replicationConfig.EditRule(replicationRule)
+	} else {
+		replicationRule.Priority = fmt.Sprint(highestPriority + 1)
+		err = replicationConfig.AddRule(replicationRule)
+	}
 	if err != nil {
-		return
+		return fmt.Errorf("AddRule: %w", err)
 	}
 
+	err = source.minio.SetBucketReplication(ctx, bucketId, replicationConfig)
+	if err != nil {
+		return fmt.Errorf("SetBucketReplication: %w", err)
+	}
+	return
+}
+
+func getRemoteTargetArn(ctx context.Context, bucketId string, source *replicationNode, destination *replicationNode) (arn string, err error) {
+	targets, err := source.admin.ListRemoteTargets(ctx, bucketId, string(madmin.ReplicationService))
+	if err != nil {
+		err = fmt.Errorf("ListRemoteTargets: %w", err)
+		return
+	}
+	
+	expectedTarget := madmin.BucketTarget{
+		SourceBucket: bucketId,
+		Endpoint:     destination.url.Host,
+		Secure:       destination.url.Scheme == "https",
+		Credentials:  &destination.serviceAccount,
+		TargetBucket: bucketId,
+		Type:         madmin.ReplicationService,
+		DisableProxy: false,
+	}
+	
 	for _, target := range targets {
-		if target.Endpoint == hostname && target.TargetBucket == bucketId {
+		if target.Endpoint == expectedTarget.Endpoint && 
+			target.Secure == expectedTarget.Secure && 
+			target.TargetBucket == expectedTarget.TargetBucket {
 			arn = target.Arn
 			return
 		}
 	}
-	adminClient, err := madmin.NewWithOptions(hostname, &madmin.Options{
-		Secure: false, // TODO: true
-		Creds:  cred,
-	})
-	if err != nil {
-		return
-	}
-	nameHash := base32.StdEncoding.EncodeToString(sha3.New256().Sum([]byte(r.swarm.OwnName)))
-	resultCredentials, err := adminClient.AddServiceAccount(ctx, madmin.AddServiceAccountReq{
-		Name:        (ReplicationServiceAccountPrefix + nameHash)[:32],
-		Description: fmt.Sprintf("Access key for replicating this bucket to %s, making sure your data is available even if this node fails!", r.swarm.OwnName),
-	})
-	if err != nil {
-		err = fmt.Errorf("AddServiceAccount: %w", err)
-		return
-	}
 
-	fmt.Printf("!! http://%s:%s@%s/%s \n", resultCredentials.AccessKey, resultCredentials.SecretKey, hostname, bucketId)
-
-	arn, err = r.minioAdmin.SetRemoteTarget(ctx, bucketId, &madmin.BucketTarget{
-		SourceBucket: bucketId,
-		Endpoint:     hostname,
-		Secure:       false, // TODO: true
-		Credentials:  &resultCredentials,
-		TargetBucket: bucketId,
-		Type:         madmin.ReplicationService,
-		DisableProxy: false,
-	})
+	arn, err = source.admin.SetRemoteTarget(ctx, bucketId, &expectedTarget)
 	if err != nil {
 		err = fmt.Errorf("SetRemoteTarget: %w", err)
 		return
 	}
 
 	return
-}
-
-func (r *ReplicationManager) UpdateCapacity(ctx context.Context) error {
-	info, err := r.minioAdmin.StorageInfo(ctx)
-	if err != nil {
-		return err
-	}
-
-	available := uint64(0)
-	for _, disk := range info.Disks {
-		available += disk.AvailableSpace
-	}
-
-	r.swarm.UpdateCapacity(available / 1024 / 1024) // Divide, so that we don't end up with a new number every single small change
-
-	return nil
 }

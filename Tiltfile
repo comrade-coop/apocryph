@@ -121,9 +121,7 @@ def s3_aapp_build_with_builder():
         ],
         # TODO: ports=[5173],
         volumes_conf={"pnpm-cache": {}},
-        env={
-            'VITE_TOKEN': os.getenv('BACKEND_ETH_TOKEN'),
-            'VITE_STORAGE_SYSTEM': (os.getenv('BACKEND_ETH_PRIVATE_KEY') and str(local('cast wallet a %s' % os.getenv('BACKEND_ETH_PRIVATE_KEY'), echo_off=True))),
+        env=get_build_args(local_eth) + {
             'COREPACK_INTEGRITY_KEYS': '0'
         }
     )
@@ -141,44 +139,73 @@ def s3_aapp_build_with_builder():
         root_dir,
         dockerfile=root_dir + "/Dockerfile",
         target="run-all-singlenode",
-        build_args={
-            'BACKEND_MODE': 'copy',
-            'FRONTEND_MODE': 'copy',
-            'VITE_TOKEN': os.getenv('BACKEND_ETH_TOKEN'),
-            'VITE_STORAGE_SYSTEM': (os.getenv('BACKEND_ETH_PRIVATE_KEY') and str(local('cast wallet a %s' % os.getenv('BACKEND_ETH_PRIVATE_KEY'), echo_off=True))),
-            'GLOBAL_HOST': os.getenv('GLOBAL_HOST', 's3-aapp.localhost'),
-            'GLOBAL_CONSOLE_HOST': os.getenv('GLOBAL_CONSOLE_HOST', 'console-s3-aapp.localhost'),
-        }
+        build_args=get_build_args(local_eth)
     )
 
+def get_build_args(local_eth=False):
+    return {
+        'VITE_CHAIN_CONFIG': (str(encode_json({
+            'id': 31337,
+            'name': 'Localhost',
+            'nativeCurrency': {'name': 'lETH', 'symbol': 'lETH', 'decimals': 18},
+            'rpcUrls': {'default': {'http': ['http://anvil.local:8545'], 'websocket': ['ws://anvil.local:8545']}},
+            'testnet': True,
+        })) if local_eth else os.getenv('VITE_CHAIN_CONFIG')),
+        'VITE_TOKEN': '0x5FbDB2315678afecb367f032d93F642f64180aa3' if local_eth else os.getenv('BACKEND_ETH_TOKEN'),
+        'VITE_STORAGE_SYSTEM': (os.getenv('BACKEND_ETH_PRIVATE_KEY') and str(local('cast wallet a %s' % os.getenv('BACKEND_ETH_PRIVATE_KEY'), echo_off=True))),
+        'VITE_GLOBAL_HOST': os.getenv('GLOBAL_HOST', 's3-aapp.local'),
+        'VITE_GLOBAL_HOST_CONSOLE': os.getenv('GLOBAL_HOST_CONSOLE', 'console-s3-aapp.local'),
+    }
 
-def s3_aapp_build():
+
+def s3_aapp_build(local_eth=False):
     docker_build(
         "comradecoop/s3-aapp",
         root_dir,
         dockerfile=root_dir + "/Dockerfile",
         target="run-all-singlenode",
-        build_args={
-            'VITE_TOKEN': os.getenv('BACKEND_ETH_TOKEN'),
-            'VITE_STORAGE_SYSTEM': (os.getenv('BACKEND_ETH_PRIVATE_KEY') and str(local('cast wallet a %s' % os.getenv('BACKEND_ETH_PRIVATE_KEY'), echo_off=True))),
-            'GLOBAL_HOST': os.getenv('GLOBAL_HOST', 's3-aapp.localhost'),
-            'GLOBAL_CONSOLE_HOST': os.getenv('GLOBAL_CONSOLE_HOST', 'console-s3-aapp.localhost'),
-        }
+        build_args=get_build_args(local_eth)
     )
 
 
-def s3_aapp_deploy(cluster_names=["zero"], deploy_local_eth=False):
+def s3_aapp_deploy(cluster_names=["zero"], local_eth=False, deploy_proxy=True, deployer_key="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"):
     compose_config = {
         "services": {},
         "volumes": {},
     }
-    if deploy_local_eth:
+    if deploy_proxy:
+        compose_config["services"]["proxy"] = {
+            "image": "nmaguiar/socksd",
+            "ports": ["127.0.0.1:1080:1080"],
+        }
+        
+    if local_eth:
         compose_config["services"]["anvil"] = {
             "container_name": "eth-anvil",
             "image": "ghcr.io/foundry-rs/foundry:nightly-25f24e677a6a32a62512ad4f561995589ac2c7dc",
-            "entrypoint": ["anvil", "--host", "0.0.0.0"]
+            "entrypoint": ["anvil", "--host", "0.0.0.0"],
+            "networks": {
+                "default": {
+                    "aliases": ["anvil.local"]
+                }
+            }
         }
+        local_resource(  # TODO: Move to container!
+            "anvil-deploy-contracts",
+            dir=root_dir + "/contracts",
+            cmd="forge script script/Deploy.s.sol --rpc-url http://$(docker inspect eth-anvil -f '{{range $x := .NetworkSettings.Networks}}{{$x.IPAddress}}{{end}}'                                                   ):8545 --private-key %s --broadcast || true"
+            % (deployer_key,),
+            resource_deps=["anvil"],
+            deps=[
+                root_dir + "/contracts/src",
+                root_dir + "/contracts/script",
+                root_dir + "/contracts/lib",
+            ],
+            allow_parallel=True,
+        )
+    replicate_sites = []
     for name in cluster_names:
+        is_last = name == cluster_names[-1]
         # TODO: Fix networking with serf
         # TODO: Redo dns and firefox proxy
         compose_config["services"][name] = {
@@ -187,52 +214,44 @@ def s3_aapp_deploy(cluster_names=["zero"], deploy_local_eth=False):
             "volumes": ["s3-%s-data:/data" % name],
             "environment": {
                 "BACKEND_ETH_PRIVATE_KEY": os.getenv("BACKEND_ETH_PRIVATE_KEY", "4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356"),
-                "BACKEND_ETH_RPC": ("ws://anvil:8545" if deploy_local_eth else os.getenv("BACKEND_ETH_RPC", "https://sepolia.base.org/")),
-                "BACKEND_ETH_TOKEN": os.getenv("BACKEND_ETH_TOKEN", "0x5FbDB2315678afecb367f032d93F642f64180aa3"),
+                "BACKEND_ETH_RPC": ("ws://anvil:8545" if local_eth else os.getenv("BACKEND_ETH_RPC", "https://sepolia.base.org/")),
+                "BACKEND_ETH_TOKEN": '0x5FbDB2315678afecb367f032d93F642f64180aa3' if local_eth else os.getenv('BACKEND_ETH_TOKEN'),
                 "BACKEND_ETH_WITHDRAW": os.getenv("BACKEND_ETH_WITHDRAW", "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f"),
+                "BACKEND_EXTERNAL_URL": "http://%s.local" % name,
+                "BACKEND_REPLICATE_SITES": ",".join(replicate_sites),
             },
+            "networks": {
+                "default": {
+                    "aliases": ["%s.local" % name] + (["s3-aapp.local", "console-s3-aapp.local"] if is_last else [])
+                }
+            }
         }
+        replicate_sites += ["http://%s.local" % name]
         compose_config["volumes"]["s3-%s-data" % name] = {}
     docker_compose(encode_yaml(compose_config))
 
 
-def s3_aapp_deploy_local(
-    deployer_key="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-):
-    local_resource(  # TODO: Move to container!
-        "anvil-deploy-contracts",
-        dir=root_dir + "/contracts",
-        cmd="forge script script/Deploy.s.sol --rpc-url http://$(docker inspect eth-anvil -f '{{range $x := .NetworkSettings.Networks}}{{$x.IPAddress}}{{end}}'                                                   ):8545 --private-key %s --broadcast || true"
-        % (deployer_key,),
-        resource_deps=["anvil"],
-        deps=[
-            root_dir + "/contracts/src",
-            root_dir + "/contracts/script",
-            root_dir + "/contracts/lib",
-        ],
-        allow_parallel=True,
-    )
-
-
 config.define_string("scenario", args=True, usage="One of single-cluster, multi-cluster")
+config.define_bool("external-eth", usage="Don't launch ethereum in the local cluster")
 cfg = config.parse()
+local_eth = not cfg.get("external-eth", False)
 scenario = cfg.get("scenario", "single-cluster")
 
-s3_aapp_build()
-s3_aapp_deploy(["zero"], True)
-s3_aapp_deploy_local()
-
+s3_aapp_build(local_eth=local_eth)
 # s3_aapp_build_with_builder()
-# 
-# if scenario == "single-cluster" or scenario == "sc":
-#     s3_aapp_deploy(["zero"])
-# elif scenario == "multi-cluster" or scenario == "mc":
-#     s3_aapp_deploy(["one", "two"])
-# else:
-#     fail("Unexpected scenario value", scenario)
-# local_resource(
-#     "launch_firefox",
-#     cmd=[],
-#     trigger_mode=TRIGGER_MODE_MANUAL,
-#     auto_init=False,
-#     serve_cmd=["./launch-proxy-firefox.sh"])
+
+if scenario == "single-cluster" or scenario == "sc":
+    s3_aapp_deploy(["zero"], local_eth=local_eth)
+elif scenario == "multi-cluster" or scenario == "mc":
+    s3_aapp_deploy(["zero", "one"], local_eth=local_eth)
+elif scenario == "single-cluster-2" or scenario == "sc2":
+    s3_aapp_deploy(["one"], local_eth=local_eth)
+else:
+    fail("Unexpected scenario value", scenario)
+
+local_resource(
+    "launch_firefox",
+    cmd=[],
+    trigger_mode=TRIGGER_MODE_MANUAL,
+    auto_init=False,
+    serve_cmd=["./launch-proxy-firefox.sh"])

@@ -29,7 +29,7 @@ type AuthenticationFailure struct {
 type AuthenticationResult struct {
 	User               string                 `json:"user"`
 	MaxValiditySeconds int                    `json:"maxValiditySeconds"`
-	Claims             map[string]interface{} `json:"claims"`
+	Claims             map[string]any `json:"claims"`
 }
 
 type Token struct {
@@ -121,10 +121,10 @@ func (s identityServer) authenticateHelper(tokenString string) (result Authentic
 
 	address := message.GetAddress()
 	if address == s.replicationPublicKeyAddress {
-		if bucketId == "" {
-			err = fmt.Errorf("Expected resource claim in special message from the replication system address!")
-			return
-		}
+		// if bucketId == "" {
+		// 	err = fmt.Errorf("Expected resource claim in special message from the replication system address!")
+		// 	return
+		// }
 		// TODO: All bucket ids are allowed here, for now, without checking if the message is coming from the expected replica
 		group = "remoteReplicant"
 	} else {
@@ -139,7 +139,7 @@ func (s identityServer) authenticateHelper(tokenString string) (result Authentic
 		group = "user"
 	}
 
-	if s.payment != nil {
+	if s.payment != nil && group == "user" {
 		var authorized bool
 		authorized, err = s.payment.IsAuthorized(context.TODO(), address)
 		if err != nil {
@@ -212,7 +212,7 @@ func (s *TokenSigner) GetReplicationToken(bucketId string) (token string, err er
 		s.GetPublicAddress().String(),
 		"localhost",
 		swie.GenerateNonce(),
-		map[string]interface{}{
+		map[string]any{
 			"issuedAt":       time.Now(),
 			"expirationTime": time.Now().Add(time.Minute * 10),
 			"resources": []url.URL{

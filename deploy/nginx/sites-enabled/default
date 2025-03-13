@@ -4,7 +4,8 @@ server {
     server_name *.$GLOBAL_HOST_CONSOLE $GLOBAL_HOST_CONSOLE;
     location /x/ {
         # Serve extra files related to Apocryph
-        root /etc/nginx/static/;
+        alias /etc/nginx/static/;
+        index index.html;
     }
     location / {
         # via https://min.io/docs/minio/linux/integrations/setup-nginx-proxy-with-minio.html
@@ -66,10 +67,9 @@ server {
 server {
     listen 80 default_server;
     server_name $GLOBAL_HOST;
-    root /var/www/html;
     location /app/ {
-        rewrite ^/app/ /;
-        try_files $uri $uri/ =404;
+        alias /usr/share/nginx/html/;
+        index index.html;
     }
     location / {
         # via https://min.io/docs/minio/linux/integrations/setup-nginx-proxy-with-minio.html

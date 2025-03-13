@@ -14,4 +14,5 @@ apocryph-s3-backend \
     --token-contract "$BACKEND_ETH_TOKEN" \
     --withdraw-address "$BACKEND_ETH_WITHDRAW" \
     --chain-id "$BACKEND_ETH_CHAIN_ID" \
-    --disable-replication
+    --external-url "$BACKEND_EXTERNAL_URL" \
+    --replicate-sites "$BACKEND_REPLICATE_SITES"
