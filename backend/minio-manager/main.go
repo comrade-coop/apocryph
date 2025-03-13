@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"math/big"
 	"net/url"
@@ -79,6 +80,8 @@ var backendCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
+
+		log.Println("Public key for storage system (VITE_STORAGE_SYSTEM): ", replicationTokenSigner.GetPublicAddress())
 		
 		minioCreds := credentials.NewStaticV4(minioAccessKey, minioSecretKey, "")
 
@@ -145,7 +148,38 @@ var backendCmd = &cobra.Command{
 	},
 }
 
+
+var getPublicKeyCmd = &cobra.Command{
+	Use: "get-public-key",
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
+
+		if privateKeyString == "" {
+			privateKeyString = os.Getenv("PRIVATE_KEY")
+		}
+		swieDomain := os.Getenv("GLOBAL_HOST")
+		if swieDomain == "" {
+			swieDomain = "s3.apocryph.io"
+		}
+		
+		privateKey, err := crypto.HexToECDSA(privateKeyString)
+		if err != nil {
+			return
+		}
+
+		replicationTokenSigner, err := NewTokenSigner(privateKey, swieDomain)
+		if err != nil {
+			return
+		}
+
+		fmt.Println(replicationTokenSigner.GetPublicAddress())
+		
+		return
+	},
+}
+
 func init() {
+	backendCmd.AddCommand(getPublicKeyCmd)
+	
 	backendCmd.Flags().StringVar(&identityServeAddress, "bind", ":8593", "Bind address to serve the minio identity plugin on")
 	backendCmd.Flags().StringVar(&minioAddress, "minio", "localhost:9000", "Address to query minio on")
 

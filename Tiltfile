@@ -152,7 +152,7 @@ def get_build_args(local_eth=False):
             'testnet': True,
         })) if local_eth else os.getenv('VITE_CHAIN_CONFIG')),
         'VITE_TOKEN': '0x5FbDB2315678afecb367f032d93F642f64180aa3' if local_eth else os.getenv('BACKEND_ETH_TOKEN'),
-        'VITE_STORAGE_SYSTEM': (os.getenv('BACKEND_ETH_PRIVATE_KEY') and str(local('cast wallet a %s' % os.getenv('BACKEND_ETH_PRIVATE_KEY'), echo_off=True))),
+        'VITE_STORAGE_SYSTEM': '$$$VITE_STORAGE_SYSTEM$$$', # HACK: $$$VITE_STORAGE_SYSTEM$$$ gets replaced in cont-init.d/51-fixup-frontend.sh
         'VITE_GLOBAL_HOST': os.getenv('GLOBAL_HOST', 's3-aapp.local'),
         'VITE_GLOBAL_HOST_CONSOLE': os.getenv('GLOBAL_HOST_CONSOLE', 'console-s3-aapp.local'),
     }
@@ -211,14 +211,14 @@ def s3_aapp_deploy(cluster_names=["zero"], local_eth=False, deploy_proxy=True, d
         compose_config["services"][name] = {
             "container_name": "s3-%s" % name,
             "image": "comradecoop/s3-aapp",
-            "volumes": ["s3-%s-data:/data" % name],
+            "volumes": ["s3-%s-data:/data" % name, "s3-%s-secrets:/shared_secrets" % name],
             "environment": {
-                "BACKEND_ETH_PRIVATE_KEY": os.getenv("BACKEND_ETH_PRIVATE_KEY", "4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356"),
                 "BACKEND_ETH_RPC": ("ws://anvil:8545" if local_eth else os.getenv("BACKEND_ETH_RPC", "https://sepolia.base.org/")),
                 "BACKEND_ETH_TOKEN": '0x5FbDB2315678afecb367f032d93F642f64180aa3' if local_eth else os.getenv('BACKEND_ETH_TOKEN'),
                 "BACKEND_ETH_WITHDRAW": os.getenv("BACKEND_ETH_WITHDRAW", "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f"),
                 "BACKEND_EXTERNAL_URL": "http://%s.local" % name,
                 "BACKEND_REPLICATE_SITES": ",".join(replicate_sites),
+                "FIXUP_VITE_STORAGE_SYSTEM": "true",
             },
             "networks": {
                 "default": {
@@ -228,6 +228,7 @@ def s3_aapp_deploy(cluster_names=["zero"], local_eth=False, deploy_proxy=True, d
         }
         replicate_sites += ["http://%s.local" % name]
         compose_config["volumes"]["s3-%s-data" % name] = {}
+        compose_config["volumes"]["s3-%s-secrets" % name] = {}
     docker_compose(encode_yaml(compose_config))
 
 

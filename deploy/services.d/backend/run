@@ -2,8 +2,7 @@
 
 set -e
 
-export PRIVATE_KEY="$BACKEND_ETH_PRIVATE_KEY"
-
+. /shared_secrets/backend_key.env
 . /secrets/backend.env
 
 apocryph-s3-backend \

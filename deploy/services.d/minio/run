@@ -1,7 +1,5 @@
 #!/command/with-contenv sh
 
-unset BACKEND_ETH_PRIVATE_KEY # TODO: Secure things better
-
 set -e
 
 . /secrets/minio.env
