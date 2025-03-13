@@ -14,7 +14,7 @@ import metamaskLogo from '/metamask.svg?url'
 import './App.css'
 import { getSiweToken } from './signin'
 import codeExamples, { envExample } from './codeExamples'
-import { ErrorCircle, OpenExternalLink } from './icons'
+import { OpenExternalLink } from './icons'
 
 const documentationLink = "https://comrade-coop.github.io/apocryph/"
 const s3AappHost = (import.meta.env.VITE_GLOBAL_HOST || "s3-aapp.kubocloud.io").trim()
@@ -36,10 +36,10 @@ function App() {
   const [ existingDeposit, setExistingDeposit ] = useState<bigint | undefined>(undefined)
   const [ depositInProgress, setDepositInProgress ] = useState(false)
   const [ depositError, setDepositError ] = useState('')
-  const [ showExamples, setShowExamples ] = useState(false)
   const [ siweToken, setSiweToken ] = useState<string>()
+  const [ consoleAccessLink, setConsoleAccessLink ] = useState<string>()
   const [ profitText, setProfitText ] = useState<string>("Ok?")
-  const [ codeExample, setCodeExample ] = useState<keyof typeof codeExamples>("JavaScript")
+  const [ codeExample, setCodeExample ] = useState<keyof typeof codeExamples>("Go")
 
   const bucketId = `${account.address?.slice(2)?.toLowerCase()}`
   const bucketLink = `${s3AappHost}/${bucketId}` // ${bucketId}.${s3AappHost}
@@ -81,17 +81,24 @@ function App() {
   }
   async function openConsole() {
     if (walletClient?.data) {
-      const token = await getSiweToken(walletClient.data, 3600)
+      if (consoleAccessLink) {
+        open(consoleAccessLink)
+      } else {
+        const token = await getSiweToken(walletClient.data, 3600)
 
-      open(`http://${consoleLink}/x/apocryphLogin#${encodeURIComponent(token)}#/browser/${bucketId}`)
-      setShowExamples(true)
+        let consoleAccessLink = `http://${consoleLink}/x/apocryphLogin#${encodeURIComponent(token)}#/browser/${bucketId}`
+        setConsoleAccessLink(consoleAccessLink)
+        setTimeout(() => {
+          setConsoleAccessLink(undefined)
+        }, 3600)
+        open(consoleAccessLink)
+      }
     }
   }
   async function getLonglivedToken() {
     if (walletClient?.data) {
       const token = await getSiweToken(walletClient!.data!, undefined)
       setSiweToken(token)
-      setShowExamples(true)
     }
   }
 
@@ -204,34 +211,34 @@ function App() {
           <ActionPopButton onClick={() => navigator.clipboard.writeText(bucketLinkHref)}>Copy</ActionPopButton>
         </label>
         <div className="button-card">
-          <button onClick={() => getLonglivedToken()}>
-            Use long-lived token <ErrorCircle/>
-          </button>
           <button onClick={() => openConsole()}>
             Launch Console <OpenExternalLink/>
           </button>
+          <button onClick={() => getLonglivedToken()}>
+            Configure programmatic access...
+          </button>
         </div>
-      </section>, showExamples)}
+      </section>, !!siweToken)}
       {step(<section className="two-columns">
-        <h2>Step 4: Hack</h2>
+        <h2>Step 4: Hack away! </h2>
         <div className="button-card">
           <select value={codeExample} onChange={e => setCodeExample(e.target.value as keyof typeof codeExamples)}>
             {Object.keys(codeExamples).map(x => <option key={x}>{x}</option>)}
           </select>
         </div>
         <div className="button-over-code">
-          <ActionPopButton onClick={() => navigator.clipboard.writeText(envExample(bucketLink, siweToken))}>Copy!</ActionPopButton>
+          <ActionPopButton onClick={() => navigator.clipboard.writeText(envExample(bucketLink, siweToken!))}>Copy!</ActionPopButton>
         </div>
         <SyntaxHighlighter language={'bash'} style={syntaxStyle} className="code" wrapLines={true}>
-          {envExample(bucketLink, siweToken)}
+          {envExample(bucketLink, siweToken!)}
         </SyntaxHighlighter>
         <div className="button-over-code">
           <ActionPopButton onClick={() => {
-            navigator.clipboard.writeText(codeExamples[codeExample].code(!!siweToken))
+            navigator.clipboard.writeText(codeExamples[codeExample].code)
           }}>Copy!</ActionPopButton>
         </div>
         <SyntaxHighlighter language={codeExamples[codeExample]?.language} style={syntaxStyle} className="code">
-          {codeExamples[codeExample]?.code(!!siweToken)}
+          {codeExamples[codeExample]?.code}
         </SyntaxHighlighter>
       </section>, true)}
       {step(<section>
