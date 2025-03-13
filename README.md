@@ -24,6 +24,8 @@ Afterwards, you can run the resulting image as follows:
 
 ```bash
 docker run \
+  --volume data-vol:/data \
+  --volume secrets-vol:/shared_secrets \
   --env BACKEND_ETH_WITHDRAW=0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f \
   docker.io/comrade-coop/s3-aapp:latest
 ```
