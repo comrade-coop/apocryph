@@ -46,6 +46,8 @@ ARG PNPM_VERSION=9.15.3
 ARG VITE_TOKEN=""
 # VITE_STORAGE_SYSTEM is the on-chain address corresponding to the backend's private key.
 ARG VITE_STORAGE_SYSTEM=""
+# VITE_CHAIN_CONFIG is an optional viem chain object, as described in https://viem.sh/docs/chains/introduction
+ARG VITE_CHAIN_CONFIG=""
 # VITE_GLOBAL_HOST is the address of the hosted aapp.
 ARG VITE_GLOBAL_HOST=s3-aapp.localhost
 # VITE_GLOBAL_HOST_CONSOLE is the console address of the hosted aapp.
@@ -113,10 +115,13 @@ COPY ./frontend/abi/package.json /app/frontend/abi/package.json
 # HACK! https://github.com/nodejs/corepack/issues/612
 ARG COREPACK_INTEGRITY_KEYS=0
 
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store cd /app && pnpm install --frozen-lockfile
+
 ARG VITE_TOKEN
 ARG VITE_STORAGE_SYSTEM
-
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store cd /app && pnpm install --frozen-lockfile
+ARG VITE_CHAIN_CONFIG
+ARG VITE_GLOBAL_HOST
+ARG VITE_GLOBAL_HOST_CONSOLE
 
 COPY ./frontend/ /app/frontend/
 RUN cd /app/frontend && pnpm run build

@@ -20,7 +20,6 @@ import (
 )
 
 var ApocryphS3Scheme string = "apocryph-s3"
-var SwieDomain string = "s3-aapp.kubocloud.io" // 's3.apocryph.io'
 
 type AuthenticationFailure struct {
 	Reason string `json:"reason"`
@@ -39,12 +38,13 @@ type Token struct {
 
 type identityServer struct {
 	ctx                         context.Context
+	swieDomain string
 	replicationPublicKeyAddress common.Address
 	minio                       *minio.Client
 	payment                     *PaymentManager
 }
 
-func RunIdentityServer(ctx context.Context, serveAddress string, replicationPublicKeyAddress common.Address, minioCreds *credentials.Credentials, payment *PaymentManager) error {
+func RunIdentityServer(ctx context.Context, serveAddress string, swieDomain string, replicationPublicKeyAddress common.Address, minioAddress string, minioCreds *credentials.Credentials, payment *PaymentManager) error {
 	minioClient, err := minio.New(minioAddress, &minio.Options{
 		Creds: minioCreds,
 	})
@@ -53,6 +53,7 @@ func RunIdentityServer(ctx context.Context, serveAddress string, replicationPubl
 	}
 	server := identityServer{
 		ctx,
+		swieDomain,
 		replicationPublicKeyAddress,
 		minioClient,
 		payment,
@@ -101,7 +102,7 @@ func (s identityServer) authenticateHelper(tokenString string) (result Authentic
 	}
 	log.Printf("Received SWIE message: %s\n", message.String())
 
-	_, err = message.Verify(token.Signature, &SwieDomain, nil, nil)
+	_, err = message.Verify(token.Signature, &s.swieDomain, nil, nil)
 	if err != nil {
 		return
 	}
@@ -153,19 +154,21 @@ func (s identityServer) authenticateHelper(tokenString string) (result Authentic
 
 	log.Printf("Bucket is %s; group: %s\n", bucketId, group)
 
-	// Try creating a bucket for the user, but don't wait around forever for it
-	makeBucketContext, cancelBucketContext := context.WithTimeout(s.ctx, time.Minute)
-	defer cancelBucketContext()
-	err = s.createBucketIfNotExists(makeBucketContext, bucketId)
-	if err != nil {
-		log.Printf("Error creating bucket %s: %v", bucketId, err)
-		return
+	if group == "user" {
+		// Try creating a bucket for the user, but don't wait around forever for it
+		makeBucketContext, cancelBucketContext := context.WithTimeout(s.ctx, time.Minute)
+		defer cancelBucketContext()
+		err = s.createBucketIfNotExists(makeBucketContext, bucketId)
+		if err != nil {
+			log.Printf("Error creating bucket %s: %v", bucketId, err)
+			return
+		}
 	}
 
 	result = AuthenticationResult{
 		User:               address.Hex(),
 		MaxValiditySeconds: 3600, // token.ExpirationTime.Unix() - time.Now().Unix()
-		Claims: map[string]interface{}{
+		Claims: map[string]any{
 			"preferred_username": bucketId,
 			"groups":             []string{group},
 		},
@@ -194,11 +197,13 @@ func (s identityServer) createBucketIfNotExists(ctx context.Context, bucketId st
 
 type TokenSigner struct {
 	privateKey *ecdsa.PrivateKey
+	swieDomain string
 }
 
-func NewTokenSigner(privateKey *ecdsa.PrivateKey) (*TokenSigner, error) {
+func NewTokenSigner(privateKey *ecdsa.PrivateKey, swieDomain string) (*TokenSigner, error) {
 	return &TokenSigner{
-		privateKey: privateKey,
+		privateKey,
+		swieDomain,
 	}, nil
 }
 
@@ -208,7 +213,7 @@ func (s *TokenSigner) GetPublicAddress() common.Address {
 
 func (s *TokenSigner) GetReplicationToken(bucketId string) (token string, err error) {
 	message, err := swie.InitMessage(
-		SwieDomain,
+		s.swieDomain,
 		s.GetPublicAddress().String(),
 		"localhost",
 		swie.GenerateNonce(),
