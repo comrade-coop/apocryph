@@ -1,0 +1,59 @@
+name: Release tag
+
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  release-trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Get job html url
+        id: get_job_html_url
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: workflow_run } =
+              await github.rest.actions.listJobsForWorkflowRunAttempt({
+                attempt_number: process.env.GITHUB_RUN_ATTEMPT,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.runId,
+              });
+            const job_html_url = workflow_run.jobs[0].html_url;
+            return job_html_url;
+
+      - name: Replace placeholders in app-manifest.json
+        run: |
+          AAPP_CNAME=$(echo "${{ github.event.release.tag_name }}" | sed 's/[^0-9]//g' | awk '{printf "v%04d", $0}')
+          echo "AAPP_CNAME=$AAPP_CNAME" >> $GITHUB_ENV
+
+          sed -i "s/__AAPPTAG__/${{ github.event.release.tag_name }}/g" "${GITHUB_WORKSPACE}/.github/workflows/app-manifest.json"
+          sed -i "s/__AAPPCNAME__/$AAPP_CNAME/g" "${GITHUB_WORKSPACE}/.github/workflows/app-manifest.json"
+          sed -i "s#__AAPPDEVPUBKEY__#${{ secrets.AAPP_DEV_PUB_KEY }}#g" "${GITHUB_WORKSPACE}/.github/workflows/app-manifest.json"
+
+          sed -i "s#__AAPPBUILDARG_BACKEND_ETH_WITHDRAW__#${{ secrets.AAPPBUILDARG_BACKEND_ETH_WITHDRAW }}#g" "${GITHUB_WORKSPACE}/.github/workflows/app-manifest.json"
+          sed -i "s#__AAPPBUILDARG_VITE_TOKEN__#${{ secrets.AAPPBUILDARG_VITE_TOKEN }}#g" "${GITHUB_WORKSPACE}/.github/workflows/app-manifest.json"
+          sed -i "s#__AAPPBUILDARG_VITE_STORAGE_SYSTEM__#${{ secrets.AAPPBUILDARG_VITE_STORAGE_SYSTEM }}#g" "${GITHUB_WORKSPACE}/.github/workflows/app-manifest.json"
+
+          cat "${GITHUB_WORKSPACE}/.github/workflows/app-manifest.json"
+
+      - name: Deploy confidential virtual machine in Azure
+        uses: comrade-coop/aapp-toolkit/workflow@main
+        with:
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
+          client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          resource_group: "s3"
+          vm_name: "s3-${{ env.AAPP_CNAME }}"
+          vm_network_id: ${{ secrets.AZURE_VM_NETWORK_ID }}
+          vm_ssh_enabled: "true"
+          vm_dev_key: ${{ secrets.AZURE_VM_SSH_KEY }}
+          aapp_manifest: "${GITHUB_WORKSPACE}/.github/workflows/app-manifest.json"
+          certbot_email: "dev@apocryph.io"
+          current_job_url: ${{ steps.get_job_html_url.outputs.result }}

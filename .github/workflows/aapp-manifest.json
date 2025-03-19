@@ -1,0 +1,45 @@
+{
+  "apiVersion": "aapp-toolkit.comrade.coop/v1alpha1",
+  "kind": "Application",
+  "metadata": {
+    "annotations": {
+      "repo": "https://github.com/comrade-coop/aapp-toolkit.git",
+      "tag": "v0.0.1"
+    }
+  },
+  "spec": {
+    "container": {
+      "build": {
+        "repo": "https://github.com/comrade-coop/s3-aapp.git",
+        "tag": "__AAPPTAG__",
+        "dockerfile": "Dockerfile",
+        "args": {
+          "BACKEND_ETH_WITHDRAW": "__AAPPBUILDARG_BACKEND_ETH_WITHDRAW__",
+          "VITE_TOKEN": "__AAPPBUILDARG_VITE_TOKEN__",
+          "VITE_STORAGE_SYSTEM": "__AAPPBUILDARG_VITE_STORAGE_SYSTEM__",
+          "VITE_GLOBAL_HOST": "__AAPPCNAME__.s3-aapp.kubocloud.io",
+          "VITE_GLOBAL_HOST_CONSOLE": "__AAPPCNAME__.console-s3-aapp.kubocloud.io"
+        }
+      },
+      "volumes": [
+        {
+          "name": "secrets-vol",
+          "mount": "/shared_secrets",
+          "type": "cloud"
+        },
+        {
+          "name": "data-vol",
+          "mount": "/data",
+          "type": "local"
+        }
+      ]
+    },
+    "ingress": {
+      "hostnames": ["__AAPPCNAME__.s3-aapp.kubocloud.io", "__AAPPCNAME__.console-s3-aapp.kubocloud.io"],
+      "port": 80
+    },
+    "developer": {
+      "key": "__AAPPDEVPUBKEY__"
+    }
+  }
+}
