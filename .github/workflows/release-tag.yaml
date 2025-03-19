@@ -49,7 +49,7 @@ jobs:
           client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-          resource_group: "s3"
+          resource_group: ${{ secrets.AZURE_RESOURCE_GROUP}}
           vm_name: "s3-${{ env.AAPP_CNAME }}"
           vm_network_id: ${{ secrets.AZURE_VM_NETWORK_ID }}
           vm_ssh_enabled: "true"
