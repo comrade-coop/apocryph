@@ -91,7 +91,7 @@ function App() {
       } else {
         const token = await getSiweToken(walletClient.data, 3600)
 
-        let consoleAccessLink = `${consoleLink}/x/apocryphLogin#${encodeURIComponent(token)}#/browser/${bucketId}`
+        const consoleAccessLink = `${consoleLink}/x/apocryphLogin#${encodeURIComponent(token)}#/browser/${bucketId}`
         setConsoleAccessLink(consoleAccessLink)
         setTimeout(() => {
           setConsoleAccessLink(undefined)

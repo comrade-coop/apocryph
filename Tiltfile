@@ -4,7 +4,7 @@
 # For more on Extensions, see: https://docs.tilt.dev/extensions.html
 load("ext://restart_process", "docker_build_with_restart")
 load("ext://namespace", "namespace_create")
-load('ext://dotenv', 'dotenv')
+load("ext://dotenv", "dotenv")
 dotenv()
 
 local("which jq forge cast docker >/dev/null", echo_off=True)  # Check dependencies
@@ -102,7 +102,7 @@ def s3_aapp_build_with_builder():
         deps=[root_dir + "/backend"],
         allow_parallel=True,
     )
-        
+
     docker_build(
         "comradecoop/s3-aapp/js-builder",
         root_dir,
@@ -121,9 +121,7 @@ def s3_aapp_build_with_builder():
         ],
         # TODO: ports=[5173],
         volumes_conf={"pnpm-cache": {}},
-        env=get_build_args(local_eth) + {
-            'COREPACK_INTEGRITY_KEYS': '0'
-        }
+        env=get_build_args(local_eth) + {"COREPACK_INTEGRITY_KEYS": "0"},
     )
 
     local_resource_in_builder(
@@ -139,23 +137,41 @@ def s3_aapp_build_with_builder():
         root_dir,
         dockerfile=root_dir + "/Dockerfile",
         target="run-all-singlenode",
-        build_args=get_build_args(local_eth)
+        build_args=get_build_args(local_eth),
     )
+
 
 def get_build_args(local_eth=False):
     return {
-        'VITE_CHAIN_CONFIG': (str(encode_json({
-            'id': 31337,
-            'name': 'Localhost',
-            'nativeCurrency': {'name': 'lETH', 'symbol': 'lETH', 'decimals': 18},
-            'rpcUrls': {'default': {'http': ['http://anvil.local:8545'], 'websocket': ['ws://anvil.local:8545']}},
-            'testnet': True,
-        })) if local_eth else os.getenv('VITE_CHAIN_CONFIG')),
-        'VITE_TOKEN': '0x5FbDB2315678afecb367f032d93F642f64180aa3' if local_eth else os.getenv('BACKEND_ETH_TOKEN'),
-        'VITE_STORAGE_SYSTEM': '$$$VITE_STORAGE_SYSTEM$$$', # HACK: $$$VITE_STORAGE_SYSTEM$$$ gets replaced in cont-init.d/51-fixup-frontend.sh
-        'VITE_GLOBAL_HOST': os.getenv('GLOBAL_HOST', 's3-aapp.local'),
-        'VITE_GLOBAL_HOST_CONSOLE': os.getenv('GLOBAL_HOST_CONSOLE', 'console-s3-aapp.local'),
-        "VITE_GLOBAL_HOST_APP": os.getenv('GLOBAL_HOST_APP', 'console-aapp.local'),
+        "VITE_CHAIN_CONFIG": (
+            str(
+                encode_json(
+                    {
+                        "id": 31337,
+                        "name": "Localhost",
+                        "nativeCurrency": {"name": "lETH", "symbol": "lETH", "decimals": 18},
+                        "rpcUrls": {
+                            "default": {
+                                "http": ["http://anvil.local:8545"],
+                                "websocket": ["ws://anvil.local:8545"],
+                            }
+                        },
+                        "testnet": True,
+                    }
+                )
+            )
+            if local_eth
+            else os.getenv("VITE_CHAIN_CONFIG")
+        ),
+        "VITE_TOKEN": (
+            "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+            if local_eth
+            else os.getenv("BACKEND_ETH_TOKEN")
+        ),
+        "VITE_STORAGE_SYSTEM": "$$$VITE_STORAGE_SYSTEM$$$",  # HACK: $$$VITE_STORAGE_SYSTEM$$$ gets replaced in cont-init.d/51-fixup-frontend.sh
+        "VITE_GLOBAL_HOST": os.getenv("GLOBAL_HOST", "s3-aapp.local"),
+        "VITE_GLOBAL_HOST_CONSOLE": os.getenv("GLOBAL_HOST_CONSOLE", "console-s3-aapp.local"),
+        "VITE_GLOBAL_HOST_APP": os.getenv("GLOBAL_HOST_APP", "console-aapp.local"),
     }
 
 
@@ -166,11 +182,16 @@ def s3_aapp_build(local_eth=False):
         dockerfile=root_dir + "/Dockerfile",
         ignore=["docs", "book"],
         target="run-all-singlenode",
-        build_args=get_build_args(local_eth)
+        build_args=get_build_args(local_eth),
     )
 
 
-def s3_aapp_deploy(cluster_names=["zero"], local_eth=False, deploy_proxy=True, deployer_key="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"):
+def s3_aapp_deploy(
+    cluster_names=["zero"],
+    local_eth=False,
+    deploy_proxy=True,
+    deployer_key="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+):
     compose_config = {
         "services": {},
         "volumes": {},
@@ -180,17 +201,13 @@ def s3_aapp_deploy(cluster_names=["zero"], local_eth=False, deploy_proxy=True, d
             "image": "nmaguiar/socksd",
             "ports": ["127.0.0.1:1080:1080"],
         }
-        
+
     if local_eth:
         compose_config["services"]["anvil"] = {
             "container_name": "eth-anvil",
             "image": "ghcr.io/foundry-rs/foundry:nightly-25f24e677a6a32a62512ad4f561995589ac2c7dc",
             "entrypoint": ["anvil", "--host", "0.0.0.0"],
-            "networks": {
-                "default": {
-                    "aliases": ["anvil.local"]
-                }
-            }
+            "networks": {"default": {"aliases": ["anvil.local"]}},
         }
         local_resource(  # TODO: Move to container!
             "anvil-deploy-contracts",
@@ -215,18 +232,33 @@ def s3_aapp_deploy(cluster_names=["zero"], local_eth=False, deploy_proxy=True, d
             "image": "comradecoop/s3-aapp",
             "volumes": ["s3-%s-data:/data" % name, "s3-%s-secrets:/shared_secrets" % name],
             "environment": {
-                "BACKEND_ETH_RPC": ("ws://anvil:8545" if local_eth else os.getenv("BACKEND_ETH_RPC", "https://sepolia.base.org/")),
-                "BACKEND_ETH_TOKEN": '0x5FbDB2315678afecb367f032d93F642f64180aa3' if local_eth else os.getenv('BACKEND_ETH_TOKEN'),
-                "BACKEND_ETH_WITHDRAW": os.getenv("BACKEND_ETH_WITHDRAW", "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f"),
+                "BACKEND_ETH_RPC": (
+                    "ws://anvil:8545"
+                    if local_eth
+                    else os.getenv("BACKEND_ETH_RPC", "https://sepolia.base.org/")
+                ),
+                "BACKEND_ETH_TOKEN": (
+                    "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+                    if local_eth
+                    else os.getenv("BACKEND_ETH_TOKEN")
+                ),
+                "BACKEND_ETH_WITHDRAW": os.getenv(
+                    "BACKEND_ETH_WITHDRAW", "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f"
+                ),
                 "BACKEND_EXTERNAL_URL": "http://%s.local" % name,
                 "BACKEND_REPLICATE_SITES": ",".join(replicate_sites),
                 "FIXUP_VITE_STORAGE_SYSTEM": "true",
             },
             "networks": {
                 "default": {
-                    "aliases": ["%s.local" % name] + (["s3-aapp.local", "console-s3-aapp.local", "console-aapp.local"] if is_last else [])
+                    "aliases": ["%s.local" % name]
+                    + (
+                        ["s3-aapp.local", "console-s3-aapp.local", "console-aapp.local"]
+                        if is_last
+                        else []
+                    )
                 }
-            }
+            },
         }
         replicate_sites += ["http://%s.local" % name]
         compose_config["volumes"]["s3-%s-data" % name] = {}
@@ -257,4 +289,5 @@ local_resource(
     cmd=[],
     trigger_mode=TRIGGER_MODE_MANUAL,
     auto_init=False,
-    serve_cmd=["./launch-proxy-firefox.sh"])
+    serve_cmd=["./launch-proxy-firefox.sh"],
+)
