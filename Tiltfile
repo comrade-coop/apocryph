@@ -164,6 +164,7 @@ def s3_aapp_build(local_eth=False):
         "comradecoop/s3-aapp",
         root_dir,
         dockerfile=root_dir + "/Dockerfile",
+        ignore=["docs", "book"],
         target="run-all-singlenode",
         build_args=get_build_args(local_eth)
     )

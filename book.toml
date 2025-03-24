@@ -1,0 +1,9 @@
+[book]
+title = "S3 Aapp documentation"
+src = "docs"
+
+[preprocessor]
+
+[output]
+[output.html]
+git-repository-url = "https://github.com/comrade-coop/s3-aapp"

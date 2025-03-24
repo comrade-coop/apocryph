@@ -17,7 +17,7 @@ import codeExamples, { envExample } from './codeExamples'
 import { OpenExternalLink } from './icons'
 
 const attestationLink: string | undefined = import.meta.env.VITE_PUBLIC_ATTESTATION_URL
-const documentationLink = "https://comrade-coop.github.io/apocryph/"
+const documentationLink = "https://comrade-coop.github.io/s3-aapp/"
 const s3AappHost = (import.meta.env.VITE_GLOBAL_HOST || "s3-aapp.kubocloud.io").trim()
 const s3consoleAappHost = (import.meta.env.VITE_GLOBAL_HOST_CONSOLE || "console-s3-aapp.kubocloud.io").trim()
 
