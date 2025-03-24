@@ -16,6 +16,7 @@ import { getSiweToken } from './signin'
 import codeExamples, { envExample } from './codeExamples'
 import { OpenExternalLink } from './icons'
 
+const attestationLink: string | undefined = import.meta.env.VITE_PUBLIC_ATTESTATION_URL
 const documentationLink = "https://comrade-coop.github.io/apocryph/"
 const s3AappHost = (import.meta.env.VITE_GLOBAL_HOST || "s3-aapp.kubocloud.io").trim()
 const s3consoleAappHost = (import.meta.env.VITE_GLOBAL_HOST_CONSOLE || "console-s3-aapp.kubocloud.io").trim()
@@ -42,10 +43,10 @@ function App() {
   const [ codeExample, setCodeExample ] = useState<keyof typeof codeExamples>("Go")
 
   const bucketId = `${account.address?.slice(2)?.toLowerCase()}`
-  const bucketLink = `${s3AappHost}/${bucketId}` // ${bucketId}.${s3AappHost}
-  const bucketLinkHref = `https://${bucketLink}`
-  const consoleLink = `${s3consoleAappHost}` // `${bucketId}.${s3consoleAappHost}`
-  const consoleLinkHref = `https://${consoleLink}/browser/${bucketId}`
+  const bucketLink = `https://${s3AappHost}` // ${bucketId}.${s3AappHost}
+  const bucketLinkHref = `//${s3AappHost}`
+  const consoleLink = `https://${s3consoleAappHost}` // `${bucketId}.${s3consoleAappHost}`
+  const consoleLinkHref = `//${s3consoleAappHost}/browser/${bucketId}`
   const minDeposit = parseUnits('10', 18) // TODO
 
   const duration: number = Number(funds) / Number(amountGb) / Number(priceGbSec) * Number(oneGb)
@@ -72,7 +73,11 @@ function App() {
       setDepositInProgress(true)
       setDepositError('')
       try {
-        await depositFunds(publicClient, walletClient.data, funds - existingDeposit)
+        if (funds <= 0n) {
+          await depositFunds(publicClient, walletClient.data, 0n)
+        } else {
+          await depositFunds(publicClient, walletClient.data, funds + minDeposit)
+        }
       } catch(err) {
         setDepositError(err + '')
       }
@@ -86,7 +91,7 @@ function App() {
       } else {
         const token = await getSiweToken(walletClient.data, 3600)
 
-        let consoleAccessLink = `http://${consoleLink}/x/apocryphLogin#${encodeURIComponent(token)}#/browser/${bucketId}`
+        let consoleAccessLink = `${consoleLink}/x/apocryphLogin#${encodeURIComponent(token)}#/browser/${bucketId}`
         setConsoleAccessLink(consoleAccessLink)
         setTimeout(() => {
           setConsoleAccessLink(undefined)
@@ -190,10 +195,10 @@ function App() {
             {
               existingDeposit === undefined ? <>Loading...</> :
               depositInProgress ? <>Processing...</> :
-              existingDeposit <= 0n ? <>Authorize! ({formatUnits(existingDeposit - funds, decimals)} {currency})</> :
-              funds > existingDeposit ? <>Top-up authorization ({formatUnits(existingDeposit - funds, decimals)} {currency})</> :
-              funds < minDeposit ? <>Reduce authorization (+{formatUnits(existingDeposit - funds, decimals)} {currency}, once unlocked)</> :
-              <>Update authorization (+{formatUnits(existingDeposit - funds, decimals)} {currency})</>
+              existingDeposit <= minDeposit ? <>Authorize! ({formatUnits(existingDeposit - minDeposit - funds, decimals)} {currency})</> :
+              funds > existingDeposit - minDeposit ? <>Top-up authorization ({formatUnits(existingDeposit - minDeposit - funds, decimals)} {currency})</> :
+              funds <= 0n ? <>Remove authorization (+{formatUnits(existingDeposit - minDeposit - funds, decimals)} {currency})</> :
+              <>Reduce authorization (+{formatUnits(existingDeposit - minDeposit - funds, decimals)} {currency})</>
             }
           </button>
         </div>
@@ -209,6 +214,11 @@ function App() {
           <span>S3 endpoint URL </span>
           <a className="fake-field" href={bucketLinkHref}>{bucketLink}</a>
           <ActionPopButton onClick={() => navigator.clipboard.writeText(bucketLinkHref)}>Copy</ActionPopButton>
+        </label>
+        <label>
+          <span>Bucket ID </span>
+          <span className="fake-field">{bucketId}</span>
+          <ActionPopButton onClick={() => navigator.clipboard.writeText(bucketId)}>Copy</ActionPopButton>
         </label>
         <div className="button-card">
           <button onClick={() => openConsole()}>
@@ -254,6 +264,7 @@ function App() {
         </div>
       </section>, true)}
       <a href={documentationLink} className="read-the-docs" target="_blank">Documentation <OpenExternalLink/></a>
+      { attestationLink ? <a href={attestationLink} className="read-the-docs" target="_blank">View Attestation <OpenExternalLink/></a> : '' }
     </>
   )
 }

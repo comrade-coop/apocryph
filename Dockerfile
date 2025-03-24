@@ -54,6 +54,8 @@ ARG VITE_GLOBAL_HOST=s3-aapp.localhost
 ARG VITE_GLOBAL_HOST_CONSOLE=console-s3-aapp.localhost
 # VITE_GLOBAL_HOST_APP is the address of the hosted aapp.
 ARG VITE_GLOBAL_HOST_APP=console-aapp.localhost
+# VITE_PUBLIC_ATTESTATION_URL is the address for the attestation link.
+ARG VITE_PUBLIC_ATTESTATION_URL=
 
 # SERF_VERSION is currently unused
 ARG SERF_VERSION=0.10.1
@@ -124,6 +126,7 @@ ARG VITE_CHAIN_CONFIG
 ARG VITE_GLOBAL_HOST
 ARG VITE_GLOBAL_HOST_CONSOLE
 ARG VITE_GLOBAL_HOST_APP
+ARG VITE_PUBLIC_ATTESTATION_URL
 
 COPY ./frontend/ /app/frontend/
 RUN cd /app/frontend && pnpm run build
