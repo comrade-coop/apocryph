@@ -26,8 +26,8 @@ type AuthenticationFailure struct {
 }
 
 type AuthenticationResult struct {
-	User               string                 `json:"user"`
-	MaxValiditySeconds int                    `json:"maxValiditySeconds"`
+	User               string         `json:"user"`
+	MaxValiditySeconds int            `json:"maxValiditySeconds"`
 	Claims             map[string]any `json:"claims"`
 }
 
@@ -38,7 +38,7 @@ type Token struct {
 
 type identityServer struct {
 	ctx                         context.Context
-	swieDomain string
+	swieDomain                  string
 	replicationPublicKeyAddress common.Address
 	minio                       *minio.Client
 	payment                     *PaymentManager

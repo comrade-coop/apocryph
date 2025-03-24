@@ -19,9 +19,9 @@ var ReplicationServiceAccountPrefix = "Replicator-"
 var ReplicationCustomTokenIamArn = "arn:minio:iam:::role/idmp-swieauth"
 
 type replicationNode struct {
-	url *url.URL
-	minio *minio.Client
-	admin *madmin.AdminClient
+	url            *url.URL
+	minio          *minio.Client
+	admin          *madmin.AdminClient
 	serviceAccount madmin.Credentials
 }
 
@@ -76,7 +76,7 @@ func ConfigureAllBucketsReplication(
 	if err != nil {
 		return
 	}
-	
+
 	remoteBuckets, err := source.minio.ListBuckets(ctx)
 	if err != nil {
 		return err
@@ -93,7 +93,7 @@ func ConfigureAllBucketsReplication(
 			log.Printf("Setting replication success for %s!\n", bucket.Name)
 		}
 	}
-	
+
 	return errors.Join(errorList...)
 }
 
@@ -104,7 +104,7 @@ func configureBucketReplication(
 	destination *replicationNode,
 ) (err error) {
 	_ = source.minio.EnableVersioning(ctx, bucketId)
-	
+
 	err = destination.minio.MakeBucket(ctx, bucketId, minio.MakeBucketOptions{})
 	if err != nil {
 		if minio.ToErrorResponse(err).Code != "BucketAlreadyOwnedByYou" {
@@ -113,12 +113,12 @@ func configureBucketReplication(
 		}
 	}
 	_ = destination.minio.EnableVersioning(ctx, bucketId)
-		
+
 	err = syncBucketPolicy(ctx, bucketId, source, destination)
 	if err != nil {
 		return
 	}
-	
+
 	err = addBucketReplicationRule(ctx, bucketId, source, destination)
 	if err != nil {
 		return
@@ -155,7 +155,7 @@ func addBucketReplicationRule(ctx context.Context, bucketId string, source *repl
 	if err != nil {
 		return
 	}
-	
+
 	exists := false
 	highestPriority := 0
 	for _, rule := range replicationConfig.Rules {
@@ -166,7 +166,7 @@ func addBucketReplicationRule(ctx context.Context, bucketId string, source *repl
 			highestPriority = rule.Priority
 		}
 	}
-	
+
 	replicationRule := replication.Options{
 		ID:                      destination.url.Host,
 		RuleStatus:              "enable",
@@ -176,7 +176,7 @@ func addBucketReplicationRule(ctx context.Context, bucketId string, source *repl
 		ReplicaSync:             "enable",
 		DestBucket:              arn,
 	}
-	
+
 	if exists {
 		err = replicationConfig.EditRule(replicationRule)
 	} else {
@@ -200,7 +200,7 @@ func getRemoteTargetArn(ctx context.Context, bucketId string, source *replicatio
 		err = fmt.Errorf("ListRemoteTargets: %w", err)
 		return
 	}
-	
+
 	expectedTarget := madmin.BucketTarget{
 		SourceBucket: bucketId,
 		Endpoint:     destination.url.Host,
@@ -210,10 +210,10 @@ func getRemoteTargetArn(ctx context.Context, bucketId string, source *replicatio
 		Type:         madmin.ReplicationService,
 		DisableProxy: false,
 	}
-	
+
 	for _, target := range targets {
-		if target.Endpoint == expectedTarget.Endpoint && 
-			target.Secure == expectedTarget.Secure && 
+		if target.Endpoint == expectedTarget.Endpoint &&
+			target.Secure == expectedTarget.Secure &&
 			target.TargetBucket == expectedTarget.TargetBucket {
 			arn = target.Arn
 			return
