@@ -66,7 +66,7 @@ var backendCmd = &cobra.Command{
 		if privateKeyString == "" {
 			privateKeyString = os.Getenv("PRIVATE_KEY")
 		}
-		swieDomain := os.Getenv("GLOBAL_HOST")
+		swieDomain := os.Getenv("GLOBAL_HOST_APP")
 		if swieDomain == "" {
 			swieDomain = "s3.apocryph.io"
 		}

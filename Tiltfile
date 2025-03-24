@@ -155,6 +155,7 @@ def get_build_args(local_eth=False):
         'VITE_STORAGE_SYSTEM': '$$$VITE_STORAGE_SYSTEM$$$', # HACK: $$$VITE_STORAGE_SYSTEM$$$ gets replaced in cont-init.d/51-fixup-frontend.sh
         'VITE_GLOBAL_HOST': os.getenv('GLOBAL_HOST', 's3-aapp.local'),
         'VITE_GLOBAL_HOST_CONSOLE': os.getenv('GLOBAL_HOST_CONSOLE', 'console-s3-aapp.local'),
+        "VITE_GLOBAL_HOST_APP": os.getenv('GLOBAL_HOST_APP', 'console-aapp.local'),
     }
 
 
@@ -222,7 +223,7 @@ def s3_aapp_deploy(cluster_names=["zero"], local_eth=False, deploy_proxy=True, d
             },
             "networks": {
                 "default": {
-                    "aliases": ["%s.local" % name] + (["s3-aapp.local", "console-s3-aapp.local"] if is_last else [])
+                    "aliases": ["%s.local" % name] + (["s3-aapp.local", "console-s3-aapp.local", "console-aapp.local"] if is_last else [])
                 }
             }
         }

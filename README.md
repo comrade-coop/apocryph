@@ -10,9 +10,10 @@ To build the S3 aApp image, use the following command:
 ```bash
 docker build . -t comrade-coop/s3-aapp:latest \
   --build-arg VITE_TOKEN=0xe52a82edf1f2a0b0cd69ffb4b98a29e3637cf665 \
-  --build-arg VITE_STORAGE_SYSTEM=0x14dC79964da2C08b23698B3D3cc7Ca32193d9955
-  --build-arg VITE_GLOBAL_HOST=s3-aapp.kubocloud.io
-  --build-arg VITE_GLOBAL_HOST_CONSOLE=console-s3-aapp.kubocloud.io
+  --build-arg VITE_STORAGE_SYSTEM=0x14dC79964da2C08b23698B3D3cc7Ca32193d9955 \
+  --build-arg VITE_GLOBAL_HOST=s3-aapp.kubocloud.io \
+  --build-arg VITE_GLOBAL_HOST_CONSOLE=console-s3-aapp.kubocloud.io \
+  --build-arg VITE_GLOBAL_HOST_APP=console-aapp.kubocloud.io
 ```
 
 ...where `VITE_STORAGE_SYSTEM` can will be output by the running instance of the container.
@@ -31,6 +32,35 @@ docker run \
 ```
 
 ...where `BACKEND_ETH_WITHDRAW` is the public address that is unique to the particular node.
+
+### Building a separate static frontend image
+
+To build a separate container for the static aapp frontend, you can do the following:
+
+1. Build a frontend-less image by passing `--build-arg FRONTEND_MODE=none` to the build command above.
+2. Run the frontend-less container:
+  ```bash
+  docker run ... docker.io/comrade-coop/s3-aapp:latest s3-aapp-container
+  ```
+3. Grep the logs for the storage system address 
+  ```bash
+  docker logs s3-aapp-container | grep "VITE_STORAGE_SYSTEM"
+  ```
+4. Build a frontend-only image with the right storage system address, passing the same `VITE_*` build arguments as in the usual build:
+  ```bash
+  docker build . --target frontend-serve -t comrade-coop/s3-aapp-serve:latest \
+    --build-arg VITE_TOKEN=0xe52a82edf1f2a0b0cd69ffb4b98a29e3637cf665 \
+    --build-arg VITE_GLOBAL_HOST=s3-aapp.kubocloud.io \
+    --build-arg VITE_GLOBAL_HOST_CONSOLE=console-s3-aapp.kubocloud.io \
+    --build-arg VITE_GLOBAL_HOST_APP=console-aapp.kubocloud.io \
+    --build-arg VITE_STORAGE_SYSTEM=$VITE_STORAGE_SYSTEM
+  ```
+5. Run the image serving the frontend:
+  ```bash
+  docker run comrade-coop/s3-aapp-serve:latest
+  ```
+  (Alternatively, copy the static frontend out of the image's `/usr/share/nginx/html/` path and serve through IPFS/an existing server/etc.)
+
 
 ## Tilt
 
