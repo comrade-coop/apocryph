@@ -9,6 +9,8 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -38,22 +40,26 @@ type Token struct {
 
 type identityServer struct {
 	ctx                         context.Context
-	swieDomain                  string
+	siweDomainRegex             *regexp.Regexp
 	replicationPublicKeyAddress common.Address
 	minio                       *minio.Client
 	payment                     *PaymentManager
 }
 
-func RunIdentityServer(ctx context.Context, serveAddress string, swieDomain string, replicationPublicKeyAddress common.Address, minioAddress string, minioCreds *credentials.Credentials, payment *PaymentManager) error {
+func RunIdentityServer(ctx context.Context, serveAddress string, siweDomainMatch string, replicationPublicKeyAddress common.Address, minioAddress string, minioCreds *credentials.Credentials, payment *PaymentManager) error {
 	minioClient, err := minio.New(minioAddress, &minio.Options{
 		Creds: minioCreds,
 	})
 	if err != nil {
 		return err
 	}
+	siweDomainRegex, err := regexp.Compile(strings.ReplaceAll(regexp.QuoteMeta(siweDomainMatch), "\\*", ".+"))
+	if err != nil {
+		return err
+	}
 	server := identityServer{
 		ctx,
-		swieDomain,
+		siweDomainRegex,
 		replicationPublicKeyAddress,
 		minioClient,
 		payment,
@@ -100,10 +106,14 @@ func (s identityServer) authenticateHelper(tokenString string) (result Authentic
 	if err != nil {
 		return
 	}
-	log.Printf("Received SWIE message: %s\n", message.String())
+	log.Printf("Received SIWE message: %s\n", message.String())
 
-	_, err = message.Verify(token.Signature, &s.swieDomain, nil, nil)
+	_, err = message.Verify(token.Signature, nil, nil, nil)
 	if err != nil {
+		return
+	}
+	if !s.siweDomainRegex.MatchString(message.GetDomain()) {
+		err = fmt.Errorf("Message domain doesn't match")
 		return
 	}
 
@@ -197,13 +207,13 @@ func (s identityServer) createBucketIfNotExists(ctx context.Context, bucketId st
 
 type TokenSigner struct {
 	privateKey *ecdsa.PrivateKey
-	swieDomain string
+	siweDomain string
 }
 
-func NewTokenSigner(privateKey *ecdsa.PrivateKey, swieDomain string) (*TokenSigner, error) {
+func NewTokenSigner(privateKey *ecdsa.PrivateKey, siweDomain string) (*TokenSigner, error) {
 	return &TokenSigner{
 		privateKey,
-		swieDomain,
+		siweDomain,
 	}, nil
 }
 
@@ -213,7 +223,7 @@ func (s *TokenSigner) GetPublicAddress() common.Address {
 
 func (s *TokenSigner) GetReplicationToken(bucketId string) (token string, err error) {
 	message, err := swie.InitMessage(
-		s.swieDomain,
+		s.siweDomain,
 		s.GetPublicAddress().String(),
 		"localhost",
 		swie.GenerateNonce(),

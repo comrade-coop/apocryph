@@ -66,9 +66,13 @@ var backendCmd = &cobra.Command{
 		if privateKeyString == "" {
 			privateKeyString = os.Getenv("PRIVATE_KEY")
 		}
-		swieDomain := os.Getenv("GLOBAL_HOST_APP")
-		if swieDomain == "" {
-			swieDomain = "s3.apocryph.io"
+		siweDomain := os.Getenv("GLOBAL_HOST_APP")
+		if siweDomain == "" {
+			siweDomain = "s3.apocryph.io"
+		}
+		siweDomainMatch := os.Getenv("SIWE_DOMAIN")
+		if siweDomainMatch == "" {
+			siweDomainMatch = siweDomain
 		}
 
 		privateKey, err := crypto.HexToECDSA(privateKeyString)
@@ -76,7 +80,7 @@ var backendCmd = &cobra.Command{
 			return
 		}
 
-		replicationTokenSigner, err := NewTokenSigner(privateKey, swieDomain)
+		replicationTokenSigner, err := NewTokenSigner(privateKey, siweDomain)
 		if err != nil {
 			return
 		}
@@ -140,7 +144,7 @@ var backendCmd = &cobra.Command{
 			}
 		}
 
-		err = RunIdentityServer(cmd.Context(), identityServeAddress, swieDomain, replicationTokenSigner.GetPublicAddress(), minioAddress, minioCreds, payment)
+		err = RunIdentityServer(cmd.Context(), identityServeAddress, siweDomainMatch, replicationTokenSigner.GetPublicAddress(), minioAddress, minioCreds, payment)
 		if err != nil {
 			return err
 		}
