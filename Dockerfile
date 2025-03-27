@@ -254,6 +254,7 @@ ENV BACKEND_ETH_RPC=https://sepolia.base.org
 ENV BACKEND_ETH_CHAIN_ID=84532
 ENV BACKEND_EXTERNAL_URL=http://example.invalid
 ENV BACKEND_REPLICATE_SITES=""
+ENV SIWE_DOMAIN=""
 VOLUME /data
 VOLUME /shared_secrets
 
