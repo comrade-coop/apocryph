@@ -52,7 +52,8 @@ jobs:
           resource_group: ${{ secrets.AZURE_RESOURCE_GROUP}}
           vm_name: "s3-${{ env.AAPP_CNAME }}"
           vm_network_id: ${{ secrets.AZURE_VM_NETWORK_ID }}
-          vm_ssh_enabled: "true"
+          vm_disk_size: "1000"
+          vm_ssh_enabled: "false"
           vm_dev_key: ${{ secrets.AZURE_VM_SSH_KEY }}
           aapp_manifest: "${GITHUB_WORKSPACE}/.github/workflows/app-manifest.json"
           certbot_email: "dev@apocryph.io"
