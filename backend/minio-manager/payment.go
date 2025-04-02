@@ -34,7 +34,7 @@ func init() {
 	}
 
 	_, _ = RequiredAllowance.SetString("1000000", 10) // 1e6
-	_, _ = MaximumOverdraft.SetString("10000000", 10)  // 10e6
+	_, _ = MaximumOverdraft.SetString("10000000", 10) // 10e6
 }
 
 type paymentChannelWatch struct {
@@ -157,7 +157,7 @@ func (p *PaymentManager) reconcilationLoop(ctx context.Context) (err error) {
 		totalToPay := &big.Int{}
 		totalToPay = totalToPay.Mul(byteMinutes, priceGbMonth)
 		// totalToPay :: byte * minute * $ / GiB / month
-		totalToPay = totalToPay.Div(totalToPay, big.NewInt(30 * 24 * 60))
+		totalToPay = totalToPay.Div(totalToPay, big.NewInt(30*24*60))
 		// totalToPay :: byte * $ / GiB
 		totalToPay = totalToPay.Div(totalToPay, big.NewInt(1000*1000))
 		// totalToPay :: $
