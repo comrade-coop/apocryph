@@ -14,11 +14,11 @@ To proceed to the next step, you need to connect a wallet.
 
 ![Screenshot of the Step 2 interface](./assets/step-2.png)
 
-The second step is for authorizing the S3 Aapp to access funds for the S3 storage space. The form displays the current price for storage deals (in USDC per GB-sec), the currently-authorized amount, as well as fields for configuring the new authorization amount.
+The second step is for authorizing the S3 Aapp to access funds for the S3 storage space. The form displays the current price for storage deals (in USDC per GB-month), the currently-authorized amount, as well as fields for configuring the new authorization amount.
 
 You can either input the amount of data (in GB) and duration (in days/years) you want to authorize funds for, using the first two fields, or you can directly use the forth box ("Total required authorization") to input the amount of funds you are allowing the Aapp to access.
 
-When you press the button at the bottom, the frontend would submit a transaction for adjusting the on-chain authorization so it matches the wanted authorization, plus the minimum required amount of funds.
+When you press the button at the bottom, the frontend would submit a transaction for adjusting the on-chain authorization so it matches the wanted authorization, plus the minimum required authorization.
 
 To proceed to the next step, you need to have authorized at least the minimum amount required. Note that dipping under the required minimum would result in no longer being able to access the Aapp.
 

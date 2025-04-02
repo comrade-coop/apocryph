@@ -27,13 +27,13 @@ function App() {
   const walletClient = useWalletClient()
   const { connect } = useConnect()
 
-  const oneGb = parseUnits('1', 6)
-  const [ amountGb, setAmountGbRaw ] = useState<bigint>(100n * oneGb)
-  const [ durationMultiplier, setDurationMultiplier ] = useState<number>(60 * 60 * 24 * 365)
-  const currency = 'S3T'
-  const decimals = 18
-  const priceGbSec = parseUnits('0.000004', decimals)
-  const [ funds, setFunds ] = useState<bigint>(() => BigInt(durationMultiplier) * amountGb * priceGbSec / oneGb)
+  const oneGb = 1000*1000
+  const [ amountGb, setAmountGbRaw ] = useState<bigint>(100n * 1000n*1000n)
+  const [ durationMultiplier, setDurationMultiplier ] = useState<number>(12)
+  const currency = 'USDC'
+  const decimals = 6
+  const priceGbMonth = parseUnits('0.025', decimals)
+  const [ funds, setFunds ] = useState<bigint>(() => BigInt(Math.round(durationMultiplier * Number(amountGb * priceGbMonth) / oneGb)))
   const [ existingDeposit, setExistingDeposit ] = useState<bigint | undefined>(undefined)
   const [ depositInProgress, setDepositInProgress ] = useState(false)
   const [ depositError, setDepositError ] = useState('')
@@ -47,11 +47,11 @@ function App() {
   const bucketLinkHref = `//${s3AappHost}`
   const consoleLink = `https://${s3consoleAappHost}` // `${bucketId}.${s3consoleAappHost}`
   const consoleLinkHref = `//${s3consoleAappHost}/browser/${bucketId}`
-  const minDeposit = parseUnits('10', 18) // TODO
+  const minDeposit = parseUnits('1', 6)
 
-  const duration: number = Number(funds) / Number(amountGb) / Number(priceGbSec) * Number(oneGb)
+  const duration: number = Number(funds) / Number(amountGb) / Number(priceGbMonth) * oneGb
   function setDuration(newDuration: number) {
-    setFunds(BigInt(newDuration) * amountGb * priceGbSec / oneGb)
+    setFunds(BigInt(Math.round(newDuration * Number(amountGb * priceGbMonth) / oneGb)))
   }
   function setAmountGb(newAmountGb: bigint) {
     if (newAmountGb < 1n) newAmountGb = 1n
@@ -162,27 +162,30 @@ function App() {
             value={durationMultiplier}
             onChange={e => setDurationMultiplier(parseInt(e.target.value))}
           >
-            <option value={1}>seconds</option>
-            <option value={60}>minutes</option>
-            <option value={60 * 60}>hours</option>
-            <option value={60 * 60 * 24}>days</option>
-            <option value={60 * 60 * 24 * 7}>weeks</option>
-            <option value={60 * 60 * 24 * 30}>months</option>
-            <option value={60 * 60 * 24 * 365}>years</option>
+            <option value={1 / 30 / 24}>hours</option>
+            <option value={1 / 30}>days</option>
+            <option value={1 / 30 * 7}>weeks</option>
+            <option value={1}>months</option>
+            <option value={12}>years</option>
           </select>
         </label>
         <label>
           <span>Current storage price</span>
-          <span className="fake-field">{formatUnits(priceGbSec, decimals)}</span>
-          <span className="fake-field"> {currency}/GB/s</span>
+          <span className="fake-field">{formatUnits(priceGbMonth, decimals)}</span>
+          <span className="fake-field"> {currency}/GB/month</span>
         </label>
         <label>
-          <span>Total required authorization</span>
+          <span>Total required authorization (est.)</span>
           <BlurUpdatedInput
             value={funds}
             stringify={v => formatUnits(v, decimals)}
             parse={v => parseUnits(v, decimals)}
             onChange={setFunds}/>
+          <span className="fake-field"> {currency}</span>
+        </label>
+        <label>
+          <span>Minimum authorization</span>
+          <span className="fake-field">{formatUnits(minDeposit, decimals)}</span>
           <span className="fake-field"> {currency}</span>
         </label>
           <label>

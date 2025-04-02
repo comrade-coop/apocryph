@@ -33,8 +33,8 @@ func init() {
 		ChannelDiscriminator[i] = discriminatorString[i]
 	}
 
-	_, _ = RequiredAllowance.SetString("10000000000000000000", 10) // 10e18
-	_, _ = MaximumOverdraft.SetString("1000000000000000000", 10)   // 1e18
+	_, _ = RequiredAllowance.SetString("1000000", 10) // 1e6
+	_, _ = MaximumOverdraft.SetString("10000000", 10)  // 10e6
 }
 
 type paymentChannelWatch struct {
@@ -138,8 +138,8 @@ func (p *PaymentManager) reconcilationLoop(ctx context.Context) (err error) {
 		return
 	}
 
-	priceGbMin := big.NewInt(int64(0.000004e18) * 60)
-	minPayment := big.NewInt(int64(0.1e18))
+	priceGbMonth := big.NewInt(int64(0.0025e6))
+	minPayment := big.NewInt(int64(0.1e6))
 
 	errs := []error{}
 
@@ -155,8 +155,12 @@ func (p *PaymentManager) reconcilationLoop(ctx context.Context) (err error) {
 		bucketOwnerAddress := common.HexToAddress(bucketId)
 
 		totalToPay := &big.Int{}
-		totalToPay = totalToPay.Mul(byteMinutes, priceGbMin)
-		totalToPay = totalToPay.Div(totalToPay, big.NewInt(1024*1024))
+		totalToPay = totalToPay.Mul(byteMinutes, priceGbMonth)
+		// totalToPay :: byte * minute * $ / GiB / month
+		totalToPay = totalToPay.Div(totalToPay, big.NewInt(30 * 24 * 60))
+		// totalToPay :: byte * $ / GiB
+		totalToPay = totalToPay.Div(totalToPay, big.NewInt(1000*1000))
+		// totalToPay :: $
 
 		watch, err := p.getWatch(ctx, bucketOwnerAddress)
 		if err != nil {
