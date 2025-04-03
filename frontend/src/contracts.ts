@@ -45,7 +45,7 @@ export async function depositFunds(publicClient: PublicClient, walletClient: Wal
   })
 
   if (depositAmount > 0n) {
-    const balance = (await token.read.balanceOf([wallet.address]))
+    // const balance = (await token.read.balanceOf([wallet.address]))
     // const debugMintTokens = balance < depositAmount
     // if (debugMintTokens) {
     //   const mockToken = getContract({
