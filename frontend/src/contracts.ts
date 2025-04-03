@@ -46,15 +46,15 @@ export async function depositFunds(publicClient: PublicClient, walletClient: Wal
 
   if (depositAmount > 0n) {
     const balance = (await token.read.balanceOf([wallet.address]))
-    const debugMintTokens = balance < depositAmount
-    if (debugMintTokens) {
-      const mockToken = getContract({
-        address: tokenAddress,
-        abi: mockTokenAbi,
-        client,
-      })
-      await mockToken.write.mint([depositAmount], writeOptions)
-    }
+    // const debugMintTokens = balance < depositAmount
+    // if (debugMintTokens) {
+    //   const mockToken = getContract({
+    //     address: tokenAddress,
+    //     abi: mockTokenAbi,
+    //     client,
+    //   })
+    //   await mockToken.write.mint([depositAmount], writeOptions)
+    // }
 
     const allowance = (await token.read.allowance([wallet.address, storageSystemAddress]))
     if (allowance != depositAmount) {
