@@ -1,4 +1,4 @@
-import { erc20Abi, mockTokenAbi } from 's3-aapp-abi'
+import { erc20Abi } from 's3-aapp-abi'
 import { PublicClient, WalletClient, Address, getContract } from 'viem'
 import { config } from './wallet'
 
