@@ -38,6 +38,7 @@ jobs:
           sed -i "s#__AAPPDEVPUBKEY__#${{ secrets.AAPP_DEV_PUB_KEY }}#g" "${GITHUB_WORKSPACE}/.github/workflows/app-manifest.json"
 
           sed -i "s#__AAPPBUILDARG_BACKEND_ETH_WITHDRAW__#${{ secrets.AAPPBUILDARG_BACKEND_ETH_WITHDRAW }}#g" "${GITHUB_WORKSPACE}/.github/workflows/app-manifest.json"
+          sed -i "s#__AAPPBUILDARG_BACKEND_ETH_RPC__#${{ secrets.AAPPBUILDARG_BACKEND_ETH_RPC }}#g" "${GITHUB_WORKSPACE}/.github/workflows/app-manifest.json"
           sed -i "s#__AAPPBUILDARG_VITE_TOKEN__#${{ secrets.AAPPBUILDARG_VITE_TOKEN }}#g" "${GITHUB_WORKSPACE}/.github/workflows/app-manifest.json"
           sed -i "s#__AAPPBUILDARG_VITE_STORAGE_SYSTEM__#${{ secrets.AAPPBUILDARG_VITE_STORAGE_SYSTEM }}#g" "${GITHUB_WORKSPACE}/.github/workflows/app-manifest.json"
 

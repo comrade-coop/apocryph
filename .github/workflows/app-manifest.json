@@ -16,6 +16,7 @@
         "args": {
           "AAPP_VERSION": "__AAPP_VERSION__",
           "BACKEND_ETH_WITHDRAW": "__AAPPBUILDARG_BACKEND_ETH_WITHDRAW__",
+          "BACKEND_ETH_RPC": "__AAPPBUILDARG_BACKEND_ETH_RPC__",
           "BACKEND_EXTERNAL_URL": "https://__AAPPCNAME__.s3.apocryph.io",
           "VITE_TOKEN": "__AAPPBUILDARG_VITE_TOKEN__",
           "VITE_GLOBAL_HOST": "__AAPPCNAME__.s3.apocryph.io",
