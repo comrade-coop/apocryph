@@ -32,7 +32,6 @@ func init() {
 	for i := range discriminatorString {
 		ChannelDiscriminator[i] = discriminatorString[i]
 	}
-
 	_, _ = RequiredAllowance.SetString("1000000", 10) // 1e6
 	_, _ = MaximumOverdraft.SetString("10000000", 10) // 10e6
 }
@@ -305,7 +304,7 @@ func (p *PaymentManager) IsAuthorized(ctx context.Context, bucketId common.Addre
 		return false, err
 	}
 
-	return authorizedFor.Cmp(RequiredAllowance) < 0, nil
+	return authorizedFor.Cmp(RequiredAllowance) > 0, nil
 }
 
 func (p *PaymentManager) removeBucket(ctx context.Context, bucketId string) error {

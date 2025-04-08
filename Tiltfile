@@ -171,6 +171,19 @@ def get_build_args(local_eth=False):
         "VITE_GLOBAL_HOST": os.getenv("GLOBAL_HOST", "s3-aapp.local"),
         "VITE_GLOBAL_HOST_CONSOLE": os.getenv("GLOBAL_HOST_CONSOLE", "console-s3-aapp.local"),
         "VITE_GLOBAL_HOST_APP": os.getenv("GLOBAL_HOST_APP", "console-aapp.local"),
+        "BACKEND_ETH_RPC": (
+            "ws://anvil:8545"
+            if local_eth
+            else os.getenv("BACKEND_ETH_RPC", "https://sepolia.base.org/")
+        ),
+        "BACKEND_ETH_CHAIN_ID": (
+            "31337"
+            if local_eth
+            else os.getenv("BACKEND_ETH_CHAIN_ID", "84532")
+        ),
+        "BACKEND_ETH_WITHDRAW": os.getenv(
+            "BACKEND_ETH_WITHDRAW", "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f"
+        ),
     }
 
 
@@ -231,24 +244,6 @@ def s3_aapp_deploy(
             "image": "comradecoop/s3-aapp",
             "volumes": ["s3-%s-data:/data" % name, "s3-%s-secrets:/shared_secrets" % name],
             "environment": {
-                "BACKEND_ETH_RPC": (
-                    "ws://anvil:8545"
-                    if local_eth
-                    else os.getenv("BACKEND_ETH_RPC", "https://sepolia.base.org/")
-                ),
-                "BACKEND_ETH_CHAIN_ID": (
-                    "31337"
-                    if local_eth
-                    else os.getenv("BACKEND_ETH_CHAIN_ID", "84532")
-                ),
-                "BACKEND_ETH_TOKEN": (
-                    "0x5FbDB2315678afecb367f032d93F642f64180aa3"
-                    if local_eth
-                    else os.getenv("BACKEND_ETH_TOKEN")
-                ),
-                "BACKEND_ETH_WITHDRAW": os.getenv(
-                    "BACKEND_ETH_WITHDRAW", "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f"
-                ),
                 "BACKEND_EXTERNAL_URL": "http://%s.local" % name,
                 "BACKEND_REPLICATE_SITES": ",".join(replicate_sites),
             },
