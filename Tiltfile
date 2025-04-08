@@ -168,7 +168,6 @@ def get_build_args(local_eth=False):
             if local_eth
             else os.getenv("BACKEND_ETH_TOKEN")
         ),
-        "VITE_STORAGE_SYSTEM": "$$$VITE_STORAGE_SYSTEM$$$",  # HACK: $$$VITE_STORAGE_SYSTEM$$$ gets replaced in cont-init.d/51-fixup-frontend.sh
         "VITE_GLOBAL_HOST": os.getenv("GLOBAL_HOST", "s3-aapp.local"),
         "VITE_GLOBAL_HOST_CONSOLE": os.getenv("GLOBAL_HOST_CONSOLE", "console-s3-aapp.local"),
         "VITE_GLOBAL_HOST_APP": os.getenv("GLOBAL_HOST_APP", "console-aapp.local"),
@@ -237,6 +236,11 @@ def s3_aapp_deploy(
                     if local_eth
                     else os.getenv("BACKEND_ETH_RPC", "https://sepolia.base.org/")
                 ),
+                "BACKEND_ETH_CHAIN_ID": (
+                    "31337"
+                    if local_eth
+                    else os.getenv("BACKEND_ETH_CHAIN_ID", "84532")
+                ),
                 "BACKEND_ETH_TOKEN": (
                     "0x5FbDB2315678afecb367f032d93F642f64180aa3"
                     if local_eth
@@ -247,7 +251,6 @@ def s3_aapp_deploy(
                 ),
                 "BACKEND_EXTERNAL_URL": "http://%s.local" % name,
                 "BACKEND_REPLICATE_SITES": ",".join(replicate_sites),
-                "FIXUP_VITE_STORAGE_SYSTEM": "true",
             },
             "networks": {
                 "default": {

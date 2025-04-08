@@ -8,7 +8,7 @@ import { tomorrowNight as syntaxStyle } from 'react-syntax-highlighter/dist/esm/
 
 import BlurUpdatedInput from './BlurUpdatedInput'
 import ActionPopButton from './ActionPopButton'
-import { watchAvailableFunds, depositFunds } from './contracts'
+import { watchAvailableFunds, depositFunds, aappAddress, paymentAddress } from './contracts'
 import apocryphLogo from '/apocryph.svg?url'
 import metamaskLogo from '/metamask.svg?url'
 import './App.css'
@@ -268,6 +268,10 @@ function App() {
       </section>, true)}
       <a href={documentationLink} className="read-the-docs" target="_blank">Documentation <OpenExternalLink/></a>
       { attestationLink ? <a href={attestationLink} className="read-the-docs" target="_blank">View Attestation <OpenExternalLink/></a> : '' }
+      <p className="deployment-info">
+        S3 aApp address: {aappAddress}<br/>
+        Payment contract address: {paymentAddress}
+      </p>
     </>
   )
 }

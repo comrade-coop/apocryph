@@ -168,3 +168,9 @@ h1, h2 {
   font-size: 0.9em;
   margin: 0.5em;
 }
+.deployment-info {
+  color: #888;
+  font-size: 0.8em;
+  margin: 1em auto;
+  width: fit-content;
+}

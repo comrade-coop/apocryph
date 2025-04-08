@@ -5,7 +5,6 @@
 // - forge build ran in ../../../contracts
 
 //go:generate abigen --pkg abi --type IERC20 --out ./IERC20.abi.go --abi ../../contracts/out/IERC20.sol/IERC20.abi.json
-
-// disabled for now: abigen --pkg abi --type PaymentV2 --out ./PaymentV2.abi.go --abi ../../contracts/out/PaymentV2.sol/PaymentV2.abi.json
+//go:generate abigen --pkg abi --type SimplePayment --out ./SimplePayment.abi.go --abi ../../contracts/out/SimplePayment.sol/SimplePayment.abi.json --bin ../../contracts/out/SimplePayment.sol/SimplePayment.bin
 
 package abi

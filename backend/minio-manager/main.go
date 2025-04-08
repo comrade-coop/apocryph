@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"strconv"
 	"time"
 
 	"github.com/comrade-coop/apocryph/backend/prometheus"
@@ -74,6 +75,11 @@ var backendCmd = &cobra.Command{
 		if siweDomainMatch == "" {
 			siweDomainMatch = siweDomain
 		}
+		aappVersion := os.Getenv("AAPP_VERSION")
+		if aappVersion == "" {
+			aappVersion = "v0000"
+		}
+		aappVersionInt, _ := strconv.ParseUint(aappVersion[1:], 10, 64)
 
 		privateKey, err := crypto.HexToECDSA(privateKeyString)
 		if err != nil {
@@ -134,7 +140,7 @@ var backendCmd = &cobra.Command{
 				return err
 			}
 
-			payment, err = NewPaymentManager(minioAddress, minioCreds, ethereumAddress, tokenAddress, transactOpts, withdrawTo, prometheusClient)
+			payment, err = NewPaymentManager(minioAddress, minioCreds, ethereumAddress, tokenAddress, transactOpts, withdrawTo, aappVersionInt, prometheusClient)
 			if err != nil {
 				return err
 			}
@@ -152,16 +158,12 @@ var backendCmd = &cobra.Command{
 	},
 }
 
-var getPublicKeyCmd = &cobra.Command{
-	Use: "get-public-key",
+var getPublicAddressCmd = &cobra.Command{
+	Use: "get-public-address",
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 
 		if privateKeyString == "" {
 			privateKeyString = os.Getenv("PRIVATE_KEY")
-		}
-		swieDomain := os.Getenv("GLOBAL_HOST")
-		if swieDomain == "" {
-			swieDomain = "s3.apocryph.io"
 		}
 
 		privateKey, err := crypto.HexToECDSA(privateKeyString)
@@ -169,19 +171,34 @@ var getPublicKeyCmd = &cobra.Command{
 			return
 		}
 
-		replicationTokenSigner, err := NewTokenSigner(privateKey, swieDomain)
+		fmt.Println(crypto.PubkeyToAddress(privateKey.PublicKey))
+
+		return
+	},
+}
+
+var getPaymentAddressCmd = &cobra.Command{
+	Use: "get-payment-address",
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
+
+		if privateKeyString == "" {
+			privateKeyString = os.Getenv("PRIVATE_KEY")
+		}
+
+		privateKey, err := crypto.HexToECDSA(privateKeyString)
 		if err != nil {
 			return
 		}
 
-		fmt.Println(replicationTokenSigner.GetPublicAddress())
+		fmt.Println(ExpectedPaymentContractAddress(crypto.PubkeyToAddress(privateKey.PublicKey)))
 
 		return
 	},
 }
 
 func init() {
-	backendCmd.AddCommand(getPublicKeyCmd)
+	backendCmd.AddCommand(getPublicAddressCmd)
+	backendCmd.AddCommand(getPaymentAddressCmd)
 
 	backendCmd.Flags().StringVar(&identityServeAddress, "bind", ":8593", "Bind address to serve the minio identity plugin on")
 	backendCmd.Flags().StringVar(&minioAddress, "minio", "localhost:9000", "Address to query minio on")

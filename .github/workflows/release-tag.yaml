@@ -29,7 +29,8 @@ jobs:
 
       - name: Replace placeholders in app-manifest.json
         run: |
-          AAPP_CNAME=$(echo "${{ github.event.release.tag_name }}" | sed 's/[^0-9]//g' | awk '{printf "v%04d", $0}')
+          AAPP_VERSION=$(echo "${{ github.event.release.tag_name }}" | sed 's/[^0-9]//g')
+          AAPP_CNAME=$(echo "$AAPP_VERSION" | awk '{printf "v%04d", $0}')
           echo "AAPP_CNAME=$AAPP_CNAME" >> $GITHUB_ENV
 
           sed -i "s/__AAPPTAG__/${{ github.event.release.tag_name }}/g" "${GITHUB_WORKSPACE}/.github/workflows/app-manifest.json"

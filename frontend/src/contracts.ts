@@ -3,7 +3,8 @@ import { PublicClient, WalletClient, Address, getContract } from 'viem'
 import { config } from './wallet'
 
 export const tokenAddress: Address = (import.meta.env.VITE_TOKEN || '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9').trim()
-export const storageSystemAddress: Address = (import.meta.env.VITE_STORAGE_SYSTEM || '0x14dC79964da2C08b23698B3D3cc7Ca32193d9955').trim()
+export const paymentAddress: Address = (import.meta.env.VITE_STORAGE_SYSTEM || '0xef11D1c2aA48826D4c41e54ab82D1Ff5Ad8A64Ca').trim()
+export const aappAddress: Address = (import.meta.env.VITE_AAPP_ADDRESS || '0x14dC79964da2C08b23698B3D3cc7Ca32193d9955').trim()
 
 type Unsubscribe = () => void
 
@@ -14,7 +15,7 @@ export function watchAvailableFunds(publicClient: PublicClient, accountAddress: 
       abi: erc20Abi,
       address: tokenAddress,
       functionName: 'allowance',
-      args: [accountAddress, storageSystemAddress],
+      args: [accountAddress, paymentAddress],
     })
     callback(available, undefined)
   }
@@ -22,7 +23,7 @@ export function watchAvailableFunds(publicClient: PublicClient, accountAddress: 
   const unsubscribe = publicClient.watchContractEvent({
     abi: erc20Abi,
     address: tokenAddress,
-    args: { from: accountAddress, owner: accountAddress, to: storageSystemAddress },
+    args: { from: accountAddress, owner: accountAddress, to: paymentAddress },
     onLogs() {
       refresh()
     }
@@ -56,14 +57,14 @@ export async function depositFunds(publicClient: PublicClient, walletClient: Wal
     //   await mockToken.write.mint([depositAmount], writeOptions)
     // }
 
-    const allowance = (await token.read.allowance([wallet.address, storageSystemAddress]))
+    const allowance = (await token.read.allowance([wallet.address, paymentAddress]))
     if (allowance != depositAmount) {
-      await token.write.approve([storageSystemAddress, depositAmount], writeOptions)
+      await token.write.approve([paymentAddress, depositAmount], writeOptions)
     }
   } else {
-    const allowance = (await token.read.allowance([wallet.address, storageSystemAddress]))
+    const allowance = (await token.read.allowance([wallet.address, paymentAddress]))
     if (allowance != depositAmount) {
-      await token.write.approve([storageSystemAddress, depositAmount], writeOptions)
+      await token.write.approve([paymentAddress, depositAmount], writeOptions)
     }
   }
 }

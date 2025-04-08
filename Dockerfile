@@ -44,8 +44,10 @@ ARG NGINX_IMAGE=docker.io/library/nginx:latest@sha256:0a399eb16751829e1af26fea27
 ARG PNPM_VERSION=9.15.3
 # VITE_TOKEN is the on-chain address of the token used.
 ARG VITE_TOKEN=""
-# VITE_STORAGE_SYSTEM is the on-chain address corresponding to the backend's private key.
-ARG VITE_STORAGE_SYSTEM=""
+# VITE_STORAGE_SYSTEM is the on-chain address corresponding to the payment contract. Defaults to a special value that gets replaced in the combined container.
+ARG VITE_STORAGE_SYSTEM="\$\$\$VITE_STORAGE_SYSTEM\$\$\$"
+# VITE_AAPP_ADDRESS is the on-chain address corresponding to the backend's private key. Defaults to a special value that gets replaced in the combined container.
+ARG VITE_AAPP_ADDRESS="\$\$\$VITE_AAPP_ADDRESS\$\$\$"
 # VITE_CHAIN_CONFIG is an optional viem chain object, as described in https://viem.sh/docs/chains/introduction
 ARG VITE_CHAIN_CONFIG=""
 # VITE_GLOBAL_HOST is the address of the hosted aapp.
@@ -56,6 +58,13 @@ ARG VITE_GLOBAL_HOST_CONSOLE=console-s3-aapp.localhost
 ARG VITE_GLOBAL_HOST_APP=console-aapp.localhost
 # VITE_PUBLIC_ATTESTATION_URL is the address for the attestation link.
 ARG VITE_PUBLIC_ATTESTATION_URL=
+
+# FIXUP_VITE_STORAGE_SYSTEM instructs whether replacement of $$$VITE_STORAGE_SYSTEM$$$ and $$$VITE_AAPP_ADDRESS$$$ should take place (can also be passed as env)
+ARG FIXUP_VITE_STORAGE_SYSTEM="true"
+# AAPP_VERSION is the version of the aapp; used for interacting with the smart contract (can also be passed as env)
+ARG AAPP_VERSION="0000"
+# SIWE_DOMAIN is the domain wildcard used to authenticate SWIE requests (defaults to VITE_GLOBAL_HOST_APP if not specified) (can also be passed as env)
+ARG SIWE_DOMAIN=""
 
 # SERF_VERSION is currently unused
 ARG SERF_VERSION=0.10.1
@@ -122,6 +131,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store cd /app && pnpm install --froz
 
 ARG VITE_TOKEN
 ARG VITE_STORAGE_SYSTEM
+ARG VITE_AAPP_ADDRESS
 ARG VITE_CHAIN_CONFIG
 ARG VITE_GLOBAL_HOST
 ARG VITE_GLOBAL_HOST_CONSOLE
@@ -248,6 +258,7 @@ ARG VITE_BACKEND_ETH_WITHDRAW
 ARG FIXUP_VITE_STORAGE_SYSTEM
 ARG BACKEND_EXTERNAL_URL
 ARG SIWE_DOMAIN
+ARG AAPP_VERSION
 ENV GLOBAL_HOST=$VITE_GLOBAL_HOST
 ENV GLOBAL_HOST_CONSOLE=$VITE_GLOBAL_HOST_CONSOLE
 ENV GLOBAL_HOST_APP=$VITE_GLOBAL_HOST_APP
@@ -257,6 +268,7 @@ ENV BACKEND_ETH_RPC=https://sepolia.base.org
 ENV BACKEND_ETH_CHAIN_ID=8453
 ENV BACKEND_EXTERNAL_URL=$BACKEND_EXTERNAL_URL
 ENV BACKEND_REPLICATE_SITES=""
+ENV AAPP_VERSION=$AAPP_VERSION
 ENV SIWE_DOMAIN=$SIWE_DOMAIN
 ENV FIXUP_VITE_STORAGE_SYSTEM=$FIXUP_VITE_STORAGE_SYSTEM
 VOLUME /data
