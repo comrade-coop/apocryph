@@ -34,6 +34,7 @@ jobs:
           echo "AAPP_CNAME=$AAPP_CNAME" >> $GITHUB_ENV
 
           sed -i "s/__AAPPTAG__/${{ github.event.release.tag_name }}/g" "${GITHUB_WORKSPACE}/.github/workflows/app-manifest.json"
+          sed -i "s/__AAPPVERSION__/$AAPP_VERSION/g" "${GITHUB_WORKSPACE}/.github/workflows/app-manifest.json"
           sed -i "s/__AAPPCNAME__/$AAPP_CNAME/g" "${GITHUB_WORKSPACE}/.github/workflows/app-manifest.json"
           sed -i "s#__AAPPDEVPUBKEY__#${{ secrets.AAPP_DEV_PUB_KEY }}#g" "${GITHUB_WORKSPACE}/.github/workflows/app-manifest.json"
 

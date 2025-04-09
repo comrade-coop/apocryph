@@ -14,7 +14,7 @@
         "tag": "__AAPPTAG__",
         "dockerfile": "Dockerfile",
         "args": {
-          "AAPP_VERSION": "__AAPP_VERSION__",
+          "AAPP_VERSION": "__AAPPVERSION__",
           "BACKEND_ETH_WITHDRAW": "__AAPPBUILDARG_BACKEND_ETH_WITHDRAW__",
           "BACKEND_ETH_RPC": "__AAPPBUILDARG_BACKEND_ETH_RPC__",
           "VITE_TOKEN": "__AAPPBUILDARG_VITE_TOKEN__",
