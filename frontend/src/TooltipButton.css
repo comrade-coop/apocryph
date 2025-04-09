@@ -1,0 +1,50 @@
+.tooltip-button {
+  position: relative;
+  padding: 0;
+  margin: 0 0.6em;
+  background-color: transparent;
+}
+.button-card .tooltip-button {
+  background-color: #1a1a1a;
+  padding: 0.6em;
+  margin: 0;
+}
+.tooltip-button-tooltip, .tooltip-button::after {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: #1a1a1a;
+}
+.tooltip-button-open::after, .tooltip-button-open .tooltip-button-tooltip {
+  opacity: 1;
+  left: 100%;
+  pointer-events: unset;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .tooltip-button-tooltip, .tooltip-button::after {
+    transition: left 0.3s, opacity 0.3s;
+  }
+}
+.tooltip-button::after {
+  content: "";
+  pointer-events: none;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%) translateX(10px) rotate(45deg);
+}
+.tooltip-button-tooltip {
+  margin-left: 10px;
+  text-align: left;
+  padding: 0.6em 1.2em;
+  pointer-events: none;
+  width: 320px;
+  border-radius: 8px;
+  box-shadow: #fff4 0 0 3px;
+  z-index: 1;
+  transform: translateY(-50%);
+}
+.tooltip-button-open:focus .tooltip-button-tooltip {
+  z-index: 2;
+}

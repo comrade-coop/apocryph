@@ -1,4 +1,4 @@
-import { erc20Abi } from 's3-aapp-abi'
+import { erc20Abi, mockTokenAbi } from 's3-aapp-abi'
 import { PublicClient, WalletClient, Address, getContract } from 'viem'
 import { config } from './wallet'
 
@@ -8,16 +8,22 @@ export const aappAddress: Address = (import.meta.env.VITE_AAPP_ADDRESS || '0x14d
 
 type Unsubscribe = () => void
 
-export function watchAvailableFunds(publicClient: PublicClient, accountAddress: Address, callback: (available?: bigint, reserved?: bigint) => void): Unsubscribe {
+export function watchAvailableFunds(publicClient: PublicClient, accountAddress: Address, callback: (allowance?: bigint, balance?: bigint) => void): Unsubscribe {
   async function refresh() {
     callback(undefined, undefined) // We are refreshing, blur out
-    const available = await publicClient.readContract({
+    const allowance = await publicClient.readContract({
       abi: erc20Abi,
       address: tokenAddress,
       functionName: 'allowance',
       args: [accountAddress, paymentAddress],
     })
-    callback(available, undefined)
+    const balance = await publicClient.readContract({
+      abi: erc20Abi,
+      address: tokenAddress,
+      functionName: 'balanceOf',
+      args: [accountAddress],
+    })
+    callback(allowance, balance)
   }
 
   const unsubscribe = publicClient.watchContractEvent({
@@ -46,17 +52,6 @@ export async function depositFunds(publicClient: PublicClient, walletClient: Wal
   })
 
   if (depositAmount > 0n) {
-    // const balance = (await token.read.balanceOf([wallet.address]))
-    // const debugMintTokens = balance < depositAmount
-    // if (debugMintTokens) {
-    //   const mockToken = getContract({
-    //     address: tokenAddress,
-    //     abi: mockTokenAbi,
-    //     client,
-    //   })
-    //   await mockToken.write.mint([depositAmount], writeOptions)
-    // }
-
     const allowance = (await token.read.allowance([wallet.address, paymentAddress]))
     if (allowance != depositAmount) {
       await token.write.approve([paymentAddress, depositAmount], writeOptions)
@@ -66,5 +61,21 @@ export async function depositFunds(publicClient: PublicClient, walletClient: Wal
     if (allowance != depositAmount) {
       await token.write.approve([paymentAddress, depositAmount], writeOptions)
     }
+  }
+}
+
+export async function debugMintFunds(publicClient: PublicClient, walletClient: WalletClient, depositAmount: bigint) {
+  const client = {public: publicClient, wallet: walletClient}
+  const wallet = walletClient.account!
+  const writeOptions = {account: wallet, chain: config.chains[0]}
+
+  const token = getContract({
+    address: tokenAddress,
+    abi: mockTokenAbi,
+    client,
+  })
+  const balance = (await token.read.balanceOf([wallet.address]))
+  if (depositAmount > balance) {
+    await token.write.mint([depositAmount - balance], writeOptions)
   }
 }

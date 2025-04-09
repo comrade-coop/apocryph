@@ -14,13 +14,24 @@ To proceed to the next step, you need to connect a wallet.
 
 ![Screenshot of the Step 2 interface](./assets/step-2.png)
 
-The second step is for authorizing the S3 Aapp to access funds for the S3 storage space. The form displays the current price for storage deals (in USDC per GB-month), the currently-authorized amount, as well as fields for configuring the new authorization amount.
+The second step is for authorizing the S3 Aapp to access funds for the S3 storage space. The form displays the current price for storage deals (in USDC per GB-month), the currently-authorized amount, as well as fields for configuring the new [authorization amount](./PRICING.md#authorized-funds).
 
-You can either input the amount of data (in GB) and duration (in days/years) you want to authorize funds for, using the first two fields, or you can directly use the forth box ("Total required authorization") to input the amount of funds you are allowing the Aapp to access.
+You can either input the amount of data (in GB) and duration (in days/years) you want to authorize funds for, using the first two fields, or you can directly use the fourth box ("Estimated funds needed") to input the amount of funds you want to allow the Aapp to have access to.
 
-When you press the button at the bottom, the frontend would submit a transaction for adjusting the on-chain authorization so it matches the wanted authorization, plus the minimum required authorization.
+The [minimum required authorization](./PRICING.md#minimal-required-authorization) box shows the amount of minimum authorization required for the Aapp would allow you to login to S3; before proceeding, the form will automatically add that on top of the estimated funds needed for storing the data for the specified duration.
+
+When you press the button at the bottom, the frontend would submit a transaction for adjusting the on-chain authorization so it matches the wanted authorization.
 
 To proceed to the next step, you need to have authorized at least the minimum amount required. Note that dipping under the required minimum would result in no longer being able to access the Aapp.
+
+### Topping-up
+
+Once you start using the S3 Aapp, it will start withdrawing from the funds you have authorized it to use.  
+**If the authorized funds fall down to zero, the Aapp [may delete](./PAYMENT.md#maximum-overdraft) your data!**
+
+**To avoid that**, you should routinely top-up the authorized amount of funds using the Apocryph Console, using the same Step 2 interface, making sure it stays positive for as long as you want to keep your data stored.
+
+![Screenshot of the Step 2 interface, when used for topping-up](./assets/step-2-topup.png)
 
 ## Step 3: Access
 
@@ -57,6 +68,14 @@ More languages / better language support and support for other S3 SDKs will come
 ## Step 5: Profit!
 
 Well, there you have it: your app is storing its files within a storage vault that no one else can access—not even us. Huzzah!
+
+## Cancellation
+
+If you want to stop using the Aapp, you can cancel your access to your S3 bucket by going back to Step 2 and setting the "Estimated funds needed" field to 0, then press the "Remove Authorization" button:
+
+![Cancelling in the Step 2 interface](./assets/step-2-cancel.png)
+
+**Note that removing your authorization will result in the [eventual deletion](./PAYMENT.md#maximum-overdraft) of your stored data!**
 
 ## Further considerations
 

@@ -8,13 +8,14 @@ import { tomorrowNight as syntaxStyle } from 'react-syntax-highlighter/dist/esm/
 
 import BlurUpdatedInput from './BlurUpdatedInput'
 import ActionPopButton from './ActionPopButton'
-import { watchAvailableFunds, depositFunds, aappAddress, paymentAddress } from './contracts'
+import { watchAvailableFunds, depositFunds, aappAddress, paymentAddress, debugMintFunds } from './contracts'
 import apocryphLogo from '/apocryph.svg?url'
 import metamaskLogo from '/metamask.svg?url'
 import './App.css'
 import { getSiweToken } from './signin'
 import codeExamples, { envExample } from './codeExamples'
-import { OpenExternalLink } from './icons'
+import { Error, InfoCircle, OpenExternalLink } from './icons'
+import TooltipButton from './TooltipButton'
 
 const attestationLink: string | undefined = import.meta.env.VITE_PUBLIC_ATTESTATION_URL
 const documentationLink = "https://comrade-coop.github.io/s3-aapp/"
@@ -36,6 +37,7 @@ function App() {
   const [ funds, setFunds ] = useState<bigint>(() => BigInt(Math.round(durationMultiplier * Number(amountGb * priceGbMonth) / oneGb)))
   const [ existingDeposit, setExistingDeposit ] = useState<bigint | undefined>(undefined)
   const [ depositInProgress, setDepositInProgress ] = useState(false)
+  const [ balance, setBalance ] = useState<bigint | undefined>(undefined)
   const [ depositError, setDepositError ] = useState('')
   const [ siweToken, setSiweToken ] = useState<string>()
   const [ consoleAccessLink, setConsoleAccessLink ] = useState<string>()
@@ -62,8 +64,9 @@ function App() {
 
   useEffect(() => {
     if (publicClient && account?.address) {
-      return watchAvailableFunds(publicClient, account.address, (availableFunds) => {
+      return watchAvailableFunds(publicClient, account.address, (availableFunds, balance) => {
         setExistingDeposit(availableFunds)
+        setBalance(balance)
       })
     }
   }, [publicClient, account])
@@ -122,7 +125,7 @@ function App() {
       <img src={apocryphLogo} alt="Apocryph Logo" />
       <h1>Get your S3-compatible bucket!</h1>
       <section>
-        <p className="hero">Hosting your S3-compatible data buckets in the Apocryph S3 network allows for the ultimate privacy peace of mind, through trasparent encryption at-rest and cryptocurrency-enabled payments.<br/><a href={documentationLink}>Read more.</a></p>
+        <p className="hero">Hosting your S3-compatible data buckets in the Apocryph S3 network allows for the ultimate privacy peace of mind, through trasparent encryption at-rest and cryptocurrency-enabled payments.<br/><a href={documentationLink}>Read more</a> <OpenExternalLink/></p>
       </section>
       {step(<section>
         <h2>Step 1: Connect</h2>
@@ -175,7 +178,15 @@ function App() {
           <span className="fake-field"> {currency}/GB/month</span>
         </label>
         <label>
-          <span>Total required authorization (est.)</span>
+          <span>
+            Estimated funds needed
+            <TooltipButton
+              tooltip={<>
+                The amount of {currency} that will be needed to store your data for the specified amount of time. <br/>
+                <a href={documentationLink + "/PAYMENT.html#authorized-funds"} target="_blank">Read more</a> <OpenExternalLink/>
+              </>}
+            ><InfoCircle/></TooltipButton>
+          </span>
           <BlurUpdatedInput
             value={funds}
             stringify={v => formatUnits(v, decimals)}
@@ -184,26 +195,58 @@ function App() {
           <span className="fake-field"> {currency}</span>
         </label>
         <label>
-          <span>Minimum authorization</span>
-          <span className="fake-field">{formatUnits(minDeposit, decimals)}</span>
+          <span>
+            Minimal authorization 
+            <TooltipButton
+              tooltip={<>
+                The minimal amount of spendable {currency} required by the Aapp before allowing you to log in. <br/>
+                <a href={documentationLink + "/PAYMENT.html#minimal-required-authorization"} target="_blank">Read more</a> <OpenExternalLink/>
+              </>}
+            ><InfoCircle/></TooltipButton>
+          </span>
+          <span className="fake-field">{formatUnits(funds <= 0n ? 0n : minDeposit, decimals)}</span>
           <span className="fake-field"> {currency}</span>
         </label>
-          <label>
-            <span>Existing authorization</span>
-            <span className="fake-field">{existingDeposit === undefined ? 'Loading...' : formatUnits(existingDeposit, decimals)}</span>
-            <span className="fake-field">{currency}</span>
-          </label>
+        <label>
+          <span>Total required authorization</span>
+          <span className="fake-field">{existingDeposit === undefined ? 'Loading...' : formatUnits(funds <= 0n ? 0n : funds + minDeposit, decimals)}</span>
+          <span className="fake-field">{currency}</span>
+        </label>
+        <label>
+          <span>Existing authorization</span>
+          <span className="fake-field">{existingDeposit === undefined ? 'Loading...' : formatUnits(existingDeposit, decimals)}</span>
+          <span className="fake-field">{currency}</span>
+        </label>
         <div className="button-card">
-          <button onClick={() => topUpDeposit()}>
+          <button onClick={() => topUpDeposit()} disabled={balance === undefined || balance < minDeposit}>
             {
               existingDeposit === undefined ? <>Loading...</> :
               depositInProgress ? <>Processing...</> :
               existingDeposit <= minDeposit ? <>Authorize! ({formatUnits(existingDeposit - minDeposit - funds, decimals)} {currency})</> :
               funds > existingDeposit - minDeposit ? <>Top-up authorization ({formatUnits(existingDeposit - minDeposit - funds, decimals)} {currency})</> :
-              funds <= 0n ? <>Remove authorization (+{formatUnits(existingDeposit - minDeposit - funds, decimals)} {currency})</> :
+              funds <= 0n ? <>Remove authorization (+{formatUnits(existingDeposit, decimals)} {currency})</> :
               <>Reduce authorization (+{formatUnits(existingDeposit - minDeposit - funds, decimals)} {currency})</>
             }
           </button>
+          {balance === undefined || balance < minDeposit + funds ?
+          <TooltipButton
+            tooltip={<>
+              {balance === undefined || balance < minDeposit ? 
+                <> Using the Aapp requires having a minimum of {formatUnits(minDeposit, decimals)} {currency} in your wallet. </> :
+                <> You only have {formatUnits(balance, decimals)} {currency}. </>
+              } <br/>
+              Even if you increased the Aapp's spending cap, the effective authorization is limited by the {currency} backing the allowance. <br/>
+              <a href={documentationLink + "/PAYMENT.html#authorized-funds"} target="_blank">Read more</a> <OpenExternalLink/>
+            </>}
+            onClick={publicClient?.chain?.id == 31337 ? () => walletClient?.data && debugMintFunds(publicClient, walletClient.data, funds + minDeposit) : undefined}
+          ><Error/></TooltipButton> : <></>}
+          {existingDeposit !== undefined && existingDeposit > minDeposit && funds <= 0n ?
+          <TooltipButton
+            tooltip={<>
+              Removing the authorization will prevent you from logging into the Aapp until it's re-authorized it. <br/>
+              <a href={documentationLink + "/PAYMENT.html#maximum-overdraft"} target="_blank">Read more</a> <OpenExternalLink/>
+            </>}
+          ><Error/></TooltipButton> : <></>}
         </div>
       </section>, existingDeposit !== undefined && existingDeposit > 0n)}
       {step(<section>
