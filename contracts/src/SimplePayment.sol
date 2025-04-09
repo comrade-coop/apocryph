@@ -9,11 +9,11 @@ import {Ownable} from "../lib/openzeppelin-contracts/contracts/access/Ownable.so
 using SafeERC20 for IERC20;
 
 /*
-This contract allows the Aapp (its owner) to withdraw funds that have been authorized.
-It keeps track of the total withdrawn funds per-version in order to facilitate the Aapp's internal 
+This contract allows the aApp (its owner) to withdraw funds that have been authorized.
+It keeps track of the total withdrawn funds per-version in order to facilitate the aApp's internal 
 
 Security-wise, the contract allows its owner to withdraw all and any funds approved to it.
-That's why the owner address exists only inside an attested TEE environment, that can be verified to only run code that comes from the Aapp's repository:
+That's why the owner address exists only inside an attested TEE environment, that can be verified to only run code that comes from the aApp's repository:
 https://github.com/comrade-coop/s3-aapp
 */
 

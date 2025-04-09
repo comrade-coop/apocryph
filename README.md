@@ -31,9 +31,9 @@ docker run \
 
 ### Initial configuration
 
-When started, the Aapp will attempt to deploy a smart contract using its own private key; this will typically fail due to insufficient funds.
+When started, the aApp will attempt to deploy a smart contract using its own private key; this will typically fail due to insufficient funds.
 
-To kickstart the Aapp, you should transfer some initial gas funds to the Aapp's own address (not the payment contract address!), listed at the bottom of the page and in the logs.
+To kickstart the aApp, you should transfer some initial gas funds to the aApp's own address (not the payment contract address!), listed at the bottom of the page and in the logs.
 
 ### Building a separate static frontend image
 
