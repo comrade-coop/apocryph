@@ -1,9 +1,8 @@
 # Introduction
 
-> **Warning**: The Apocryph S3 aApp is beta software
-> 
-> While this aApp might work for a particular usecase, no features of it should be considered stable and final until a stable release rolls around.  
-> In particular, there may be security vulnerabilities within the aApp's code (that you can [freely review](https://github.com/comrade-coop/s3-aapp)) that will yet be fixed in future releases.
+> **Warning**: The Apocryph S3 aApp is beta software.
+>
+> While this aApp might work for particular use cases, no features of it should be considered stable or final until a stable release rolls out. In particular, there may be security vulnerabilities within the aApp's code (which you can [freely review](https://github.com/comrade-coop/s3-aapp)) that will be fixed in future releases.
 
 The Apocryph S3 aApp (autonomous application) allows you to store files in an S3-compatible filesystem backed by an attested trusted execution enclave.  
 This allows you to store files, application data, backups, and more, in a private and secure manner, where no one else can read them.
