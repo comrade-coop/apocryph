@@ -16,7 +16,7 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
 	github.com/holiman/uint256 v1.3.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	golang.org/x/crypto v0.29.0 // indirect
+	golang.org/x/crypto v0.29.0
 	golang.org/x/sys v0.27.0 // indirect
 )
 
@@ -56,7 +56,7 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
-	github.com/golang-jwt/jwt/v4 v4.5.1 // indirect
+	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
 	github.com/google/pprof v0.0.0-20240711041743-f6c9dda6c6da // indirect
