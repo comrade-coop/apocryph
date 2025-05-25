@@ -1,9 +1,9 @@
 [book]
-title = "S3 Aapp documentation"
+title = "Apocryph documentation"
 src = "docs"
 
 [preprocessor]
 
 [output]
 [output.html]
-git-repository-url = "https://github.com/comrade-coop/s3-aapp"
+git-repository-url = "https://github.com/comrade-coop/apocryph"

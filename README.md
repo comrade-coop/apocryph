@@ -1,5 +1,26 @@
-# S3 aApp
+# Apocryph
+Apocryph is an unstoppable, decentralized, permissionless cloud powered by Trusted Execution Environments (TEEs). 
+It lets you run arbitrary software in containers and offers S3-compatible object storage — 
+everything with cryptographically verifiable code integrity, fully confidential execution, and zero performance overhead.
 
+[![Discord](https://img.shields.io/badge/DISCORD-COMMUNITY-informational?style=for-the-badge&logo=discord)](https://discord.gg/fWwMSZdBF2)
+
+:notebook: For more information you can check our documentation (specs) draft:
+- [GitHub Pages](https://comrade-coop.github.io/apocryph)
+- [GitHub Markdown](docs/SUMMARY.md)
+
+#### :warning: Important Notice
+This repository was recently moved here from https://github.com/comrade-coop/s3-aapp, and parts of the documentation/code might still refer to the old location. Use:
+```
+git remote set-url origin git://github.com/comrade-coop/apocryph
+```
+or
+```
+git remote set-url origin git@github.com:comrade-coop/apocryph.git
+```
+to update your local clone/s to point to the right repository. 
+
+:star: If you're looking for the code for the previous approaches used in Apocryph - using consensus protocol (from 2020 to 2022) or using confidential kubernetes (from 2022-2024), please see [this issue](https://github.com/comrade-coop/apocryph/issues/14) for more details.
 
 ## Docker
 
