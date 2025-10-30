@@ -1,13 +1,13 @@
 module github.com/comrade-coop/apocryph
 
-go 1.22.7
+go 1.23.0
 
 toolchain go1.23.4
 
 require (
 	github.com/ethereum/go-ethereum v1.14.9
 	github.com/spf13/cobra v1.8.1
-	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/spf13/pflag v1.0.6 // indirect
 )
 
 require (
@@ -16,8 +16,8 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
 	github.com/holiman/uint256 v1.3.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	golang.org/x/crypto v0.29.0 // indirect
-	golang.org/x/sys v0.27.0 // indirect
+	golang.org/x/crypto v0.35.0
+	golang.org/x/sys v0.30.0 // indirect
 )
 
 require (
@@ -37,10 +37,9 @@ require (
 	github.com/apparentlymart/go-cidr v1.1.0 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/bits-and-blooms/bitset v1.13.0 // indirect
+	github.com/bits-and-blooms/bitset v1.20.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/consensys/bavard v0.1.13 // indirect
-	github.com/consensys/gnark-crypto v0.12.1 // indirect
+	github.com/consensys/gnark-crypto v0.18.1 // indirect
 	github.com/crate-crypto/go-ipa v0.0.0-20240223125850-b1e8a79f509c // indirect
 	github.com/crate-crypto/go-kzg-4844 v1.0.0 // indirect
 	github.com/dchest/uniuri v1.2.0 // indirect
@@ -76,7 +75,6 @@ require (
 	github.com/lufia/plan9stats v0.0.0-20240909124753-873cd0166683 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/mmcloughlin/addchain v0.4.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/onsi/ginkgo/v2 v2.19.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
@@ -107,11 +105,10 @@ require (
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
 	golang.org/x/mod v0.19.0 // indirect
 	golang.org/x/net v0.31.0 // indirect
-	golang.org/x/sync v0.9.0 // indirect
-	golang.org/x/text v0.20.0 // indirect
+	golang.org/x/sync v0.11.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 	golang.org/x/tools v0.23.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241104194629-dd2ea8efbc28 // indirect
 	google.golang.org/grpc v1.68.0 // indirect
 	google.golang.org/protobuf v1.35.2 // indirect
-	rsc.io/tmplfunc v0.0.3 // indirect
 )
